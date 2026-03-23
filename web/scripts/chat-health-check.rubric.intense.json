@@ -1,0 +1,634 @@
+{
+  "version": "2026-03-17-intense-v3",
+  "notes": [
+    "Intensity overlay rubric for the existing 50-question benchmark.",
+    "Focuses on proving the semantic layer and summary contracts are used where relevant.",
+    "Adds synthesis-oriented SQL evidence checks for sector, strategy, and pit-cycle narratives.",
+    "Adds synthesis-oriented answer checks via required_answer_checks for known narration failure modes.",
+    "Unlisted question_ids inherit baseline rubric behavior via extends_rubric."
+  ],
+  "extends_rubric": "./chat-health-check.rubric.json",
+  "questions": [
+    {
+      "question_id": 6,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "ideal_tables": [
+        "core.session_completeness"
+      ],
+      "require_all_ideal_tables": true,
+      "require_fact_tables": false,
+      "minimum_score_ratio": 0.75,
+      "critical_checks": [
+        "all_ideal_tables_used"
+      ],
+      "required_sql_patterns": [
+        "core\\.session_completeness"
+      ]
+    },
+    {
+      "question_id": 21,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "require_fact_tables": false,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.85,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "core\\.laps_enriched",
+        "is_valid"
+      ]
+    },
+    {
+      "question_id": 22,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "best_lap|best_valid_lap|min\\s*\\(",
+        "avg_lap|avg_valid_lap|avg\\s*\\(",
+        "median_lap|median_valid_lap|percentile_cont",
+        "lap_stddev|valid_lap_stddev|stddev"
+      ]
+    },
+    {
+      "question_id": 23,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns",
+        "sector_summary_matches_metrics"
+      ],
+      "required_sql_patterns": [
+        "duration_sector_1|best_s1",
+        "duration_sector_2|best_s2",
+        "duration_sector_3|best_s3",
+        "avg\\s*\\(|avg_s1|avg_s2|avg_s3",
+        "min\\s*\\(|best_s1|best_s2|best_s3"
+      ],
+      "required_answer_checks": [
+        "sector_summary_matches_metrics",
+        "structured_rows_summarized"
+      ]
+    },
+    {
+      "question_id": 24,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "is_valid",
+        "min\\s*\\("
+      ]
+    },
+    {
+      "question_id": 26,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used"
+      ]
+    },
+    {
+      "question_id": 27,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "tyre_age_on_lap|stint_number"
+      ]
+    },
+    {
+      "question_id": 28,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used"
+      ]
+    },
+    {
+      "question_id": 29,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used"
+      ]
+    },
+    {
+      "question_id": 30,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns",
+        "sector_summary_matches_metrics"
+      ],
+      "required_sql_patterns": [
+        "duration_sector_1|best_s1",
+        "duration_sector_2|best_s2",
+        "duration_sector_3|best_s3",
+        "avg\\s*\\(|avg_s1|avg_s2|avg_s3",
+        "min\\s*\\(|best_s1|best_s2|best_s3"
+      ],
+      "required_answer_checks": [
+        "sector_summary_matches_metrics",
+        "structured_rows_summarized"
+      ]
+    },
+    {
+      "question_id": 31,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "is_pit_lap|pit_duration"
+      ]
+    },
+    {
+      "question_id": 32,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "tyre_age_on_lap|compound_name"
+      ]
+    },
+    {
+      "question_id": 33,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used"
+      ]
+    },
+    {
+      "question_id": 34,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "is_valid|stddev"
+      ]
+    },
+    {
+      "question_id": 35,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": false,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "raw.car_data"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.75,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "max\\s*\\([^)]*speed|max_speed|top_speed"
+      ]
+    },
+    {
+      "question_id": 37,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "lap_number",
+        "avg\\s*\\("
+      ]
+    },
+    {
+      "question_id": 42,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.stint_summary",
+        "core.strategy_summary"
+      ],
+      "require_all_ideal_tables": false,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "ideal_tables_used",
+        "required_sql_patterns",
+        "stop_count_consistent_with_stints"
+      ],
+      "required_sql_patterns": [
+        "stint_number",
+        "stint_length_laps|lap_start|lap_end",
+        "compound_name|compound"
+      ],
+      "required_answer_checks": [
+        "stop_count_consistent_with_stints",
+        "structured_rows_summarized"
+      ]
+    },
+    {
+      "question_id": 43,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.stint_summary",
+        "core.strategy_summary"
+      ],
+      "require_all_ideal_tables": false,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "compound_name|compounds_used|compound",
+        "stint_number|total_stints",
+        "lap_start|lap_end|pit_stop_count"
+      ],
+      "required_answer_checks": [
+        "structured_rows_summarized"
+      ]
+    },
+    {
+      "question_id": 44,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.strategy_summary"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "pit_stop_count|total_stints",
+        "strategy_type|one-stop|two-stop|no-stop"
+      ]
+    },
+    {
+      "question_id": 45,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.strategy_summary",
+        "core.race_progression_summary",
+        "core.lap_semantic_bridge"
+      ],
+      "require_all_ideal_tables": false,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.75,
+      "critical_checks": [
+        "ideal_tables_used",
+        "required_sql_patterns",
+        "evidence_required_for_strategy_claim"
+      ],
+      "required_sql_patterns": [
+        "pit_laps|pit_lap|is_pit_lap",
+        "position_end_of_lap|previous_position|pre_pit_position|post_pit_position|positions_gained_this_lap"
+      ],
+      "required_answer_checks": [
+        "evidence_required_for_strategy_claim"
+      ]
+    },
+    {
+      "question_id": 46,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.strategy_summary",
+        "core.race_progression_summary",
+        "core.lap_semantic_bridge",
+        "core.lap_context_summary"
+      ],
+      "require_all_ideal_tables": false,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.75,
+      "critical_checks": [
+        "ideal_tables_used",
+        "required_sql_patterns",
+        "evidence_required_for_strategy_claim"
+      ],
+      "required_sql_patterns": [
+        "pit_laps|pit_lap|is_pit_lap",
+        "position_end_of_lap|previous_position|pre_pit_position|post_pit_position|positions_gained_this_lap",
+        "lap_duration|avg_lap|avg_valid_lap|degradation_per_lap"
+      ],
+      "required_answer_checks": [
+        "evidence_required_for_strategy_claim"
+      ]
+    },
+    {
+      "question_id": 47,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "tyre_age_on_lap|stint_number"
+      ]
+    },
+    {
+      "question_id": 48,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.laps_enriched"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.8,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "stint_number",
+        "min\\(|max\\("
+      ]
+    },
+    {
+      "question_id": 49,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "is_derived_logic": true,
+      "expected_session_key": 9839,
+      "required_driver_numbers": [
+        1,
+        16
+      ],
+      "ideal_tables": [
+        "core.race_progression_summary"
+      ],
+      "require_all_ideal_tables": true,
+      "allow_derived_leniency": false,
+      "minimum_score_ratio": 0.75,
+      "critical_checks": [
+        "all_ideal_tables_used",
+        "required_sql_patterns"
+      ],
+      "required_sql_patterns": [
+        "position_end_of_lap|previous_position|positions_gained_this_lap|opening_position|latest_position",
+        "lap_number"
+      ]
+    },
+    {
+      "question_id": 50,
+      "required_answer_checks": [
+        "grid_finish_evidence_present",
+        "structured_rows_summarized"
+      ],
+      "critical_checks": [
+        "grid_finish_evidence_present"
+      ]
+    }
+  ]
+}

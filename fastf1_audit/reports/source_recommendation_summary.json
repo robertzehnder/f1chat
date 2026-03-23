@@ -1,0 +1,44 @@
+[
+  {
+    "use_case":"session resolution",
+    "preferred_source":"openf1",
+    "confidence":"high",
+    "rationale":"themes=session_coverage,session_naming_quality; openf1_score=71.0; fastf1_score=49.0",
+    "recommended_action":"Keep OpenF1 as source of truth; use FastF1 only for edge-case checks."
+  },
+  {
+    "use_case":"clean-lap logic",
+    "preferred_source":"tie",
+    "confidence":"low",
+    "rationale":"themes=lap_timing_quality,sector_timing_quality; openf1_score=263.0; fastf1_score=263.0",
+    "recommended_action":"Maintain dual-source audit and prioritize semantic-layer normalization."
+  },
+  {
+    "use_case":"pace comparisons",
+    "preferred_source":"tie",
+    "confidence":"low",
+    "rationale":"themes=lap_timing_quality,sector_timing_quality,race_progression_quality; openf1_score=264.0; fastf1_score=264.0",
+    "recommended_action":"Maintain dual-source audit and prioritize semantic-layer normalization."
+  },
+  {
+    "use_case":"pit\/strategy analysis",
+    "preferred_source":"tie",
+    "confidence":"low",
+    "rationale":"themes=pit_and_stint_quality,strategy_analysis_usefulness; openf1_score=129.0; fastf1_score=129.0",
+    "recommended_action":"Maintain dual-source audit and prioritize semantic-layer normalization."
+  },
+  {
+    "use_case":"result\/final classification",
+    "preferred_source":"tie",
+    "confidence":"low",
+    "rationale":"themes=result_finishing_order_quality,starting_grid_quality; openf1_score=0.0; fastf1_score=0.0",
+    "recommended_action":"Maintain dual-source audit and prioritize semantic-layer normalization."
+  },
+  {
+    "use_case":"telemetry overlays",
+    "preferred_source":"tie",
+    "confidence":"low",
+    "rationale":"themes=telemetry_usefulness,race_progression_quality,weather_coverage; openf1_score=50.0; fastf1_score=50.0",
+    "recommended_action":"Maintain dual-source audit and prioritize semantic-layer normalization."
+  }
+]

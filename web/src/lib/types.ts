@@ -1,0 +1,64 @@
+export type SessionListRow = {
+  session_key: number;
+  meeting_key: number | null;
+  session_name: string | null;
+  session_type: string | null;
+  date_start: string | null;
+  year: number | null;
+  country_name: string | null;
+  location: string | null;
+  circuit_short_name: string | null;
+  meeting_name: string | null;
+  driver_count: number;
+  lap_rows: number;
+  interval_rows: number;
+  position_rows: number;
+  car_rows: number;
+  location_rows: number;
+};
+
+export type SessionCompleteness = {
+  session_key: number;
+  meeting_key: number | null;
+  session_type: string | null;
+  normalized_session_type: string | null;
+  is_future_session: boolean;
+  is_placeholder: boolean;
+  completeness_status: string;
+  completeness_score: number;
+  has_meeting_name: boolean;
+  has_core_analysis_pack: boolean;
+  has_drivers: boolean;
+  has_laps: boolean;
+  has_intervals: boolean;
+  has_position_history: boolean;
+  has_car_data: boolean;
+  has_location: boolean;
+  has_weather: boolean;
+  has_race_control: boolean;
+  has_pit: boolean;
+  has_stints: boolean;
+  has_team_radio: boolean;
+  has_session_result: boolean;
+  has_starting_grid: boolean;
+  driver_rows: number;
+  lap_rows: number;
+  interval_rows: number;
+  position_rows: number;
+  car_rows: number;
+  location_rows: number;
+  weather_rows: number;
+  race_control_rows: number;
+  pit_rows: number;
+  team_radio_rows: number;
+  session_result_rows: number;
+  starting_grid_rows: number;
+};
+
+export type QueryRunResult = {
+  sql: string;
+  rowCount: number;
+  elapsedMs: number;
+  truncated: boolean;
+  rows: Record<string, unknown>[];
+};

@@ -1,0 +1,6 @@
+question_family,question_type,benchmark_count,openf1_above_c_rate,related_themes,theme_winner,likely_issue_driver,recommendation
+driver_roster_and_metadata,metadata_lookup,7,1.0,driver_roster_coverage;driver_team_mapping;session_coverage,openf1,healthy_or_minor,Keep current approach with periodic audit checks.
+head_to_head_pace_and_progression,comparison_analysis,5,1.0,lap_timing_quality;sector_timing_quality;race_progression_quality;strategy_analysis_usefulness,tie,healthy_or_minor,Keep current approach with periodic audit checks.
+lap_pit_result_aggregates,aggregate_analysis,26,1.0,lap_timing_quality;sector_timing_quality;pit_and_stint_quality;result_finishing_order_quality;starting_grid_quality;strategy_analysis_usefulness,tie,healthy_or_minor,Keep current approach with periodic audit checks.
+session_resolution_and_metadata,entity_lookup,11,0.9091,session_coverage;session_naming_quality,openf1,healthy_or_minor,Keep current approach with periodic audit checks.
+telemetry_and_overlays,telemetry_analysis,1,1.0,telemetry_usefulness;race_progression_quality;weather_coverage,tie,healthy_or_minor,Keep current approach with periodic audit checks.

@@ -1,0 +1,37 @@
+# Ignore hidden files/folders everywhere
+.*
+**/.*
+
+# Keep .gitignore files trackable
+!.gitignore
+!**/.gitignore
+
+# Ignore helper repos
+helper-repos/
+data/
+data_2024_nonrace/
+
+# Python/runtime caches
+__pycache__/
+**/__pycache__/
+venv/
+.venv/
+
+# Runtime/generated logs
+logs/
+web/logs/
+*.log
+*.jsonl
+
+# FastF1 local runtime artifacts
+fastf1_audit/.venv/
+fastf1_audit/.fastf1_cache/
+fastf1_audit/exports/
+fastf1_audit/logs/
+
+# local-only helper workspace
+f1_codex_helpers/
+
+# if reports are regenerated
+fastf1_openf1_audit_toolkit/reports/
+

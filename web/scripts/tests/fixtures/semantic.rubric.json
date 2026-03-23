@@ -1,0 +1,14 @@
+{
+  "name": "grading-semantic-fixture",
+  "questions": [
+    {
+      "question_id": 201,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "ideal_tables": ["core.strategy_summary"],
+      "require_all_ideal_tables": true,
+      "semantic_enforcement": "strict",
+      "critical_checks": ["all_ideal_tables_used", "raw_table_regression"]
+    }
+  ]
+}

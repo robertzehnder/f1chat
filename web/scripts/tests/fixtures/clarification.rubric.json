@@ -1,0 +1,17 @@
+{
+  "name": "grading-clarification-fixture",
+  "questions": [
+    {
+      "question_id": 101,
+      "should_be_answerable": false,
+      "needs_clarification": true,
+      "semantic_enforcement": "off"
+    },
+    {
+      "question_id": 102,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "semantic_enforcement": "off"
+    }
+  ]
+}

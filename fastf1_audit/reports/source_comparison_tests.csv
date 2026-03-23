@@ -1,0 +1,905 @@
+theme,test_name,year,session_key_or_equivalent,event_name,session_type,openf1_result,fastf1_result,match_status,severity,notes,recommended_source
+driver_roster_coverage,driver_count_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,19,20,mismatch,medium,distinct drivers per session,review
+driver_roster_coverage,driver_count_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2023,9078|2023_5_miami_race,United States Miami,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,19,19,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2024,9507|2024_6_miami_race,United States Miami,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,20,20,match,low,distinct drivers per session,either
+driver_roster_coverage,driver_count_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,20,20,match,low,distinct drivers per session,either
+driver_team_mapping,driver_team_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,1,0,mismatch,medium,number of mismatched driver->team labels,review
+driver_team_mapping,driver_team_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2023,9078|2023_5_miami_race,United States Miami,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2024,9507|2024_6_miami_race,United States Miami,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,0,0,match,low,number of mismatched driver->team labels,openf1
+driver_team_mapping,driver_team_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,0,0,match,low,number of mismatched driver->team labels,openf1
+lap_timing_quality,avg_lap_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,147.680814,87.148042,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,80.235000,80.235000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,1006,1003,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,73.262444,73.290237,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,67.012000,67.012000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,1355,1354,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,110.484409,108.884638,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,103.370000,103.370000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,963,962,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,100.452551,100.445938,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,93.996000,93.996000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,1058,1056,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,114.245485,114.249221,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,107.305000,107.305000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,817,816,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,101.881765,79.136900,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,72.486000,72.486000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,1112,1109,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,81.511850,81.402331,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,74.481000,74.481000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,1318,1317,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,85.497109,85.491864,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,80.504000,80.504000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,1255,1252,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,87.771703,87.766148,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,85.072000,85.072000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,968,958,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,108.567404,101.406703,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,94.183000,94.183000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,886,880,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,104.354178,86.196129,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,81.334000,81.334000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,1286,1282,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,85.127047,85.051698,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,75.650000,75.650000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,1516,1515,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,117.359683,85.354223,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,73.837000,73.837000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,1344,1343,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,93.462469,93.203773,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,84.319000,84.319000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,1009,1006,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,98.780492,97.576861,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,91.906000,91.906000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,945,943,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,104.018868,102.641190,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,95.867000,95.867000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,1091,1088,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,81.086879,81.103977,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,76.330000,76.330000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,1312,1312,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,91.009308,91.001143,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,86.993000,86.993000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,1159,1157,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,98.712398,98.439570,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,90.275000,90.275000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,974,971,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,103.217261,103.249899,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,98.139000,98.139000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,1017,1014,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,107.760547,102.087244,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,95.490000,95.490000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,949,946,mismatch,medium,tolerance=2,review
+lap_timing_quality,avg_lap_alignment,2023,9078|2023_5_miami_race,United States Miami,race,93.333778,93.327539,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2023,9078|2023_5_miami_race,United States Miami,race,89.708000,89.708000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2023,9078|2023_5_miami_race,United States Miami,race,1139,1138,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,84.535705,84.541895,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,79.813000,79.813000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,998,998,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,72.182580,72.185731,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,67.694000,67.694000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,1407,1405,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,110.862948,110.001479,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,105.255000,105.255000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,975,973,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,98.132034,98.004108,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,92.608000,92.608000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,1129,1129,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,110.157246,110.062699,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,104.701000,104.701000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,842,841,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,110.746742,89.047630,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,80.472000,80.472000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,1137,1135,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,91.464991,91.457971,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,74.856000,74.856000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,1272,1272,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,109.148585,108.061464,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,97.810000,97.810000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,1033,1032,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,85.142381,85.146669,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,80.305000,80.305000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,1356,1355,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,82.750383,82.687517,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,78.589000,78.589000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,1239,1238,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,85.798344,85.789876,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,81.432000,81.432000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,1009,1008,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,131.095267,100.014936,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,93.706000,93.706000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,908,907,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,86.652441,86.686408,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,78.336000,78.336000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,1216,1215,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,80.508687,111.471635,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,74.165000,74.165000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,1237,1237,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,76.824588,76.828419,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,73.817000,73.817000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,1426,1426,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,96.800488,95.645672,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,82.384000,82.384000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,944,943,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,98.229177,95.919242,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,91.632000,91.632000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,902,901,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,99.467843,99.400463,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,94.486000,94.486000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,1179,1177,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,81.470923,81.474285,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,77.115000,77.115000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,1310,1310,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,91.124639,91.117298,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,85.637000,85.637000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,1037,1035,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,96.833269,96.839128,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,88.293000,88.293000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,962,961,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,103.316240,101.956362,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,97.330000,97.330000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,1059,1059,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,99.718372,99.726767,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,94.876000,94.876000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,940,938,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2024,9507|2024_6_miami_race,United States Miami,race,96.218998,96.003387,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2024,9507|2024_6_miami_race,United States Miami,race,90.634000,90.634000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2024,9507|2024_6_miami_race,United States Miami,race,1112,1111,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,107.671345,103.638020,mismatch,medium,tolerance=0.25,review
+lap_timing_quality,best_lap_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,82.167000,82.167000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,928,927,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,98.510360,98.502539,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,95.069000,95.069000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,1066,1065,match,low,tolerance=2,either
+lap_timing_quality,avg_lap_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,93.903137,93.895003,match,low,tolerance=0.25,either
+lap_timing_quality,best_lap_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,90.965000,90.965000,match,low,tolerance=0.25,either
+lap_timing_quality,lap_count_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,1059,1059,match,low,tolerance=2,either
+pit_and_stint_quality,pit_count_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,0,65,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,85,85,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,63,63,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,83,83,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,0,24,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,43,43,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,0,52,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,70,70,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,37,38,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,57,57,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,67,70,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,87,87,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,33,34,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,53,53,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,36,39,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,56,56,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,25,26,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,45,45,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,43,48,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,63,63,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,38,42,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,58,58,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,0,38,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,57,57,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,101,102,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,121,121,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,54,55,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,73,73,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,25,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,44,44,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,25,25,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,44,44,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,43,43,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,63,63,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,37,38,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,57,57,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,24,26,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,44,44,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,36,39,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,56,56,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,31,31,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,51,51,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2023,9078|2023_5_miami_race,United States Miami,race,0,20,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2023,9078|2023_5_miami_race,United States Miami,race,40,40,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,36,37,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,55,55,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,45,46,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,65,65,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,22,24,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,42,42,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,43,43,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,63,63,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,34,35,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,58,54,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,35,36,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,54,53,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,42,45,mismatch,medium,tolerance=2,review
+pit_and_stint_quality,stint_count_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,62,62,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,40,41,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,60,60,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,40,41,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,60,60,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,27,28,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,47,47,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,30,31,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,50,50,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,54,55,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,74,74,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,21,22,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,41,41,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,23,23,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,43,43,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,26,26,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,46,46,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,60,61,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,82,80,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,19,20,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,39,39,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,23,25,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,43,43,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,42,42,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,62,62,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,28,30,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,48,48,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,45,46,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,65,65,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,23,23,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,43,43,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,39,41,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,59,59,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2024,9507|2024_6_miami_race,United States Miami,race,28,28,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2024,9507|2024_6_miami_race,United States Miami,race,48,48,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,82,82,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,106,102,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,25,26,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,45,45,match,low,tolerance=4,either
+pit_and_stint_quality,pit_count_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,21,21,match,low,tolerance=2,either
+pit_and_stint_quality,stint_count_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,41,41,match,low,tolerance=4,either
+race_progression_quality,progression_signal_availability,2023,7787|2023_3_australian_race,Australia Melbourne,race,479,995,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9118|2023_9_austrian_race,Austria Spielberg,race,532,1353,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,325,961,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,666,1055,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,620,815,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,444,1106,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9110|2023_8_canadian_race,Canada Montréal,race,346,1316,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,464,1252,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9157|2023_14_italian_race,Italy Monza,race,472,948,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9173|2023_16_japanese_race,Japan Suzuka,race,523,880,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,564,1281,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9094|2023_6_monaco_race,Monaco Monaco,race,300,1514,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,1012,1341,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9221|2023_17_qatar_race,Qatar Lusail,race,1058,1005,match,low,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",either
+race_progression_quality,progression_signal_availability,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,343,942,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,405,1084,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9102|2023_7_spanish_race,Spain Barcelona,race,705,1312,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,692,1157,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,305,970,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9213|2023_18_united_states_race,United States Austin,race,537,1014,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,628,943,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2023,9078|2023_5_miami_race,United States Miami,race,430,1138,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9488|2024_3_australian_race,Australia Melbourne,race,442,996,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9550|2024_11_austrian_race,Austria Spielberg,race,591,1405,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,359,971,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,698,1129,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,539,841,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,360,1133,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9531|2024_9_canadian_race,Canada Montréal,race,406,1270,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9673|2024_5_chinese_race,China Shanghai,race,617,1030,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,552,1355,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,308,1238,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9590|2024_16_italian_race,Italy Monza,race,482,1008,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9496|2024_4_japanese_race,Japan Suzuka,race,443,905,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,422,1213,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9523|2024_8_monaco_race,Monaco Monaco,race,127,1233,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,540,1426,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9655|2024_23_qatar_race,Qatar Lusail,race,510,939,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,229,900,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,416,1177,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9539|2024_10_spanish_race,Spain Barcelona,race,744,1310,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,508,1033,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,252,960,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9617|2024_19_united_states_race,United States Austin,race,403,1058,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,691,938,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2024,9507|2024_6_miami_race,United States Miami,race,403,1110,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2025,9693|2025_1_australian_race,Australia Melbourne,race,335,921,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2025,9998|2025_2_chinese_race,China Shanghai,race,461,1065,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+race_progression_quality,progression_signal_availability,2025,10006|2025_3_japanese_race,Japan Suzuka,race,281,1059,mismatch,medium,"OpenF1 uses position_history rows, FastF1 uses laps.position rows",review
+result_finishing_order_quality,result_count_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2023,9078|2023_5_miami_race,United States Miami,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,0,19,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2024,9507|2024_6_miami_race,United States Miami,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,0,20,mismatch,medium,tolerance=2,review
+result_finishing_order_quality,result_count_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,0,20,mismatch,medium,tolerance=2,review
+sector_timing_quality,best_s1_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,27.834000,27.834000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,17.589000,17.589000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,34.302000,34.302000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,16.835000,16.835000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,29.896000,29.896000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,20.076000,20.076000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,36.397000,36.397000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,41.715000,41.715000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,24.929000,24.929000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,30.069000,30.069000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,40.533000,40.533000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,23.280000,23.280000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,31.249000,31.249000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,46.470000,46.470000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,29.290000,29.290000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,18.840000,18.840000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,36.731000,36.731000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,16.913000,16.913000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,20.627000,20.627000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,23.762000,23.762000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,30.086000,30.086000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,29.265000,29.265000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,28.662000,28.662000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,22.577000,22.577000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,27.731000,27.731000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,29.130000,29.130000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,27.838000,27.838000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,33.720000,33.720000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,42.118000,42.118000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,18.345000,18.345000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,28.441000,28.441000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,31.596000,31.596000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,21.057000,21.057000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,19.730000,19.730000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,35.628000,35.628000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,20.059000,20.059000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,25.159000,25.159000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,25.814000,25.814000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,22.095000,22.095000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,30.765000,30.765000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,28.657000,28.657000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,24.729000,24.729000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,33.543000,33.543000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,29.029000,29.029000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,29.244000,29.244000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,28.032000,28.032000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,40.658000,40.658000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,26.904000,26.904000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,22.514000,22.514000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,30.589000,30.589000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,22.717000,22.717000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,17.505000,17.505000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,37.427000,37.427000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,31.774000,31.774000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,28.668000,28.668000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,36.344000,36.344000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,24.844000,24.844000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,26.546000,26.546000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,39.573000,39.573000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,32.020000,32.020000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,27.135000,27.135000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,31.711000,31.711000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,35.851000,35.851000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2023,9078|2023_5_miami_race,United States Miami,race,30.233000,30.233000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2023,9078|2023_5_miami_race,United States Miami,race,33.844000,33.844000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2023,9078|2023_5_miami_race,United States Miami,race,25.326000,25.326000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,27.633000,27.633000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,17.488000,17.488000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,34.197000,34.197000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,16.897000,16.897000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,30.127000,30.127000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,20.298000,20.298000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,37.530000,37.530000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,42.537000,42.537000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,24.693000,24.693000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,29.741000,29.741000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,39.916000,39.916000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,22.951000,22.951000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,30.359000,30.359000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,45.309000,45.309000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,28.419000,28.419000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,20.546000,20.546000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,42.236000,42.236000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,17.690000,17.690000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,21.061000,21.061000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,23.671000,23.671000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,29.890000,29.890000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,26.034000,26.034000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,29.306000,29.306000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,42.398000,42.398000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,29.034000,29.034000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,28.360000,28.360000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,22.577000,22.577000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,24.926000,24.926000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,27.092000,27.092000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,26.360000,26.360000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,26.877000,26.877000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,27.439000,27.439000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,26.804000,26.804000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,33.310000,33.310000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,41.851000,41.851000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,18.161000,18.161000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,27.884000,27.884000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,30.313000,30.313000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,20.139000,20.139000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,19.343000,19.343000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,34.842000,34.842000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,19.700000,19.700000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,24.871000,24.871000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,26.104000,26.104000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,22.023000,22.023000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,30.454000,30.454000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,27.885000,27.885000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,23.795000,23.795000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,33.575000,33.575000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,28.668000,28.668000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,28.873000,28.873000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,28.091000,28.091000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,39.948000,39.948000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,26.447000,26.447000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,22.564000,22.564000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,31.195000,31.195000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,23.246000,23.246000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,17.257000,17.257000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,37.109000,37.109000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,31.271000,31.271000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,28.550000,28.550000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,35.591000,35.591000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,23.979000,23.979000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,26.007000,26.007000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,38.874000,38.874000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,32.007000,32.007000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,26.777000,26.777000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,31.481000,31.481000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,35.779000,35.779000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2024,9507|2024_6_miami_race,United States Miami,race,30.309000,30.309000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2024,9507|2024_6_miami_race,United States Miami,race,34.425000,34.425000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2024,9507|2024_6_miami_race,United States Miami,race,25.341000,25.341000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,28.553000,28.553000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,17.831000,17.831000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,34.890000,34.890000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,25.334000,25.334000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,28.437000,28.437000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,40.993000,40.993000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s1_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,31.235000,31.235000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s2_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,41.404000,41.404000,match,low,tolerance=0.15,either
+sector_timing_quality,best_s3_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,17.700000,17.700000,match,low,tolerance=0.15,either
+session_coverage,session_presence,2023,7787|2023_3_australian_race,Australia Melbourne,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9118|2023_9_austrian_race,Austria Spielberg,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9110|2023_8_canadian_race,Canada Montréal,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9086,Italy Imola,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2023,9157|2023_14_italian_race,Italy Monza,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9173|2023_16_japanese_race,Japan Suzuka,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9094|2023_6_monaco_race,Monaco Monaco,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9221|2023_17_qatar_race,Qatar Lusail,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9102|2023_7_spanish_race,Spain Barcelona,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,present,present,match,low,mapped session pair; score=4,either
+session_coverage,session_presence,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,present,present,match,low,mapped session pair; score=4,either
+session_coverage,session_presence,2023,9213|2023_18_united_states_race,United States Austin,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2023,9078|2023_5_miami_race,United States Miami,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9488|2024_3_australian_race,Australia Melbourne,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9550|2024_11_austrian_race,Austria Spielberg,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9531|2024_9_canadian_race,Canada Montréal,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9673|2024_5_chinese_race,China Shanghai,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9590|2024_16_italian_race,Italy Monza,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9496|2024_4_japanese_race,Japan Suzuka,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9523|2024_8_monaco_race,Monaco Monaco,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9655|2024_23_qatar_race,Qatar Lusail,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9539|2024_10_spanish_race,Spain Barcelona,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2024,9617|2024_19_united_states_race,United States Austin,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2024,9507|2024_6_miami_race,United States Miami,race,present,present,match,low,mapped session pair; score=7,either
+session_coverage,session_presence,2025,9693|2025_1_australian_race,Australia Melbourne,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2025,9955,Austria Spielberg,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9904,Azerbaijan Baku,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,10014,Bahrain Sakhir,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9939,Belgium Spa-Francorchamps,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9869,Brazil São Paulo,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9963,Canada Montréal,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9998|2025_2_chinese_race,China Shanghai,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2025,9928,Hungary Budapest,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9987,Italy Imola,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9912,Italy Monza,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,10006|2025_3_japanese_race,Japan Suzuka,race,present,present,match,low,mapped session pair; score=6,either
+session_coverage,session_presence,2025,9877,Mexico Mexico City,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9979,Monaco Monaco,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9920,Netherlands Zandvoort,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9850,Qatar Lusail,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,10022,Saudi Arabia Jeddah,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9896,Singapore Marina Bay,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9971,Spain Barcelona,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9839,United Arab Emirates Yas Island,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9947,United Kingdom Silverstone,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9888,United States Austin,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,9858,United States Las Vegas,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_coverage,session_presence,2025,10033,United States Miami Gardens,Race,present,missing,missing_in_fastf1,high,open session has no mapped fastf1 session,openf1
+session_naming_quality,event_name_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,Australia Melbourne,Australian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,Austria Spielberg,Austrian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,Azerbaijan Baku,Azerbaijan Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,Bahrain Sakhir,Bahrain Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,Belgium Spa-Francorchamps,Belgian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,Brazil São Paulo,São Paulo Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,Canada Montréal,Canadian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,Hungary Budapest,Hungarian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,Italy Monza,Italian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,Japan Suzuka,Japanese Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,Mexico Mexico City,Mexico City Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,Monaco Monaco,Monaco Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,Netherlands Zandvoort,Dutch Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,Qatar Lusail,Qatar Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,Saudi Arabia Jeddah,Saudi Arabian Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,Singapore Marina Bay,Singapore Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,Spain Barcelona,Spanish Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,United Arab Emirates Yas Island,Abu Dhabi Grand Prix,mismatch,medium,mapping_score=4,review
+session_naming_quality,event_name_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,United Kingdom Silverstone,British Grand Prix,mismatch,medium,mapping_score=4,review
+session_naming_quality,event_name_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,United States Austin,United States Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,United States Las Vegas,Las Vegas Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2023,9078|2023_5_miami_race,United States Miami,race,United States Miami,Miami Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,Australia Melbourne,Australian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,Austria Spielberg,Austrian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,Azerbaijan Baku,Azerbaijan Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,Bahrain Sakhir,Bahrain Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,Belgium Spa-Francorchamps,Belgian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,Brazil São Paulo,São Paulo Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,Canada Montréal,Canadian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,China Shanghai,Chinese Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,Hungary Budapest,Hungarian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,Italy Imola,Emilia Romagna Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,Italy Monza,Italian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,Japan Suzuka,Japanese Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,Mexico Mexico City,Mexico City Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,Monaco Monaco,Monaco Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,Netherlands Zandvoort,Dutch Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,Qatar Lusail,Qatar Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,Saudi Arabia Jeddah,Saudi Arabian Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,Singapore Marina Bay,Singapore Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,Spain Barcelona,Spanish Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,United Arab Emirates Yas Island,Abu Dhabi Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,United Kingdom Silverstone,British Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,United States Austin,United States Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,United States Las Vegas,Las Vegas Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2024,9507|2024_6_miami_race,United States Miami,race,United States Miami,Miami Grand Prix,mismatch,medium,mapping_score=7,review
+session_naming_quality,event_name_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,Australia Melbourne,Australian Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,China Shanghai,Chinese Grand Prix,mismatch,medium,mapping_score=6,review
+session_naming_quality,event_name_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,Japan Suzuka,Japanese Grand Prix,mismatch,medium,mapping_score=6,review
+starting_grid_quality,grid_count_alignment,2023,7787|2023_3_australian_race,Australia Melbourne,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9118|2023_9_austrian_race,Austria Spielberg,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9110|2023_8_canadian_race,Canada Montréal,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9157|2023_14_italian_race,Italy Monza,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9173|2023_16_japanese_race,Japan Suzuka,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9094|2023_6_monaco_race,Monaco Monaco,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9221|2023_17_qatar_race,Qatar Lusail,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,0,19,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9102|2023_7_spanish_race,Spain Barcelona,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9213|2023_18_united_states_race,United States Austin,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2023,9078|2023_5_miami_race,United States Miami,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9488|2024_3_australian_race,Australia Melbourne,race,0,19,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9550|2024_11_austrian_race,Austria Spielberg,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9531|2024_9_canadian_race,Canada Montréal,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9673|2024_5_chinese_race,China Shanghai,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9590|2024_16_italian_race,Italy Monza,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9496|2024_4_japanese_race,Japan Suzuka,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9523|2024_8_monaco_race,Monaco Monaco,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9655|2024_23_qatar_race,Qatar Lusail,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9539|2024_10_spanish_race,Spain Barcelona,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9617|2024_19_united_states_race,United States Austin,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2024,9507|2024_6_miami_race,United States Miami,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2025,9693|2025_1_australian_race,Australia Melbourne,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2025,9998|2025_2_chinese_race,China Shanghai,race,0,20,mismatch,medium,tolerance=2,review
+starting_grid_quality,grid_count_alignment,2025,10006|2025_3_japanese_race,Japan Suzuka,race,0,20,mismatch,medium,tolerance=2,review
+strategy_analysis_usefulness,strategy_signal_presence,2023,7787|2023_3_australian_race,Australia Melbourne,race,0,1,mismatch,medium,1 = lap + pit + stint data present,review
+strategy_analysis_usefulness,strategy_signal_presence,2023,9118|2023_9_austrian_race,Austria Spielberg,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,0,1,mismatch,medium,1 = lap + pit + stint data present,review
+strategy_analysis_usefulness,strategy_signal_presence,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,0,1,mismatch,medium,1 = lap + pit + stint data present,review
+strategy_analysis_usefulness,strategy_signal_presence,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9110|2023_8_canadian_race,Canada Montréal,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9157|2023_14_italian_race,Italy Monza,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9173|2023_16_japanese_race,Japan Suzuka,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9094|2023_6_monaco_race,Monaco Monaco,race,0,1,mismatch,medium,1 = lap + pit + stint data present,review
+strategy_analysis_usefulness,strategy_signal_presence,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9221|2023_17_qatar_race,Qatar Lusail,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,0,1,mismatch,medium,1 = lap + pit + stint data present,review
+strategy_analysis_usefulness,strategy_signal_presence,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9102|2023_7_spanish_race,Spain Barcelona,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9213|2023_18_united_states_race,United States Austin,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2023,9078|2023_5_miami_race,United States Miami,race,0,1,mismatch,medium,1 = lap + pit + stint data present,review
+strategy_analysis_usefulness,strategy_signal_presence,2024,9488|2024_3_australian_race,Australia Melbourne,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9550|2024_11_austrian_race,Austria Spielberg,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9531|2024_9_canadian_race,Canada Montréal,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9673|2024_5_chinese_race,China Shanghai,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9590|2024_16_italian_race,Italy Monza,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9496|2024_4_japanese_race,Japan Suzuka,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9523|2024_8_monaco_race,Monaco Monaco,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9655|2024_23_qatar_race,Qatar Lusail,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9539|2024_10_spanish_race,Spain Barcelona,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9617|2024_19_united_states_race,United States Austin,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2024,9507|2024_6_miami_race,United States Miami,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2025,9693|2025_1_australian_race,Australia Melbourne,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2025,9998|2025_2_chinese_race,China Shanghai,race,1,1,match,low,1 = lap + pit + stint data present,either
+strategy_analysis_usefulness,strategy_signal_presence,2025,10006|2025_3_japanese_race,Japan Suzuka,race,1,1,match,low,1 = lap + pit + stint data present,either
+telemetry_usefulness,telemetry_row_availability,2023,7787|2023_3_australian_race,Australia Melbourne,race,981460,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9118|2023_9_austrian_race,Austria Spielberg,race,680140,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,719980,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,720340,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,660200,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,826940,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9110|2023_8_canadian_race,Canada Montréal,race,728540,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,736220,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9157|2023_14_italian_race,Italy Monza,race,719620,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9173|2023_16_japanese_race,Japan Suzuka,race,705660,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,855840,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9094|2023_6_monaco_race,Monaco Monaco,race,796900,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,935600,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9221|2023_17_qatar_race,Qatar Lusail,race,702940,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,666560,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,742254,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9102|2023_7_spanish_race,Spain Barcelona,race,699400,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,698960,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,670080,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9213|2023_18_united_states_race,United States Austin,race,727440,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,488120,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2023,9078|2023_5_miami_race,United States Miami,race,699440,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9488|2024_3_australian_race,Australia Melbourne,race,612142,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9550|2024_11_austrian_race,Austria Spielberg,race,642794,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,665800,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,695500,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,607120,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,900420,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9531|2024_9_canadian_race,Canada Montréal,race,504980,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9673|2024_5_chinese_race,China Shanghai,race,735440,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,692620,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,647340,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9590|2024_16_italian_race,Italy Monza,race,584360,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9496|2024_4_japanese_race,Japan Suzuka,race,820640,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,718202,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9523|2024_8_monaco_race,Monaco Monaco,race,906260,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,681600,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9655|2024_23_qatar_race,Qatar Lusail,race,687300,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,654224,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,725995,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9539|2024_10_spanish_race,Spain Barcelona,race,681660,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,671582,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,663619,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9617|2024_19_united_states_race,United States Austin,race,709724,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,646160,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2024,9507|2024_6_miami_race,United States Miami,race,679060,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2025,9693|2025_1_australian_race,Australia Melbourne,race,767300,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2025,9998|2025_2_chinese_race,China Shanghai,race,669540,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+telemetry_usefulness,telemetry_row_availability,2025,10006|2025_3_japanese_race,Japan Suzuka,race,625860,0,mismatch,medium,raw telemetry rows (large differences are expected),review
+weather_coverage,weather_row_availability,2023,7787|2023_3_australian_race,Australia Melbourne,race,222,222,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9118|2023_9_austrian_race,Austria Spielberg,race,153,153,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9070|2023_4_azerbaijan_race,Azerbaijan Baku,race,160,160,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,7953|2023_1_bahrain_race,Bahrain Sakhir,race,161,161,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9141|2023_12_belgian_race,Belgium Spa-Francorchamps,race,150,150,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9205|2023_20_s_o_paulo_race,Brazil São Paulo,race,183,183,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9110|2023_8_canadian_race,Canada Montréal,race,162,162,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9133|2023_11_hungarian_race,Hungary Budapest,race,164,164,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9157|2023_14_italian_race,Italy Monza,race,156,156,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9173|2023_16_japanese_race,Japan Suzuka,race,158,158,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9181|2023_19_mexico_city_race,Mexico Mexico City,race,190,190,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9094|2023_6_monaco_race,Monaco Monaco,race,176,176,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9149|2023_13_dutch_race,Netherlands Zandvoort,race,209,209,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9221|2023_17_qatar_race,Qatar Lusail,race,159,159,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,7779|2023_2_saudi_arabian_race,Saudi Arabia Jeddah,race,148,148,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9165|2023_15_singapore_race,Singapore Marina Bay,race,176,176,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9102|2023_7_spanish_race,Spain Barcelona,race,154,154,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9197|2023_22_abu_dhabi_race,United Arab Emirates Yas Island,race,156,156,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9126|2023_10_british_race,United Kingdom Silverstone,race,151,151,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9213|2023_18_united_states_race,United States Austin,race,168,168,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9189|2023_21_las_vegas_race,United States Las Vegas,race,108,108,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2023,9078|2023_5_miami_race,United States Miami,race,155,155,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9488|2024_3_australian_race,Australia Melbourne,race,144,144,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9550|2024_11_austrian_race,Austria Spielberg,race,143,143,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9598|2024_17_azerbaijan_race,Azerbaijan Baku,race,152,152,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9472|2024_1_bahrain_race,Bahrain Sakhir,race,157,157,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9574|2024_14_belgian_race,Belgium Spa-Francorchamps,race,137,137,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9636|2024_21_s_o_paulo_race,Brazil São Paulo,race,201,201,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9531|2024_9_canadian_race,Canada Montréal,race,113,113,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9673|2024_5_chinese_race,China Shanghai,race,165,165,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9566|2024_13_hungarian_race,Hungary Budapest,race,155,155,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9515|2024_7_emilia_romagna_race,Italy Imola,race,143,143,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9590|2024_16_italian_race,Italy Monza,race,133,133,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9496|2024_4_japanese_race,Japan Suzuka,race,181,181,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9625|2024_20_mexico_city_race,Mexico Mexico City,race,159,159,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9523|2024_8_monaco_race,Monaco Monaco,race,200,200,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9582|2024_15_dutch_race,Netherlands Zandvoort,race,153,153,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9655|2024_23_qatar_race,Qatar Lusail,race,151,151,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9480|2024_2_saudi_arabian_race,Saudi Arabia Jeddah,race,146,146,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9606|2024_18_singapore_race,Singapore Marina Bay,race,160,160,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9539|2024_10_spanish_race,Spain Barcelona,race,154,154,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9662|2024_24_abu_dhabi_race,United Arab Emirates Yas Island,race,148,148,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9558|2024_12_british_race,United Kingdom Silverstone,race,147,147,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9617|2024_19_united_states_race,United States Austin,race,155,155,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9644|2024_22_las_vegas_race,United States Las Vegas,race,143,143,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2024,9507|2024_6_miami_race,United States Miami,race,150,150,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2025,9693|2025_1_australian_race,Australia Melbourne,race,178,178,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2025,9998|2025_2_chinese_race,China Shanghai,race,154,154,match,low,weather sample count,either
+weather_coverage,weather_row_availability,2025,10006|2025_3_japanese_race,Japan Suzuka,race,140,140,match,low,weather sample count,either

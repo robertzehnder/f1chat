@@ -1,0 +1,26 @@
+{
+  "name": "grading-synthesis-fixture",
+  "questions": [
+    {
+      "question_id": 301,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "required_answer_checks": ["structured_rows_summarized"],
+      "semantic_enforcement": "off"
+    },
+    {
+      "question_id": 302,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "required_answer_checks": ["evidence_required_for_strategy_claim"],
+      "semantic_enforcement": "off"
+    },
+    {
+      "question_id": 303,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "required_answer_checks": ["stop_count_consistent_with_stints"],
+      "semantic_enforcement": "off"
+    }
+  ]
+}

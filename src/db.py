@@ -1,0 +1,59 @@
+"""Database utilities for OpenF1 local Postgres project."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import psycopg2
+from dotenv import load_dotenv
+from psycopg2.extensions import connection
+
+
+def load_env() -> None:
+    load_dotenv()
+
+
+def get_db_dsn() -> str:
+    load_env()
+    host = os.getenv("DB_HOST", "127.0.0.1")
+    port = os.getenv("DB_PORT", "5432")
+    dbname = os.getenv("DB_NAME", "openf1")
+    user = os.getenv("DB_USER", "openf1")
+    password = os.getenv("DB_PASSWORD", "openf1_local_dev")
+    return f"host={host} port={port} dbname={dbname} user={user} password={password}"
+
+
+def get_connection() -> connection:
+    conn = psycopg2.connect(get_db_dsn())
+    conn.autocommit = False
+    return conn
+
+
+def apply_sql_files(sql_dir: str | Path) -> None:
+    sql_dir = Path(sql_dir)
+    files = sorted(p for p in sql_dir.glob("*.sql") if p.is_file())
+    if not files:
+        raise FileNotFoundError(f"No SQL files found in {sql_dir}")
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            for sql_file in files:
+                print(f"Applying {sql_file}")
+                cur.execute(sql_file.read_text(encoding="utf-8"))
+        conn.commit()
+
+
+def fetch_table_columns(conn: connection, schema: str, table: str) -> list[str]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = %s
+              AND table_name = %s
+            ORDER BY ordinal_position
+            """,
+            (schema, table),
+        )
+        return [r[0] for r in cur.fetchall()]

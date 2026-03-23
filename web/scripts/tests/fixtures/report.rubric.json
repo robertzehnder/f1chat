@@ -1,0 +1,34 @@
+{
+  "name": "grading-report-shape-fixture",
+  "questions": [
+    {
+      "question_id": 401,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "semantic_enforcement": "off"
+    },
+    {
+      "question_id": 402,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "ideal_tables": ["core.strategy_summary"],
+      "require_all_ideal_tables": true,
+      "semantic_enforcement": "strict",
+      "critical_checks": ["all_ideal_tables_used", "raw_table_regression"]
+    },
+    {
+      "question_id": 403,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "required_answer_checks": ["structured_rows_summarized"],
+      "semantic_enforcement": "off"
+    },
+    {
+      "question_id": 404,
+      "should_be_answerable": true,
+      "needs_clarification": false,
+      "ideal_tables": ["core.driver_session_summary"],
+      "semantic_enforcement": "strict"
+    }
+  ]
+}

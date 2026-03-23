@@ -1,0 +1,76 @@
+[
+  {
+    "id": 401,
+    "question": "Who drove in the Abu Dhabi 2025 race?",
+    "answer": "I could not confidently resolve the session. Please specify the race and session type.",
+    "sql": "-- query not executed (clarification required)",
+    "rowCount": 0,
+    "previewRows": [],
+    "warnings": [],
+    "generationSource": "runtime_clarification",
+    "adequacyGrade": "B"
+  },
+  {
+    "id": 402,
+    "question": "Between Max Verstappen and Charles Leclerc in the Abu Dhabi 2025 race session, who had the shorter stationary pit stop?",
+    "answer": "Charles Leclerc had the shorter stationary pit stop at 20.902 seconds.",
+    "sql": "SELECT p.driver_number, MIN(p.pit_duration) AS best_pit_duration FROM raw.pit p WHERE p.session_key = 9839 AND p.driver_number IN (1, 16) GROUP BY p.driver_number ORDER BY best_pit_duration ASC",
+    "rowCount": 2,
+    "previewRows": [
+      {
+        "driver_number": 16,
+        "best_pit_duration": 20.902
+      },
+      {
+        "driver_number": 1,
+        "best_pit_duration": 21.703
+      }
+    ],
+    "warnings": [],
+    "generationSource": "deterministic_template",
+    "adequacyGrade": "B"
+  },
+  {
+    "id": 403,
+    "question": "In the Abu Dhabi 2025 race session, what were the top 10 fastest laps overall?",
+    "answer": "I found 10 matching row(s). Key results:\n1. driver_number=16, full_name=Charles LECLERC, lap_number=45, lap_duration=86.725",
+    "sql": "SELECT l.driver_number, l.lap_number, l.lap_duration FROM core.laps_enriched l WHERE l.session_key = 9839 ORDER BY l.lap_duration ASC LIMIT 10",
+    "rowCount": 10,
+    "previewRows": [
+      {
+        "driver_number": 16,
+        "lap_number": 45,
+        "lap_duration": 86.725
+      }
+    ],
+    "warnings": [],
+    "generationSource": "deterministic_template",
+    "adequacyGrade": "B"
+  },
+  {
+    "id": 404,
+    "question": "Compare Max Verstappen and Charles Leclerc on lap pace in the Abu Dhabi 2025 race session.",
+    "answer": "Leclerc had the faster best lap, while Verstappen was slightly stronger on consistency over the full race distance.",
+    "sql": "SELECT driver_number, full_name, best_lap, avg_lap, lap_stddev FROM core.driver_session_summary WHERE session_key = 9839 AND driver_number IN (1, 16)",
+    "rowCount": 2,
+    "previewRows": [
+      {
+        "driver_number": 1,
+        "full_name": "Max VERSTAPPEN",
+        "best_lap": 87.625,
+        "avg_lap": 88.705,
+        "lap_stddev": 0.868
+      },
+      {
+        "driver_number": 16,
+        "full_name": "Charles LECLERC",
+        "best_lap": 86.725,
+        "avg_lap": 88.714,
+        "lap_stddev": 1.353
+      }
+    ],
+    "warnings": [],
+    "generationSource": "deterministic_template",
+    "adequacyGrade": "B"
+  }
+]

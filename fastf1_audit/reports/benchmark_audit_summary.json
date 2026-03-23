@@ -1,0 +1,52 @@
+[
+  {
+    "question_family":"driver_roster_and_metadata",
+    "question_type":"metadata_lookup",
+    "benchmark_count":7,
+    "openf1_above_c_rate":1.0,
+    "related_themes":"driver_roster_coverage;driver_team_mapping;session_coverage",
+    "theme_winner":"openf1",
+    "likely_issue_driver":"healthy_or_minor",
+    "recommendation":"Keep current approach with periodic audit checks."
+  },
+  {
+    "question_family":"head_to_head_pace_and_progression",
+    "question_type":"comparison_analysis",
+    "benchmark_count":5,
+    "openf1_above_c_rate":1.0,
+    "related_themes":"lap_timing_quality;sector_timing_quality;race_progression_quality;strategy_analysis_usefulness",
+    "theme_winner":"tie",
+    "likely_issue_driver":"healthy_or_minor",
+    "recommendation":"Keep current approach with periodic audit checks."
+  },
+  {
+    "question_family":"lap_pit_result_aggregates",
+    "question_type":"aggregate_analysis",
+    "benchmark_count":26,
+    "openf1_above_c_rate":1.0,
+    "related_themes":"lap_timing_quality;sector_timing_quality;pit_and_stint_quality;result_finishing_order_quality;starting_grid_quality;strategy_analysis_usefulness",
+    "theme_winner":"tie",
+    "likely_issue_driver":"healthy_or_minor",
+    "recommendation":"Keep current approach with periodic audit checks."
+  },
+  {
+    "question_family":"session_resolution_and_metadata",
+    "question_type":"entity_lookup",
+    "benchmark_count":11,
+    "openf1_above_c_rate":0.9091,
+    "related_themes":"session_coverage;session_naming_quality",
+    "theme_winner":"openf1",
+    "likely_issue_driver":"healthy_or_minor",
+    "recommendation":"Keep current approach with periodic audit checks."
+  },
+  {
+    "question_family":"telemetry_and_overlays",
+    "question_type":"telemetry_analysis",
+    "benchmark_count":1,
+    "openf1_above_c_rate":1.0,
+    "related_themes":"telemetry_usefulness;race_progression_quality;weather_coverage",
+    "theme_winner":"tie",
+    "likely_issue_driver":"healthy_or_minor",
+    "recommendation":"Keep current approach with periodic audit checks."
+  }
+]

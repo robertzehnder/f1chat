@@ -1,0 +1,22 @@
+[
+  {
+    "id": 101,
+    "question": "Which drivers participated in a given session?",
+    "answer": "I could not confidently resolve the session. Please specify the race and session type (for example: Abu Dhabi 2025 Race).",
+    "sql": "-- query not executed (clarification required)",
+    "rowCount": 0,
+    "previewRows": [],
+    "warnings": [],
+    "generationSource": "runtime_clarification"
+  },
+  {
+    "id": 102,
+    "question": "Who drove in the Abu Dhabi 2025 race?",
+    "answer": "I could not confidently resolve the session. Please specify the race and session type (for example: Abu Dhabi 2025 Race).",
+    "sql": "-- query not executed (clarification required)",
+    "rowCount": 0,
+    "previewRows": [],
+    "warnings": [],
+    "generationSource": "runtime_clarification"
+  }
+]

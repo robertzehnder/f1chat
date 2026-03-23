@@ -1,0 +1,79 @@
+[
+  {
+    "id": 301,
+    "question": "In the Abu Dhabi 2025 race session, what were the top 10 fastest laps overall?",
+    "answer": "I found 10 matching row(s). Key results:\n1. driver_number=16, full_name=Charles LECLERC, lap_number=45, lap_duration=86.725\n2. driver_number=81, full_name=Oscar PIASTRI, lap_number=44, lap_duration=86.765",
+    "sql": "SELECT l.driver_number, d.full_name, l.lap_number, l.lap_duration FROM core.laps_enriched l JOIN core.session_drivers d ON d.session_key = l.session_key AND d.driver_number = l.driver_number WHERE l.session_key = 9839 ORDER BY l.lap_duration ASC LIMIT 10",
+    "rowCount": 10,
+    "previewRows": [
+      {
+        "driver_number": 16,
+        "full_name": "Charles LECLERC",
+        "lap_number": 45,
+        "lap_duration": 86.725
+      },
+      {
+        "driver_number": 81,
+        "full_name": "Oscar PIASTRI",
+        "lap_number": 44,
+        "lap_duration": 86.765
+      }
+    ],
+    "warnings": [],
+    "generationSource": "deterministic_template",
+    "sessionKey": 9839
+  },
+  {
+    "id": 302,
+    "question": "In the Abu Dhabi 2025 race session, was there evidence that Max Verstappen or Charles Leclerc benefited from an undercut or overcut?",
+    "answer": "Max Verstappen clearly benefited from an undercut and gained track position because of pit timing.",
+    "sql": "SELECT driver_number, AVG(lap_duration) AS avg_lap FROM core.laps_enriched WHERE session_key = 9839 AND driver_number IN (1, 16) GROUP BY driver_number",
+    "rowCount": 2,
+    "previewRows": [
+      {
+        "driver_number": 1,
+        "avg_lap": 88.705
+      },
+      {
+        "driver_number": 16,
+        "avg_lap": 88.714
+      }
+    ],
+    "warnings": [],
+    "generationSource": "deterministic_template",
+    "sessionKey": 9839
+  },
+  {
+    "id": 303,
+    "question": "In the Abu Dhabi 2025 race session, what were the stint lengths for Max Verstappen and Charles Leclerc?",
+    "answer": "Max Verstappen ran two stints with a two-stop strategy, while Charles Leclerc ran three stints with one stop.",
+    "sql": "SELECT driver_number, driver_name, stint_number, lap_start, lap_end FROM core.stint_summary WHERE session_key = 9839 AND driver_number IN (1, 16) ORDER BY driver_number, stint_number",
+    "rowCount": 5,
+    "previewRows": [
+      {
+        "driver_number": 1,
+        "driver_name": "Max VERSTAPPEN",
+        "stint_number": 1,
+        "lap_start": 1,
+        "lap_end": 23
+      },
+      {
+        "driver_number": 1,
+        "driver_name": "Max VERSTAPPEN",
+        "stint_number": 2,
+        "lap_start": 24,
+        "lap_end": 58
+      },
+      {
+        "driver_number": 16,
+        "driver_name": "Charles LECLERC",
+        "stint_number": 1,
+        "lap_start": 1,
+        "lap_end": 16
+      }
+    ],
+    "warnings": [],
+    "generationSource": "deterministic_template",
+    "sessionKey": 9839
+  }
+]

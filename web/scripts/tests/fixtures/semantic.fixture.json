@@ -1,0 +1,24 @@
+[
+  {
+    "id": 201,
+    "question": "Between Max Verstappen and Charles Leclerc in the Abu Dhabi 2025 race session, who had the shorter stationary pit stop?",
+    "answer": "Charles Leclerc had the shorter stationary pit stop at 20.902 seconds, compared with 21.703 seconds for Max Verstappen.",
+    "sql": "SELECT p.driver_number, d.full_name, MIN(p.pit_duration) AS best_pit_duration FROM raw.pit p JOIN raw.drivers d ON d.session_key = p.session_key AND d.driver_number = p.driver_number WHERE p.session_key = 9839 AND p.driver_number IN (1, 16) GROUP BY p.driver_number, d.full_name ORDER BY best_pit_duration ASC",
+    "rowCount": 2,
+    "previewRows": [
+      {
+        "driver_number": 16,
+        "full_name": "Charles LECLERC",
+        "best_pit_duration": 20.902
+      },
+      {
+        "driver_number": 1,
+        "full_name": "Max VERSTAPPEN",
+        "best_pit_duration": 21.703
+      }
+    ],
+    "warnings": [],
+    "generationSource": "deterministic_template",
+    "sessionKey": 9839
+  }
+]

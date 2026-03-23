@@ -1,0 +1,106 @@
+[
+  {
+    "theme":"driver_roster_coverage",
+    "openf1_score":48.0,
+    "fastf1_score":48.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=1; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"driver_team_mapping",
+    "openf1_score":48.0,
+    "fastf1_score":48.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=1; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"lap_timing_quality",
+    "openf1_score":116.0,
+    "fastf1_score":116.0,
+    "winner":"tie",
+    "rationale":"rows=147; mismatches=31; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"pit_and_stint_quality",
+    "openf1_score":86.0,
+    "fastf1_score":86.0,
+    "winner":"tie",
+    "rationale":"rows=98; mismatches=12; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"race_progression_quality",
+    "openf1_score":1.0,
+    "fastf1_score":1.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=48; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"result_finishing_order_quality",
+    "openf1_score":0.0,
+    "fastf1_score":0.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"sector_timing_quality",
+    "openf1_score":147.0,
+    "fastf1_score":147.0,
+    "winner":"tie",
+    "rationale":"rows=147; mismatches=0; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"session_coverage",
+    "openf1_score":71.0,
+    "fastf1_score":49.0,
+    "winner":"openf1",
+    "rationale":"rows=71; mismatches=0; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"Keep OpenF1 primary for this theme; use FastF1 for spot-validation."
+  },
+  {
+    "theme":"session_naming_quality",
+    "openf1_score":0.0,
+    "fastf1_score":0.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"starting_grid_quality",
+    "openf1_score":0.0,
+    "fastf1_score":0.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"strategy_analysis_usefulness",
+    "openf1_score":43.0,
+    "fastf1_score":43.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=6; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"telemetry_usefulness",
+    "openf1_score":0.0,
+    "fastf1_score":0.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  },
+  {
+    "theme":"weather_coverage",
+    "openf1_score":49.0,
+    "fastf1_score":49.0,
+    "winner":"tie",
+    "rationale":"rows=49; mismatches=0; missing_openf1=0; missing_fastf1=0",
+    "recommended_action":"No clear source winner; keep OpenF1 primary and maintain comparison checks."
+  }
+]

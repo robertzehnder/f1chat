@@ -1,0 +1,14 @@
+theme,openf1_score,fastf1_score,winner,rationale,recommended_action
+driver_roster_coverage,48.0,48.0,tie,rows=49; mismatches=1; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+driver_team_mapping,48.0,48.0,tie,rows=49; mismatches=1; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+lap_timing_quality,116.0,116.0,tie,rows=147; mismatches=31; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+pit_and_stint_quality,86.0,86.0,tie,rows=98; mismatches=12; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+race_progression_quality,1.0,1.0,tie,rows=49; mismatches=48; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+result_finishing_order_quality,0.0,0.0,tie,rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+sector_timing_quality,147.0,147.0,tie,rows=147; mismatches=0; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+session_coverage,71.0,49.0,openf1,rows=71; mismatches=0; missing_openf1=0; missing_fastf1=0,Keep OpenF1 primary for this theme; use FastF1 for spot-validation.
+session_naming_quality,0.0,0.0,tie,rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+starting_grid_quality,0.0,0.0,tie,rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+strategy_analysis_usefulness,43.0,43.0,tie,rows=49; mismatches=6; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+telemetry_usefulness,0.0,0.0,tie,rows=49; mismatches=49; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.
+weather_coverage,49.0,49.0,tie,rows=49; mismatches=0; missing_openf1=0; missing_fastf1=0,No clear source winner; keep OpenF1 primary and maintain comparison checks.

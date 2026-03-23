@@ -1,0 +1,40 @@
+themes:
+  - theme: session_coverage
+    test_name: session_presence
+    severity_on_mismatch: high
+  - theme: session_naming_quality
+    test_name: event_name_alignment
+    severity_on_mismatch: medium
+  - theme: driver_roster_coverage
+    test_name: driver_count_alignment
+    severity_on_mismatch: high
+  - theme: driver_team_mapping
+    test_name: driver_team_alignment
+    severity_on_mismatch: medium
+  - theme: lap_timing_quality
+    test_name: lap_count_fastest_avg_alignment
+    severity_on_mismatch: medium
+  - theme: sector_timing_quality
+    test_name: sector_best_alignment
+    severity_on_mismatch: medium
+  - theme: pit_and_stint_quality
+    test_name: pit_and_stint_alignment
+    severity_on_mismatch: medium
+  - theme: result_finishing_order_quality
+    test_name: finish_position_alignment
+    severity_on_mismatch: high
+  - theme: starting_grid_quality
+    test_name: grid_alignment
+    severity_on_mismatch: medium
+  - theme: telemetry_usefulness
+    test_name: telemetry_availability
+    severity_on_mismatch: medium
+  - theme: weather_coverage
+    test_name: weather_availability
+    severity_on_mismatch: low
+  - theme: race_progression_quality
+    test_name: progression_signal_availability
+    severity_on_mismatch: medium
+  - theme: strategy_analysis_usefulness
+    test_name: strategy_signal_availability
+    severity_on_mismatch: medium

@@ -1,0 +1,7 @@
+use_case,preferred_source,confidence,rationale,recommended_action
+session resolution,openf1,high,"themes=session_coverage,session_naming_quality; openf1_score=71.0; fastf1_score=49.0",Keep OpenF1 as source of truth; use FastF1 only for edge-case checks.
+clean-lap logic,tie,low,"themes=lap_timing_quality,sector_timing_quality; openf1_score=263.0; fastf1_score=263.0",Maintain dual-source audit and prioritize semantic-layer normalization.
+pace comparisons,tie,low,"themes=lap_timing_quality,sector_timing_quality,race_progression_quality; openf1_score=264.0; fastf1_score=264.0",Maintain dual-source audit and prioritize semantic-layer normalization.
+pit/strategy analysis,tie,low,"themes=pit_and_stint_quality,strategy_analysis_usefulness; openf1_score=129.0; fastf1_score=129.0",Maintain dual-source audit and prioritize semantic-layer normalization.
+result/final classification,tie,low,"themes=result_finishing_order_quality,starting_grid_quality; openf1_score=0.0; fastf1_score=0.0",Maintain dual-source audit and prioritize semantic-layer normalization.
+telemetry overlays,tie,low,"themes=telemetry_usefulness,race_progression_quality,weather_coverage; openf1_score=50.0; fastf1_score=50.0",Maintain dual-source audit and prioritize semantic-layer normalization.
