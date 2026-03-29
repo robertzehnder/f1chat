@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
-import { Nav } from "@/components/Nav";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { AppChrome } from "@/components/AppChrome";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-display"
+  variable: "--font-sans"
 });
 
 const ibmPlexMono = IBM_Plex_Mono({
@@ -22,11 +22,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} ${ibmPlexMono.variable}`}>
-        <div className="app-shell">
-          <Nav />
-          <main className="main-content">{children}</main>
-        </div>
+      <body className={`${inter.variable} ${ibmPlexMono.variable}`}>
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );

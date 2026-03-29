@@ -1,5 +1,10 @@
 const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
-const DEFAULT_MAX_TOKENS = Number(process.env.ANTHROPIC_MAX_TOKENS ?? "600");
+/** Short JSON answers; keep separate from SQL generation which needs a much higher ceiling. */
+const ANSWER_MAX_TOKENS = Number(
+  process.env.ANTHROPIC_MAX_TOKENS_ANSWER ?? process.env.ANTHROPIC_MAX_TOKENS ?? "1024"
+);
+/** Large CTEs exceed 600 tokens easily; override with ANTHROPIC_MAX_TOKENS_SQL. */
+const SQL_MAX_TOKENS = Number(process.env.ANTHROPIC_MAX_TOKENS_SQL ?? "4096");
 
 type SqlGenerationInput = {
   question: string;
@@ -76,6 +81,7 @@ Rules:
 - If runtime context includes resolved IDs (such as session_key, driver_number), use those exact IDs in filters.
 - Do not rely on meeting_name alone for venue matching because it may be null/empty.
 - Prefer semantic/core contracts over raw tables for analytical questions; use raw.* only when a required semantic view is missing.
+- Put only executable SQL in "sql". Never append trace lines, notes, or text like session_pin_* inside the JSON or the query string.
 `.trim();
 }
 
@@ -110,19 +116,148 @@ Rules:
 `.trim();
 }
 
+function stripModelTraceNoise(text: string): string {
+  return text.replace(/\s*\|\s*session_pin_[a-z0-9_]+\([^)]*\)\s*$/gim, "").trim();
+}
+
+/** Remove echoed session-pin trace fragments the model sometimes appends inside the SQL string. */
+function stripSqlEchoArtifacts(sql: string): string {
+  return sql.replace(/\s*\|\s*session_pin_[a-z0-9_]+\([^)]*\)/gi, "").trimEnd();
+}
+
 function extractJsonText(text: string): string {
-  const fenced = text.match(/```json\s*([\s\S]*?)```/i);
+  let t = stripModelTraceNoise(text);
+
+  const fenced = t.match(/```json\s*([\s\S]*?)```/i);
   if (fenced?.[1]) {
     return fenced[1].trim();
   }
 
-  const firstBrace = text.indexOf("{");
-  const lastBrace = text.lastIndexOf("}");
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return text.slice(firstBrace, lastBrace + 1);
+  const openJsonFence = t.match(/```json\s*([\s\S]*)/i);
+  if (openJsonFence?.[1]) {
+    return openJsonFence[1].trim();
   }
 
-  return text.trim();
+  const fencedPlain = t.match(/```\s*([\s\S]*?)```/);
+  if (fencedPlain?.[1]?.trim().startsWith("{")) {
+    return fencedPlain[1].trim();
+  }
+
+  const firstBrace = t.indexOf("{");
+  const lastBrace = t.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return t.slice(firstBrace, lastBrace + 1);
+  }
+
+  return t.trim();
+}
+
+/**
+ * When the model hits max_tokens mid-JSON, recover the sql string value if it started.
+ */
+function recoverSqlFromTruncatedJsonPayload(payload: string): string | null {
+  const match = /"sql"\s*:\s*"/.exec(payload);
+  if (!match || match.index === undefined) {
+    return null;
+  }
+  let i = match.index + match[0].length;
+  let out = "";
+  while (i < payload.length) {
+    const c = payload[i];
+    if (c === "\\") {
+      if (i + 1 >= payload.length) {
+        break;
+      }
+      const n = payload[i + 1];
+      if (n === "n") {
+        out += "\n";
+        i += 2;
+        continue;
+      }
+      if (n === "t") {
+        out += "\t";
+        i += 2;
+        continue;
+      }
+      if (n === "r") {
+        out += "\r";
+        i += 2;
+        continue;
+      }
+      if (n === '"' || n === "\\" || n === "/") {
+        out += n;
+        i += 2;
+        continue;
+      }
+      if (n === "u" && i + 5 < payload.length) {
+        const hex = payload.slice(i + 2, i + 6);
+        if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+          out += String.fromCharCode(parseInt(hex, 16));
+          i += 6;
+          continue;
+        }
+      }
+      out += n;
+      i += 2;
+      continue;
+    }
+    if (c === '"') {
+      break;
+    }
+    out += c;
+    i += 1;
+  }
+
+  let sql = stripSqlEchoArtifacts(stripModelTraceNoise(out).trim());
+  if (sql.length < 12) {
+    return null;
+  }
+  if (!/\b(WITH|SELECT)\b/i.test(sql)) {
+    return null;
+  }
+  return sql;
+}
+
+function parseSqlJsonPayload(jsonText: string, rawText: string): { sql: string; reasoning?: string } {
+  let parsed: { sql?: string; reasoning?: string };
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    const recovered = recoverSqlFromTruncatedJsonPayload(jsonText);
+    if (recovered) {
+      return { sql: recovered, reasoning: undefined };
+    }
+    throw new Error(`Could not parse JSON from model output: ${rawText.slice(0, 4000)}`);
+  }
+
+  if (!parsed.sql || typeof parsed.sql !== "string") {
+    throw new Error("Model output did not include a valid 'sql' field.");
+  }
+  let sql = stripSqlEchoArtifacts(stripModelTraceNoise(parsed.sql).trim());
+  if (!sql) {
+    throw new Error("Model output did not include a valid 'sql' field.");
+  }
+  return {
+    sql,
+    reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined
+  };
+}
+
+function parseAnswerJsonPayload(jsonText: string, rawText: string): { answer: string; reasoning?: string } {
+  let parsed: { answer?: string; reasoning?: string };
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new Error(`Could not parse JSON from model output: ${rawText.slice(0, 4000)}`);
+  }
+
+  if (!parsed.answer || typeof parsed.answer !== "string") {
+    throw new Error("Model output did not include a valid 'answer' field.");
+  }
+  return {
+    answer: parsed.answer.trim(),
+    reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined
+  };
 }
 
 function parseAnthropicTextFromResponse(payload: unknown): string {
@@ -181,7 +316,7 @@ Return JSON only.
     },
     body: JSON.stringify({
       model,
-      max_tokens: DEFAULT_MAX_TOKENS,
+      max_tokens: SQL_MAX_TOKENS,
       temperature: 0,
       system: buildSystemPrompt(),
       messages: [
@@ -201,21 +336,11 @@ Return JSON only.
   const payload = await response.json();
   const rawText = parseAnthropicTextFromResponse(payload);
   const jsonText = extractJsonText(rawText);
-
-  let parsed: { sql?: string; reasoning?: string };
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch {
-    throw new Error(`Could not parse JSON from model output: ${rawText}`);
-  }
-
-  if (!parsed.sql || typeof parsed.sql !== "string") {
-    throw new Error("Model output did not include a valid 'sql' field.");
-  }
+  const parsed = parseSqlJsonPayload(jsonText, rawText);
 
   return {
     sql: parsed.sql,
-    reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined,
+    reasoning: parsed.reasoning,
     model,
     rawText
   };
@@ -274,7 +399,7 @@ Provide corrected SQL only in JSON format.
     },
     body: JSON.stringify({
       model,
-      max_tokens: DEFAULT_MAX_TOKENS,
+      max_tokens: SQL_MAX_TOKENS,
       temperature: 0,
       system: `${buildSystemPrompt()}\n\n${buildRepairPrompt()}`,
       messages: [
@@ -294,21 +419,11 @@ Provide corrected SQL only in JSON format.
   const payload = await response.json();
   const rawText = parseAnthropicTextFromResponse(payload);
   const jsonText = extractJsonText(rawText);
-
-  let parsed: { sql?: string; reasoning?: string };
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch {
-    throw new Error(`Could not parse JSON from model output: ${rawText}`);
-  }
-
-  if (!parsed.sql || typeof parsed.sql !== "string") {
-    throw new Error("Model repair output did not include a valid 'sql' field.");
-  }
+  const parsed = parseSqlJsonPayload(jsonText, rawText);
 
   return {
     sql: parsed.sql,
-    reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined,
+    reasoning: parsed.reasoning,
     model,
     rawText
   };
@@ -353,7 +468,7 @@ Return JSON only.
     },
     body: JSON.stringify({
       model,
-      max_tokens: DEFAULT_MAX_TOKENS,
+      max_tokens: ANSWER_MAX_TOKENS,
       temperature: 0,
       system: buildAnswerSynthesisPrompt(),
       messages: [
@@ -373,21 +488,11 @@ Return JSON only.
   const payload = await response.json();
   const rawText = parseAnthropicTextFromResponse(payload);
   const jsonText = extractJsonText(rawText);
-
-  let parsed: { answer?: string; reasoning?: string };
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch {
-    throw new Error(`Could not parse JSON from model output: ${rawText}`);
-  }
-
-  if (!parsed.answer || typeof parsed.answer !== "string") {
-    throw new Error("Model output did not include a valid 'answer' field.");
-  }
+  const parsed = parseAnswerJsonPayload(jsonText, rawText);
 
   return {
-    answer: parsed.answer.trim(),
-    reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined,
+    answer: parsed.answer,
+    reasoning: parsed.reasoning,
     model,
     rawText
   };

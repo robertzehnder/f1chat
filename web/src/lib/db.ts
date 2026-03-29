@@ -14,17 +14,74 @@ function env(name: string, fallback?: string): string {
   return value;
 }
 
+function firstUrl(...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const v = process.env[key]?.trim();
+    if (v) {
+      return v;
+    }
+  }
+  return undefined;
+}
+
+function sslForHost(host: string): { rejectUnauthorized: boolean } | undefined {
+  if (process.env.DB_SSL === "false" || process.env.NEON_SSL === "false") {
+    return undefined;
+  }
+  if (process.env.DB_SSL === "true" || process.env.NEON_SSL === "true") {
+    return { rejectUnauthorized: true };
+  }
+  if (/neon\.tech/i.test(host)) {
+    return { rejectUnauthorized: true };
+  }
+  return undefined;
+}
+
 function createPool(): Pool {
+  const statementTimeout = Number(process.env.OPENF1_QUERY_TIMEOUT_MS ?? "15000");
+  const base = {
+    max: 10,
+    idleTimeoutMillis: 30_000,
+    statement_timeout: statementTimeout,
+    application_name: "openf1_web_app"
+  };
+
+  // Neon-prefixed vars win so local DB_* can stay in the same file.
+  const databaseUrl = firstUrl("NEON_DATABASE_URL", "DATABASE_URL");
+  if (databaseUrl) {
+    return new Pool({
+      connectionString: databaseUrl,
+      ...base
+    });
+  }
+
+  const neonHost = process.env.NEON_DB_HOST?.trim();
+  if (neonHost) {
+    const user = process.env.NEON_DB_USER?.trim();
+    const password = process.env.NEON_DB_PASSWORD ?? "";
+    if (!user) {
+      throw new Error("NEON_DB_USER is required when NEON_DB_HOST is set");
+    }
+    return new Pool({
+      host: neonHost,
+      port: Number(process.env.NEON_DB_PORT ?? "5432"),
+      database: process.env.NEON_DB_NAME?.trim() || "neondb",
+      user,
+      password,
+      ssl: sslForHost(neonHost),
+      ...base
+    });
+  }
+
+  const host = env("DB_HOST", "127.0.0.1");
   return new Pool({
-    host: env("DB_HOST", "127.0.0.1"),
+    host,
     port: Number(env("DB_PORT", "5432")),
     database: env("DB_NAME", "openf1"),
     user: env("DB_USER", "openf1"),
     password: env("DB_PASSWORD", "openf1_local_dev"),
-    max: 10,
-    idleTimeoutMillis: 30_000,
-    statement_timeout: Number(process.env.OPENF1_QUERY_TIMEOUT_MS ?? "15000"),
-    application_name: "openf1_web_app"
+    ssl: sslForHost(host),
+    ...base
   });
 }
 

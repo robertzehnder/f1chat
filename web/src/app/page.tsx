@@ -4,7 +4,12 @@ import { getOverviewStats } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const stats = await getOverviewStats();
+  let stats: Record<string, unknown> = {};
+  try {
+    stats = await getOverviewStats();
+  } catch {
+    // DB unavailable or slow — show zeros rather than crashing the page.
+  }
 
   const cards = [
     { label: "Sessions", value: stats.sessions },

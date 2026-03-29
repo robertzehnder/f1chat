@@ -144,15 +144,30 @@ function safeLimit(value: number | undefined, fallback: number, max: number): nu
 }
 
 export async function getOverviewStats(): Promise<Record<string, unknown>> {
+  // Full COUNT(*) on raw.laps / car_data / location can exceed statement_timeout on large DBs.
+  // pg_stat_all_tables.n_live_tup is an approximate live row count (updated by ANALYZE / autovacuum).
   const rows = await sql<Record<string, unknown>>(
     `
     SELECT
-      (SELECT COUNT(*) FROM raw.sessions) AS sessions,
-      (SELECT COUNT(*) FROM raw.drivers) AS drivers,
-      (SELECT COUNT(*) FROM raw.laps) AS laps,
-      (SELECT COUNT(*) FROM raw.intervals) AS intervals,
-      (SELECT COUNT(*) FROM raw.car_data) AS car_data,
-      (SELECT COUNT(*) FROM raw.location) AS location
+      COALESCE(SUM(CASE WHEN c.relname = 'sessions' THEN COALESCE(st.n_live_tup, 0) ELSE 0 END), 0)::bigint AS sessions,
+      COALESCE(SUM(CASE WHEN c.relname = 'drivers' THEN COALESCE(st.n_live_tup, 0) ELSE 0 END), 0)::bigint AS drivers,
+      COALESCE(SUM(CASE WHEN c.relname = 'laps' THEN COALESCE(st.n_live_tup, 0) ELSE 0 END), 0)::bigint AS laps,
+      COALESCE(SUM(CASE WHEN c.relname = 'intervals' THEN COALESCE(st.n_live_tup, 0) ELSE 0 END), 0)::bigint AS intervals,
+      COALESCE(SUM(CASE WHEN c.relname = 'car_data' THEN COALESCE(st.n_live_tup, 0) ELSE 0 END), 0)::bigint AS car_data,
+      COALESCE(SUM(CASE WHEN c.relname = 'location' THEN COALESCE(st.n_live_tup, 0) ELSE 0 END), 0)::bigint AS location
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    LEFT JOIN pg_stat_all_tables st ON st.relid = c.oid
+    WHERE n.nspname = 'raw'
+      AND c.relkind = 'r'
+      AND c.relname IN (
+        'sessions',
+        'drivers',
+        'laps',
+        'intervals',
+        'car_data',
+        'location'
+      )
     `
   );
   return rows[0] ?? {};

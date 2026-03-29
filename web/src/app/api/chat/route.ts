@@ -396,8 +396,8 @@ export async function POST(request: Request) {
         generationSource = "heuristic_fallback";
         generationNotes =
           error instanceof Error
-            ? `Anthropic unavailable, fallback applied: ${error.message}`
-            : "Anthropic unavailable, fallback applied.";
+            ? `SQL generation failed; heuristic fallback applied: ${error.message}`
+            : "SQL generation failed; heuristic fallback applied.";
         await logServer("WARN", "chat_anthropic_fallback", {
           requestId,
           error: error instanceof Error ? error.message : String(error)

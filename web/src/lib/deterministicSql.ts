@@ -146,6 +146,140 @@ export function buildDeterministicSqlTemplate(
     return null;
   }
 
+  const mentionsPractice = includesAny(lower, [
+    "practice",
+    "practices",
+    "fp1",
+    "fp2",
+    "fp3",
+    "free practice"
+  ]);
+  const mentionsRacePaceComparison = includesAny(lower, [
+    "race pace",
+    "representative race",
+    "matched",
+    "best matched",
+    "closest",
+    "compare",
+    "comparison",
+    "against the race",
+    "against his race",
+    "against her race",
+    "vs race",
+    "versus race",
+    "relative to race",
+    "delta to race",
+    "similar to race"
+  ]);
+
+  let practiceVsRaceDriver: number | undefined;
+  if (context.driverNumbers?.length === 1) {
+    practiceVsRaceDriver = normalizeInt(context.driverNumbers[0]);
+  } else if (mentionsMax && !mentionsLeclerc) {
+    practiceVsRaceDriver = MAX_VERSTAPPEN;
+  } else if (mentionsLeclerc && !mentionsMax) {
+    practiceVsRaceDriver = CHARLES_LECLERC;
+  } else if (context.driverNumbers?.length) {
+    practiceVsRaceDriver = normalizeInt(context.driverNumbers[0]);
+  }
+
+  if (mentionsPractice && mentionsRacePaceComparison && practiceVsRaceDriver !== undefined) {
+    return {
+      templateKey: "practice_laps_vs_race_pace_same_meeting",
+      sql: `
+        WITH anchor AS (
+          SELECT meeting_key
+          FROM core.sessions
+          WHERE session_key = ${targetSession}
+          LIMIT 1
+        ),
+        race_sess AS (
+          SELECT s.session_key, s.session_name, s.session_type
+          FROM core.sessions s
+          JOIN anchor a ON s.meeting_key = a.meeting_key
+          WHERE (
+              s.session_name ILIKE '%Race%'
+              OR s.session_type ILIKE '%race%'
+            )
+            AND s.session_name NOT ILIKE '%sprint%'
+          ORDER BY
+            CASE
+              WHEN s.session_name ILIKE 'Race' OR s.session_name ILIKE '% Grand Prix%' THEN 0
+              ELSE 1
+            END,
+            s.date_start ASC NULLS LAST
+          LIMIT 1
+        ),
+        practice_sessions AS (
+          SELECT s.session_key, s.session_name, s.session_type, s.date_start
+          FROM core.sessions s
+          JOIN anchor a ON s.meeting_key = a.meeting_key
+          WHERE s.session_key <> (SELECT session_key FROM race_sess)
+            AND (
+              s.session_type ILIKE '%practice%'
+              OR upper(trim(s.session_name)) LIKE 'FP1%'
+              OR upper(trim(s.session_name)) LIKE 'FP2%'
+              OR upper(trim(s.session_name)) LIKE 'FP3%'
+              OR s.session_name ILIKE '%Practice 1%'
+              OR s.session_name ILIKE '%Practice 2%'
+              OR s.session_name ILIKE '%Practice 3%'
+            )
+        ),
+        race_target AS (
+          SELECT
+            dss.session_key AS race_session_key,
+            MAX(dss.session_name) AS race_session_name,
+            COALESCE(MAX(dss.avg_valid_lap), MAX(dss.median_valid_lap), MAX(dss.best_valid_lap)) AS race_reference_lap_s
+          FROM core.driver_session_summary dss
+          WHERE dss.session_key = (SELECT session_key FROM race_sess)
+            AND dss.driver_number = ${practiceVsRaceDriver}
+          GROUP BY dss.session_key
+        ),
+        practice_laps AS (
+          SELECT
+            le.session_key AS practice_session_key,
+            ps.session_name AS practice_session_name,
+            ps.session_type AS practice_session_type,
+            le.lap_number,
+            le.lap_duration,
+            le.compound_name,
+            le.tyre_age_on_lap,
+            rt.race_session_key,
+            rt.race_session_name,
+            rt.race_reference_lap_s,
+            le.lap_duration - rt.race_reference_lap_s AS delta_to_race_reference_s,
+            ABS(le.lap_duration - rt.race_reference_lap_s) AS abs_delta_to_race_reference_s
+          FROM core.laps_enriched le
+          JOIN practice_sessions ps ON ps.session_key = le.session_key
+          CROSS JOIN race_target rt
+          WHERE le.driver_number = ${practiceVsRaceDriver}
+            AND le.lap_duration IS NOT NULL
+            AND le.lap_duration > 0
+            AND COALESCE(le.is_valid, TRUE) = TRUE
+            AND COALESCE(le.is_pit_out_lap, FALSE) = FALSE
+            AND rt.race_reference_lap_s IS NOT NULL
+        )
+        SELECT
+          (SELECT meeting_key FROM anchor) AS meeting_key,
+          race_session_key,
+          race_session_name,
+          ROUND(race_reference_lap_s::numeric, 3) AS race_reference_lap_s,
+          practice_session_key,
+          practice_session_name,
+          practice_session_type,
+          lap_number,
+          ROUND(lap_duration::numeric, 3) AS lap_duration_s,
+          ROUND(delta_to_race_reference_s::numeric, 3) AS delta_to_race_reference_s,
+          ROUND(abs_delta_to_race_reference_s::numeric, 3) AS abs_delta_s,
+          compound_name,
+          tyre_age_on_lap
+        FROM practice_laps
+        ORDER BY abs_delta_to_race_reference_s ASC, practice_session_name ASC, lap_number ASC
+        LIMIT 60
+      `
+    };
+  }
+
   if (lower.includes("who set the fastest lap")) {
     return {
       templateKey: "fastest_lap_by_driver",
