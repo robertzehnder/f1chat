@@ -1,8 +1,8 @@
 ---
 slice_id: 00-ci-workflow
 phase: 0
-status: blocked
-owner: user
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-25
 updated: 2026-04-25T18:56:31-04:00
