@@ -50,8 +50,20 @@ Audit:
    - PASS  → status=ready_to_merge; owner=user (Phase 0) or owner=codex (Phase 1+ post sign-off)
    - REVISE → status=revising, owner=claude
    - REJECT → status=blocked, owner=user
-7. Commit with message tag [slice:${slice_id}][pass|revise|reject].
-8. Push.
+7. Commit on slice/${slice_id} with message tag [slice:${slice_id}][pass|revise|reject].
+8. Push slice/${slice_id}.
+
+9. CRITICAL — mirror the slice file onto integration/perf-roadmap so the runner sees the new state:
+     git checkout integration/perf-roadmap
+     git pull --ff-only origin integration/perf-roadmap || true
+     git show slice/${slice_id}:${slice_file} > ${slice_file}
+     git add ${slice_file}
+     git commit -m "audit: mirror $verdict_lower verdict for ${slice_id} onto integration
+
+[slice:${slice_id}][\$verdict_lower][protocol-mirror]"
+     git push
+   Without this, the runner reads stale frontmatter from integration's worktree
+   and re-dispatches Claude on a slice that has already been audited.
 
 Be skeptical. Substantive correctness over cosmetic compliance.
 EOF
@@ -77,8 +89,20 @@ Steps:
    - REVISE → status=revising, owner=claude
    - REJECT → status=blocked, owner=user
 7. Note in the audit verdict: "AUDITED IN CLAUDE-FALLBACK MODE (Codex CLI unavailable)".
-8. Commit with [slice:${slice_id}][pass|revise|reject][fallback].
-9. Push.
+8. Commit on slice/${slice_id} with [slice:${slice_id}][pass|revise|reject][fallback].
+9. Push slice/${slice_id}.
+
+10. CRITICAL — mirror the updated slice file onto integration/perf-roadmap so the runner sees the new state:
+      git checkout integration/perf-roadmap
+      git pull --ff-only origin integration/perf-roadmap || true
+      git show slice/${slice_id}:${slice_file} > ${slice_file}
+      git add ${slice_file}
+      git commit -m "audit: mirror <verdict> verdict for ${slice_id} onto integration
+
+[slice:${slice_id}][<verdict>][protocol-mirror][fallback]"
+      git push
+    Without this, the runner reads stale frontmatter from integration's worktree
+    and re-dispatches the implementer on a slice that has already been audited.
 EOF
 }
 
