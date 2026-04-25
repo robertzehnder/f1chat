@@ -1,8 +1,8 @@
 ---
 slice_id: 00-codex-handoff-protocol
 phase: 0
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: no
 created: 2026-04-25
 updated: 2026-04-25T18:21:51-04:00
@@ -94,4 +94,27 @@ Trivially rollback by deleting `diagnostic/_handoff_test.md` and reverting the c
 - No application code touched; no files outside "Changed files expected" modified
 
 ## Audit verdict
-(filled by Codex / claude-fallback on audit)
+
+AUDITED IN CLAUDE-FALLBACK MODE (Codex CLI unavailable)
+
+**Verdict: PASS**
+
+Gate commands (all exit 0):
+- `test -f diagnostic/_handoff_test.md` → exit 0
+- `wc -l | tr -d '[:space:]'` == "1" → exit 0 (BSD wc compat fix correctly applied)
+- `git log --oneline -1 | grep -q '\[slice:00-codex-handoff-protocol\]\[awaiting-audit\]'` → exit 0; commit: `f23cdb0 validate handoff protocol [slice:00-codex-handoff-protocol][awaiting-audit]`
+- Scope diff check (comm -23 / -13) → exit 0; `handoff dry-run gates pass`
+
+Diff scope (`git diff --name-only integration/perf-roadmap...HEAD`):
+```
+diagnostic/_handoff_test.md
+diagnostic/slices/00-codex-handoff-protocol.md
+```
+Matches "Changed files expected" exactly — no scope creep, no missing files.
+
+Acceptance criteria:
+- [x] `diagnostic/_handoff_test.md` exists with exactly 1 line (`handoff test executed at 2026-04-25T18:21:51-04:00`)
+- [x] Commit message contains `[slice:00-codex-handoff-protocol][awaiting-audit]`
+- [x] Diff scope is exactly the two allowed files
+- [x] Audit verdict recorded in this file
+- [x] (Phase 0) status → `ready_to_merge`, owner → `user`
