@@ -1,11 +1,11 @@
 ---
 slice_id: 00-ci-workflow
 phase: 0
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-25T18:56:31-04:00
+updated: 2026-04-25T19:27:34-04:00
 ---
 
 ## Goal
@@ -56,20 +56,28 @@ Rollback: `git revert <commit>`.
 
 ## Slice-completion note
 Branch: slice/00-ci-workflow
+Commit: 0a1980c
 
 File created: `.github/workflows/ci.yml`
 
-Jobs: web-typecheck, web-tests, web-build (all with node_modules cache keyed on web/package-lock.json), python-compile, shell-syntax.
+Jobs: web-typecheck, web-tests, web-build (node_modules cache keyed on web/package-lock.json), python-compile, shell-syntax.
 Triggers: push and pull_request to main and integration/perf-roadmap.
+
+Fix from REJECT: replaced `scripts/**/*.sh` glob with
+`find scripts/ -name "*.sh"` so top-level scripts (init_db.sh,
+load_codex_helpers.sh) are checked alongside scripts/loop/*.sh.
+9 scripts total covered by find.
+
+Scope: `git diff --name-only integration/perf-roadmap...HEAD` → `.github/workflows/ci.yml` only.
 
 Gate results (all exit 0):
 - `cd web && npm run typecheck` → 0
 - `cd web && npm run test:grading` → 0 (4 pass, 9 skipped/integration)
-- `cd web && npm run build` → 0 (Next.js 15 production build, 20 routes)
+- `cd web && npm run build` → 0 (Next.js 15, 20 routes)
 - `python3 -m compileall -q src/` → 0
-- `for s in scripts/**/*.sh; do bash -n "$s" || exit 1; done` → 0 (7 scripts checked)
+- `find scripts/ -name "*.sh" shell-syntax check` → 0 (9 scripts)
 
-YAML inspection: all required sections present (yaml module unavailable; manual Python string check confirmed all job names, trigger blocks, and commands are present).
+YAML inspection: all required sections present (yamllint unavailable; manual inspection confirms valid structure).
 
 ## Audit verdict
 REJECT
