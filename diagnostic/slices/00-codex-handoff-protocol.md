@@ -1,11 +1,11 @@
 ---
 slice_id: 00-codex-handoff-protocol
 phase: 0
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-25
+updated: 2026-04-25T18:21:51-04:00
 ---
 
 ## Goal
@@ -42,7 +42,7 @@ None.
 set -e
 
 test -f diagnostic/_handoff_test.md || { echo "FAIL: file missing"; exit 1; }
-[[ "$(wc -l < diagnostic/_handoff_test.md)" == "1" ]] || { echo "FAIL: not single line"; exit 1; }
+[[ "$(wc -l < diagnostic/_handoff_test.md | tr -d '[:space:]')" == "1" ]] || { echo "FAIL: not single line"; exit 1; }
 
 git log --oneline -1 | grep -q '\[slice:00-codex-handoff-protocol\]\[awaiting-audit\]' \
   || { echo "FAIL: commit tag missing"; exit 1; }
@@ -86,7 +86,12 @@ echo "handoff dry-run gates pass"
 Trivially rollback by deleting `diagnostic/_handoff_test.md` and reverting the commit. The whole point of this slice is to be cheap and reversible.
 
 ## Slice-completion note
-(filled by Claude on handoff)
+- Branch: `slice/00-codex-handoff-protocol` (from `integration/perf-roadmap`)
+- Commit: HEAD of `slice/00-codex-handoff-protocol` (see `git log --oneline -1`)
+- `diagnostic/_handoff_test.md` created with exactly one line + trailing newline
+- Gate fix: BSD `wc -l` on macOS pads output with spaces (`"       1"` not `"1"`); gate line-count check updated to pipe through `tr -d '[:space:]'` for cross-platform compatibility
+- All gate commands exited 0: file-exists, line-count, commit-tag, scope check
+- No application code touched; no files outside "Changed files expected" modified
 
 ## Audit verdict
 (filled by Codex / claude-fallback on audit)
