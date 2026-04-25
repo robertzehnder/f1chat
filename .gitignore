@@ -6,6 +6,37 @@
 !.gitignore
 !**/.gitignore
 
+# Loop / automation infrastructure (per execution plan §0a + automation §8)
+!.github/
+!.github/**
+!/.env.example
+!/web/.env.local.example
+!diagnostic/artifacts/**/.gitkeep
+!diagnostic/slices/
+!diagnostic/slices/**
+!diagnostic/slices/.approved/
+!diagnostic/slices/.approved/.gitkeep
+!diagnostic/slices/.approved-merge/
+!diagnostic/slices/.approved-merge/.gitkeep
+!scripts/loop/
+!scripts/loop/**
+
+# Approval sentinels (touch files inside .approved/ and .approved-merge/) are
+# expected runtime artifacts; keep ignored so they don't bloat git. Only the
+# .gitkeep above is tracked.
+diagnostic/slices/.approved/*
+!diagnostic/slices/.approved/.gitkeep
+diagnostic/slices/.approved-merge/*
+!diagnostic/slices/.approved-merge/.gitkeep
+
+# But keep runtime state under scripts/loop/state/ ignored
+scripts/loop/state/runner.log
+scripts/loop/state/runner.pid
+scripts/loop/state/cost_ledger.jsonl
+
+# Track tsbuildinfo as ignored going forward
+web/tsconfig.tsbuildinfo
+
 # Ignore helper repos
 helper-repos/
 data/
