@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-26T13:47:29Z
+# Project state — last updated: 2026-04-26T14:31:44Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -9,7 +9,7 @@ accumulated context the loop carries between slices._
 | Phase | Total | Done | Pending | Pending plan-audit | Revising plan | Awaiting audit | Ready to merge | Blocked | Missing |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 1 | 4 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
+| 1 | 4 | 3 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | ? | 71 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 71 |
 
 ## Latest benchmark headline
@@ -27,6 +27,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `c0993ea` merge: 01-perf-summary-route [pass] — 2026-04-26
 - `551dedc` merge: 01-route-stage-timings [pass] — 2026-04-26
 - `4621b9f` merge: 01-perf-trace-helpers [pass] — 2026-04-25
 - `2eee714` merge: 00-fresh-benchmark [pass] — 2026-04-25
