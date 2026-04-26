@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:35:00Z
+updated: 2026-04-26T13:58:07Z
 ---
 
 ## Goal
@@ -115,6 +115,21 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 - [x] Make the production "no file I/O" acceptance check actually observable, because asserting 404 with a missing path does not prove the handler returned before attempting to read the trace file.
 
 ### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T13:47:29Z`, which is less than 24 hours old at audit time.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Align the route's default trace path with the existing writers in `web/src/lib/perfTrace.ts` and `web/src/lib/serverLog.ts`: read from `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), "logs")` plus `chat_query_trace.jsonl`, or otherwise explicitly document and test why `path.join(process.cwd(), "web/logs/chat_query_trace.jsonl")` is correct when gates and the Next app run from `web/`.
+
+### Medium
+- [ ] Resolve the `n`-policy ambiguity by stating whether `aggregatePerfTraces(records, n)` must sanitize invalid/out-of-range `n` values itself, or remove the direct aggregate "n-clamp" test coverage and leave all invalid query handling to `parseN`.
 
 ### Low
 
