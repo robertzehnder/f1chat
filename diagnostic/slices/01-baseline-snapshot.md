@@ -1,7 +1,7 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -166,6 +166,33 @@ Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `we
 - [x] All gates exit `0`.
 
 ## Audit verdict
+audit: PASS
+
+[slice:01-baseline-snapshot][pass]
+
+Gate commands re-run locally from repo root / `web/` as specified:
+- `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary" >/dev/null` with `OPENF1_CHAT_BASE_URL=http://127.0.0.1:3001` — exit `0`.
+- `(cd web && npm run build)` — exit `0`; Next production build completed and listed `/api/admin/perf-summary` as dynamic.
+- `(cd web && npm run typecheck)` — exit `0`; `tsc --noEmit` clean.
+- `(cd web && npm run test:grading)` — exit `0`; TAP `1..26`, `# pass 17`, `# fail 0`, `# skipped 9`.
+- `test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json"` with `DATE=2026-04-26` — exit `0`.
+- `test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md"` with `DATE=2026-04-26` — exit `0`.
+- `node -e '...'` window check against `01-baseline-snapshot_2026-04-26.json` — exit `0`; `window.requested === 50` and `window.returned === 50`.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json`, `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.md`, and `diagnostic/slices/01-baseline-snapshot.md`.
+- Scope check passes. The two artifact files are listed under "Changed files expected"; this slice file is explicitly expected and implicitly allowed.
+
+Acceptance criteria:
+- PASS: Both artifact files exist at `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.{json,md}`, matching the recorded UTC date token.
+- PASS: Slice-completion note records `DATE=2026-04-26` for exact artifact verification.
+- PASS: Saved JSON has `window.requested === 50` and `window.returned === 50`.
+- PASS: Companion markdown contains a per-stage p50 / p95 / max table, not raw JSON only.
+- PASS: Slice-completion note quotes overall median `12603.28 ms`, overall p95 `26310.01 ms`, the three highest-latency stages by p95 (`runtime_classify`, `resolve_db`, `sqlgen_llm`), and confirmed `window.returned = 50`.
+- PASS: All gates exit `0`.
+
+Phase 1 merge status: `status=ready_to_merge`, `owner=codex`.
+
 [protocol-repair 2026-04-26] Implementer self-blocked because slice hardcoded port 3000 throughout Steps §2/§4/§5 and Gate commands, while the OpenF1 dev server was bound to port 3001 by a port conflict. Fixed by replacing all four literal `:3000` URLs with `${OPENF1_CHAT_BASE_URL}` and adding a Required-services note to export the variable before running the slice. Status flipped to revising/claude for retry.
 
 ## Plan-audit verdict (round 1)
