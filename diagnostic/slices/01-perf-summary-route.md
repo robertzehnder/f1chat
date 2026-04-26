@@ -101,7 +101,7 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 - Branch: `slice/01-perf-summary-route` (forked from `integration/perf-roadmap` @ `f214860`).
 - Commits:
   - `edf9ff2` — Add `/api/admin/perf-summary` dev route with the `perfSummary.mjs` helper, ambient `.d.mts` declarations, and the `node --test`-compatible gate test.
-  - (Slice-doc bookkeeping commit to follow with `[slice:01-perf-summary-route][awaiting-audit]` tag and updated frontmatter.)
+  - `83d735e` — Record slice-completion note + flip frontmatter to `status=awaiting_audit` / `owner=codex`.
 - Files changed (matches "Changed files expected"):
   - `web/src/lib/perfSummary.mjs` — new (~80 LOC). Plain JS so `node --test scripts/tests/*.test.mjs` can import it without a TS loader.
   - `web/src/lib/perfSummary.d.mts` — new (~16 LOC). Ambient TS declarations paired with the `.mjs` via `moduleResolution: bundler`; no `tsconfig.json` change needed and `allowJs` stays `false`.
