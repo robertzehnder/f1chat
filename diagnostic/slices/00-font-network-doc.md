@@ -1,11 +1,11 @@
 ---
 slice_id: 00-font-network-doc
 phase: 0
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-25
+updated: 2026-04-25T21:23:52-04:00
 ---
 
 ## Goal
@@ -47,7 +47,24 @@ grep -q "next/font/google" web/README.md
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+Branch: `slice/00-font-network-doc`
+
+Changes:
+- `web/README.md`: added "Build dependencies" section documenting the `next/font/google` network
+  requirement and the self-host migration path (download fonts to `web/public/fonts/`, swap to
+  `next/font/local`). Also included an environment note that the CI `web-build` job runs on
+  GitHub-hosted runners (`ubuntu-latest`) which have network access, satisfying this dependency
+  automatically.
+
+Gate results:
+- `test -f web/README.md` → exit 0
+- `grep -q "next/font/google" web/README.md` → exit 0
+
+Decisions:
+- Step 2 (CI environment note) was incorporated inline in the "Build dependencies" section rather
+  than as a separate section, since the `ci.yml` `web-build` job was already present and a single
+  cohesive section is clearer than two fragmented notes.
 
 ## Audit verdict
 (filled by auditor)
