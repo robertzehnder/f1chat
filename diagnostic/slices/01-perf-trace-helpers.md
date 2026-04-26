@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-trace-helpers
 phase: 1
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-26T03:46:54Z
+updated: 2026-04-25T23:48:47-04:00
 ---
 
 ## Goal
@@ -55,7 +55,34 @@ cd web && npm run test:grading
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/01-perf-trace-helpers` (forked from `integration/perf-roadmap` @ `cdac876`).
+- Commits:
+  - `04d76b3` — Add perf trace helpers (startSpan / Span.end / flushTrace).
+  - (this slice-note commit) — Fill slice-completion note and flip frontmatter to `awaiting_audit`.
+- Files changed (matches "Changed files expected"):
+  - `web/src/lib/perfTrace.ts` (new, ~95 LOC).
+  - `web/scripts/tests/perf-trace.test.mjs` (new, ~95 LOC).
+  - `diagnostic/slices/01-perf-trace-helpers.md` (frontmatter + this note; loop-protocol file, not roadmap source).
+- Implementation decisions:
+  - `StageName` is a TS string union restricted to the 10 allow-listed stages from Step 2 (`request_intake`, `runtime_classify`, `resolve_db`, `template_match`, `sqlgen_llm`, `execute_db`, `repair_llm`, `synthesize_llm`, `sanity_check`, `total`). `runtime_classify` was used (not `classify_llm`) per the slice's explicit note that classification is local.
+  - `startSpan(name)` validates the name against a `ReadonlySet<StageName>` and throws on unknown stages, so misuse fails loudly during dev rather than silently polluting traces.
+  - Elapsed timing uses `performance.now()` (monotonic, sub-ms resolution); `startedAt` is captured separately as a wall-clock `Date.now()` so trace consumers can correlate to log timestamps.
+  - `Span.end()` is idempotent — repeat calls return the originally recorded `elapsedMs` rather than re-measuring. The test asserts this.
+  - `flushTrace(requestId, spans)` writes one JSON-per-line entry `{ ts, requestId, spans:[{name,startedAt,elapsedMs}] }` to `web/logs/chat_query_trace.jsonl` (or `${OPENF1_WEB_LOG_DIR}/chat_query_trace.jsonl`). Errors are swallowed and logged to stderr in the same shape `serverLog.ts` uses, so trace failures cannot crash the request hot path.
+  - No imports of `route.ts`; not wired into the chat handler. That is `01-route-stage-timings`'s job (Out of scope).
+- Test approach:
+  - The test transpiles `perfTrace.ts` in-process using the existing `typescript` devDependency (`ts.transpileModule` with `module: ESNext`, `target: ES2022`), writes the JS to `os.tmpdir()`, dynamic-imports it, and cleans up the temp dir in a `finally` block.
+  - Trace-file safety: the test snapshots `web/logs/chat_query_trace.jsonl` before the run, only reads the suffix appended by `flushTrace` (so it does not depend on truncating the file), and restores the original contents (or removes the file when it didn't exist) in `finally`.
+  - Assertions: `startSpan`/`flushTrace` are functions; `span.name`/`span.startedAt`/`span.end` exist; `record.elapsedMs > 0` after a 3 ms busy-wait; `span.end()` is idempotent; unknown stage names throw; the persisted JSON line has ISO-parsable `ts`, matching `requestId`, an array `spans` with `name`/`startedAt`/`elapsedMs` typed correctly and `elapsedMs > 0`.
+- Gate command results (run from `web/`, in slice-specified order):
+  - `npm run build` — exit `0`. Next 15 compile + page generation succeeded.
+  - `npm run typecheck` — exit `0`. `tsc --noEmit` clean.
+  - `npm run test:grading` — exit `0`. 14 subtests; the new `perfTrace records elapsed ms per span and flushTrace writes a structured JSON line` test passes; the 9 propagation tests skip as designed (no `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`); the 4 grading-regression tests pass.
+- Self-checks against acceptance criteria:
+  - [x] `perfTrace.ts` exports `startSpan`, `Span.end`, `flushTrace` (verified by direct named imports in the new test).
+  - [x] `npm run test:grading` executes the perf trace test and asserts span elapsed > 0 and JSON shape (subtest 5 in the TAP run).
+  - [x] No imports from `route.ts`. `git grep route.ts` in this diff returns nothing; only the two listed files plus the slice markdown changed.
 
 ## Audit verdict
 PASS-WITH-FIXES — corrected gate order so build generates `.next/types` before typecheck, and moved the unit test plan under the existing `test:grading` runner.
