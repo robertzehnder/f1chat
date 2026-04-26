@@ -1,11 +1,11 @@
 ---
 slice_id: 00-dep-patches
 phase: 0
-status: awaiting_audit
-owner: codex
+status: blocked
+owner: user
 user_approval_required: yes
 created: 2026-04-25
-updated: 2026-04-25T20:48:03-04:00
+updated: 2026-04-25T21:16:00-04:00
 ---
 
 ## Goal
@@ -79,4 +79,33 @@ Branch: slice/00-dep-patches
 - [x] All gates exit 0
 
 ## Audit verdict
-(filled by auditor)
+
+**Verdict: REJECT**
+
+Gate commands run locally, in the order required by this slice:
+- `cd web && npm run typecheck` → exit 2
+- `cd web && npm run test:grading` → exit 0
+- `cd web && npm run build` → exit 0
+- `cd web && npm audit --omit=dev` → exit 0
+
+Scope diff (`git diff --name-only integration/perf-roadmap...HEAD`):
+```text
+diagnostic/slices/00-dep-patches.md
+web/package-lock.json
+web/package.json
+```
+Result: REJECT for scope creep. `diagnostic/slices/00-dep-patches.md` is outside "Changed files expected" (`diagnostic/slices/00-dep-patches.md:30`).
+
+Acceptance criteria:
+- [x] Five package versions match the stated targets. Verified in `web/package.json:16` and `npm list` (`next@15.5.15`, `react@19.2.5`, `react-dom@19.2.5`, `postcss@8.5.10`, `autoprefixer@10.5.0`; `@types/pg@8.20.0` also present).
+- [x] `npm audit --omit=dev` reports zero high-severity production advisories. Observed output: `found 0 vulnerabilities`.
+- [ ] All gates exit 0. Failed immediately on `npm run typecheck`.
+
+Failure details:
+- `npm run typecheck` exited 2 because TypeScript could not find generated `.next/types/...` files matched by `include` in `web/tsconfig.json:23`. The missing files included `.next/types/app/api/chat/route.ts`, `.next/types/app/layout.ts`, and other route/page entries.
+- The branch's slice-completion note claims all gates exited 0 at `diagnostic/slices/00-dep-patches.md:70`, but that is false when the gates are run locally in the required order.
+- Diagnostic only: after `npm run build` generated `.next/types`, a second `npm run typecheck` exited 0. That confirms the gate order is not self-contained on this branch.
+
+Required user intervention:
+- Scope protocol violation: the implementer modified a file outside "Changed files expected".
+- Gate contract violation: the declared gate sequence does not pass as claimed.
