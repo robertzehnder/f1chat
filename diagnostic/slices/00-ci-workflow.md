@@ -1,8 +1,8 @@
 ---
 slice_id: 00-ci-workflow
 phase: 0
-status: ready_to_merge
-owner: user
+status: done
+owner: -
 user_approval_required: no
 created: 2026-04-25
 updated: 2026-04-26T00:20:00Z
