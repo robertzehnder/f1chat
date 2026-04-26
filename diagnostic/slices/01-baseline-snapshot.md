@@ -1,11 +1,11 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-26T14:40:00Z
 ---
 
 ## Goal
@@ -86,3 +86,18 @@ Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `we
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Tie the artifact existence gates and acceptance criterion to the UTC date token or exact artifact paths produced by this slice, instead of using broad wildcards that can pass against stale `01-baseline-snapshot_*` files.
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T14:31:44Z`, which is less than 24 hours old at audit time.
+- The declared prior-context paths all exist, and `01-perf-summary-route.md` documents the expected `{ stages: { [name]: { count, p50_ms, p95_ms, max_ms } } }` shape.
