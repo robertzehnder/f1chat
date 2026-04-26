@@ -1,8 +1,8 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: ready_to_merge
-owner: codex
+status: done
+owner: -
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-26T11:23:00-04:00
