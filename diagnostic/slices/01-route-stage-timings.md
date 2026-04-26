@@ -99,7 +99,7 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
   - `7062b45` — Wire perfTrace stage spans into the chat route (route.ts + new static-analysis test).
   - `e974c30` — Fill slice-completion note and flip frontmatter to `awaiting_audit` / owner `codex`.
   - `0f2886c` — audit: revise (REVISE verdict appended noting repair-fallback regression).
-  - (this revision commit) — Restore repair fallback semantics: re-wrap `repair_llm` LLM call + `repair_retry` execution in a single outer try/catch so a `repair_retry` execution failure once again logs `chat_query_repair_failed` and falls back to `heuristic_after_sql_failure`. The `repair_llm` span remains scoped strictly to the `repairSqlWithAnthropic` call via an inner try/finally that ends the span before the retry runs.
+  - `455e6f3` — Restore repair fallback semantics: re-wrap `repair_llm` LLM call + `repair_retry` execution in a single outer try/catch so a `repair_retry` execution failure once again logs `chat_query_repair_failed` and falls back to `heuristic_after_sql_failure`. The `repair_llm` span remains scoped strictly to the `repairSqlWithAnthropic` call via an inner try/finally that ends the span before the retry runs.
 - Files changed (matches "Changed files expected"):
   - `web/src/app/api/chat/route.ts` — modified.
   - `web/scripts/tests/route-trace.test.mjs` — new (~55 LOC).
