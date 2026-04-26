@@ -161,25 +161,37 @@ I want Codex to audit **what** I'm planning to fix, **what** I'm explicitly not 
 
 **Fix recipe:** create slice `01-perf-trace-fix-spans`. Audit the span boundaries in `route.ts`. Confirm each stage span starts and ends at distinct points in the request lifecycle. Re-run `01-baseline-snapshot` (or write a `01-baseline-snapshot-v2` slice that re-captures the artifact under the same naming convention).
 
-### Item 2 — C-3 + repo-level mutation lock (revised post-audit)
+### Item 2 — C-3 + repo-level mutation lock (revised post-round-2 audit)
+
+**Uniform worktree model (per round-2 H-1):** EVERY agent dispatch runs in a slice worktree on a slice branch — including plan-audit and plan-revise (which previously edited integration directly). Every state change mirrors back to integration through `mirror_helper`. No agent ever writes to the main worktree. This eliminates the "sometimes-on-integration / sometimes-on-slice" ambiguity entirely.
+
+**Shared runner state stays in absolute paths (per round-2 H-3):** all dispatchers and helpers receive `LOOP_MAIN_WORKTREE` and `LOOP_STATE_DIR` env vars with **absolute** paths to the runner's main worktree and state dir. Relative writes inside slice worktrees would write to the slice worktree's filesystem; we want the runner's view. Pattern below.
 
 **Files to modify:**
 - `scripts/loop/dispatch_claude.sh`
 - `scripts/loop/dispatch_codex.sh`
 - `scripts/loop/dispatch_repair.sh`
 - `scripts/loop/dispatch_plan_revise.sh`
-- `scripts/loop/runner.sh` (preconditions check needs to know worktree paths)
-- `scripts/loop/dispatch_merger.sh` (clean up worktree after merge; lock around merge+push+state-update)
-- `scripts/loop/update_state.sh` (lock around state-update commit+push)
+- `scripts/loop/dispatch_slice_audit.sh` (also moves into a slice worktree even though it's "just" reading the slice file — still appends a verdict + mutates frontmatter)
+- `scripts/loop/runner.sh` (export `LOOP_MAIN_WORKTREE`, `LOOP_STATE_DIR`; preconditions check)
+- `scripts/loop/dispatch_merger.sh` (uses absolute state paths; lock around merge+push+regression+state-update)
+- `scripts/loop/update_state.sh` (uses `LOOP_MAIN_WORKTREE` to find slice files / artifacts when invoked from a worktree context)
 - New file: `scripts/loop/worktree_helpers.sh`
 - New file: `scripts/loop/repo_lock.sh` (the lock primitive)
 
-**Repo lock (mkdir-based, portable across macOS/Linux without `flock`):**
+**Repo lock (mkdir-based, portable; round-2 audit fixes for `set -e` and EXIT-trap stacking):**
 ```bash
 # scripts/loop/repo_lock.sh
-LOCK_DIR=".git/openf1-loop.lock"
-LOCK_TIMEOUT="${LOOP_LOCK_TIMEOUT:-300}"   # seconds
+# Lock dir lives under the MAIN worktree's .git/, regardless of which
+# worktree's shell is calling us. This means every dispatcher (running in
+# a slice worktree) coordinates through one shared lock.
+: "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE must be set (absolute path)}"
+LOCK_DIR="$LOOP_MAIN_WORKTREE/.git/openf1-loop.lock"
+LOCK_TIMEOUT="${LOOP_LOCK_TIMEOUT:-300}"
 LOCK_POLL="${LOOP_LOCK_POLL:-1}"
+
+# Stack EXIT traps instead of clobbering pre-existing ones (round-2 M-5).
+_REPO_LOCK_PRIOR_TRAP=""
 
 acquire_repo_lock() {
   local owner="$1"
@@ -188,59 +200,156 @@ acquire_repo_lock() {
   while ! mkdir "$LOCK_DIR" 2>/dev/null; do
     elapsed=$(( $(date +%s) - started ))
     if [[ $elapsed -ge $LOCK_TIMEOUT ]]; then
-      # Stale-lock detection: if owner pid is dead, force release
-      if [[ -f "$LOCK_DIR/owner" ]] && ! kill -0 "$(cat "$LOCK_DIR/pid" 2>/dev/null)" 2>/dev/null; then
-        echo "force-releasing stale lock from $(cat "$LOCK_DIR/owner")" >&2
+      # Stale-lock detection (PID-based, but also handle malformed/empty pid file).
+      local stored_pid stored_owner
+      stored_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
+      stored_owner=$(cat "$LOCK_DIR/owner" 2>/dev/null || echo "?")
+      if [[ -z "$stored_pid" || ! "$stored_pid" =~ ^[0-9]+$ ]]; then
+        echo "force-releasing malformed lock (owner=$stored_owner)" >&2
         rm -rf "$LOCK_DIR"
         continue
       fi
-      echo "lock timeout: held by $(cat "$LOCK_DIR/owner" 2>/dev/null)" >&2
+      if ! kill -0 "$stored_pid" 2>/dev/null; then
+        echo "force-releasing stale lock from $stored_owner (pid $stored_pid dead)" >&2
+        rm -rf "$LOCK_DIR"
+        continue
+      fi
+      echo "lock timeout: held by $stored_owner (pid $stored_pid)" >&2
       return 1
     fi
     sleep "$LOCK_POLL"
   done
   echo "$owner" > "$LOCK_DIR/owner"
   echo "$$"     > "$LOCK_DIR/pid"
-  trap 'release_repo_lock' EXIT
+
+  # Stack any pre-existing EXIT trap so we don't clobber callers'.
+  _REPO_LOCK_PRIOR_TRAP=$(trap -p EXIT | sed -E "s/^trap -- '(.*)' EXIT$/\1/" || true)
+  trap '_repo_lock_on_exit' EXIT
   return 0
+}
+
+_repo_lock_on_exit() {
+  release_repo_lock
+  if [[ -n "$_REPO_LOCK_PRIOR_TRAP" ]]; then
+    eval "$_REPO_LOCK_PRIOR_TRAP"
+  fi
 }
 
 release_repo_lock() {
   rm -rf "$LOCK_DIR" 2>/dev/null || true
-  trap - EXIT
+  if [[ -n "$_REPO_LOCK_PRIOR_TRAP" ]]; then
+    trap "$_REPO_LOCK_PRIOR_TRAP" EXIT
+  else
+    trap - EXIT
+  fi
+  _REPO_LOCK_PRIOR_TRAP=""
 }
 
+# Run a command under the lock with set -e safety:
+# Disable errexit around the call, capture rc, restore.
 with_repo_lock() {
   local owner="$1"; shift
   acquire_repo_lock "$owner" || return 1
+  local saved_errexit=0
+  case "$-" in *e*) saved_errexit=1 ;; esac
+  set +e
   "$@"
   local rc=$?
+  [[ "$saved_errexit" == "1" ]] && set -e
   release_repo_lock
   return $rc
 }
 ```
 
-**Worktree pattern (with lock around mutations):**
+**Worktree pattern (post-round-2 audit: stale-branch + stale-worktree handling):**
 ```bash
+# scripts/loop/worktree_helpers.sh
 WORKTREE_BASE="${LOOP_WORKTREE_BASE:-$HOME/.openf1-loop-worktrees}"
-slice_worktree="$WORKTREE_BASE/$slice_id"
 
-# Create worktree under lock (mutates .git/worktrees and creates a branch)
-if [[ ! -d "$slice_worktree" ]]; then
-  with_repo_lock "dispatch_claude:$slice_id:worktree-add" \
-    git worktree add "$slice_worktree" -b "slice/$slice_id" integration/perf-roadmap
-fi
+ensure_slice_worktree() {
+  local slice_id="$1"
+  local slice_worktree="$WORKTREE_BASE/$slice_id"
+  local slice_branch="slice/$slice_id"
 
-# Run agent in worktree (NO lock — agent can read/edit/commit-on-its-own-branch freely)
-( cd "$slice_worktree" && claude --print ... )
+  mkdir -p "$WORKTREE_BASE"
 
-# Mirror, push, cleanup happen under lock
-with_repo_lock "dispatch_claude:$slice_id:post-dispatch" do_post_dispatch_steps "$slice_id"
+  # Step 1: handle stale worktree dirs from prior interrupted runs.
+  # `git worktree list --porcelain` is the source of truth.
+  local known_worktrees
+  known_worktrees=$(cd "$LOOP_MAIN_WORKTREE" && git worktree list --porcelain | awk '/^worktree / {print $2}')
+  if [[ -d "$slice_worktree" ]] && ! echo "$known_worktrees" | grep -qx "$slice_worktree"; then
+    # Directory exists but git doesn't know about it — orphan from a prior run
+    rm -rf "$slice_worktree"
+  fi
 
-# Worktree cleanup at merge time
-with_repo_lock "merger:$slice_id:cleanup" \
-  git worktree remove "$slice_worktree" --force
+  # Step 2: prune any worktree records git knows about but whose dir is gone.
+  ( cd "$LOOP_MAIN_WORKTREE" && git worktree prune ) 2>/dev/null || true
+
+  if [[ -d "$slice_worktree" ]]; then
+    # Worktree exists and is git-known. Ensure it's on the right branch.
+    ( cd "$slice_worktree" && git checkout "$slice_branch" 2>/dev/null ) || true
+    echo "$slice_worktree"
+    return 0
+  fi
+
+  # Step 3: handle pre-existing slice branch (from a prior interrupted run).
+  if ( cd "$LOOP_MAIN_WORKTREE" && git rev-parse --verify "$slice_branch" >/dev/null 2>&1 ); then
+    # Branch exists — attach the worktree to it (no -b flag).
+    ( cd "$LOOP_MAIN_WORKTREE" && git worktree add "$slice_worktree" "$slice_branch" )
+  else
+    # Fresh slice: create branch and worktree together.
+    ( cd "$LOOP_MAIN_WORKTREE" && git worktree add "$slice_worktree" -b "$slice_branch" integration/perf-roadmap )
+  fi
+
+  echo "$slice_worktree"
+}
+
+cleanup_slice_worktree() {
+  local slice_id="$1"
+  local slice_worktree="$WORKTREE_BASE/$slice_id"
+  if [[ -d "$slice_worktree" ]]; then
+    ( cd "$LOOP_MAIN_WORKTREE" && git worktree remove "$slice_worktree" --force ) 2>/dev/null || rm -rf "$slice_worktree"
+  fi
+  ( cd "$LOOP_MAIN_WORKTREE" && git worktree prune ) 2>/dev/null || true
+}
 ```
+
+**Dispatcher pattern (every dispatcher uses this; absolute paths preserved):**
+```bash
+# Top of every dispatcher script:
+: "${LOOP_MAIN_WORKTREE:?must be set by runner}"
+: "${LOOP_STATE_DIR:?must be set by runner}"
+
+slice_worktree=$(ensure_slice_worktree "$slice_id")
+
+# Anything that writes to runner state uses absolute paths.
+LEDGER="$LOOP_STATE_DIR/cost_ledger.jsonl"
+LOG="$LOOP_STATE_DIR/runner.log"
+
+# Worktree-creation step is itself a repo mutation — run under lock.
+# (ensure_slice_worktree internally calls git worktree add/prune; the caller
+# wraps it.)
+with_repo_lock "dispatch:$slice_id:worktree-prep" ensure_slice_worktree "$slice_id" >/dev/null
+
+# Run the agent INSIDE the worktree. Agent commits go to slice/$slice_id naturally.
+( cd "$slice_worktree" && claude --print ... )
+agent_rc=$?
+
+# Mirror back to integration's main worktree (under lock, with retry).
+mirror_slice_to_integration "$slice_id" "<dispatch_type>" || agent_rc=1
+
+return $agent_rc
+```
+
+**Runner-side env export (in `runner.sh` startup):**
+```bash
+export LOOP_MAIN_WORKTREE
+LOOP_MAIN_WORKTREE=$(git rev-parse --show-toplevel)
+export LOOP_STATE_DIR
+LOOP_STATE_DIR="$LOOP_MAIN_WORKTREE/scripts/loop/state"
+```
+
+These two vars are what every dispatcher and helper reads to find the runner's state files, regardless of which slice worktree's shell is currently active.
 
 **Operations that MUST run under lock:**
 - `git worktree add` / `git worktree remove`
@@ -331,15 +440,21 @@ dispatch_with_guards() {
 
 **Why this requires the mirror step (Item 5) to be reliable:** if the mirror fails to land integration's slice file with the new status, even a successful audit looks like a failure here. The lock + retry policy in Item 5 makes this safe.
 
-### Item 5 — C-6 (deterministic mirror step, full pattern post-audit)
+### Item 5 — C-6 (deterministic mirror step, full pattern post-round-2 audit)
+
+**Per round-2 H-1 + H-2:** every dispatcher mirrors. The implementation dispatcher (`dispatch_claude.sh`) was missing from the prior file list — it now mirrors the `pending|revising → awaiting_audit` handoff back to integration so the runner observes implementation completion. With the uniform-worktree model (Item 2), there is **always** a slice branch by the time mirror runs; the "no slice branch" branch in the prior code is removed.
 
 **Files to modify:**
+- `scripts/loop/dispatch_claude.sh` — add post-step after `claude --print` returns (NEW per round-2 H-2)
 - `scripts/loop/dispatch_codex.sh` — add post-step after `codex exec` returns
-- `scripts/loop/dispatch_slice_audit.sh` — same post-step (plan-audit also mirrors)
-- `scripts/loop/dispatch_plan_revise.sh` — same post-step (plan-revise also mirrors)
+- `scripts/loop/dispatch_slice_audit.sh` — add post-step (plan-audit mirror)
+- `scripts/loop/dispatch_plan_revise.sh` — add post-step (plan-revise mirror)
+- `scripts/loop/dispatch_repair.sh` — add post-step (repair commits also need mirroring)
 - `scripts/loop/prompts/codex_auditor.md` — remove mirror instructions
 - `scripts/loop/prompts/codex_slice_auditor.md` — remove mirror instructions
 - `scripts/loop/prompts/claude_plan_reviser.md` — remove mirror instructions
+- `scripts/loop/prompts/claude_implementer.md` — confirm no push-to-integration directive (it stays slice-branch-only)
+- `scripts/loop/prompts/claude_repair.md` — remove "push integration" directive (now done by dispatcher post-step)
 - New file: `scripts/loop/mirror_helper.sh` (shared post-step)
 
 **Full pattern (mirror_helper.sh):**
@@ -365,6 +480,10 @@ _do_mirror() {
   local slice_path="diagnostic/slices/${sid}.md"
   local slice_branch="slice/${sid}"
 
+  # All git operations target the runner's main worktree, regardless of which
+  # worktree's shell called us. (Round-2 H-3 fix.)
+  cd "$LOOP_MAIN_WORKTREE" || return 1
+
   # 1. Ensure runner is on integration and synced.
   local current_branch
   current_branch=$(git rev-parse --abbrev-ref HEAD)
@@ -373,16 +492,17 @@ _do_mirror() {
   fi
   git pull --ff-only origin integration/perf-roadmap 2>/dev/null || true
 
-  # 2. Does the slice branch even exist? (Plan-audit may not create one.)
+  # 2. Slice branch must exist (per uniform-worktree model in Item 2).
   if ! git rev-parse --verify "$slice_branch" >/dev/null 2>&1; then
-    # No slice branch yet (plan-audit / plan-revise often only edit on integration).
-    # Already on integration, so nothing to mirror.
-    return 0
+    # Should never happen under the uniform model. If it does, the dispatch
+    # is corrupt — refuse the mirror (no-op-as-success would mask the bug).
+    log "mirror: slice branch $slice_branch does not exist for $sid"
+    return 1
   fi
 
   # 3. Read the slice's slice-file version from the slice branch.
   local slice_branch_content
-  slice_branch_content=$(git show "${slice_branch}:${slice_path}" 2>/dev/null) || return 0
+  slice_branch_content=$(git show "${slice_branch}:${slice_path}" 2>/dev/null) || return 1
 
   # 4. Validate the new status is a known terminal state for this dispatch.
   local new_status
@@ -433,24 +553,34 @@ fi
 - Push-failure retry once (handles the common case where another dispatcher just pushed; a second attempt with `--rebase` succeeds).
 - No commit if content didn't change (idempotent re-runs).
 
-### Item 6 — C-7 (auto-merger conflict policy, hardened pre-run)
+### Item 6 — C-7 (auto-merger conflict policy, hardened pre-run, round-2 M-7 tightened)
 
 **Files to modify:**
 - `scripts/loop/dispatch_merger.sh`
 
-**Pattern:** the existing conflict resolver currently auto-takes the slice branch's version for `web/*` and the slice file, bails on everything else. New policy uses two explicit allow-lists:
+**Per round-2 M-7:** broad prefix matching alone is too permissive. Phase 9 might modify `src/foo.ts` while integration concurrently fixed an unrelated bug in `src/bar.ts`; the prior policy would auto-take the slice's tree for `src/*` and silently lose the integration fix. New policy: a conflict in path P auto-resolves with slice version **only if** P appears in the slice's `Changed files expected` list. Broad prefixes are fallback categories for *unexpected-but-plausibly-slice-owned* conflicts that go to user instead of merging silently.
 
+**Decision tree per conflicted path P:**
+
+```
+1. P ∈ slice's "Changed files expected" (parsed from slice file)?
+   YES → auto-take slice version (the slice authored its own work; trust it)
+   NO  → step 2
+
+2. P matches an INTEGRATION_OWNED prefix?
+   YES → auto-take integration version + log loudly (slice touched protected path)
+   NO  → step 3
+
+3. P matches a SLICE_PLAUSIBLE prefix (web/, src/, sql/, diagnostic/artifacts/)?
+   YES → BLOCK with "ambiguous-slice-owned" reason. The slice didn't declare
+         this file but it's under a slice-owned area; user judges intent.
+   NO  → step 4
+
+4. Block with "fully-unexpected" reason. User decides.
+```
+
+**Code shape:**
 ```bash
-# Paths the slice is *expected* to modify — auto-take slice branch's version.
-SLICE_OWNED_PATHS=(
-  "web/"
-  "sql/"
-  "src/"
-  "diagnostic/artifacts/"
-  "diagnostic/slices/${slice_id}.md"
-)
-
-# Paths the slice should NEVER modify — auto-take integration's version.
 INTEGRATION_OWNED_PATHS=(
   "scripts/loop/"
   "scripts/loop/prompts/"
@@ -460,18 +590,40 @@ INTEGRATION_OWNED_PATHS=(
   ".github/"
   ".gitignore"
 )
+SLICE_PLAUSIBLE_PATHS=(
+  "web/"
+  "src/"
+  "sql/"
+  "diagnostic/artifacts/"
+)
 
-# Decision tree per conflicted path:
-#   - matches SLICE_OWNED_PATHS prefix → git checkout --theirs
-#   - matches INTEGRATION_OWNED_PATHS prefix → git checkout --ours
-#   - matches neither → BLOCK (status=blocked, owner=user)
+resolve_conflict() {
+  local p="$1"
+  if path_in_changed_files_expected "$p"; then
+    git checkout --theirs -- "$p"; git add "$p"
+    return 0
+  fi
+  for prefix in "${INTEGRATION_OWNED_PATHS[@]}"; do
+    if [[ "$p" == "$prefix"* || "$p" == "$prefix" ]]; then
+      git checkout --ours -- "$p"; git add "$p"
+      log "merger: auto-took integration version of $p (slice touched protected path)"
+      return 0
+    fi
+  done
+  for prefix in "${SLICE_PLAUSIBLE_PATHS[@]}"; do
+    if [[ "$p" == "$prefix"* ]]; then
+      log "merger: ambiguous-slice-owned conflict in $p (not in Changed files expected)"
+      return 1
+    fi
+  done
+  log "merger: fully-unexpected conflict in $p"
+  return 1
+}
 ```
 
-After all conflicts processed:
-- If any path was in INTEGRATION_OWNED set, log it loudly — the slice tried to touch loop infrastructure, which is a protocol violation worth surfacing in the audit verdict next round.
-- If any path matched neither list, abort the merge, set the slice's `status: blocked, owner: user`, append a "Merger escalation" section to the slice file with the conflict list. Push the abort. Exit 1.
+The slice file's `Changed files expected` is implicitly always allowed (the existing convention). `path_in_changed_files_expected()` parses the slice file and tests P against the bullet-list paths.
 
-**Why this matters now:** Phase 3 slices touch `sql/*` (matview definitions), Phase 9 touches `src/*` (refactored TS modules). The current merger would bail on these and surface USER ATTENTION on every Phase 3 / 9 slice merge. The hardened policy auto-resolves the expected paths and only escalates the genuinely ambiguous cases.
+**After all conflicts processed:** if any path returned 1 from `resolve_conflict`, abort the merge, set `status: blocked, owner: user`, append a "Merger escalation" section listing each unresolved path and its reason. Push abort. Exit 1.
 
 ### Item 7 — C-8 (CI verification before kickoff)
 
@@ -479,31 +631,37 @@ After all conflicts processed:
 - One-time pre-flight check, no script changes needed
 - Verify GitHub Actions workflow at `.github/workflows/ci.yml` actually fires
 
-**Procedure:**
+**Procedure (round-2 M-8: SHA-pinned check):**
 ```bash
 # Make a trivial change that touches no app code
 echo "" >> diagnostic/_state.md
 git add diagnostic/_state.md
 git commit -m "ci: trigger workflow verification [no-op]"
 git push
+TRIGGER_SHA=$(git rev-parse HEAD)
 
 # Wait ~30s for the workflow to register
 sleep 30
 
-# Confirm a run was triggered for this commit
-gh run list --branch integration/perf-roadmap --limit 1 \
-  --json status,conclusion,event,headSha \
+# Confirm a run was triggered FOR THIS EXACT COMMIT — not just "newest run".
+# Otherwise a stale run from an earlier commit would falsely pass the gate.
+gh run list --branch integration/perf-roadmap --limit 5 \
+  --json status,conclusion,event,headSha,createdAt \
   | python3 -c "
 import json, sys
 runs = json.load(sys.stdin)
-if not runs: print('FAIL: no run registered'); sys.exit(1)
-r = runs[0]
-print(f'status={r[\"status\"]}, conclusion={r.get(\"conclusion\") or \"in-progress\"}, sha={r[\"headSha\"][:8]}')
+target = '$TRIGGER_SHA'
+matching = [r for r in runs if r['headSha'] == target]
+if not matching:
+    print(f'FAIL: no run registered for {target[:8]}'); sys.exit(1)
+r = matching[0]
+print(f'sha={r[\"headSha\"][:8]} status={r[\"status\"]} conclusion={r.get(\"conclusion\") or \"in-progress\"}')
+# Pass if in-progress or successful; fail only if explicitly failed.
 sys.exit(0 if r['status'] != 'completed' or r.get('conclusion') == 'success' else 1)
 "
 ```
 
-If the workflow doesn't fire, fix `.github/workflows/ci.yml` (likely a trigger-paths issue) before kickoff.
+If the workflow doesn't fire for the trigger SHA specifically, fix `.github/workflows/ci.yml` (likely a trigger-paths issue) before kickoff. The SHA pin ensures we don't accidentally accept a stale run from a prior commit.
 
 ### Item 8 — C-1 (stub 71 slice files)
 
@@ -617,12 +775,39 @@ updated: 2026-04-26
 
 **Parser fallback:** if the session JSONL is missing or unparsable, append a placeholder row with `estimated: true, source: "placeholder", cost_usd: 0` so the ledger is contiguous.
 
-### Item 10 — I-3-min (minimal post-merge regression gate)
+### Item 10 — I-3-min (post-merge regression gate, round-2 H-4 fixed)
 
 **Files to modify:**
-- `scripts/loop/dispatch_merger.sh` — add `run_regression_gate` step before `update_state.sh`
+- `scripts/loop/dispatch_merger.sh` — regression gate runs in the **merge-staging** phase, BEFORE push and BEFORE `update_state.sh` and BEFORE marking the slice `done`.
 
-**Gates per merge (all must exit 0 or merger sets `REGRESSION` event and exits 1):**
+**Per round-2 H-4:** the prior plan ran regression "before update_state.sh" — but state update happens AFTER push, so a regression detected then would already be on origin. The new ordering puts regression strictly between merge-into-local-integration and push:
+
+**New merger flow (under one repo lock):**
+
+```
+acquire repo lock
+  │
+  ├─ git checkout integration/perf-roadmap
+  ├─ git pull --ff-only
+  ├─ git merge --no-ff slice/<id> [resolve conflicts per Item 6]
+  ├─ ─── REGRESSION GATE ─── (new)
+  │     • bash -n scripts/loop/*.sh
+  │     • loop_status.sh exits 0
+  │     • if phase-boundary: typecheck / test:grading / SQL parse / healthcheck
+  │     • on FAILURE: git reset --hard ORIG_HEAD
+  │                   set slice status=blocked, append "Regression detected" note
+  │                   commit slice file revert; do NOT push
+  │                   log REGRESSION event (webhook fires)
+  │                   exit 1
+  ├─ flip slice frontmatter status=done, owner=-
+  ├─ commit "mark <id> done after auto-merge"
+  ├─ git push integration  (single push includes merge + done commit)
+  ├─ git branch -D slice/<id>; cleanup_slice_worktree
+  ├─ scripts/loop/update_state.sh  (regenerates _state.md, separate commit + push)
+release repo lock
+```
+
+**Gates per merge (all must exit 0 or REGRESSION + revert):**
 ```bash
 # Always-on (cheap):
 bash -n scripts/loop/*.sh
@@ -635,12 +820,17 @@ bash -n scripts/loop/*.sh
 # Phase 8/11 boundary → healthcheck:chat + healthcheck:grade
 ```
 
-**Phase-boundary detection:** use `loop_status.sh` to count `done` slices in the just-merged slice's phase; if equal to phase total, run boundary gate.
+**Phase-boundary detection:** count `done` slices in the just-merged slice's phase **including the in-flight merge**; if equal to phase total, this is the boundary, run heavy gates.
+
+**Critical property (round-2 H-4):** regression detection **before push** means rollback is local-only (`git reset --hard ORIG_HEAD`). Once pushed, rollback would require a force-push to integration — much riskier. By gating before push, the only side effect of a regression is one wasted Codex audit pass, not a corrupted shared branch.
 
 **On regression detection:**
-- Log `REGRESSION` event (caught by webhook in Item 11).
-- Set the just-merged slice's `status: blocked, owner: user` and append a "Regression detected" note.
-- Exit 1; runner trips circuit breaker on next tick.
+- `git reset --hard ORIG_HEAD` (un-merges locally; integration/perf-roadmap on origin is unchanged)
+- Switch to slice branch; flip slice frontmatter to `status: blocked, owner: user`; append "Regression detected" section
+- Commit + push slice branch with the regression note (so the audit verdict is preserved on origin)
+- Log `REGRESSION` event (webhook fires)
+- Release lock; exit 1
+- Runner's next tick sees `blocked`, auto-repair attempts, or escalates per existing flow
 
 ### Item 11 — I-9 (webhook — generic JSON payload)
 
@@ -815,7 +1005,56 @@ After all 15 verifications pass, the loop is ready for end-to-end kickoff.
 
 ---
 
-## 9. Codex round-1 audit answers + remaining open questions
+## 9. Codex round-1 + round-2 audit answers + remaining open questions
+
+### Resolved by Codex round-2 audit (4 High + 4 Medium)
+
+| Round-2 finding | How resolved |
+|---|---|
+| H-1: worktree conflicts with plan-audit semantics | Item 2 now uses **uniform worktree model** — every dispatcher (incl. plan-audit + plan-revise) runs in slice worktree on slice branch; every state change goes through `mirror_helper`. No more "edit on integration directly" branch. |
+| H-2: implementation dispatch mirror was missing | Item 5 now lists `dispatch_claude.sh` as a mirror caller. The `pending|revising → awaiting_audit` transition is mirrored back to integration so the runner observes implementation handoff. |
+| H-3: shared runner state under worktrees | Runner exports `LOOP_MAIN_WORKTREE` and `LOOP_STATE_DIR` (absolute paths). Every dispatcher and helper reads runner state from these vars regardless of which slice worktree's shell is active. Lock dir lives at `$LOOP_MAIN_WORKTREE/.git/openf1-loop.lock`. |
+| H-4: regression gate timing dangerous | Item 10 reordered: regression gate runs strictly between `git merge` and `git push`. Failure → `git reset --hard ORIG_HEAD` (local-only rollback) + slice → blocked + slice-branch commit preserves audit trail. No force-pushes ever needed. |
+| M-5: `with_repo_lock` unsafe under `set -e` | `with_repo_lock` now toggles `set +e` around the user command, captures rc, restores. Plus EXIT trap stacks the prior trap instead of clobbering. |
+| M-6: stale branch / worktree handling | `ensure_slice_worktree` now: detects orphan dirs not in `git worktree list`, runs `git worktree prune`, attaches to existing slice branch instead of `-b`-erroring. |
+| M-7: conflict policy too broad | Two-tier resolution: `Changed files expected` is the *primary* allow-list; broad prefixes are fallback categories that go to user, not silent merge. Slice version only auto-taken when path is explicitly in the slice's declared expected files. |
+| M-8: CI verification not SHA-pinned | Procedure now captures `TRIGGER_SHA=$(git rev-parse HEAD)` post-push and matches against `headSha` in `gh run list`, so a stale run from a prior commit can't pass the gate. |
+
+### Resolved by Codex round-1 (held; no changes needed in round 2)
+
+1. ~~Worktree disk usage~~ — acceptable; cleanup verified.
+2. ~~Plan-iter cap~~ — approve-with-deferred only after round 5, no Highs deferable.
+3. ~~Stub-thin vs stub-fat~~ — Phase 9 explicit per-file mappings, others thin.
+4. ~~Cost telemetry pricing~~ — `scripts/loop/pricing.json`, `estimated: true`.
+5. ~~Webhook channel~~ — generic JSON payload.
+6. ~~Worktree fallback~~ — keep `LOOP_WORKTREE_MODE=shared` for one cycle, then remove (round-2 L: "only if it actually works; otherwise fail fast" — interpreted as: keep for one cycle to prove out, then remove).
+7. ~~Stub-before-or-after harden~~ — stub AFTER Items 2–7.
+8. ~~Deferred list completeness~~ — pulled in I-2/I-3/I-7.
+
+### Round-2 L answers also incorporated
+
+- Single global lock fine for v1 (no per-path locks yet).
+- `LOCK_TIMEOUT=300s` fine if stale handling robust — done in round-2 lock revision.
+- Terminal-state read source is integration — already documented; reaffirmed.
+- `web/package.json` slice-owned only if listed in `Changed files expected` — done in round-2 conflict policy.
+- Cheap gates every merge + heavy at boundary — already in Item 10; reaffirmed.
+- Cost validation as later slice or checklist item — captured in §9 below as `X-cost-telemetry-validation`.
+- Fail-fast on `LOOP_WORKTREE_MODE=shared` if it doesn't work — added to §8 risk #1 mitigation.
+- No-op mirror + no transition counts as failure — already encoded; reaffirmed.
+
+### Remaining open for Codex round 3
+
+1. **Cost validation slice timing.** The Codex L-answer says "make cost validation an explicit later slice or checklist item." Should I stub `X-cost-telemetry-validation` in `_index.md` and run it after Phase 1 has accumulated ~50 dispatches of telemetry data, or just add it to the §7 verification list as a manual checkpoint? My read: explicit slice (`01-cost-telemetry-validation` placed AFTER `01-baseline-snapshot`) so the loop runs it itself.
+
+2. **Repo-lock dir location under `LOOP_MAIN_WORKTREE/.git/`.** The lock dir is in `.git/openf1-loop.lock` — git ignores anything in `.git/` so it doesn't get committed, but is there a risk the lock conflicts with git's own internal locks? My read: `.git/index.lock` and `.git/HEAD.lock` are git's; ours has a unique name and only blocks our own dispatchers — no overlap. Confirming.
+
+3. **Repair agent dispatch — does it also need a worktree?** Item 5 added `dispatch_repair.sh` to the mirror list, but the repair agent edits *integration*-side things (loop infrastructure, slice plans). Does it need a slice worktree at all, or should it run on the main worktree under lock? My read: keep it on main worktree under lock — it's making integration-side commits by design, not slice-branch commits.
+
+4. **Stub-after-harden ordering — which Phase-2 slice gets used to validate hardening?** I plan to use `02-prompt-static-prefix-split` (the simplest Phase-2 slice) as the smoke-run slice in §7 verification step 15. Codex agree?
+
+5. **Backfill cost ledger after validation flag flips.** Once `estimated: true → false`, do we re-stamp the prior `estimated: true` rows as accurate (recompute with then-current pricing)? My read: leave them as-is with the flag; new rows after the flip are accurate. Document the flip date clearly.
+
+6. **`ensure_slice_worktree` race against itself.** If two dispatchers call `ensure_slice_worktree` for *different* slices simultaneously, both can succeed (they're operating on different paths). But both are calling `git worktree add` which mutates `.git/worktrees/`. The repo lock serializes them; confirming this is enough.
 
 ### Resolved by Codex round-1 audit
 1. ~~Worktree disk usage~~ — **Acceptable** if cleanup/prune verified. Verification step 11 added.
@@ -862,7 +1101,31 @@ Webhook events fire on every blocked / repaired / phase-boundary state for visib
 
 ---
 
-## 11. Codex round-2 audit ask
+## 11. Codex round-3 audit ask
+
+This is round-3 (round-2 returned 4 High + 4 Medium; all addressed):
+
+| Round-2 finding | How resolved |
+|---|---|
+| H-1: worktree conflicts with plan-audit semantics | Uniform-worktree model; every dispatcher in slice worktree on slice branch |
+| H-2: implementation dispatch mirror missing | `dispatch_claude.sh` added to mirror callers (§4 Item 5) |
+| H-3: shared runner state under worktrees | `LOOP_MAIN_WORKTREE` + `LOOP_STATE_DIR` env vars (§4 Item 2) |
+| H-4: regression timing dangerous | Regression gate moved to between merge and push, with local rollback (§4 Item 10) |
+| M-5: `with_repo_lock` unsafe under `set -e` | `set +e/-e` toggle + EXIT-trap stacking (§4 Item 2) |
+| M-6: stale branch/worktree handling | `ensure_slice_worktree` handles orphans, prune, existing-branch attach (§4 Item 2) |
+| M-7: conflict policy too broad | `Changed files expected` is primary allow-list; broad prefixes fallback only (§4 Item 6) |
+| M-8: CI verification SHA-pinned | `TRIGGER_SHA` captured and matched against `headSha` (§4 Item 7) |
+
+Round-3 review please:
+- Round-2 fixes in §4 Items 2 / 5 / 6 / 7 / 10 — especially the lock primitive, ensure_slice_worktree, conflict resolver, and regression-gate timing
+- Open questions in §9 (cost validation slice timing, repo-lock dir location, repair-agent worktree, smoke-run slice choice, ledger backfill, ensure_slice_worktree race)
+- Anything else newly surfaced
+
+Triage as `High` / `Medium` / `Low`. Approving this round means I start implementation.
+
+---
+
+End of plan.
 
 This is the round-2 revision. Codex round-1 returned 4 High + 3 Medium + 6 Low/Answers items; all addressed:
 
