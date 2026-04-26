@@ -1,18 +1,18 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T13:58:07Z
+updated: 2026-04-26T14:01:15Z
 ---
 
 ## Goal
-Add a local/dev-only API route that aggregates the most recent perfTrace records from `web/logs/chat_query_trace.jsonl` and returns a p50 / p95 summary per stage. Used to inspect the loop's perf state without grepping JSONL by hand. The window size defaults to the 200 most recent perfTrace records (records carrying a top-level `spans` array — see step 5 below) and is overridable with an `?n=<int>` query parameter (clamped to `[1, 1000]`); non-numeric or out-of-range values fall back to the default. All non-trivial behavior (parsing, filtering, percentile math, the production gate) lives in a plain JS helper `web/src/lib/perfSummary.mjs` so the existing `node --test scripts/tests/*.test.mjs` gate can exercise it without a TypeScript loader; the `route.ts` file is a thin shim around the helper.
+Add a local/dev-only API route that aggregates the most recent perfTrace records from the same JSONL file the existing writer (`web/src/lib/perfTrace.ts`) appends to — i.e. `<base>/chat_query_trace.jsonl` where `<base>` is `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), "logs")` (matching `getTraceFilePath` in `perfTrace.ts` and `serverLog.ts`; resolves to `web/logs/...` when the Next app and gates run from `web/`) — and returns a p50 / p95 summary per stage. Used to inspect the loop's perf state without grepping JSONL by hand. The window size defaults to the 200 most recent perfTrace records (records carrying a top-level `spans` array — see step 5 below) and is overridable with an `?n=<int>` query parameter (clamped to `[1, 1000]`); non-numeric or out-of-range values fall back to the default. All non-trivial behavior (parsing, filtering, percentile math, the production gate) lives in a plain JS helper `web/src/lib/perfSummary.mjs` so the existing `node --test scripts/tests/*.test.mjs` gate can exercise it without a TypeScript loader; the `route.ts` file is a thin shim around the helper. Sanitization of `n` is the sole responsibility of `parseN`; `aggregatePerfTraces` trusts its caller and assumes `n` is already a positive integer.
 
 ## Inputs
-- `web/logs/chat_query_trace.jsonl` (dev sink populated by `01-route-stage-timings`)
+- `<base>/chat_query_trace.jsonl` where `<base>` = `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), "logs")` (resolves to `web/logs/chat_query_trace.jsonl` in dev when running from `web/`; this is the dev sink populated by `01-route-stage-timings` via `web/src/lib/perfTrace.ts`'s `getTraceFilePath`).
 - [roadmap §4 Phase 1 step 3](../roadmap_2026-04_performance_and_upgrade.md)
 
 ## Prior context
@@ -27,15 +27,16 @@ None at author time.
 
 ## Steps
 1. Create plain JS helper module `web/src/lib/perfSummary.mjs` (extension `.mjs` so the existing `node --test scripts/tests/*.test.mjs` gate can import it directly without a TypeScript compile step). Exports:
-   - `aggregatePerfTraces(records, n)` — pure function. `records` is an array of already-parsed perfTrace entries (each `{ spans: [...] }`); `n` is the window size. Takes the last `n` records, groups by `spans[].name`, computes `count`, `p50_ms`, `p95_ms`, `max_ms` (numbers, milliseconds, rounded to 2 decimals), and returns `{ window: { requested: <n>, returned: <records.length capped at n> }, stages: { [name]: { count, p50_ms, p95_ms, max_ms } } }`. Stages not present are omitted (no zero-count entries).
-   - `parseN(rawValue)` — parses a query-string `n` value: returns the integer if it's a finite number in `[1, 1000]`, else `200`. Used by both the route and the tests.
+   - `aggregatePerfTraces(records, n)` — pure function. `records` is an array of already-parsed perfTrace entries (each `{ spans: [...] }`); `n` is the window size. **Trusts its caller**: assumes `n` is a positive integer; does no clamping or sanitization itself (that responsibility lives entirely in `parseN`). Takes the last `n` records, groups by `spans[].name`, computes `count`, `p50_ms`, `p95_ms`, `max_ms` (numbers, milliseconds, rounded to 2 decimals), and returns `{ window: { requested: <n>, returned: <records.length capped at n> }, stages: { [name]: { count, p50_ms, p95_ms, max_ms } } }`. Stages not present are omitted (no zero-count entries).
+   - `parseN(rawValue)` — **sole sanitizer** for the window size. Parses a query-string `n` value: returns the integer if it's a finite number in `[1, 1000]`, else `200`. Every code path that supplies `n` to `aggregatePerfTraces` (the route's GET handler, tests) routes through `parseN` first.
    - `handlePerfSummaryRequest({ env, traceFilePath, n, readFile })` — orchestrator with **dependency-injected** `readFile` (the route passes `fs.promises.readFile`; tests pass a stub that records call counts so the production no-IO check is observable). Behavior:
      - If `env === 'production'`, return `{ status: 404, body: 'Not Found' }` **before calling `readFile`** (the test asserts `readFile` was never invoked in this branch — see Acceptance criteria).
      - Else, call `readFile(traceFilePath, 'utf8')`. On rejection with `code === 'ENOENT'`, return `{ status: 200, body: { window: { requested: n, returned: 0 }, stages: {} } }`. Other rejections also return that empty 200 shape (the route never 5xxs for IO/parse failures).
      - Split content on `\n`, drop empty lines, parse each line with `JSON.parse` inside a `try/catch` (silently skip malformed lines — see step 5). Filter to entries where `Array.isArray(entry.spans)` is true. Call `aggregatePerfTraces(filtered, n)` and return `{ status: 200, body: <result> }`.
 2. Create `web/src/app/api/admin/perf-summary/route.ts` as a thin Next.js wrapper. Its `GET` handler:
    - Reads `?n=` from the request URL and passes the raw value through `parseN` (imported from the helper).
-   - Calls `handlePerfSummaryRequest({ env: process.env.NODE_ENV, traceFilePath: process.env.OPENF1_PERF_SUMMARY_TRACE_PATH ?? path.join(process.cwd(), 'web/logs/chat_query_trace.jsonl'), n, readFile: fs.promises.readFile })`.
+   - Resolves the default trace file path the same way the writer (`web/src/lib/perfTrace.ts::getTraceFilePath`) does: `const baseDir = process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), 'logs'); const traceFilePath = path.join(baseDir, 'chat_query_trace.jsonl');` — no separate env var, so flipping `OPENF1_WEB_LOG_DIR` redirects the writer and the reader together.
+   - Calls `handlePerfSummaryRequest({ env: process.env.NODE_ENV, traceFilePath, n, readFile: fs.promises.readFile })`.
    - Wraps the returned `{ status, body }` in a `Response` (`Response.json(body, { status })` for status 200; `new Response('Not Found', { status: 404 })` for status 404). Contains no aggregation, parsing, or filtering logic of its own — all behavior the gate test must exercise lives in the helper.
 3. Window-size policy lives in `parseN`: defaults to 200, accepts `?n=<int>` clamped to `[1, 1000]`, non-numeric / NaN / out-of-range falls back to 200.
 4. Mark this route as **local/dev only**: in production it must not run, since trace data lives elsewhere (a future production sink, see roadmap §6 / Phase 12). The production gate is the very first statement of `handlePerfSummaryRequest` (step 1) and runs before the injected `readFile` is called; the test verifies non-invocation of the `readFile` stub.
@@ -47,12 +48,12 @@ None at author time.
 
 ## Changed files expected
 - `web/src/lib/perfSummary.mjs` — new plain JS helper (~120 LOC) holding all parsing, filtering, percentile, and prod-gate logic. Plain JS (not TypeScript) so the `.mjs` gate test can `import` it directly without a build step.
-- `web/src/app/api/admin/perf-summary/route.ts` — thin Next.js shim (~30 LOC) that wires `process.env`, the request URL, and `fs.promises.readFile` into `handlePerfSummaryRequest`.
+- `web/src/app/api/admin/perf-summary/route.ts` — thin Next.js shim (~30 LOC) that resolves the trace file path via `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), 'logs')` joined with `chat_query_trace.jsonl` (matching `web/src/lib/perfTrace.ts::getTraceFilePath`) and wires `process.env.NODE_ENV`, the request URL, and `fs.promises.readFile` into `handlePerfSummaryRequest`.
 - `web/scripts/tests/perf-summary-route.test.mjs` — new (~120 LOC) gate test. Picked up by the existing `node --test scripts/tests/*.test.mjs` glob in `npm run test:grading`, so no `package.json` change is needed. The test does NOT import `route.ts` (TypeScript cannot be loaded under the plain `node --test` runner without an extra loader) — it imports the plain JS helper `web/src/lib/perfSummary.mjs` directly and exercises `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest`. Coverage:
   - Writes a fixture JSONL in `os.tmpdir()` containing an `appendQueryTrace`-shaped entry (no top-level `spans`), a perfTrace entry (with `spans`), and one malformed line; passes the path to `handlePerfSummaryRequest` along with a stub `readFile` that wraps the real `fs.promises.readFile` and records call counts. Asserts dev-mode response shape, that only the perfTrace entry contributes to `stages`, and that the malformed line is silently skipped.
   - Calls `handlePerfSummaryRequest({ env: 'production', traceFilePath: <fixture path>, n: 200, readFile: stub })` with the same fixture and asserts `status === 404` AND `stub.callCount === 0` — this is the observable proof the production branch performed no file I/O (replaces the previous "404 with a missing path" check, which only proved an absent file, not absent IO).
-  - Calls `aggregatePerfTraces` directly with hand-built record arrays to verify percentile math and the n-clamp (n ≤ 0, n > 1000, NaN, non-numeric).
-  - Calls `parseN` directly to verify `[1, 1000]` clamp + 200 fallback for `null`, `''`, `'abc'`, `'-5'`, `'5000'`.
+  - Calls `aggregatePerfTraces` directly with hand-built record arrays to verify percentile math, rounding to 2 decimals, omission of absent stages, and that `window.returned` equals `min(records.length, n)` when called with valid positive integers (no n-sanitization tests here — those live under `parseN`).
+  - Calls `parseN` directly to verify the `[1, 1000]` clamp + 200 fallback. Cases: returns 200 for `null`, `undefined`, `''`, `'abc'`, `NaN`, `'-5'`, `'0'`, `'5000'`, `'1.5'`; returns the integer for `'1'`, `'500'`, `'1000'`. This is the **only** place invalid-`n` handling is tested.
 - `diagnostic/slices/01-perf-summary-route.md` (slice-completion note + audit verdict; always implicitly allowed)
 
 ## Artifact paths
@@ -73,7 +74,8 @@ cd web && npm run test:grading
   - `handlePerfSummaryRequest` invoked with `env: 'production'`, the same fixture path, and a `readFile` stub that records call counts returns `{ status: 404 }` AND the stub's call count is `0` — directly observable proof the production branch performed no file I/O.
   - `handlePerfSummaryRequest` invoked with a `traceFilePath` that does not exist (in dev mode) returns `{ status: 200, body: { window: { requested, returned: 0 }, stages: {} } }`.
   - `aggregatePerfTraces` with hand-built records produces correct `p50_ms`, `p95_ms`, `max_ms` values (rounded to 2 decimals) and omits stages not present in the window.
-  - `parseN` returns 200 for `null`, `''`, `'abc'`, `NaN`, `'-5'`, `'5000'`, and `'0'`; returns the clamped integer for `'1'`, `'500'`, `'1000'`.
+  - `parseN` returns 200 for `null`, `undefined`, `''`, `'abc'`, `NaN`, `'-5'`, `'0'`, `'5000'`, and `'1.5'`; returns the integer for `'1'`, `'500'`, `'1000'`. (This is the only invalid-`n` coverage; `aggregatePerfTraces` is not tested with invalid `n`.)
+  - The route's default `traceFilePath` resolution matches `web/src/lib/perfTrace.ts::getTraceFilePath` (same env var `OPENF1_WEB_LOG_DIR`, same `chat_query_trace.jsonl` filename) — verified by code review during implementation, since the path resolution itself is in `route.ts` and not directly exercised by the helper tests.
 - [ ] All gates exit 0.
 
 ## Out of scope
@@ -126,10 +128,10 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 **Status: REVISE**
 
 ### High
-- [ ] Align the route's default trace path with the existing writers in `web/src/lib/perfTrace.ts` and `web/src/lib/serverLog.ts`: read from `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), "logs")` plus `chat_query_trace.jsonl`, or otherwise explicitly document and test why `path.join(process.cwd(), "web/logs/chat_query_trace.jsonl")` is correct when gates and the Next app run from `web/`.
+- [x] Align the route's default trace path with the existing writers in `web/src/lib/perfTrace.ts` and `web/src/lib/serverLog.ts`: read from `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), "logs")` plus `chat_query_trace.jsonl`, or otherwise explicitly document and test why `path.join(process.cwd(), "web/logs/chat_query_trace.jsonl")` is correct when gates and the Next app run from `web/`.
 
 ### Medium
-- [ ] Resolve the `n`-policy ambiguity by stating whether `aggregatePerfTraces(records, n)` must sanitize invalid/out-of-range `n` values itself, or remove the direct aggregate "n-clamp" test coverage and leave all invalid query handling to `parseN`.
+- [x] Resolve the `n`-policy ambiguity by stating whether `aggregatePerfTraces(records, n)` must sanitize invalid/out-of-range `n` values itself, or remove the direct aggregate "n-clamp" test coverage and leave all invalid query handling to `parseN`.
 
 ### Low
 
