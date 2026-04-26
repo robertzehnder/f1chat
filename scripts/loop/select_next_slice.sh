@@ -40,6 +40,12 @@ while IFS= read -r sid; do
     done|"")
       continue
       ;;
+    pending_plan_audit)
+      # Plan-audit phase: Codex reviews the slice file for plan bugs before
+      # any implementation work runs.
+      echo "$sid codex $status"
+      exit 0
+      ;;
     pending|revising)
       # Approval-required pending slices wait on sentinel — unless the user
       # set LOOP_AUTO_APPROVE=1 in the runner's environment, which waives all

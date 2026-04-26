@@ -154,6 +154,14 @@ while true; do
         run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_claude.sh" "$slice_id" \
         || guard_rc=$?
       ;;
+    codex:pending_plan_audit)
+      # Plan-audit phase: Codex reviews the slice file for plan bugs BEFORE
+      # any Claude implementation runs. Eliminates wasted implementer rounds
+      # when the slice file itself has gate-order / scope / dependency bugs.
+      dispatch_with_guards "$slice_id" \
+        run_with_timeout 900 "$LOOP_DIR/dispatch_slice_audit.sh" "$slice_id" \
+        || guard_rc=$?
+      ;;
     codex:awaiting_audit)
       dispatch_with_guards "$slice_id" \
         run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_codex.sh" "$slice_id" \

@@ -1,8 +1,8 @@
 ---
 slice_id: 00-fresh-benchmark
 phase: 0
-status: pending
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-25
 updated: 2026-04-25
