@@ -1,18 +1,18 @@
 ---
 slice_id: 01-route-stage-timings
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T13:07:02Z
+updated: 2026-04-26T14:05:00Z
 ---
 
 ## Goal
-Wire the per-stage perf-trace helpers (built in `01-perf-trace-helpers`) into the chat route so every request emits a structured stage-timing record.
+Wire the per-stage perf-trace helpers (built in `01-perf-trace-helpers`) into the chat route so every request — including early-return and error-path exits — emits a structured stage-timing record covering the stages that actually fired on that request's code path.
 
 ## Inputs
-- `web/src/lib/perfTrace.ts` — span helpers from prior slice
+- `web/src/lib/perfTrace.ts` — span helpers from prior slice (`startSpan`, `Span.end`, `flushTrace`)
 - `web/src/app/api/chat/route.ts` — chat endpoint
 - [roadmap §4 Phase 1](../roadmap_2026-04_performance_and_upgrade.md)
 
@@ -22,20 +22,44 @@ Read these before triaging or implementing:
 
 - `diagnostic/_state.md` — current phase counts, recent merges, accumulated auditor notes.
 - `diagnostic/slices/01-perf-trace-helpers.md` — defines the `startSpan` / `Span.end` / `flushTrace` API this slice integrates with. The acceptance criteria here must match what that slice actually exported.
-- The chat route at `web/src/app/api/chat/route.ts` to confirm the actual stage boundaries before writing the integration test.
+- `web/src/lib/perfTrace.ts` — confirms the exported signatures: `startSpan(name): Span`, `Span.end(): SpanRecord`, `flushTrace(requestId, spans: SpanRecord[]): Promise<void>`. `flushTrace` writes to `web/logs/chat_query_trace.jsonl`.
+- The chat route at `web/src/app/api/chat/route.ts` to confirm the actual stage boundaries (and the existing `appendQueryTrace` writes to the same JSONL file) before writing the test.
 
 ## Required services / env
-None at author time. The chat route does run a Postgres query at request time, but the spans wrap whatever the request does — not the slice's gates.
+None. The route's runtime path uses Postgres + Anthropic, but the gate test does NOT invoke the route — it does static analysis on the route source (see Steps step 5). No env vars or live services are required for `npm run build`, `npm run typecheck`, or `npm run test:grading` to pass.
 
 ## Steps
-1. Import `startSpan` / `flushTrace` (or equivalent helpers) from `web/src/lib/perfTrace.ts` into `web/src/app/api/chat/route.ts`.
-2. Wrap each pipeline stage in a span with these stage names: `request_intake`, `runtime_classify`, `resolve_db`, `template_match`, `sqlgen_llm`, `execute_db`, `repair_llm`, `synthesize_llm`, `sanity_check`, `total`.
-3. At end of request, `flushTrace(requestId, spans)` writes one structured JSON line to `web/logs/chat_query_trace.jsonl`.
-4. Add a unit/integration test that hits the route once and asserts a trace line was appended with all expected stage names.
+1. Import `startSpan`, `flushTrace`, and the `SpanRecord` type from `@/lib/perfTrace` into `web/src/app/api/chat/route.ts`.
+2. Stage names — use exactly these 10 from `perfTrace.ts`: `request_intake`, `runtime_classify`, `resolve_db`, `template_match`, `sqlgen_llm`, `execute_db`, `repair_llm`, `synthesize_llm`, `sanity_check`, `total`. Wire each stage at the corresponding code site:
+   - `request_intake` — body parse + validation block.
+   - `runtime_classify` — local question-type classification inside `buildChatRuntime` (wrap the call; the helper itself is shared).
+   - `resolve_db` — runtime resolution / session-candidate DB work (the same `buildChatRuntime` call). It is acceptable to model `runtime_classify` and `resolve_db` as a single combined span around `buildChatRuntime` if the call cannot be decomposed without refactoring; in that case emit only one of the two stages on this path and document the choice in a one-line code comment.
+   - `template_match` — the `buildDeterministicSqlTemplate` call.
+   - `sqlgen_llm` — the `generateSqlWithAnthropic` call (only on the LLM-generation branch).
+   - `execute_db` — each `runReadOnlySql` invocation inside `executeSqlWithTrace`.
+   - `repair_llm` — the `repairSqlWithAnthropic` call (only on the repair branch).
+   - `synthesize_llm` — the `synthesizeAnswerWithAnthropic` call (only when `result.rowCount > 0`).
+   - `sanity_check` — the `applyAnswerSanityGuards` call (only when `result.rowCount > 0`).
+   - `total` — started at the top of `POST` (right after `requestId` is generated) and ended in the finally block (see step 4).
+3. Span lifecycle (corrects the prior wording): `startSpan(name)` returns a `Span`; calling `span.end()` returns a `SpanRecord` (`{ name, startedAt, elapsedMs }`). Accumulate every returned `SpanRecord` into a single `SpanRecord[]` array scoped to the request. Pass that array (not active `Span` objects) to `flushTrace(requestId, records)`.
+4. Trace must flush on every exit covered by the goal. Implement using a `try { ... } finally { ... }` around the request body so the finally runs on:
+   - Clarification-required early return.
+   - Completeness-blocked early return.
+   - Successful response.
+   - Transient DB unavailability branch (`isTransientDatabaseAvailabilityError`).
+   - Generic error catch.
+   In the finally block: end any still-open spans (defensively — `Span.end()` is idempotent), end `total`, then `await flushTrace(requestId, spans)`. Wrap the `flushTrace` call in its own try/catch that logs to stderr only — trace-write failures must not change the response status (existing `appendQueryTrace` already swallows; mirror that behavior).
+5. Coexistence with the existing `appendQueryTrace` writes to `web/logs/chat_query_trace.jsonl`: both writers append to the same file. The new perfTrace records are uniquely identified by the top-level `spans: SpanRecord[]` array (existing `appendQueryTrace` records do not include a `spans` field — they carry `status`, `queryPath`, `sql`, etc.). Tests and downstream consumers MUST filter by `Array.isArray(entry.spans)` to isolate the structured stage-timing records. Do not change the file path, and do not remove or reshape the existing `appendQueryTrace` entries — they continue to coexist.
+6. Add a static-analysis test at `web/scripts/tests/route-trace.test.mjs` (matching the `web/scripts/tests/*.test.mjs` pattern used by `01-perf-trace-helpers` so it is picked up by `npm run test:grading`). The test reads `web/src/app/api/chat/route.ts` as text and asserts:
+   - The file imports `startSpan` and `flushTrace` from `@/lib/perfTrace` (regex on the import statement).
+   - For each of the 10 stage names, at least one `startSpan("<stage>")` (or `startSpan('<stage>')`) call appears in the source.
+   - At least one `flushTrace(` call appears in the source.
+   - At least one `} finally {` block appears in the source (sanity check that flushing is set up to run on all exits — not airtight but cheap).
+   The static-analysis approach is deliberate: it covers all conditional branches without needing live Postgres or Anthropic, and it is robust to stages that only fire on one code path. Branch-execution coverage is left to `01-baseline-snapshot`, which exercises the route with real services and produces the first promoted JSONL artifact.
 
 ## Changed files expected
 - `web/src/app/api/chat/route.ts`
-- `web/src/lib/__tests__/routeTrace.test.ts` (or equivalent)
+- `web/scripts/tests/route-trace.test.mjs`
 - `diagnostic/slices/01-route-stage-timings.md` (slice-completion note + audit verdict; always implicitly allowed)
 
 ## Artifact paths
@@ -49,16 +73,22 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] Imports from `perfTrace.ts` resolve at typecheck time.
-- [ ] Every named stage from step 2 appears in at least one trace record produced by a test request.
+- [ ] Imports of `startSpan` and `flushTrace` from `@/lib/perfTrace` resolve at typecheck time in `route.ts`.
+- [ ] Each of the 10 stage names from step 2 appears in at least one `startSpan("<stage>")` call site in `route.ts` (verified by the static-analysis test). Per step 2, `runtime_classify` and `resolve_db` may be modeled as a single combined span around `buildChatRuntime` — both stage names need not appear if the combined-span exception applies; if it does, only the chosen stage name is required and a one-line code comment must explain the choice.
+- [ ] `route.ts` calls `flushTrace(requestId, spans)` from a `finally` block so every exit path (clarification, completeness-blocked, success, transient-db-unavailable, error) flushes exactly once.
+- [ ] `flushTrace` is invoked with a `SpanRecord[]` (the values returned by `Span.end()`), not active `Span` objects.
+- [ ] The existing `appendQueryTrace` JSONL writes are unchanged in shape and file path; perfTrace records are distinguishable by the top-level `spans` array.
+- [ ] `web/scripts/tests/route-trace.test.mjs` exists, is executed by `npm run test:grading`, and asserts the four conditions in step 6.
 - [ ] All gates exit 0.
 
 ## Out of scope
 - The /api/admin/perf-summary route (separate slice `01-perf-summary-route`).
 - Capturing baseline traces (`01-baseline-snapshot`).
+- Branch-execution coverage of the route under real services (also `01-baseline-snapshot`).
+- Splitting `runtime_classify` and `resolve_db` into separate spans if `buildChatRuntime` cannot be decomposed without refactoring — combined-span exception in step 2 is allowed.
 
 ## Risk / rollback
-Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent state is at risk.
+Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent state is at risk. `flushTrace` failures are swallowed (mirroring `appendQueryTrace`), so a regression in trace-writing cannot change response status codes.
 
 ## Slice-completion note
 (filled by Claude)
@@ -71,17 +101,17 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
 **Status: REVISE**
 
 ### High
-- [ ] Specify that the route trace test must live under `web/scripts/tests/*.test.mjs` or change the gate commands so the listed test is actually executed by `npm run test:grading`.
-- [ ] Define how the route test avoids live Postgres and Anthropic dependencies, or update `Required services / env` with the exact services and environment variables the gate requires.
-- [ ] Clarify conditional stage semantics so the acceptance criteria are achievable: either every trace record must include all ten stage names including skipped/no-op stages, or the tests must cover branch-specific stage sets instead of expecting one request to hit every conditional stage.
-- [ ] Require trace flushing on all route exits covered by the goal, including early returns and error paths, or narrow the goal and acceptance criteria to the specific successful path being instrumented.
+- [x] Specify that the route trace test must live under `web/scripts/tests/*.test.mjs` or change the gate commands so the listed test is actually executed by `npm run test:grading`.
+- [x] Define how the route test avoids live Postgres and Anthropic dependencies, or update `Required services / env` with the exact services and environment variables the gate requires.
+- [x] Clarify conditional stage semantics so the acceptance criteria are achievable: either every trace record must include all ten stage names including skipped/no-op stages, or the tests must cover branch-specific stage sets instead of expecting one request to hit every conditional stage.
+- [x] Require trace flushing on all route exits covered by the goal, including early returns and error paths, or narrow the goal and acceptance criteria to the specific successful path being instrumented.
 
 ### Medium
-- [ ] Update step 3 to say `flushTrace` receives `SpanRecord[]` produced by `Span.end()`, not active `Span` objects.
-- [ ] Specify how the new perf-trace record coexists with the route's existing `appendQueryTrace` writes to `web/logs/chat_query_trace.jsonl`, including how tests identify the structured stage-timing record.
+- [x] Update step 3 to say `flushTrace` receives `SpanRecord[]` produced by `Span.end()`, not active `Span` objects.
+- [x] Specify how the new perf-trace record coexists with the route's existing `appendQueryTrace` writes to `web/logs/chat_query_trace.jsonl`, including how tests identify the structured stage-timing record.
 
 ### Low
-- [ ] Replace `web/src/lib/__tests__/routeTrace.test.ts (or equivalent)` with the exact intended test path once the test-runner issue is resolved.
+- [x] Replace `web/src/lib/__tests__/routeTrace.test.ts (or equivalent)` with the exact intended test path once the test-runner issue is resolved.
 
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T04:32:14Z`, which is less than 24 hours old at audit time.
