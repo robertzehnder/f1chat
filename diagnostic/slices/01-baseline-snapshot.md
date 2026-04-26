@@ -1,11 +1,11 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:40:00Z
+updated: 2026-04-26T14:41:51Z
 ---
 
 ## Goal
@@ -35,27 +35,33 @@ Read these before triaging or implementing:
 Verify the dev server responds before running the benchmark; abort the slice with status=blocked if not.
 
 ## Steps
-1. Confirm dev server is up: `curl -fsS http://127.0.0.1:3000/api/admin/perf-summary` returns a 200 JSON response.
-2. Run a fixed 10–20-question benchmark against the chat endpoint (subset of `chat-health-check.questions.json` is fine; full 50 is ok if you have time). Each request will populate `web/logs/chat_query_trace.jsonl` with stage timings.
-3. After the benchmark, GET `/api/admin/perf-summary` to fetch the aggregated p50/p95 per stage.
-4. Save the perf-summary JSON to `diagnostic/artifacts/perf/01-baseline-snapshot_<UTC-date>.json`.
-5. Generate a short human-readable companion `diagnostic/artifacts/perf/01-baseline-snapshot_<UTC-date>.md` with:
+1. Capture the UTC date token at slice start: `DATE=$(date -u +%Y-%m-%d)`. Use this exact value for every artifact path produced by this slice (no wildcards, no re-deriving later).
+2. Confirm dev server is up: `curl -fsS http://127.0.0.1:3000/api/admin/perf-summary` returns a 200 JSON response.
+3. Run a fixed 10–20-question benchmark against the chat endpoint (subset of `chat-health-check.questions.json` is fine; full 50 is ok if you have time). Each request will populate `web/logs/chat_query_trace.jsonl` with stage timings.
+4. After the benchmark, GET `/api/admin/perf-summary` to fetch the aggregated p50/p95 per stage.
+5. Save the perf-summary JSON to the exact path `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json`.
+6. Generate a short human-readable companion at the exact path `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md` with:
    - One-line overall median request time
    - Per-stage p50 / p95 table
    - Notes section with anything notable (cold-start spikes, outliers).
-6. The slice-completion note records the headline numbers (p50 / p95 totals) so the audit can verify against the artifacts.
+7. Record `${DATE}` in the slice-completion note alongside the headline numbers (p50 / p95 totals) so the audit can verify against the exact artifact paths.
 
 ## Changed files expected
-- `diagnostic/artifacts/perf/01-baseline-snapshot_<UTC-date>.json`
-- `diagnostic/artifacts/perf/01-baseline-snapshot_<UTC-date>.md`
+- `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json` (exact `${DATE}` from step 1)
+- `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md` (exact `${DATE}` from step 1)
 - `diagnostic/slices/01-baseline-snapshot.md` (slice-completion note + audit verdict; always implicitly allowed)
 
 ## Artifact paths
-- `diagnostic/artifacts/perf/01-baseline-snapshot_<UTC-date>.json` — machine-readable per-stage summary.
-- `diagnostic/artifacts/perf/01-baseline-snapshot_<UTC-date>.md` — human-readable summary.
+- `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json` — machine-readable per-stage summary, where `${DATE}` is the UTC date token captured in step 1.
+- `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md` — human-readable summary, same `${DATE}`.
 
 ## Gate commands
 ```bash
+# Use the SAME UTC date token captured at slice start (step 1).
+# Do not re-derive with `date` here; export DATE explicitly so the gates
+# fail loudly if the artifacts were written under a different date.
+: "${DATE:?must export DATE=<UTC-date> matching the artifacts written in steps 5–6}"
+
 # Verify the dev server is up (slice-blocking precondition)
 curl -fsS http://127.0.0.1:3000/api/admin/perf-summary >/dev/null
 
@@ -63,13 +69,15 @@ cd web && npm run build
 cd web && npm run typecheck
 cd web && npm run test:grading
 
-# Verify both artifact files exist on tracked paths
-ls diagnostic/artifacts/perf/01-baseline-snapshot_*.json | head -1 | xargs test -f
-ls diagnostic/artifacts/perf/01-baseline-snapshot_*.md   | head -1 | xargs test -f
+# Verify both artifact files exist at the EXACT paths produced by this slice
+# (no wildcards — wildcards can match stale 01-baseline-snapshot_* files).
+test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json"
+test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md"
 ```
 
 ## Acceptance criteria
-- [ ] Both artifact files exist under `diagnostic/artifacts/perf/`.
+- [ ] Both artifact files exist at the exact paths `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.{json,md}` where `${DATE}` is the UTC date captured at slice start (step 1).
+- [ ] Slice-completion note records `${DATE}` so the audit can verify the exact artifact paths (no wildcard matching).
 - [ ] Companion markdown contains a per-stage p50/p95 table (not just raw JSON).
 - [ ] Slice-completion note quotes overall median and at least three highest-latency stages.
 - [ ] All gates exit 0.
@@ -94,7 +102,7 @@ Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `we
 ### High
 
 ### Medium
-- [ ] Tie the artifact existence gates and acceptance criterion to the UTC date token or exact artifact paths produced by this slice, instead of using broad wildcards that can pass against stale `01-baseline-snapshot_*` files.
+- [x] Tie the artifact existence gates and acceptance criterion to the UTC date token or exact artifact paths produced by this slice, instead of using broad wildcards that can pass against stale `01-baseline-snapshot_*` files.
 
 ### Low
 
