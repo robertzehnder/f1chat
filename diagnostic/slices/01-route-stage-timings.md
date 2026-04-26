@@ -1,11 +1,11 @@
 ---
 slice_id: 01-route-stage-timings
 phase: 1
-status: revising
+status: awaiting_audit
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T09:21:25-04:00
+updated: 2026-04-26T09:32:35-04:00
 ---
 
 ## Goal
@@ -97,7 +97,9 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
 - Branch: `slice/01-route-stage-timings` (forked from `integration/perf-roadmap` @ `84ee03f`).
 - Commits:
   - `7062b45` — Wire perfTrace stage spans into the chat route (route.ts + new static-analysis test).
-  - (this slice-note commit) — Fill slice-completion note and flip frontmatter to `awaiting_audit` / owner `codex`.
+  - `e974c30` — Fill slice-completion note and flip frontmatter to `awaiting_audit` / owner `codex`.
+  - `0f2886c` — audit: revise (REVISE verdict appended noting repair-fallback regression).
+  - (this revision commit) — Restore repair fallback semantics: re-wrap `repair_llm` LLM call + `repair_retry` execution in a single outer try/catch so a `repair_retry` execution failure once again logs `chat_query_repair_failed` and falls back to `heuristic_after_sql_failure`. The `repair_llm` span remains scoped strictly to the `repairSqlWithAnthropic` call via an inner try/finally that ends the span before the retry runs.
 - Files changed (matches "Changed files expected"):
   - `web/src/app/api/chat/route.ts` — modified.
   - `web/scripts/tests/route-trace.test.mjs` — new (~55 LOC).
@@ -108,16 +110,20 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
   - In the finally, `total` is removed from `openSpans` first so the loop ends only the auxiliary spans (defensive cleanup); `total` is then ended last so its `elapsedMs` brackets the entire request, including any cleanup of stragglers. `flushTrace` is wrapped in its own try/catch that logs a `trace_flush_failed` stderr line — mirroring the existing `appendQueryTrace` swallow-and-log pattern — so trace-write failures cannot change the response status.
   - `runtime_classify` and `resolve_db` both bracket the same `buildChatRuntime` call (concurrent spans wrapping the shared work) per the slice's explicit decision; the call is wrapped in a `try { ... } finally { endTrackedSpan(both); }` so an exception inside `buildChatRuntime` still ends both spans before propagating to the inner catch. A code comment at the call site documents the shared-call duplication.
   - All other LLM/DB stage spans (`template_match`, `sqlgen_llm`, `execute_db`, `repair_llm`, `synthesize_llm`, `sanity_check`) are similarly enclosed in `try { ... } finally { endTrackedSpan(...); }` so their elapsed times reflect just the wrapped call (and not subsequent error-handling work) even on the throw path.
-  - `repair_llm`: the existing nested try/catch needed to be rewritten to keep the span scoped to `repairSqlWithAnthropic` only — I introduced a `repaired`/`repairError` pair so the span ends in a single finally before the heuristic-fallback log/branch runs.
+  - `repair_llm`: the span is scoped strictly to the `repairSqlWithAnthropic` call via an inner `try { repaired = await repairSqlWithAnthropic(...) } finally { endTrackedSpan(repairSpan) }`. That inner block sits inside the original outer `try { ...repair LLM + repair_retry... } catch (repairError) { ...heuristic fallback... }`, which preserves the pre-slice fallback semantics: if either `repairSqlWithAnthropic` throws OR the subsequent `executeSqlWithTrace(..., "repair_retry")` throws, the same outer catch logs `chat_query_repair_failed` and runs `heuristic_after_sql_failure` (revision applied 2026-04-26 in response to the implementation-audit REVISE verdict above).
   - `flushTrace` receives `SpanRecord[]` (the values returned by `Span.end()`), not active `Span` objects, satisfying the slice's lifecycle correction.
   - Coexistence with the existing `appendQueryTrace` writes is preserved unchanged: the perfTrace records are uniquely identifiable by the top-level `spans` array; `appendQueryTrace` records continue to carry `status`, `queryPath`, `sql`, etc. Both writers append to `web/logs/chat_query_trace.jsonl`.
 - Test approach:
   - `web/scripts/tests/route-trace.test.mjs` is a static-analysis test that reads `web/src/app/api/chat/route.ts` as text and asserts: (1) the file imports `startSpan` and `flushTrace` from `@/lib/perfTrace`, (2) each of the 10 stage names appears in at least one `startSpan("<stage>")` literal call site, (3) at least one `flushTrace(` call appears, (4) at least one `} finally {` block appears. No live Postgres or Anthropic dependency is required, matching the slice's "Required services / env: None" promise.
   - Filename follows the `web/scripts/tests/*.test.mjs` glob, so `npm run test:grading` (`node --test scripts/tests/*.test.mjs`) picks it up automatically.
-- Gate command results (run from `web/`, in slice-specified order):
+- Gate command results (run from `web/`, in slice-specified order; re-run after the 2026-04-26 revision that restored repair fallback semantics):
   - `npm run build` — exit `0`. Next 15 compile + page generation succeeded; `/api/chat` builds dynamic.
   - `npm run typecheck` — exit `0`. `tsc --noEmit` clean.
   - `npm run test:grading` — exit `0`. TAP `1..15`; `# pass 6 # fail 0 # skipped 9`. The new `chat route imports perfTrace, opens a finally block, and starts a span for every stage` test is subtest 6 and passes; the prior `perfTrace records elapsed ms per span ...` test (subtest 5) still passes; the 9 chat-integration propagation tests skip as designed without `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`.
+- Revision applied 2026-04-26 (addresses implementation-audit REVISE verdict in this file):
+  - Restored the original outer `try { repairSqlWithAnthropic(...) + executeSqlWithTrace(..., "repair_retry") } catch (repairError) { log + heuristic_after_sql_failure }` structure in `route.ts` so a `repair_retry` execution failure once again triggers the `chat_query_repair_failed` log + heuristic fallback (regression diagnosed at the prior `route.ts:573`).
+  - The `repair_llm` span remains scoped strictly to the `repairSqlWithAnthropic` call: inside the outer try, an inner `try { repaired = await repairSqlWithAnthropic(...) } finally { endTrackedSpan(repairSpan) }` ends the span before the retry runs (and before the catch fires on LLM failure).
+  - All three gates re-run from `web/`, all exit 0; the static-analysis test still asserts the four required conditions and passes.
 - Self-checks against acceptance criteria:
   - [x] Imports of `startSpan` and `flushTrace` from `@/lib/perfTrace` resolve at typecheck time in `route.ts` — `npm run typecheck` exit 0.
   - [x] Each of the 10 stage names appears in at least one `startSpan("<stage>")` call site in `route.ts` — verified by the static-analysis test (subtest 6, exit 0). `runtime_classify` and `resolve_db` are both started immediately before `buildChatRuntime` and ended after it resolves, with a code comment noting the shared call.

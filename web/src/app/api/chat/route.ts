@@ -537,30 +537,27 @@ export async function POST(request: Request) {
         });
 
         if (generationSource === "anthropic") {
-          const repairSpan = startTrackedSpan(startSpan("repair_llm"));
-          let repaired: Awaited<ReturnType<typeof repairSqlWithAnthropic>> | undefined;
-          let repairError: unknown;
           try {
-            repaired = await repairSqlWithAnthropic({
-              question: message,
-              failingSql: generatedSql,
-              dbError: execError instanceof Error ? execError.message : String(execError),
-              context: resolvedContext,
-              runtime: {
-                questionType: runtime.questionType,
-                grain: runtime.grain.grain,
-                resolvedEntities: runtime.queryPlan.resolved_entities,
-                queryPlan: runtime.queryPlan as unknown as Record<string, unknown>,
-                requiredTables: runtime.completeness.requiredTables,
-                completenessWarnings: runtime.completeness.warnings
-              }
-            });
-          } catch (err) {
-            repairError = err;
-          } finally {
-            endTrackedSpan(repairSpan);
-          }
-          if (repaired) {
+            const repairSpan = startTrackedSpan(startSpan("repair_llm"));
+            let repaired: Awaited<ReturnType<typeof repairSqlWithAnthropic>>;
+            try {
+              repaired = await repairSqlWithAnthropic({
+                question: message,
+                failingSql: generatedSql,
+                dbError: execError instanceof Error ? execError.message : String(execError),
+                context: resolvedContext,
+                runtime: {
+                  questionType: runtime.questionType,
+                  grain: runtime.grain.grain,
+                  resolvedEntities: runtime.queryPlan.resolved_entities,
+                  queryPlan: runtime.queryPlan as unknown as Record<string, unknown>,
+                  requiredTables: runtime.completeness.requiredTables,
+                  completenessWarnings: runtime.completeness.warnings
+                }
+              });
+            } finally {
+              endTrackedSpan(repairSpan);
+            }
             generatedSql = repaired.sql;
             generatedSqlForTrace = generatedSql;
             generationNotes = [generationNotes, repaired.reasoning, "auto_repair_applied"]
@@ -571,7 +568,7 @@ export async function POST(request: Request) {
             model = repaired.model;
             modelForTrace = model ?? null;
             result = await executeSqlWithTrace(generatedSql, generationSource, "repair_retry");
-          } else {
+          } catch (repairError) {
             await logServer("WARN", "chat_query_repair_failed", {
               requestId,
               error: repairError instanceof Error ? repairError.message : String(repairError)
