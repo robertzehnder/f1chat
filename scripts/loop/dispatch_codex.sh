@@ -67,7 +67,12 @@ Audit:
 
 Be skeptical. Substantive correctness over cosmetic compliance.
 EOF
-  } | codex exec -
+  } | codex exec --sandbox danger-full-access -
+  # --sandbox danger-full-access is required so Codex can write to .git/index.lock
+  # for `git checkout`, `git commit`, `git push`. The default workspace-write sandbox
+  # blocks those operations and Codex exits non-zero before producing a verdict,
+  # which causes the runner to re-dispatch indefinitely. Observed: 11 wasted runs on
+  # 00-ci-workflow before this fix landed.
 }
 
 run_claude_fallback() {
