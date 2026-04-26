@@ -1,11 +1,11 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:43:14Z
+updated: 2026-04-26T14:45:37Z
 ---
 
 ## Goal
@@ -37,7 +37,7 @@ Verify the dev server responds before running the benchmark; abort the slice wit
 ## Steps
 1. Capture the UTC date token at slice start: `DATE=$(date -u +%Y-%m-%d)`. Use this exact value for every artifact path produced by this slice (no wildcards, no re-deriving later).
 2. Confirm dev server is up: `curl -fsS http://127.0.0.1:3000/api/admin/perf-summary` returns a 200 JSON response.
-3. Run a fixed 10–20-question benchmark against the chat endpoint (subset of `chat-health-check.questions.json` is fine; full 50 is ok if you have time). Each request will populate `web/logs/chat_query_trace.jsonl` with stage timings.
+3. Run the canonical fixed benchmark — the full 50-question intense set — against the chat endpoint. Run from repo root: `(cd web && OPENF1_CHAT_BASE_URL=http://127.0.0.1:3000 npm run healthcheck:chat:intense)`. This MUST be the exact script + question file (`web/scripts/chat-health-check.questions.json`, all 50 entries) and rubric (`web/scripts/chat-health-check.rubric.intense.json`); do not pass `--questions` to subset, and do not invoke `chat-health-check.mjs` directly with a different file. Each request populates `web/logs/chat_query_trace.jsonl` with stage timings.
 4. After the benchmark, GET `/api/admin/perf-summary` to fetch the aggregated p50/p95 per stage.
 5. Save the perf-summary JSON to the exact path `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json`.
 6. Generate a short human-readable companion at the exact path `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md` with:
@@ -57,6 +57,12 @@ Verify the dev server responds before running the benchmark; abort the slice wit
 
 ## Gate commands
 ```bash
+# Run all gates from the repo root. Each `web/` command uses a subshell
+# `(cd web && ...)` so the cwd is restored to the repo root afterward —
+# avoid bare `cd web && ...` chained across lines, which leaves you in
+# `web/` and turns the next `cd web` into `web/web` (and the `test -f`
+# checks below into `web/diagnostic/...`).
+
 # Use the SAME UTC date token captured at slice start (step 1).
 # Do not re-derive with `date` here; export DATE explicitly so the gates
 # fail loudly if the artifacts were written under a different date.
@@ -65,12 +71,14 @@ Verify the dev server responds before running the benchmark; abort the slice wit
 # Verify the dev server is up (slice-blocking precondition)
 curl -fsS http://127.0.0.1:3000/api/admin/perf-summary >/dev/null
 
-cd web && npm run build
-cd web && npm run typecheck
-cd web && npm run test:grading
+(cd web && npm run build)
+(cd web && npm run typecheck)
+(cd web && npm run test:grading)
 
 # Verify both artifact files exist at the EXACT paths produced by this slice
 # (no wildcards — wildcards can match stale 01-baseline-snapshot_* files).
+# These run from the repo root because the subshells above did not change
+# the parent shell's cwd.
 test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json"
 test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md"
 ```
@@ -115,10 +123,10 @@ Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `we
 **Status: REVISE**
 
 ### High
-- [ ] Fix the gate command working-directory flow so `npm run build`, `npm run typecheck`, `npm run test:grading`, and the root-relative artifact `test -f` checks all execute from the intended directories without repeated `cd web` causing `web/web` lookups or artifact checks from `web/`.
+- [x] Fix the gate command working-directory flow so `npm run build`, `npm run typecheck`, `npm run test:grading`, and the root-relative artifact `test -f` checks all execute from the intended directories without repeated `cd web` causing `web/web` lookups or artifact checks from `web/`.
 
 ### Medium
-- [ ] Specify the exact fixed benchmark selection and command, such as full 50 or a named first-N subset, so the promoted perf baseline is reproducible instead of varying by implementer choice.
+- [x] Specify the exact fixed benchmark selection and command, such as full 50 or a named first-N subset, so the promoted perf baseline is reproducible instead of varying by implementer choice.
 
 ### Low
 
