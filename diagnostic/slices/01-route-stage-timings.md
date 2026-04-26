@@ -1,11 +1,11 @@
 ---
 slice_id: 01-route-stage-timings
 phase: 1
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T10:08:00-04:00
+updated: 2026-04-26T09:39:27-04:00
 ---
 
 ## Goal
@@ -100,6 +100,9 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
   - `e974c30` — Fill slice-completion note and flip frontmatter to `awaiting_audit` / owner `codex`.
   - `0f2886c` — audit: revise (REVISE verdict appended noting repair-fallback regression).
   - `455e6f3` — Restore repair fallback semantics: re-wrap `repair_llm` LLM call + `repair_retry` execution in a single outer try/catch so a `repair_retry` execution failure once again logs `chat_query_repair_failed` and falls back to `heuristic_after_sql_failure`. The `repair_llm` span remains scoped strictly to the `repairSqlWithAnthropic` call via an inner try/finally that ends the span before the retry runs.
+  - `622a17a` — Record revision commit hash in slice-completion note (round-1 follow-up).
+  - `ccebbaa` — audit: revise (round-2 REVISE verdict appended noting `totalSpan` initialized outside the outer try).
+  - `3da753b` — Move `totalSpan` initialization inside the outer try as its first action (round-2 REVISE fix). Declare `let totalSpan: Span | null = null` before the outer try; assign `totalSpan = startTrackedSpan(startSpan("total"))` as the first statement inside the try; guard `openSpans.delete(totalSpan)` and `traceRecords.push(totalSpan.end())` in the finally with `if (totalSpan)`.
 - Files changed (matches "Changed files expected"):
   - `web/src/app/api/chat/route.ts` — modified.
   - `web/scripts/tests/route-trace.test.mjs` — new (~55 LOC).
@@ -124,6 +127,12 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
   - Restored the original outer `try { repairSqlWithAnthropic(...) + executeSqlWithTrace(..., "repair_retry") } catch (repairError) { log + heuristic_after_sql_failure }` structure in `route.ts` so a `repair_retry` execution failure once again triggers the `chat_query_repair_failed` log + heuristic fallback (regression diagnosed at the prior `route.ts:573`).
   - The `repair_llm` span remains scoped strictly to the `repairSqlWithAnthropic` call: inside the outer try, an inner `try { repaired = await repairSqlWithAnthropic(...) } finally { endTrackedSpan(repairSpan) }` ends the span before the retry runs (and before the catch fires on LLM failure).
   - All three gates re-run from `web/`, all exit 0; the static-analysis test still asserts the four required conditions and passes.
+- Revision applied 2026-04-26 (round 2 — addresses audit verdict round 2 in this file):
+  - `web/src/app/api/chat/route.ts`: `totalSpan` is no longer started before the outer try. The new structure is `let totalSpan: Span | null = null;` declared at function scope (before the outer try, so the finally can still close it), with `totalSpan = startTrackedSpan(startSpan("total"));` as the FIRST statement inside the outer try. The outer try now opens immediately after the trace-state declarations (which are pure `const` declarations of helpers/state and cannot throw — there are no early returns or exits between `requestId` and the try). The body-parse `try`/`catch`, the missing-message early return, and every other documented exit path remain inside the outer try, so `flushTrace` continues to fire exactly once on every exit.
+  - The finally block now guards both `openSpans.delete(totalSpan)` and `traceRecords.push(totalSpan.end())` with `if (totalSpan)` so even on the (now-impossible) path where `totalSpan` assignment is interrupted, the finally still runs without dereferencing null and still flushes any other tracked spans.
+  - No other code paths or behaviors changed; the repair-fallback restoration from the prior revision is preserved verbatim.
+  - All three gates re-run from `web/`, all exit `0`; the static-analysis test (`route-trace.test.mjs`, subtest 6) continues to assert the four required conditions and passes (TAP `1..15`, `# pass 6 # fail 0 # skipped 9`).
+  - Commit hash for this revision: `3da753b`.
 - Self-checks against acceptance criteria:
   - [x] Imports of `startSpan` and `flushTrace` from `@/lib/perfTrace` resolve at typecheck time in `route.ts` — `npm run typecheck` exit 0.
   - [x] Each of the 10 stage names appears in at least one `startSpan("<stage>")` call site in `route.ts` — verified by the static-analysis test (subtest 6, exit 0). `runtime_classify` and `resolve_db` are both started immediately before `buildChatRuntime` and ended after it resolves, with a code comment noting the shared call.
