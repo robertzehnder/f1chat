@@ -150,9 +150,10 @@ export async function POST(request: Request) {
     }
   };
 
-  const totalSpan = startTrackedSpan(startSpan("total"));
+  let totalSpan: Span | null = null;
 
   try {
+    totalSpan = startTrackedSpan(startSpan("total"));
     await logServer("INFO", "chat_request_received", { requestId });
 
     const intakeSpan = startTrackedSpan(startSpan("request_intake"));
@@ -868,12 +869,16 @@ export async function POST(request: Request) {
       );
     }
   } finally {
-    openSpans.delete(totalSpan);
+    if (totalSpan) {
+      openSpans.delete(totalSpan);
+    }
     for (const span of openSpans) {
       traceRecords.push(span.end());
     }
     openSpans.clear();
-    traceRecords.push(totalSpan.end());
+    if (totalSpan) {
+      traceRecords.push(totalSpan.end());
+    }
     try {
       await flushTrace(requestId, traceRecords);
     } catch (flushErr) {
