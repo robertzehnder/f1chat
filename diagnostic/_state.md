@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-26T14:31:44Z
+# Project state — last updated: 2026-04-26T15:24:13Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -9,7 +9,7 @@ accumulated context the loop carries between slices._
 | Phase | Total | Done | Pending | Pending plan-audit | Revising plan | Awaiting audit | Ready to merge | Blocked | Missing |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 1 | 4 | 3 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 1 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | ? | 71 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 71 |
 
 ## Latest benchmark headline
@@ -23,10 +23,18 @@ accumulated context the loop carries between slices._
 
 ## Latest perf baseline
 
-(no perf artifact yet)
+- File: `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json`
+- Slowest stages by p50:
+  - `total` p50=12603.28ms p95=26310.01ms n=50
+  - `runtime_classify` p50=7190.91ms p95=16718.68ms n=50
+  - `resolve_db` p50=7190.91ms p95=16718.68ms n=50
+  - `synthesize_llm` p50=4719.58ms p95=7085.43ms n=46
+  - `repair_llm` p50=4456.08ms p95=6129.08ms n=2
+- Overall p50=12603.28ms p95=26310.01ms
 
 ## Recent slice merges (last 10)
 
+- `eb5a31a` merge: 01-baseline-snapshot [pass] — 2026-04-26
 - `c0993ea` merge: 01-perf-summary-route [pass] — 2026-04-26
 - `551dedc` merge: 01-route-stage-timings [pass] — 2026-04-26
 - `4621b9f` merge: 01-perf-trace-helpers [pass] — 2026-04-25
