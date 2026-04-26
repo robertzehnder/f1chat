@@ -15,13 +15,84 @@ TICK="${LOOP_TICK:-30}"
 MAX_SLICE_DURATION="${LOOP_MAX_SLICE_DURATION:-3600}"
 DRY_RUN="${LOOP_DRY_RUN:-0}"
 
+# Circuit breakers — graceful exits to avoid token-burning runaways.
+MAX_SLICE_FAILURES="${LOOP_MAX_SLICE_FAILURES:-5}"     # consecutive non-zero dispatches on same slice
+MAX_TOTAL_DISPATCHES="${LOOP_MAX_TOTAL_DISPATCHES:-50}" # total dispatches in this session
+MAX_SESSION_SECONDS="${LOOP_MAX_SESSION_SECONDS:-14400}" # 4 hours
+SESSION_START=$(date +%s)
+TOTAL_DISPATCHES=0
+
 log() { printf '%s %s\n' "$(date -Iseconds)" "$*" | tee -a "$LOG"; }
 
 mkdir -p "$STATE_DIR"
 echo "$$" > "$PIDFILE"
 trap 'rm -f "$PIDFILE"; log "runner exit"; exit 0' INT TERM
 
-log "runner start pid=$$ tick=$TICK dry_run=$DRY_RUN"
+log "runner start pid=$$ tick=$TICK dry_run=$DRY_RUN guards: max_slice_failures=$MAX_SLICE_FAILURES max_total_dispatches=$MAX_TOTAL_DISPATCHES max_session_seconds=$MAX_SESSION_SECONDS"
+
+# --- circuit-breaker helpers ---
+fail_counter_path() { echo "$STATE_DIR/fail_count_$1"; }
+
+slice_fail_count() {
+  local sid="$1"; local f
+  f=$(fail_counter_path "$sid")
+  cat "$f" 2>/dev/null || echo 0
+}
+
+slice_fail_increment() {
+  local sid="$1"; local f n
+  f=$(fail_counter_path "$sid")
+  n=$(slice_fail_count "$sid")
+  echo $((n + 1)) > "$f"
+}
+
+slice_fail_reset() {
+  rm -f "$(fail_counter_path "$1")" 2>/dev/null || true
+}
+
+check_circuit_breakers() {
+  # Returns 0 = keep going, 1 = trip and exit.
+  local now elapsed
+  now=$(date +%s)
+  elapsed=$((now - SESSION_START))
+
+  if [[ "$elapsed" -ge "$MAX_SESSION_SECONDS" ]]; then
+    log "CIRCUIT BREAKER: session wall-clock exceeded ($elapsed s >= $MAX_SESSION_SECONDS s); exiting cleanly"
+    return 1
+  fi
+
+  if [[ "$TOTAL_DISPATCHES" -ge "$MAX_TOTAL_DISPATCHES" ]]; then
+    log "CIRCUIT BREAKER: total dispatches exceeded ($TOTAL_DISPATCHES >= $MAX_TOTAL_DISPATCHES); exiting cleanly"
+    return 1
+  fi
+
+  return 0
+}
+
+# Wrap a dispatch invocation with bookkeeping: counts dispatch, tracks per-slice
+# failures, trips the circuit breaker if a slice fails too many times in a row.
+# Args: <slice_id> <command> [args...]
+dispatch_with_guards() {
+  local sid="$1"; shift
+  TOTAL_DISPATCHES=$((TOTAL_DISPATCHES + 1))
+
+  local fc rc
+  fc=$(slice_fail_count "$sid")
+  if [[ "$fc" -ge "$MAX_SLICE_FAILURES" ]]; then
+    log "CIRCUIT BREAKER: slice=$sid has failed $fc times consecutively (limit $MAX_SLICE_FAILURES); exiting cleanly"
+    return 2  # signal to outer loop to exit
+  fi
+
+  if "$@"; then
+    rc=0
+    slice_fail_reset "$sid"
+  else
+    rc=$?
+    slice_fail_increment "$sid"
+    log "dispatch failed slice=$sid rc=$rc consecutive_failures=$(slice_fail_count "$sid")"
+  fi
+  return 0  # bookkept; let outer loop continue
+}
 
 # Resolve a portable timeout command. macOS lacks both `timeout` (GNU) and
 # `gtimeout` (coreutils brew) by default. Fall back to a `perl` alarm shim.
@@ -53,6 +124,11 @@ run_with_timeout() {
 log "timeout backend: ${TIMEOUT_BIN:-perl-alarm-shim}"
 
 while true; do
+  if ! check_circuit_breakers; then
+    rm -f "$PIDFILE"
+    exit 0
+  fi
+
   if ! "$LOOP_DIR/preconditions.sh" >>"$LOG" 2>&1; then
     log "preconditions failed; sleeping"
     sleep "$TICK"; continue
@@ -71,22 +147,26 @@ while true; do
     sleep "$TICK"; continue
   fi
 
+  guard_rc=0
   case "$owner:$status" in
     claude:pending|claude:revising)
-      run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_claude.sh" "$slice_id" \
-        || log "claude timeout/fail $slice_id"
+      dispatch_with_guards "$slice_id" \
+        run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_claude.sh" "$slice_id" \
+        || guard_rc=$?
       ;;
     codex:awaiting_audit)
-      run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_codex.sh" "$slice_id" \
-        || log "codex timeout/fail $slice_id"
+      dispatch_with_guards "$slice_id" \
+        run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_codex.sh" "$slice_id" \
+        || guard_rc=$?
       ;;
     user:ready_to_merge)
       # Auto-merge by default. Approval-flagged slices still require a sentinel
       # at diagnostic/slices/.approved-merge/<slice_id>; the merger checks that
       # itself and exits 0 (no-op) if not present.
       log "auto-merging slice=$slice_id"
-      run_with_timeout 600 "$LOOP_DIR/dispatch_merger.sh" "$slice_id" \
-        || log "merger fail $slice_id"
+      dispatch_with_guards "$slice_id" \
+        run_with_timeout 600 "$LOOP_DIR/dispatch_merger.sh" "$slice_id" \
+        || guard_rc=$?
       ;;
     user:blocked)
       # If LOOP_AUTO_REPAIR=1, try to autonomously repair the protocol or
@@ -94,6 +174,7 @@ while true; do
       # If the repair dispatcher exits 4, give up and fall through to USER ATTENTION.
       if [[ "${LOOP_AUTO_REPAIR:-0}" == "1" ]]; then
         log "auto-repair attempt for slice=$slice_id"
+        TOTAL_DISPATCHES=$((TOTAL_DISPATCHES + 1))
         if run_with_timeout 600 "$LOOP_DIR/dispatch_repair.sh" "$slice_id"; then
           # Dispatcher succeeded; status should now be revising or escalated.
           # Loop continues; selector will pick up whatever the new state is.
@@ -102,6 +183,8 @@ while true; do
           rc=$?
           if [[ "$rc" == "4" ]]; then
             log "auto-repair gave up (max attempts); USER ATTENTION: slice=$slice_id"
+            log "CIRCUIT BREAKER: max repairs reached; exiting cleanly"
+            rm -f "$PIDFILE"; exit 0
           else
             log "auto-repair failed (rc=$rc) for slice=$slice_id"
           fi
@@ -109,14 +192,19 @@ while true; do
         fi
       fi
       log "USER ATTENTION: slice=$slice_id status=blocked"
+      log "CIRCUIT BREAKER: surfacing user attention; exiting cleanly so user can intervene"
       printf '\a'
-      sleep $((TICK * 4))
-      continue
+      rm -f "$PIDFILE"; exit 0
       ;;
     *)
       log "unhandled owner:status pair $owner:$status"
       ;;
   esac
+
+  # If a guard tripped (rc=2 from dispatch_with_guards), exit cleanly.
+  if [[ $guard_rc -eq 2 ]]; then
+    rm -f "$PIDFILE"; exit 0
+  fi
 
   sleep "$TICK"
 done
