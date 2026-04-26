@@ -1,11 +1,11 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:41:51Z
+updated: 2026-04-26T14:43:14Z
 ---
 
 ## Goal
@@ -109,3 +109,19 @@ Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `we
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T14:31:44Z`, which is less than 24 hours old at audit time.
 - The declared prior-context paths all exist, and `01-perf-summary-route.md` documents the expected `{ stages: { [name]: { count, p50_ms, p95_ms, max_ms } } }` shape.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Fix the gate command working-directory flow so `npm run build`, `npm run typecheck`, `npm run test:grading`, and the root-relative artifact `test -f` checks all execute from the intended directories without repeated `cd web` causing `web/web` lookups or artifact checks from `web/`.
+
+### Medium
+- [ ] Specify the exact fixed benchmark selection and command, such as full 50 or a named first-N subset, so the promoted perf baseline is reproducible instead of varying by implementer choice.
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T14:31:44Z`, which is less than 24 hours old at audit time.
+- Prior context was read; the endpoint shape includes per-stage `count`, `p50_ms`, `p95_ms`, and `max_ms`, and the timing writer includes a `total` stage that can serve as the overall request-time median source.
