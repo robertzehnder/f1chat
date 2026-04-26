@@ -1,11 +1,11 @@
 ---
 slice_id: 01-route-stage-timings
 phase: 1
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T09:32:35-04:00
+updated: 2026-04-26T10:08:00-04:00
 ---
 
 ## Goal
@@ -155,6 +155,27 @@ Acceptance criteria:
 
 Required revision:
 - `web/src/app/api/chat/route.ts:539` changes the existing repair fallback behavior. Before this slice, the `try` around `repairSqlWithAnthropic` also covered `executeSqlWithTrace(generatedSql, generationSource, "repair_retry")`; if the repaired SQL execution failed, the `catch` logged `chat_query_repair_failed` and fell back to `heuristic_after_sql_failure`. In the new code, `repairSqlWithAnthropic` is caught into `repairError`, but `executeSqlWithTrace(..., "repair_retry")` at `web/src/app/api/chat/route.ts:573` runs outside that catch, so a repaired-SQL execution failure now escapes to the generic/transient outer catch instead of using the prior heuristic fallback. Preserve the original fallback semantics while keeping the `repair_llm` span scoped only to the `repairSqlWithAnthropic` call.
+
+## Audit verdict (round 2)
+**Status: REVISE** — independent audit on 2026-04-26.
+
+Gate commands re-run locally from `web/`:
+- `npm run build` — exit `0`
+- `npm run typecheck` — exit `0`
+- `npm run test:grading` — exit `0`; TAP `1..15`, `# pass 6`, `# skipped 9`, including `ok 6 - chat route imports perfTrace, opens a finally block, and starts a span for every stage`.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/slices/01-route-stage-timings.md`, `web/scripts/tests/route-trace.test.mjs`, and `web/src/app/api/chat/route.ts`.
+- Scope check passes. The route and test are listed under "Changed files expected"; this slice file is implicitly allowed.
+
+Acceptance criteria:
+- PASS: `route.ts` imports `startSpan`, `flushTrace`, and perfTrace types; `npm run typecheck` resolves them.
+- PASS: all 10 required `startSpan("<stage>")` call sites exist, and the static-analysis test covers them.
+- PASS: `runtime_classify` and `resolve_db` are started together immediately before `buildChatRuntime` and ended together after it resolves; the code includes a comment documenting the shared call.
+- PASS: `flushTrace(requestId, traceRecords)` receives `SpanRecord[]` values produced by `Span.end()`, not active `Span` objects.
+- PASS: the existing `appendQueryTrace` writes still append to `chat_query_trace.jsonl` with their existing payload fields; perfTrace records remain distinguishable by top-level `spans`.
+- PASS: `web/scripts/tests/route-trace.test.mjs` exists, is picked up by `npm run test:grading`, and asserts the required static conditions.
+- REVISE: `web/src/app/api/chat/route.ts:153` starts `totalSpan` before the outer `try`, and the outer `try` does not open immediately after `requestId` is generated. The slice explicitly requires the outer `try { ... } finally { ... }` to open immediately after `requestId` is generated, before body parsing and validation exits, with `startSpan("total")` as the first action inside that `try`. Move `totalSpan` initialization inside the outer `try` as its first action while preserving the finally cleanup and exactly-once `flushTrace` behavior.
 
 ## Plan-audit verdict (round 1)
 
