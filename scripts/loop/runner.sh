@@ -80,8 +80,16 @@ while true; do
       run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_codex.sh" "$slice_id" \
         || log "codex timeout/fail $slice_id"
       ;;
-    user:blocked|user:ready_to_merge)
-      log "USER ATTENTION: slice=$slice_id status=$status"
+    user:ready_to_merge)
+      # Auto-merge by default. Approval-flagged slices still require a sentinel
+      # at diagnostic/slices/.approved-merge/<slice_id>; the merger checks that
+      # itself and exits 0 (no-op) if not present.
+      log "auto-merging slice=$slice_id"
+      run_with_timeout 600 "$LOOP_DIR/dispatch_merger.sh" "$slice_id" \
+        || log "merger fail $slice_id"
+      ;;
+    user:blocked)
+      log "USER ATTENTION: slice=$slice_id status=blocked"
       printf '\a'
       sleep $((TICK * 4))
       continue

@@ -41,8 +41,10 @@ while IFS= read -r sid; do
       continue
       ;;
     pending|revising)
-      # Approval-required pending slices wait on sentinel.
-      if [[ "$status" == "pending" && "$approval" == "yes" ]]; then
+      # Approval-required pending slices wait on sentinel — unless the user
+      # set LOOP_AUTO_APPROVE=1 in the runner's environment, which waives all
+      # approval gates (suitable for low-risk personal projects).
+      if [[ "$status" == "pending" && "$approval" == "yes" && "${LOOP_AUTO_APPROVE:-0}" != "1" ]]; then
         if [[ ! -f "${APPROVED_DIR}/${sid}" ]]; then
           continue
         fi
