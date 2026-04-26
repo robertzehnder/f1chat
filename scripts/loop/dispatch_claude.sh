@@ -34,6 +34,7 @@ append_ledger() {
 }
 
 claude --print \
+  --model "${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}" \
   --append-system-prompt "$(cat "$prompt_file")" \
   --permission-mode acceptEdits \
   --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
