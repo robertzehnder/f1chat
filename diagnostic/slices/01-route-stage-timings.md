@@ -1,11 +1,11 @@
 ---
 slice_id: 01-route-stage-timings
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T13:15:49Z
+updated: 2026-04-26T13:18:21Z
 ---
 
 ## Goal
@@ -32,8 +32,8 @@ None. The route's runtime path uses Postgres + Anthropic, but the gate test does
 1. Import `startSpan`, `flushTrace`, and the `SpanRecord` type from `@/lib/perfTrace` into `web/src/app/api/chat/route.ts`.
 2. Stage names — use exactly these 10 from `perfTrace.ts`: `request_intake`, `runtime_classify`, `resolve_db`, `template_match`, `sqlgen_llm`, `execute_db`, `repair_llm`, `synthesize_llm`, `sanity_check`, `total`. All 10 stage names must appear as `startSpan("<stage>")` call sites in `route.ts` — there is no combined-span exception. Wire each stage at the corresponding code site:
    - `request_intake` — body parse + validation block (started right after `requestId` is generated; ended after the message-presence check, before `buildChatRuntime`).
-   - `runtime_classify` — wrap the question-type classification step. Since `buildChatRuntime` performs both classification and DB resolution internally, model this as a span that begins immediately before the `buildChatRuntime` call and ends synthetically once that call returns the classification fields (`runtime.questionType` / equivalent). It is acceptable for `runtime_classify` and `resolve_db` to be back-to-back spans that bracket the same `buildChatRuntime` call (start `runtime_classify` → end it → start `resolve_db` → end it after the call resolves), so each stage name still appears in source even though the underlying work is shared. A one-line code comment must note that both spans wrap a shared call.
-   - `resolve_db` — see above; ends after `buildChatRuntime` resolves.
+   - `runtime_classify` — wrap the question-type classification step. Since `buildChatRuntime` performs both classification and DB resolution internally, this slice cannot separate them in time. Start BOTH `runtime_classify` and `resolve_db` immediately before the `buildChatRuntime` call, await `buildChatRuntime`, then end BOTH spans after it resolves. The two spans therefore cover the same window and will record essentially the same `elapsedMs`; this is acknowledged duplication and is the explicit intent of the slice. Splitting `buildChatRuntime` so the two stages can be measured independently is out of scope (see "Out of scope"). A one-line code comment at the call site must note that both spans wrap the shared call.
+   - `resolve_db` — see above; started immediately before `buildChatRuntime` (alongside `runtime_classify`) and ended after the call resolves (alongside `runtime_classify`). Both spans are open concurrently, not back-to-back.
    - `template_match` — the `buildDeterministicSqlTemplate` call.
    - `sqlgen_llm` — the `generateSqlWithAnthropic` call (only on the LLM-generation branch).
    - `execute_db` — each `runReadOnlySql` invocation inside `executeSqlWithTrace`.
@@ -76,7 +76,7 @@ cd web && npm run test:grading
 
 ## Acceptance criteria
 - [ ] Imports of `startSpan` and `flushTrace` from `@/lib/perfTrace` resolve at typecheck time in `route.ts`.
-- [ ] Each of the 10 stage names from step 2 appears in at least one `startSpan("<stage>")` call site in `route.ts` (verified by the static-analysis test). All 10 are required — no combined-span exception. `runtime_classify` and `resolve_db` are emitted as back-to-back spans bracketing the shared `buildChatRuntime` call, with a one-line code comment noting the shared call.
+- [ ] Each of the 10 stage names from step 2 appears in at least one `startSpan("<stage>")` call site in `route.ts` (verified by the static-analysis test). All 10 are required — no combined-span exception. `runtime_classify` and `resolve_db` are both started immediately before `buildChatRuntime` and both ended after it resolves (concurrent spans wrapping the same call), with a one-line code comment noting the shared call.
 - [ ] `route.ts` calls `flushTrace(requestId, spans)` from a `finally` block whose `try` opens immediately after `requestId` is generated, so every exit path — invalid-JSON, missing-message, clarification, completeness-blocked, success, transient-db-unavailable, generic error — flushes exactly once.
 - [ ] `flushTrace` is invoked with a `SpanRecord[]` (the values returned by `Span.end()`), not active `Span` objects.
 - [ ] The existing `appendQueryTrace` JSONL writes are unchanged in shape and file path; perfTrace records are distinguishable by the top-level `spans` array.
@@ -139,7 +139,7 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
 **Status: REVISE**
 
 ### High
-- [ ] Define a coherent lifecycle for the shared `buildChatRuntime` instrumentation: either start both `runtime_classify` and `resolve_db` before the call and end both after it resolves, or explicitly make one stage a synthetic/no-op span, instead of instructing `runtime_classify` to end before `resolve_db` starts while both are said to bracket the same call.
+- [x] Define a coherent lifecycle for the shared `buildChatRuntime` instrumentation: either start both `runtime_classify` and `resolve_db` before the call and end both after it resolves, or explicitly make one stage a synthetic/no-op span, instead of instructing `runtime_classify` to end before `resolve_db` starts while both are said to bracket the same call.
 
 ### Medium
 
