@@ -1,8 +1,8 @@
 ---
 slice_id: 00-dep-patches
 phase: 0
-status: ready_to_merge
-owner: user
+status: done
+owner: -
 user_approval_required: yes
 created: 2026-04-25
 updated: 2026-04-25T21:15:31-04:00
