@@ -1,11 +1,11 @@
 ---
 slice_id: 00-dep-patches
 phase: 0
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: yes
 created: 2026-04-25
-updated: 2026-04-25T21:10:18-04:00
+updated: 2026-04-25T21:15:31-04:00
 ---
 
 ## Goal
@@ -85,4 +85,27 @@ Branch: slice/00-dep-patches
 
 ## Audit verdict
 
-_Pending._
+**Verdict: PASS**
+
+Gate commands re-run locally in required order (all exit `0`):
+- `cd web && npm run build` → exit `0`
+- `cd web && npm run typecheck` → exit `0`
+- `cd web && npm run test:grading` → exit `0`
+- `cd web && npm audit --omit=dev` → exit `0` (`found 0 vulnerabilities`)
+
+Diff scope (`git diff --name-only integration/perf-roadmap...HEAD`):
+```text
+diagnostic/slices/00-dep-patches.md
+web/package-lock.json
+web/package.json
+```
+Matches the allowlist exactly. No scope creep.
+
+Criterion-by-criterion verification:
+- [x] Five package targets resolve to the requested versions: `next@15.5.15`, `react@19.2.5`, `react-dom@19.2.5`, `postcss@8.5.10`, `autoprefixer@10.5.0`
+- [x] `@types/pg@8.20.0` is installed as required by the slice steps
+- [x] `postcss` override is substantive, not just declared: `npm list next react react-dom postcss autoprefixer @types/pg` shows `next@15.5.15` using `postcss@8.5.10 deduped`
+- [x] `npm audit --omit=dev` reports zero production vulnerabilities, so the high-severity Next.js and moderate PostCSS advisories are cleared
+- [x] All listed gates pass locally
+
+Merge status: Phase 0 plus `user_approval_required: yes` means `status=ready_to_merge`, `owner=user`.
