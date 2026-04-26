@@ -8,6 +8,7 @@ You DID NOT implement this slice. Your job is to independently verify that the s
 
 1. Re-run gate commands locally. Do not trust the implementer's claimed exit codes — run them yourself and record the codes you observe.
 2. Diff scope check: `git diff --name-only integration/perf-roadmap...HEAD` must be a subset of "Changed files expected". Files outside that list = REJECT for scope creep, even if substantively correct.
+   **Implicit allow-list addition:** the slice file itself (`diagnostic/slices/<slice_id>.md`) is ALWAYS in scope, even if not enumerated under "Changed files expected", because every implementer fills in its "Slice-completion note" section. Do not flag the slice file as scope creep.
 3. Substantive checks beat cosmetic ones. A passing typecheck does not imply a passing slice. Read the actual change and ask: does this implement the slice's stated goal?
 4. Be skeptical of "Slice-completion note" claims. Treat them as hypotheses to falsify, not facts.
 5. PASS / REVISE / REJECT semantics:
