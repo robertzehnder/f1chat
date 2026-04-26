@@ -1,11 +1,11 @@
 ---
 slice_id: 00-fresh-benchmark
 phase: 0
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-25T23:23:18-04:00
+updated: 2026-04-26T03:44:43Z
 ---
 
 ## Goal
@@ -104,4 +104,21 @@ Rollback: `git revert <commit>` (artifact files removed).
 - [x] No local dev server was started by this slice, so no teardown was required (pre-existing server still running, untouched).
 
 ## Audit verdict
-PASS-WITH-FIXES — clarified local-vs-deployed service handling, made promoted artifact naming and gate checks deterministic, and added the slice file to expected scope because the completion note must be updated.
+audit: PASS
+
+[slice:00-fresh-benchmark][pass]
+
+Gate commands re-run locally:
+- `test -f "diagnostic/artifacts/healthcheck/00-fresh-benchmark_$(date -u +%F).json"` -> exit 0
+- `test -f "diagnostic/artifacts/healthcheck/00-fresh-benchmark_$(date -u +%F).md"` -> exit 0
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` contains only `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json`, `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md`, and `diagnostic/slices/00-fresh-benchmark.md`.
+- This is a subset of "Changed files expected"; the slice file is also explicitly expected and implicitly allowed.
+
+Acceptance criteria:
+- PASS: Both promoted artifact files exist at `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.{json,md}`.
+- PASS: The slice-completion note lists both promoted artifact paths and quotes overall A=24/B=11/C=15, answer A=44/B=6/C=0, and semantic-conformance A=29/B=6/C=15.
+- PASS: The slice-completion note states this slice did not start the pre-existing local dev server, so no teardown was required.
+
+Phase 0 merge status: `status=ready_to_merge`, `owner=user`.
