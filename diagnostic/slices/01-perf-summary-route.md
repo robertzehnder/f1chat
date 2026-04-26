@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-26T13:48:31Z
 ---
 
 ## Goal
@@ -63,3 +63,20 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify that the aggregator must ignore non-perfTrace JSONL entries and only summarize records where `Array.isArray(entry.spans)`, because the referenced timing slice says `appendQueryTrace` entries coexist in the same file.
+- [ ] Add an executable verification path for the dev JSON shape and production 404 behavior, or rewrite those acceptance criteria so they are checked by the listed gates.
+
+### Medium
+- [ ] Define the request parameter or fixed policy for "most recent N" trace lines, since step 1 hard-codes the last 200 lines while the goal says the route aggregates the most recent N.
+- [ ] State how malformed JSONL lines or malformed perfTrace records should be handled so one bad log line does not make the dev summary route fail unexpectedly.
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T13:47:29Z`, which is less than 24 hours old at audit time.
