@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: revising_plan
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:16:56Z
+updated: 2026-04-26T10:18:14-04:00
 ---
 
 ## Goal
@@ -177,3 +177,7 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T13:47:29Z`, which is less than 24 hours old at audit time.
+
+## Plan-revise escalation
+
+Hit `LOOP_MAX_PLAN_ITERATIONS=4` without converging on APPROVED. Latest audit verdict still has open items. User intervention required.
