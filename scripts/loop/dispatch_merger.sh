@@ -63,12 +63,56 @@ fi
 # Best-effort sync with origin.
 git pull --ff-only origin integration/perf-roadmap 2>/dev/null || true
 
-# Merge.
-logmsg "merging $slice_branch"
-if ! git merge --no-ff "$slice_branch" -m "merge: $slice_id [pass]"; then
-  logmsg "FAIL: merge produced conflicts; aborting"
-  git merge --abort 2>/dev/null || true
-  exit 1
+# Merge attempt 1 — straight merge.
+logmsg "merging $slice_branch (attempt 1: direct)"
+if git merge --no-ff "$slice_branch" -m "merge: $slice_id [pass]"; then
+  logmsg "merge attempt 1 succeeded"
+else
+  # Merge conflict. The most common cause is the slice branch being behind
+  # integration: protocol fixes have landed on integration since the slice
+  # branched, and both sides edited the same file (almost always the slice
+  # file itself). Try to recover by taking the slice branch's version of
+  # the slice file (which has the audit verdict and slice-completion note)
+  # and integration's version of all other conflicting files.
+  conflicts=$(git diff --name-only --diff-filter=U)
+  logmsg "merge attempt 1 produced conflicts in: $(echo "$conflicts" | tr '\n' ' ')"
+
+  recoverable=1
+  while IFS= read -r conflicted; do
+    [[ -z "$conflicted" ]] && continue
+    if [[ "$conflicted" == "diagnostic/slices/${slice_id}.md" ]]; then
+      # Take the slice branch's version (contains audit verdict + completion note).
+      logmsg "auto-resolving $conflicted with slice-branch version"
+      git checkout --theirs -- "$conflicted"
+      git add "$conflicted"
+    elif [[ "$conflicted" == web/* ]]; then
+      # Web changes are the slice's substantive work; take the slice branch's version.
+      logmsg "auto-resolving $conflicted with slice-branch version (web/)"
+      git checkout --theirs -- "$conflicted"
+      git add "$conflicted"
+    else
+      # Anything else (scripts/loop/*, prompts/*, sql/*, src/*, etc.) — slice
+      # branch shouldn't have touched these for a Phase-0 slice. Bail out.
+      logmsg "FAIL: unresolvable conflict in $conflicted; aborting"
+      recoverable=0
+      break
+    fi
+  done <<EOF_CONFLICTS
+$conflicts
+EOF_CONFLICTS
+
+  if [[ "$recoverable" != "1" ]]; then
+    git merge --abort 2>/dev/null || true
+    exit 1
+  fi
+
+  # Complete the merge with the auto-resolutions.
+  if ! git commit --no-edit; then
+    logmsg "FAIL: merge commit refused even after auto-resolution; aborting"
+    git merge --abort 2>/dev/null || true
+    exit 1
+  fi
+  logmsg "merge attempt 1 succeeded after auto-resolving slice file"
 fi
 
 # Flip frontmatter status: ready_to_merge -> done; owner: user -> -
