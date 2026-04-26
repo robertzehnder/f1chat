@@ -1,11 +1,11 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:45:37Z
+updated: 2026-04-26T14:47:12Z
 ---
 
 ## Goal
@@ -133,3 +133,18 @@ Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `we
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T14:31:44Z`, which is less than 24 hours old at audit time.
 - Prior context was read; the endpoint shape includes per-stage `count`, `p50_ms`, `p95_ms`, and `max_ms`, and the timing writer includes a `total` stage that can serve as the overall request-time median source.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify how the perf-summary fetch is isolated to the 50 requests from this slice's benchmark run, because the endpoint default summarizes the most recent 200 perfTrace records and can include stale traces from earlier runs.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T14:31:44Z`, which is less than 24 hours old at audit time.
+- Prior context was read; prior round items are addressed by the current exact artifact paths, subshell gate cwd flow, and full 50-question benchmark command.
