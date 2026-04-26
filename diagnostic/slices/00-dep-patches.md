@@ -1,11 +1,11 @@
 ---
 slice_id: 00-dep-patches
 phase: 0
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-25
-updated: 2026-04-25
+updated: 2026-04-25T20:48:03-04:00
 ---
 
 ## Goal
@@ -54,7 +54,29 @@ cd web && npm audit --omit=dev
 Rollback: `git checkout HEAD -- web/package.json web/package-lock.json && cd web && npm ci`.
 
 ## Slice-completion note
-(filled by Claude)
+
+Branch: slice/00-dep-patches
+
+**Package versions installed (all match targets):**
+- next@15.5.15
+- react@19.2.5
+- react-dom@19.2.5
+- postcss@8.5.10 (overridden — see decision below)
+- autoprefixer@10.5.0
+- @types/pg@8.20.0
+
+**Decision:** next@15.5.15 vendors its own `postcss@8.4.31` at `node_modules/next/node_modules/postcss`. Installing `postcss@8.5.10` at the top level alone did not override it. Added `"overrides": {"postcss": "^8.5.10"}` to `web/package.json` so npm forces the patched postcss across all nested dependencies. After this, `npm list next` shows `next@15.5.15 → postcss@8.5.10 deduped`.
+
+**Gate results (all exit 0):**
+- `npm run typecheck`: exit 0
+- `npm run test:grading`: exit 0 (4 pass, 9 skipped — integration tests require live app)
+- `npm run build`: exit 0 (Next.js 15.5.15 production build successful)
+- `npm audit --omit=dev`: exit 0 — found 0 vulnerabilities
+
+**Self-check:**
+- [x] Five package versions match targets
+- [x] `npm audit --omit=dev` reports zero high-severity production advisories (0 total)
+- [x] All gates exit 0
 
 ## Audit verdict
 (filled by auditor)
