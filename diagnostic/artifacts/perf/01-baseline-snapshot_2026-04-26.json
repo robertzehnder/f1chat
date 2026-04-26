@@ -1,0 +1,68 @@
+{
+    "window": {
+        "requested": 50,
+        "returned": 50
+    },
+    "stages": {
+        "request_intake": {
+            "count": 50,
+            "p50_ms": 0.16,
+            "p95_ms": 0.22,
+            "max_ms": 0.31
+        },
+        "runtime_classify": {
+            "count": 50,
+            "p50_ms": 7190.91,
+            "p95_ms": 16718.68,
+            "max_ms": 17967.61
+        },
+        "resolve_db": {
+            "count": 50,
+            "p50_ms": 7190.91,
+            "p95_ms": 16718.68,
+            "max_ms": 17967.61
+        },
+        "template_match": {
+            "count": 46,
+            "p50_ms": 0.03,
+            "p95_ms": 0.07,
+            "max_ms": 0.42
+        },
+        "sqlgen_llm": {
+            "count": 12,
+            "p50_ms": 3807.3,
+            "p95_ms": 7650.41,
+            "max_ms": 7650.41
+        },
+        "execute_db": {
+            "count": 49,
+            "p50_ms": 1680.4,
+            "p95_ms": 5629.55,
+            "max_ms": 7828.96
+        },
+        "synthesize_llm": {
+            "count": 46,
+            "p50_ms": 4719.58,
+            "p95_ms": 7085.43,
+            "max_ms": 7874.45
+        },
+        "sanity_check": {
+            "count": 46,
+            "p50_ms": 0.1,
+            "p95_ms": 0.46,
+            "max_ms": 0.62
+        },
+        "total": {
+            "count": 50,
+            "p50_ms": 12603.28,
+            "p95_ms": 26310.01,
+            "max_ms": 31252.96
+        },
+        "repair_llm": {
+            "count": 2,
+            "p50_ms": 4456.08,
+            "p95_ms": 6129.08,
+            "max_ms": 6129.08
+        }
+    }
+}
