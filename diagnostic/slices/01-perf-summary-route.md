@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T10:18:14-04:00
+updated: 2026-04-26T10:20:00-04:00
 ---
 
 ## Goal
@@ -97,7 +97,49 @@ cd web && npm run test:grading
 Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at risk.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/01-perf-summary-route` (forked from `integration/perf-roadmap` @ `f214860`).
+- Commits:
+  - `edf9ff2` — Add `/api/admin/perf-summary` dev route with the `perfSummary.mjs` helper, ambient `.d.mts` declarations, and the `node --test`-compatible gate test.
+  - (Slice-doc bookkeeping commit to follow with `[slice:01-perf-summary-route][awaiting-audit]` tag and updated frontmatter.)
+- Files changed (matches "Changed files expected"):
+  - `web/src/lib/perfSummary.mjs` — new (~80 LOC). Plain JS so `node --test scripts/tests/*.test.mjs` can import it without a TS loader.
+  - `web/src/lib/perfSummary.d.mts` — new (~16 LOC). Ambient TS declarations paired with the `.mjs` via `moduleResolution: bundler`; no `tsconfig.json` change needed and `allowJs` stays `false`.
+  - `web/src/app/api/admin/perf-summary/route.ts` — new (~28 LOC). Thin Next.js shim wiring `process.env.NODE_ENV`, the request URL, and `fs.promises.readFile` into `handlePerfSummaryRequest`. Imports `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest` from `'@/lib/perfSummary.mjs'` (the `aggregatePerfTraces` import is referenced via `void aggregatePerfTraces;` to silence unused-binding noise without re-exporting from the route file, which Next would warn on).
+  - `web/scripts/tests/perf-summary-route.test.mjs` — new (~190 LOC). Picked up by the existing `node --test scripts/tests/*.test.mjs` glob in `npm run test:grading`; no `package.json` change.
+  - `diagnostic/slices/01-perf-summary-route.md` — frontmatter + this note (loop-protocol file, implicitly allowed).
+- Implementation decisions:
+  - **`parseN` is the sole sanitizer.** Empty/null/undefined → 200. Otherwise coerce via `Number(rawValue)`; non-finite, non-integer, `< 1`, or `> 1000` → 200 (fallback, not clamp — `'5000'` returns 200, not 1000). Inside the accepted range `[1, 1000]` the input is returned verbatim. `aggregatePerfTraces` does no `n` validation and trusts its caller.
+  - **Percentile algorithm: nearest-rank ceiling, sorted ascending.** For a stage's `vals` array, `p50_ms = vals[Math.ceil(vals.length * 0.50) - 1]` and `p95_ms = vals[Math.ceil(vals.length * 0.95) - 1]`, both rounded via `Math.round(x * 100) / 100`. A stage with one value collapses to `p50 === p95 === max === <that value rounded>`.
+  - **Production gate is the very first statement of `handlePerfSummaryRequest`.** When `env === 'production'` the helper returns `{ status: 404, body: 'Not Found' }` *before* the injected `readFile` is called. The gate test asserts `stub.callCount === 0` in this branch, so non-invocation is directly observable.
+  - **IO failure resilience.** The helper never throws or returns 5xx for parse/shape/IO failures: `readFile` rejection (ENOENT or otherwise) → empty 200 (`{ window: { requested: n, returned: 0 }, stages: {} }`); malformed lines silently skipped via per-line `try/catch`; entries lacking a top-level `Array.isArray(spans)` skipped (so the existing `appendQueryTrace` rows from `01-route-stage-timings` coexist without polluting the summary); individual span entries with non-string `name`, non-finite/NaN/negative `elapsedMs`, etc. are skipped without affecting the rest of the record's spans.
+  - **Trace path resolution mirrors the writer.** `route.ts` uses `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), 'logs')` joined with `'chat_query_trace.jsonl'`, identical to `web/src/lib/perfTrace.ts::getTraceFilePath`. Flipping `OPENF1_WEB_LOG_DIR` redirects the writer and reader together.
+  - **Plain JS helper + sibling `.d.mts`.** With `allowJs: false`, TypeScript pairs the `import ... from './perfSummary.mjs'` in `route.ts` against the sibling `perfSummary.d.mts` automatically thanks to `moduleResolution: bundler`. No `tsconfig.json` edit; `allowJs` stays `false` per the audit constraint.
+- Test approach:
+  - `web/scripts/tests/perf-summary-route.test.mjs` imports `web/src/lib/perfSummary.mjs` directly (no TS loader, no `route.ts` import) and exercises every public export. 11 subtests:
+    1. dev-mode fixture (appendQueryTrace row + perfTrace row + malformed line) returns shape `{ status: 200, body: { window: { requested, returned }, stages: {...} } }`; only the perfTrace record contributes; `readFile` stub call count is `1`.
+    2. production fixture returns `{ status: 404 }` AND `readFile` stub call count is `0` — the observable proof of no-IO in the prod branch.
+    3. dev-mode missing path returns `{ status: 200, body: { window: { requested, returned: 0 }, stages: {} } }`.
+    4. nearest-rank ceiling percentiles on integer values 1..10 (shuffled at input to also verify ascending sort): `p50 === 5`, `p95 === 10`, `max === 10`; absent stages omitted.
+    5. 2-decimal rounding via `Math.round(x*100)/100` on values chosen to dodge `.x5`/floating-point landmines.
+    6. single-record-per-stage edge case: `p50 === p95 === max === 7.12`.
+    7. `window.returned === min(records.length, n)` for both `n > records.length` and `n < records.length`.
+    8. invalid span entries skipped individually (NaN, negative, Infinity, non-string `name`, missing fields) without dropping the rest of the record.
+    9. `parseN` fallback-to-200 for `null`, `undefined`, `''`, `'abc'`, `NaN`, `'-5'`, `'0'`, `'5000'`, `'1.5'`.
+    10. `parseN` returns the integer for `'1'`, `'500'`, `'1000'`.
+    11. route source is read as text and confirmed to reference `OPENF1_WEB_LOG_DIR` and `chat_query_trace.jsonl`, matching `perfTrace.ts` — discharges the path-resolution acceptance criterion via code review under the test runner.
+- Gate command results (run from `web/`, in slice-specified order):
+  - `npm run build` — exit `0`. Next 15 production build compiled in ~1.7s; the new `/api/admin/perf-summary` route is listed as `ƒ` (dynamic, server-rendered on demand).
+  - `npm run typecheck` — exit `0`. `tsc --noEmit` clean; `route.ts` imports the `.mjs` helper and resolves types via `perfSummary.d.mts` without modifying `tsconfig.json`.
+  - `npm run test:grading` — exit `0`. TAP `1..26`; `# pass 17 # fail 0 # skipped 9`. The 11 new `perf-summary-route.test.mjs` subtests are `ok 5`–`ok 15`. The 9 chat-integration propagation tests skip as designed (no `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`).
+- Self-checks against acceptance criteria:
+  - [x] Helper module exists at `web/src/lib/perfSummary.mjs` exporting `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest`.
+  - [x] Sibling `.d.mts` declares the three exports plus `PerfSpan` / `PerfTraceRecord` / `StageStats` / `PerfSummary` types; `npm run typecheck` is clean under `allowJs: false` with no `tsconfig.json` change.
+  - [x] Route at `web/src/app/api/admin/perf-summary/route.ts` imports `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest` from `'@/lib/perfSummary.mjs'`; build + typecheck both green.
+  - [x] `web/scripts/tests/perf-summary-route.test.mjs` is picked up by `node --test scripts/tests/*.test.mjs`, imports the `.mjs` helper directly, and asserts every required dev/prod/missing-path/percentile/rounding/parseN/path-resolution case from the slice acceptance criteria.
+  - [x] Production branch performs zero file I/O (asserted via `readFile`-stub call count of 0).
+  - [x] Trace file path matches `perfTrace.ts::getTraceFilePath` (same env var, same filename — verified by code review and by the route-source regex test).
+  - [x] All gates exit 0.
 
 ## Audit verdict
 (filled by Codex)
