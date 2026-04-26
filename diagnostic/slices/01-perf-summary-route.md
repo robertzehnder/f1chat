@@ -1,15 +1,15 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T13:52:26Z
+updated: 2026-04-26T14:35:00Z
 ---
 
 ## Goal
-Add a local/dev-only API route that aggregates the most recent perfTrace records from `web/logs/chat_query_trace.jsonl` and returns a p50 / p95 summary per stage. Used to inspect the loop's perf state without grepping JSONL by hand. The window size defaults to the 200 most recent perfTrace records (records carrying a top-level `spans` array — see step 5 below) and is overridable with an `?n=<int>` query parameter (clamped to `[1, 1000]`); non-numeric or out-of-range values fall back to the default.
+Add a local/dev-only API route that aggregates the most recent perfTrace records from `web/logs/chat_query_trace.jsonl` and returns a p50 / p95 summary per stage. Used to inspect the loop's perf state without grepping JSONL by hand. The window size defaults to the 200 most recent perfTrace records (records carrying a top-level `spans` array — see step 5 below) and is overridable with an `?n=<int>` query parameter (clamped to `[1, 1000]`); non-numeric or out-of-range values fall back to the default. All non-trivial behavior (parsing, filtering, percentile math, the production gate) lives in a plain JS helper `web/src/lib/perfSummary.mjs` so the existing `node --test scripts/tests/*.test.mjs` gate can exercise it without a TypeScript loader; the `route.ts` file is a thin shim around the helper.
 
 ## Inputs
 - `web/logs/chat_query_trace.jsonl` (dev sink populated by `01-route-stage-timings`)
@@ -26,23 +26,33 @@ Read these before triaging or implementing:
 None at author time.
 
 ## Steps
-1. Create `web/src/app/api/admin/perf-summary/route.ts`. The GET handler:
-   - Reads `web/logs/chat_query_trace.jsonl` end-to-end via `fs.promises.readFile` (acceptable for a dev sink; the file is bounded by the loop's local usage and live production traffic does not write to it — see step 4).
-   - Splits on `\n`, drops empty lines, and parses each line with `JSON.parse` inside a `try/catch`. See step 6 for malformed-line handling.
-   - After parsing, filter the records down to perfTrace entries: keep only entries where `Array.isArray(entry.spans)` is true. This is the contract documented by `01-route-stage-timings` — `appendQueryTrace` entries coexist in the same file but do not carry a top-level `spans` array, so this filter cleanly isolates the structured stage-timing records.
-   - Take the last `N` of the filtered perfTrace records (most-recent window). `N` defaults to 200 and accepts an `?n=<int>` query param clamped to `[1, 1000]`; non-numeric / NaN / out-of-range values silently fall back to 200.
-2. Group by stage name across the windowed records' `spans[].name` / `spans[].elapsedMs`; compute `count`, `p50_ms`, `p95_ms`, `max_ms` (numbers, milliseconds; round to 2 decimals). Return JSON: `{ window: { requested: <n>, returned: <records> }, stages: { request_intake: { count, p50_ms, p95_ms, max_ms }, ... } }`. Stages not present in the window are omitted (no zero-count entries).
-3. Return HTTP 200 with `{ window: { requested: <n>, returned: 0 }, stages: {} }` if the trace file does not exist or contains no perfTrace records (clean local dev environment). Do NOT return 404 in that case — the route is "available but empty"; 404 is reserved for the production gate in step 4.
-4. Mark this route as **local/dev only**: in production it must not run, since trace data lives elsewhere (a future production sink, see roadmap §6 / Phase 12). Gate the route with `if (process.env.NODE_ENV === 'production') return new Response('Not Found', { status: 404 })` as the very first statement of the handler, before any file I/O.
-5. Coexistence with `appendQueryTrace`: the route MUST tolerate (and ignore) non-perfTrace JSONL entries that share the file. Concretely, after `JSON.parse` succeeds, the handler skips any entry where `Array.isArray(entry.spans)` is false. Do not throw, do not log, do not include such entries in the window or counts. Also skip parsed perfTrace entries whose `spans` array contains malformed span objects — see step 6.
-6. Resilience to malformed JSONL: a single bad log line must not break the route.
+1. Create plain JS helper module `web/src/lib/perfSummary.mjs` (extension `.mjs` so the existing `node --test scripts/tests/*.test.mjs` gate can import it directly without a TypeScript compile step). Exports:
+   - `aggregatePerfTraces(records, n)` — pure function. `records` is an array of already-parsed perfTrace entries (each `{ spans: [...] }`); `n` is the window size. Takes the last `n` records, groups by `spans[].name`, computes `count`, `p50_ms`, `p95_ms`, `max_ms` (numbers, milliseconds, rounded to 2 decimals), and returns `{ window: { requested: <n>, returned: <records.length capped at n> }, stages: { [name]: { count, p50_ms, p95_ms, max_ms } } }`. Stages not present are omitted (no zero-count entries).
+   - `parseN(rawValue)` — parses a query-string `n` value: returns the integer if it's a finite number in `[1, 1000]`, else `200`. Used by both the route and the tests.
+   - `handlePerfSummaryRequest({ env, traceFilePath, n, readFile })` — orchestrator with **dependency-injected** `readFile` (the route passes `fs.promises.readFile`; tests pass a stub that records call counts so the production no-IO check is observable). Behavior:
+     - If `env === 'production'`, return `{ status: 404, body: 'Not Found' }` **before calling `readFile`** (the test asserts `readFile` was never invoked in this branch — see Acceptance criteria).
+     - Else, call `readFile(traceFilePath, 'utf8')`. On rejection with `code === 'ENOENT'`, return `{ status: 200, body: { window: { requested: n, returned: 0 }, stages: {} } }`. Other rejections also return that empty 200 shape (the route never 5xxs for IO/parse failures).
+     - Split content on `\n`, drop empty lines, parse each line with `JSON.parse` inside a `try/catch` (silently skip malformed lines — see step 5). Filter to entries where `Array.isArray(entry.spans)` is true. Call `aggregatePerfTraces(filtered, n)` and return `{ status: 200, body: <result> }`.
+2. Create `web/src/app/api/admin/perf-summary/route.ts` as a thin Next.js wrapper. Its `GET` handler:
+   - Reads `?n=` from the request URL and passes the raw value through `parseN` (imported from the helper).
+   - Calls `handlePerfSummaryRequest({ env: process.env.NODE_ENV, traceFilePath: process.env.OPENF1_PERF_SUMMARY_TRACE_PATH ?? path.join(process.cwd(), 'web/logs/chat_query_trace.jsonl'), n, readFile: fs.promises.readFile })`.
+   - Wraps the returned `{ status, body }` in a `Response` (`Response.json(body, { status })` for status 200; `new Response('Not Found', { status: 404 })` for status 404). Contains no aggregation, parsing, or filtering logic of its own — all behavior the gate test must exercise lives in the helper.
+3. Window-size policy lives in `parseN`: defaults to 200, accepts `?n=<int>` clamped to `[1, 1000]`, non-numeric / NaN / out-of-range falls back to 200.
+4. Mark this route as **local/dev only**: in production it must not run, since trace data lives elsewhere (a future production sink, see roadmap §6 / Phase 12). The production gate is the very first statement of `handlePerfSummaryRequest` (step 1) and runs before the injected `readFile` is called; the test verifies non-invocation of the `readFile` stub.
+5. Coexistence with `appendQueryTrace` + malformed-line resilience (handled inside `handlePerfSummaryRequest`):
    - Lines that fail `JSON.parse` are silently skipped (no throw, no log).
-   - Parsed entries that pass the `Array.isArray(entry.spans)` filter but contain individual span entries that are not `{ name: string, elapsedMs: number }` — including `NaN`, non-finite, or negative `elapsedMs` — have those individual span entries skipped while the rest of the entry's spans are still aggregated.
-   - The handler always returns HTTP 200 (or HTTP 404 in production per step 4); it never returns 5xx for parse / shape failures.
+   - Parsed entries where `Array.isArray(entry.spans)` is false are silently skipped (the `appendQueryTrace` rows from `01-route-stage-timings` coexist in the same JSONL but do not carry a top-level `spans` array).
+   - Span entries within an otherwise-valid perfTrace record that are not `{ name: string, elapsedMs: number }` — including `NaN`, non-finite, or negative `elapsedMs` — are skipped individually; the rest of the record's spans still aggregate.
+   - The helper always returns `status: 200` or `status: 404`; it never throws or returns 5xx for parse / shape / IO failures.
 
 ## Changed files expected
-- `web/src/app/api/admin/perf-summary/route.ts`
-- `web/scripts/tests/perf-summary-route.test.mjs` — new (~80 LOC) gate test (see "Acceptance criteria" and "Gate commands"). Picked up by the existing `node --test scripts/tests/*.test.mjs` glob in `npm run test:grading`, so no `package.json` change is needed. The test imports the route module directly (no live HTTP server), writes a small fixture JSONL containing both an `appendQueryTrace`-shaped entry (no `spans`) and a perfTrace entry (with `spans`) plus one malformed line, then asserts: (a) `GET` in dev returns 200 with the documented `{ window, stages }` shape and only counts the perfTrace entry's spans; (b) the malformed line and the non-`spans` entry are silently skipped; (c) `process.env.NODE_ENV='production'` makes the same handler return 404 before any file I/O. The test stubs the trace path via an env var the route reads (`OPENF1_PERF_SUMMARY_TRACE_PATH`, defaulting to `web/logs/chat_query_trace.jsonl` when unset) so the fixture lives in `os.tmpdir()` and the real dev sink is untouched.
+- `web/src/lib/perfSummary.mjs` — new plain JS helper (~120 LOC) holding all parsing, filtering, percentile, and prod-gate logic. Plain JS (not TypeScript) so the `.mjs` gate test can `import` it directly without a build step.
+- `web/src/app/api/admin/perf-summary/route.ts` — thin Next.js shim (~30 LOC) that wires `process.env`, the request URL, and `fs.promises.readFile` into `handlePerfSummaryRequest`.
+- `web/scripts/tests/perf-summary-route.test.mjs` — new (~120 LOC) gate test. Picked up by the existing `node --test scripts/tests/*.test.mjs` glob in `npm run test:grading`, so no `package.json` change is needed. The test does NOT import `route.ts` (TypeScript cannot be loaded under the plain `node --test` runner without an extra loader) — it imports the plain JS helper `web/src/lib/perfSummary.mjs` directly and exercises `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest`. Coverage:
+  - Writes a fixture JSONL in `os.tmpdir()` containing an `appendQueryTrace`-shaped entry (no top-level `spans`), a perfTrace entry (with `spans`), and one malformed line; passes the path to `handlePerfSummaryRequest` along with a stub `readFile` that wraps the real `fs.promises.readFile` and records call counts. Asserts dev-mode response shape, that only the perfTrace entry contributes to `stages`, and that the malformed line is silently skipped.
+  - Calls `handlePerfSummaryRequest({ env: 'production', traceFilePath: <fixture path>, n: 200, readFile: stub })` with the same fixture and asserts `status === 404` AND `stub.callCount === 0` — this is the observable proof the production branch performed no file I/O (replaces the previous "404 with a missing path" check, which only proved an absent file, not absent IO).
+  - Calls `aggregatePerfTraces` directly with hand-built record arrays to verify percentile math and the n-clamp (n ≤ 0, n > 1000, NaN, non-numeric).
+  - Calls `parseN` directly to verify `[1, 1000]` clamp + 200 fallback for `null`, `''`, `'abc'`, `'-5'`, `'5000'`.
 - `diagnostic/slices/01-perf-summary-route.md` (slice-completion note + audit verdict; always implicitly allowed)
 
 ## Artifact paths
@@ -56,13 +66,14 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] Route exists at `web/src/app/api/admin/perf-summary/route.ts` and `npm run typecheck` resolves it.
-- [ ] `web/scripts/tests/perf-summary-route.test.mjs` exists, is executed by `npm run test:grading` (via the existing `node --test scripts/tests/*.test.mjs` glob), and asserts:
-  - GET in dev (`NODE_ENV !== 'production'`) returns HTTP 200 with body matching `{ window: { requested: number, returned: number }, stages: { [stageName]: { count: number, p50_ms: number, p95_ms: number, max_ms: number } } }`. Counts of zero render as `{ window: { requested, returned: 0 }, stages: {} }`.
-  - When the fixture JSONL contains both an `appendQueryTrace`-shaped entry (no top-level `spans`) and a perfTrace entry (with `spans`), only the perfTrace entry's spans contribute to `stages` (the non-`spans` entry is silently skipped).
-  - A malformed JSONL line in the fixture does not cause a non-200 response and does not appear in `stages`.
-  - With `process.env.NODE_ENV='production'` the same handler returns HTTP 404 and performs no file I/O (verified by pointing `OPENF1_PERF_SUMMARY_TRACE_PATH` at a path that does not exist and confirming no read attempt — e.g., the test asserts the response is 404 even when the path is missing).
-  - The `?n=` query param clamps to `[1, 1000]` and falls back to 200 on non-numeric input.
+- [ ] Helper module exists at `web/src/lib/perfSummary.mjs` exporting `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest`.
+- [ ] Route exists at `web/src/app/api/admin/perf-summary/route.ts`, imports from the helper, and `npm run typecheck` resolves it.
+- [ ] `web/scripts/tests/perf-summary-route.test.mjs` exists, is executed by `npm run test:grading` (via the existing `node --test scripts/tests/*.test.mjs` glob without any TS loader), imports `web/src/lib/perfSummary.mjs` directly, and asserts:
+  - `handlePerfSummaryRequest` invoked with `env: 'development'` and a fixture JSONL containing both an `appendQueryTrace`-shaped entry (no `spans`), a perfTrace entry (with `spans`), and one malformed line returns `{ status: 200, body: { window: { requested: number, returned: number }, stages: { [stageName]: { count: number, p50_ms: number, p95_ms: number, max_ms: number } } } }`; only the perfTrace entry's spans contribute to `stages`; the malformed line is silently skipped.
+  - `handlePerfSummaryRequest` invoked with `env: 'production'`, the same fixture path, and a `readFile` stub that records call counts returns `{ status: 404 }` AND the stub's call count is `0` — directly observable proof the production branch performed no file I/O.
+  - `handlePerfSummaryRequest` invoked with a `traceFilePath` that does not exist (in dev mode) returns `{ status: 200, body: { window: { requested, returned: 0 }, stages: {} } }`.
+  - `aggregatePerfTraces` with hand-built records produces correct `p50_ms`, `p95_ms`, `max_ms` values (rounded to 2 decimals) and omits stages not present in the window.
+  - `parseN` returns 200 for `null`, `''`, `'abc'`, `NaN`, `'-5'`, `'5000'`, and `'0'`; returns the clamped integer for `'1'`, `'500'`, `'1000'`.
 - [ ] All gates exit 0.
 
 ## Out of scope
@@ -100,8 +111,8 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 **Status: REVISE**
 
 ### High
-- [ ] Replace the direct `.mjs` import of `web/src/app/api/admin/perf-summary/route.ts` with an executable test strategy that works under the listed `node --test scripts/tests/*.test.mjs` gate, such as importing the built route artifact after `npm run build` or testing a plain JS helper exported from an importable module.
-- [ ] Make the production "no file I/O" acceptance check actually observable, because asserting 404 with a missing path does not prove the handler returned before attempting to read the trace file.
+- [x] Replace the direct `.mjs` import of `web/src/app/api/admin/perf-summary/route.ts` with an executable test strategy that works under the listed `node --test scripts/tests/*.test.mjs` gate, such as importing the built route artifact after `npm run build` or testing a plain JS helper exported from an importable module.
+- [x] Make the production "no file I/O" acceptance check actually observable, because asserting 404 with a missing path does not prove the handler returned before attempting to read the trace file.
 
 ### Medium
 
