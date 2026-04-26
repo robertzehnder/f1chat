@@ -1,11 +1,11 @@
 ---
 slice_id: 01-route-stage-timings
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:05:00Z
+updated: 2026-04-26T13:11:41Z
 ---
 
 ## Goal
@@ -112,6 +112,22 @@ Rollback: `git revert <commit>`. The trace file is dev-sink only; no persistent 
 
 ### Low
 - [x] Replace `web/src/lib/__tests__/routeTrace.test.ts (or equivalent)` with the exact intended test path once the test-runner issue is resolved.
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T04:32:14Z`, which is less than 24 hours old at audit time.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Resolve the contradiction between the combined `runtime_classify` / `resolve_db` exception and the static-analysis test: either require both `startSpan("runtime_classify")` and `startSpan("resolve_db")` call sites, or update step 6 so the test accepts the documented one-stage combined-span exception.
+- [ ] Include the invalid-JSON and missing-message early returns in the explicit `try` / `finally` coverage, or narrow the goal so "every request" does not include those validation exits.
+
+### Medium
+- [ ] Align the acceptance criterion for "each of the 10 stage names" with the resolved combined-span rule so it no longer says both all 10 names are required and one of the two names may be omitted.
+
+### Low
 
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T04:32:14Z`, which is less than 24 hours old at audit time.
