@@ -1,11 +1,11 @@
 ---
 slice_id: 00-verify-script
 phase: 0
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-25
+updated: 2026-04-25T22:02:26-04:00
 ---
 
 ## Goal
@@ -46,7 +46,16 @@ cd web && npm run verify
 Rollback: remove the line from `package.json`.
 
 ## Slice-completion note
-(filled by Claude)
+Branch: slice/00-verify-script
+
+Added `"verify": "npm run typecheck && npm run test:grading && npm run build"` to `web/package.json` scripts block.
+
+Gate: `cd web && npm run verify` — exit 0
+- typecheck: clean (tsc --noEmit, no errors)
+- test:grading: 4 pass, 0 fail, 9 skipped (integration tests require OPENF1_RUN_CHAT_INTEGRATION_TESTS=1)
+- build: Next.js 15.5.15 compiled successfully, 20 routes generated
+
+Self-check: `verify` key present in `web/package.json`; script chains the three required commands.
 
 ## Audit verdict
 (filled by auditor)

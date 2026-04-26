@@ -11,7 +11,8 @@
     "healthcheck:chat": "node scripts/chat-health-check.mjs",
     "healthcheck:chat:intense": "node scripts/chat-health-check.mjs --rubric scripts/chat-health-check.rubric.intense.json",
     "healthcheck:grade": "node scripts/chat-health-check-grade.mjs",
-    "healthcheck:grade:intense": "node scripts/chat-health-check-grade.mjs --rubric scripts/chat-health-check.rubric.intense.json"
+    "healthcheck:grade:intense": "node scripts/chat-health-check-grade.mjs --rubric scripts/chat-health-check.rubric.intense.json",
+    "verify": "npm run typecheck && npm run test:grading && npm run build"
   },
   "dependencies": {
     "next": "^15.5.15",
