@@ -46,6 +46,13 @@ while IFS= read -r sid; do
       echo "$sid codex $status"
       exit 0
       ;;
+    revising_plan)
+      # Plan-revise phase: Claude addresses Codex's triaged action items by
+      # editing the slice file, then flips status back to pending_plan_audit
+      # for re-audit.
+      echo "$sid claude $status"
+      exit 0
+      ;;
     pending|revising)
       # Approval-required pending slices wait on sentinel — unless the user
       # set LOOP_AUTO_APPROVE=1 in the runner's environment, which waives all

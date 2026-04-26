@@ -156,10 +156,19 @@ while true; do
       ;;
     codex:pending_plan_audit)
       # Plan-audit phase: Codex reviews the slice file for plan bugs BEFORE
-      # any Claude implementation runs. Eliminates wasted implementer rounds
-      # when the slice file itself has gate-order / scope / dependency bugs.
+      # any Claude implementation runs. Returns triaged High/Medium/Low
+      # action items. Iterates with claude:revising_plan until the triage
+      # list is empty (Codex returns APPROVED).
       dispatch_with_guards "$slice_id" \
         run_with_timeout 900 "$LOOP_DIR/dispatch_slice_audit.sh" "$slice_id" \
+        || guard_rc=$?
+      ;;
+    claude:revising_plan)
+      # Plan-revise phase: Claude addresses the triaged items, edits the
+      # slice file only, flips status back to pending_plan_audit for the
+      # next Codex round. Bounded by LOOP_MAX_PLAN_ITERATIONS (default 4).
+      dispatch_with_guards "$slice_id" \
+        run_with_timeout 900 "$LOOP_DIR/dispatch_plan_revise.sh" "$slice_id" \
         || guard_rc=$?
       ;;
     codex:awaiting_audit)
