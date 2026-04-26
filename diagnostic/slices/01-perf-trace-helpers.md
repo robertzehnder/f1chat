@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-trace-helpers
 phase: 1
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-25T23:48:47-04:00
+updated: 2026-04-25T23:54:20-04:00
 ---
 
 ## Goal
@@ -85,4 +85,18 @@ Rollback: `git revert <commit>`.
   - [x] No imports from `route.ts`. `git grep route.ts` in this diff returns nothing; only the two listed files plus the slice markdown changed.
 
 ## Audit verdict
-PASS-WITH-FIXES — corrected gate order so build generates `.next/types` before typecheck, and moved the unit test plan under the existing `test:grading` runner.
+PASS — independent audit on 2026-04-25.
+
+Gate commands re-run locally from `web/`:
+- `npm run build` — exit `0`
+- `npm run typecheck` — exit `0`
+- `npm run test:grading` — exit `0`; TAP included `ok 5 - perfTrace records elapsed ms per span and flushTrace writes a structured JSON line`.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/slices/01-perf-trace-helpers.md`, `web/scripts/tests/perf-trace.test.mjs`, and `web/src/lib/perfTrace.ts`.
+- Scope check passes. The two code/test files are listed under "Changed files expected"; the slice file is implicitly allowed.
+
+Acceptance criteria:
+- PASS: `web/src/lib/perfTrace.ts` exports `startSpan`, `Span.end`, and `flushTrace`.
+- PASS: `npm run test:grading` executes the perf trace test; it asserts elapsed span time is greater than zero and validates the emitted JSON line shape.
+- PASS: no `route.ts` import or chat-route wiring is present in the diff.
