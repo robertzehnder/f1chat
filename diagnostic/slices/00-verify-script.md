@@ -1,11 +1,11 @@
 ---
 slice_id: 00-verify-script
 phase: 0
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: no
 created: 2026-04-25
-updated: 2026-04-25T22:02:26-04:00
+updated: 2026-04-25T22:23:12-04:00
 ---
 
 ## Goal
@@ -58,4 +58,27 @@ Gate: `cd web && npm run verify` — exit 0
 Self-check: `verify` key present in `web/package.json`; script chains the three required commands.
 
 ## Audit verdict
-(filled by auditor)
+
+**Verdict: PASS**
+
+Gate commands re-run locally:
+- `cd web && npm run verify` -> exit 0
+
+Diff scope (`git diff --name-only integration/perf-roadmap...HEAD`):
+```text
+diagnostic/slices/00-verify-script.md
+web/package.json
+```
+Subset check passes. `web/package.json` is in "Changed files expected"; `diagnostic/slices/00-verify-script.md`
+is the slice file and is implicitly allowed.
+
+Acceptance criteria:
+- [x] Script exists in `package.json` as `"verify": "npm run typecheck && npm run test:grading && npm run build"` at `web/package.json:15`.
+- [x] `npm run verify` exits 0 when re-run locally by the auditor.
+
+Observed gate output:
+- `typecheck`: `tsc --noEmit` completed with exit 0.
+- `test:grading`: exit 0 with 4 passed, 0 failed, 9 skipped.
+- `build`: `next build` completed with exit 0 and generated 20 routes.
+
+Phase 0 merge status: `status=ready_to_merge`, `owner=user`.
