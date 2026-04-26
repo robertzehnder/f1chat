@@ -1,11 +1,11 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: revising
-owner: claude
+status: ready_to_merge
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:51:22Z
+updated: 2026-04-26T11:23:00-04:00
 ---
 
 ## Goal
@@ -120,9 +120,79 @@ node -e '
 Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `web/logs/` is dev-sink only.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/01-baseline-snapshot` (reset to `integration/perf-roadmap` @ `4b62346` to pick up the protocol-repair commit before doing slice work; the prior `935a870 [blocked]` slice-file edit is no longer on the branch).
+- UTC date token (Step 1): `DATE=2026-04-26` (from `date -u +%Y-%m-%d`). Used verbatim for both artifact filenames and as the suffix on the rotated trace backup.
+- Dev server / `OPENF1_CHAT_BASE_URL`: an OpenF1 `next-server` (PID `97713`) was already listening on `*:3001`; an unrelated Vite dev server (PID `61936`) holds `[::1]:3000`. Per the revised Required-services block, exported `OPENF1_CHAT_BASE_URL=http://127.0.0.1:3001` for the entire slice (steps + gates). Step 2 verification: `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary"` returned `200 {"window":{"requested":200,"returned":0},"stages":{}}` — the empty `stages` is the expected post-rotation pre-benchmark state, not a failure.
+- Trace isolation (Step 3): `web/logs/chat_query_trace.jsonl` (58 records, last modified `Apr 26 10:29`, all from earlier dev-server activity) was atomically renamed to `web/logs/chat_query_trace.jsonl.pre-2026-04-26` before the benchmark. The dev server recreated the file on the first traced request; final line count after the run was exactly **50**, confirming clean isolation. The `.pre-2026-04-26` backup is gitignored and left in place for inspection.
+- Benchmark (Step 4): ran from repo root as `(cd web && npm run healthcheck:chat:intense)`, with `OPENF1_CHAT_BASE_URL` inherited from the parent shell (no inline shadowing). The unmodified `web/scripts/chat-health-check.questions.json` (50 entries) and `web/scripts/chat-health-check.rubric.intense.json` rubric were used; no `--questions` flag was passed. All 50/50 ran to completion, exit code `0`. Output logs:
+  - `web/logs/chat_health_check_2026-04-26T15-18-09-530Z.json`
+  - `web/logs/chat_health_check_2026-04-26T15-18-09-530Z.summary.json`
+  - `web/logs/chat_health_check_2026-04-26T15-18-09-530Z.md`
+- Perf-summary fetch (Step 5): `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary?n=50"` returned `window.requested === 50` AND `window.returned === 50`. The trace-isolation invariant held; no abort.
+- Artifacts (Steps 6 / 7) — exact paths, both committed:
+  - `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json` — pretty-printed perf-summary JSON; 11 stages including `total`.
+  - `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.md` — companion with one-line headline (`total.p50_ms = 12603.28 ms`), per-stage p50 / p95 / max table sorted by `p95_ms` desc, and a Notes section flagging (a) `runtime_classify` and `resolve_db` reporting identical numbers across all 50 records (likely nested-span artifact, worth confirming in a later slice); (b) `sqlgen_llm` only firing on 12/50 requests because `template_match` short-circuited the rest; (c) `repair_llm` firing only twice; (d) `execute_db` being the only non-LLM stage with seconds-scale latency.
+
+### Headline numbers (Step 8)
+
+- `${DATE}` = `2026-04-26` (used for both artifact paths).
+- `window.requested` = `50`, `window.returned` = `50` (acceptance criterion #3 satisfied).
+- Overall median (`total.p50_ms`): **12603.28 ms** (~12.6 s).
+- Overall p95 (`total.p95_ms`): **26310.01 ms** (~26.3 s).
+- Three highest-latency stages by `p95_ms` (excluding the `total` umbrella):
+  1. `runtime_classify` — count 50, p50 7190.91 ms, p95 16718.68 ms, max 17967.61 ms.
+  2. `resolve_db` — count 50, p50 7190.91 ms, p95 16718.68 ms, max 17967.61 ms (numerically identical to `runtime_classify` across all 50 records — see Notes).
+  3. `sqlgen_llm` — count 12, p50 3807.30 ms, p95 7650.41 ms, max 7650.41 ms.
+
+### Gate command results (slice-specified order, run from repo root)
+
+- `: "${DATE:?…}"` / `: "${OPENF1_CHAT_BASE_URL:?…}"` — exit `0` (both exported).
+- `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary" >/dev/null` — exit `0`.
+- `(cd web && npm run build)` — exit `0`. Next 15 production build, all 4 static pages generated, `/api/admin/perf-summary` listed as `ƒ` (dynamic).
+- `(cd web && npm run typecheck)` — exit `0`. `tsc --noEmit` clean.
+- `(cd web && npm run test:grading)` — exit `0`. TAP `1..26`; `# pass 17 # fail 0 # skipped 9` (the 9 chat-integration tests skip as designed without `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`).
+- `test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json"` — exit `0`.
+- `test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md"` — exit `0`.
+- `node -e '... j.window?.returned !== 50 || j.window?.requested !== 50 ...'` — exit `0`; printed `WINDOW_OK requested=50 returned=50`.
+
+### Self-checks vs acceptance criteria
+
+- [x] Both artifact files exist at `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.{json,md}` (the exact `${DATE}` from Step 1).
+- [x] Slice-completion note records `${DATE}=2026-04-26` so the audit can match the exact artifact paths without wildcards.
+- [x] Saved JSON's `window.returned === 50` AND `window.requested === 50` — direct evidence the perf-summary fetch saw only this slice's 50 perfTrace records.
+- [x] Companion markdown contains a per-stage p50 / p95 (and max) table, not just raw JSON.
+- [x] Slice-completion note quotes overall median (`total.p50_ms = 12603.28 ms`), the three highest-latency stages by p95 (`runtime_classify`, `resolve_db`, `sqlgen_llm`), and the confirmed `window.returned = 50`.
+- [x] All gates exit `0`.
 
 ## Audit verdict
+audit: PASS
+
+[slice:01-baseline-snapshot][pass]
+
+Gate commands re-run locally from repo root / `web/` as specified:
+- `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary" >/dev/null` with `OPENF1_CHAT_BASE_URL=http://127.0.0.1:3001` — exit `0`.
+- `(cd web && npm run build)` — exit `0`; Next production build completed and listed `/api/admin/perf-summary` as dynamic.
+- `(cd web && npm run typecheck)` — exit `0`; `tsc --noEmit` clean.
+- `(cd web && npm run test:grading)` — exit `0`; TAP `1..26`, `# pass 17`, `# fail 0`, `# skipped 9`.
+- `test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json"` with `DATE=2026-04-26` — exit `0`.
+- `test -f "diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md"` with `DATE=2026-04-26` — exit `0`.
+- `node -e '...'` window check against `01-baseline-snapshot_2026-04-26.json` — exit `0`; `window.requested === 50` and `window.returned === 50`.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json`, `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.md`, and `diagnostic/slices/01-baseline-snapshot.md`.
+- Scope check passes. The two artifact files are listed under "Changed files expected"; this slice file is explicitly expected and implicitly allowed.
+
+Acceptance criteria:
+- PASS: Both artifact files exist at `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.{json,md}`, matching the recorded UTC date token.
+- PASS: Slice-completion note records `DATE=2026-04-26` for exact artifact verification.
+- PASS: Saved JSON has `window.requested === 50` and `window.returned === 50`.
+- PASS: Companion markdown contains a per-stage p50 / p95 / max table, not raw JSON only.
+- PASS: Slice-completion note quotes overall median `12603.28 ms`, overall p95 `26310.01 ms`, the three highest-latency stages by p95 (`runtime_classify`, `resolve_db`, `sqlgen_llm`), and confirmed `window.returned = 50`.
+- PASS: All gates exit `0`.
+
+Phase 1 merge status: `status=ready_to_merge`, `owner=codex`.
+
 [protocol-repair 2026-04-26] Implementer self-blocked because slice hardcoded port 3000 throughout Steps §2/§4/§5 and Gate commands, while the OpenF1 dev server was bound to port 3001 by a port conflict. Fixed by replacing all four literal `:3000` URLs with `${OPENF1_CHAT_BASE_URL}` and adding a Required-services note to export the variable before running the slice. Status flipped to revising/claude for retry.
 
 ## Plan-audit verdict (round 1)
