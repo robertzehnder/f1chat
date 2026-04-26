@@ -1,8 +1,8 @@
 ---
 slice_id: 00-font-network-doc
 phase: 0
-status: ready_to_merge
-owner: user
+status: done
+owner: -
 user_approval_required: no
 created: 2026-04-25
 updated: 2026-04-25T21:26:13-04:00
