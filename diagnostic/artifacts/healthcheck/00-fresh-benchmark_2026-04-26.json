@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-04-26T03:37:41.250Z",
+  "sourceFile": "/Users/robertzehnder/Documents/coding/f1/openf1/web/logs/chat_health_check_2026-04-26T03-37-13-005Z.json",
+  "rubricPath": "/Users/robertzehnder/Documents/coding/f1/openf1/web/scripts/chat-health-check.rubric.intense.json",
+  "gradingModel": "answer_semantic_split_v1",
+  "summary": {
+    "total": 50,
+    "gradeCounts": {
+      "A": 24,
+      "B": 11,
+      "C": 15
+    },
+    "answerGradeCounts": {
+      "A": 44,
+      "B": 6,
+      "C": 0
+    },
+    "semanticConformanceGradeCounts": {
+      "A": 29,
+      "B": 6,
+      "C": 15
+    },
+    "answerability": {
+      "expected_clarification_met": 4,
+      "expected_clarification_missed": 0,
+      "unnecessary_clarification": 0,
+      "answerable_and_answered": 46,
+      "answerable_but_unanswered": 0
+    },
+    "rootCauseCounts": {
+      "raw_table_regression": 1,
+      "semantic_contract_missed": 1,
+      "resolver_failure": 1
+    }
+  },
+  "actionable": {
+    "answer_grade_counts": {
+      "A": 44,
+      "B": 6,
+      "C": 0
+    },
+    "semantic_conformance_grade_counts": {
+      "A": 29,
+      "B": 6,
+      "C": 15
+    },
+    "answerability_outcome_counts": {
+      "expected_clarification_met": 4,
+      "expected_clarification_missed": 0,
+      "unnecessary_clarification": 0,
+      "answerable_and_answered": 46,
+      "answerable_but_unanswered": 0
+    },
+    "root_cause_label_counts": {
+      "raw_table_regression": 1,
+      "semantic_contract_missed": 1,
+      "resolver_failure": 1
+    },
+    "root_cause_priority": [
+      {
+        "label": "raw_table_regression",
+        "count": 1,
+        "question_ids": [
+          6
+        ]
+      },
+      {
+        "label": "resolver_failure",
+        "count": 1,
+        "question_ids": [
+          26
+        ]
+      },
+      {
+        "label": "semantic_contract_missed",
+        "count": 1,
+        "question_ids": [
+          6
+        ]
+      }
+    ]
+  }
+}
