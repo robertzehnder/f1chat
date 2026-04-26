@@ -89,6 +89,25 @@ while true; do
         || log "merger fail $slice_id"
       ;;
     user:blocked)
+      # If LOOP_AUTO_REPAIR=1, try to autonomously repair the protocol or
+      # flip the slice back to revising. Bounded by LOOP_MAX_REPAIRS (default 3).
+      # If the repair dispatcher exits 4, give up and fall through to USER ATTENTION.
+      if [[ "${LOOP_AUTO_REPAIR:-0}" == "1" ]]; then
+        log "auto-repair attempt for slice=$slice_id"
+        if run_with_timeout 600 "$LOOP_DIR/dispatch_repair.sh" "$slice_id"; then
+          # Dispatcher succeeded; status should now be revising or escalated.
+          # Loop continues; selector will pick up whatever the new state is.
+          continue
+        else
+          rc=$?
+          if [[ "$rc" == "4" ]]; then
+            log "auto-repair gave up (max attempts); USER ATTENTION: slice=$slice_id"
+          else
+            log "auto-repair failed (rc=$rc) for slice=$slice_id"
+          fi
+          # fall through to USER ATTENTION
+        fi
+      fi
       log "USER ATTENTION: slice=$slice_id status=blocked"
       printf '\a'
       sleep $((TICK * 4))

@@ -89,6 +89,10 @@ fi
 # Clean up the approval-merge sentinel if it existed.
 [[ -f "$approved_merge_sentinel" ]] && rm -f "$approved_merge_sentinel"
 
+# Reset the repair counter on successful merge — if this slice ever blocks
+# again later, it gets a fresh repair budget.
+rm -f "scripts/loop/state/repair_count_${slice_id}"
+
 # Push integration.
 git push >/dev/null 2>&1 || logmsg "WARN: push failed (will retry on next tick)"
 
