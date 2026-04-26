@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T14:01:15Z
+updated: 2026-04-26T14:02:50Z
 ---
 
 ## Goal
@@ -132,6 +132,21 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 
 ### Medium
 - [x] Resolve the `n`-policy ambiguity by stating whether `aggregatePerfTraces(records, n)` must sanitize invalid/out-of-range `n` values itself, or remove the direct aggregate "n-clamp" test coverage and leave all invalid query handling to `parseN`.
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T13:47:29Z`, which is less than 24 hours old at audit time.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Add an explicit TypeScript typing strategy for `route.ts` importing `web/src/lib/perfSummary.mjs` under the current strict `allowJs: false` `web/tsconfig.json`, and include any required declaration file in Changed files expected and acceptance criteria so `npm run typecheck` can pass.
+
+### Medium
+- [ ] Replace the remaining "clamped to `[1, 1000]`" wording for `?n=` with unambiguous accepted-range/fallback wording, because the plan also requires out-of-range values such as `5000` to return the default `200` rather than clamp to `1000`.
 
 ### Low
 
