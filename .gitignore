@@ -29,10 +29,12 @@ diagnostic/slices/.approved/*
 diagnostic/slices/.approved-merge/*
 !diagnostic/slices/.approved-merge/.gitkeep
 
-# But keep runtime state under scripts/loop/state/ ignored
-scripts/loop/state/runner.log
-scripts/loop/state/runner.pid
-scripts/loop/state/cost_ledger.jsonl
+# Loop runtime state — fully ephemeral. Everything in scripts/loop/state/ is
+# ignored except a .gitkeep so the directory itself is tracked.
+# Includes: runner.log, runner.pid, cost_ledger.jsonl, fail_count_*,
+# repair_count_*, .last_*_response.json, etc.
+scripts/loop/state/*
+!scripts/loop/state/.gitkeep
 
 # Track tsbuildinfo as ignored going forward
 web/tsconfig.tsbuildinfo
