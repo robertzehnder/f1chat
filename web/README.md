@@ -58,6 +58,28 @@ npm run dev
 http://localhost:3000
 ```
 
+## Build dependencies
+
+### Google Fonts network requirement
+
+`npm run build` (and `next build`) fetches font metrics from Google Fonts at build time via
+`next/font/google` (`web/src/app/layout.tsx`). **Network access is required** unless fonts are
+self-hosted locally.
+
+CI runs the `web-build` job on GitHub-hosted runners (`ubuntu-latest`), which have outbound network
+access, so this dependency is satisfied automatically in CI.
+
+### Self-hosting fonts (offline / air-gapped builds)
+
+To remove the network dependency:
+
+1. Download the font files (e.g. `Inter`) into `web/public/fonts/`.
+2. Replace the `next/font/google` import in `web/src/app/layout.tsx` with `next/font/local`,
+   pointing `src` at the local files.
+3. Delete or empty the `subset` / `display` options that only apply to the Google loader.
+
+This migration is out of scope for the current roadmap phase; see roadmap §1 for context.
+
 ## Notes
 
 - This scaffold assumes your Postgres container is already running and reachable using the env values.
