@@ -16,6 +16,14 @@ Wire the per-stage perf-trace helpers (built in `01-perf-trace-helpers`) into th
 - `web/src/app/api/chat/route.ts` — chat endpoint
 - [roadmap §4 Phase 1](../roadmap_2026-04_performance_and_upgrade.md)
 
+## Prior context
+
+Read these before triaging or implementing:
+
+- `diagnostic/_state.md` — current phase counts, recent merges, accumulated auditor notes.
+- `diagnostic/slices/01-perf-trace-helpers.md` — defines the `startSpan` / `Span.end` / `flushTrace` API this slice integrates with. The acceptance criteria here must match what that slice actually exported.
+- The chat route at `web/src/app/api/chat/route.ts` to confirm the actual stage boundaries before writing the integration test.
+
 ## Required services / env
 None at author time. The chat route does run a Postgres query at request time, but the spans wrap whatever the request does — not the slice's gates.
 

@@ -15,6 +15,13 @@ Add a local/dev-only API route that aggregates the most recent N trace lines fro
 - `web/logs/chat_query_trace.jsonl` (dev sink populated by `01-route-stage-timings`)
 - [roadmap §4 Phase 1 step 3](../roadmap_2026-04_performance_and_upgrade.md)
 
+## Prior context
+
+Read these before triaging or implementing:
+
+- `diagnostic/_state.md` — current phase counts, recent merges, accumulated auditor notes.
+- `diagnostic/slices/01-route-stage-timings.md` — defines the JSONL trace shape this route reads. The aggregator must parse the same fields the writer emits.
+
 ## Required services / env
 None at author time.
 

@@ -17,6 +17,15 @@ Capture a Phase 1 perf baseline: with stage timings now wired (slice `01-route-s
 - `web/src/app/api/admin/perf-summary/route.ts` (perf-summary endpoint from prior slice)
 - [roadmap §4 Phase 1 step 4](../roadmap_2026-04_performance_and_upgrade.md)
 
+## Prior context
+
+Read these before triaging or implementing:
+
+- `diagnostic/_state.md` — current phase counts, recent merges, accumulated auditor notes.
+- `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.{md,json}` — the most recent benchmark baseline. The artifact-naming convention here (`<slice>_<UTC-date>.{json,md}`) is what this slice's "Prior context" expects you to match for `01-baseline-snapshot_<UTC-date>.{json,md}`.
+- `diagnostic/slices/01-perf-summary-route.md` — the aggregator endpoint shape this slice queries; if its response shape differs from `{ stages: { name: { count, p50_ms, p95_ms, max_ms } } }`, raise a Medium audit item.
+- `diagnostic/slices/00-fresh-benchmark.md` — pattern for "slice depends on running services" — the Required services / env block here must mirror that one's structure (dev server up + Postgres + ANTHROPIC_API_KEY + verify-before-run).
+
 ## Required services / env
 - Postgres reachable (`NEON_DATABASE_URL` or local Docker).
 - `ANTHROPIC_API_KEY` set (in dev server's env).

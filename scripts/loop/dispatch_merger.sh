@@ -137,7 +137,20 @@ fi
 # again later, it gets a fresh repair budget.
 rm -f "scripts/loop/state/repair_count_${slice_id}"
 
-# Push integration.
+# Reset plan-iteration counter too, so a future re-audit (if we ever ship a
+# rerun of this slice) starts fresh.
+rm -f "scripts/loop/state/plan_iter_count_${slice_id}"
+
+# Push integration (with the merge + done commits before state regeneration).
 git push >/dev/null 2>&1 || logmsg "WARN: push failed (will retry on next tick)"
+
+# Regenerate diagnostic/_state.md so the next slice's plan-audit sees the
+# updated phase counts, latest benchmark/perf headlines, and recent merges.
+# Best-effort; if the script is missing or fails, the merger still succeeds.
+if [[ -x scripts/loop/update_state.sh ]]; then
+  if ! scripts/loop/update_state.sh >>"$log" 2>&1; then
+    logmsg "WARN: update_state.sh failed; continuing"
+  fi
+fi
 
 logmsg "merged and pushed; slice marked done"
