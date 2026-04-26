@@ -1,7 +1,7 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -142,7 +142,28 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
   - [x] All gates exit 0.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS** — independent audit on 2026-04-26.
+
+Gate commands re-run locally from `web/`:
+- `npm run build` — exit `0`; Next production build completed successfully and listed `/api/admin/perf-summary` as a dynamic route.
+- `npm run typecheck` — exit `0`; `tsc --noEmit` clean.
+- `npm run test:grading` — exit `0`; TAP `1..26`, `# pass 17`, `# fail 0`, `# skipped 9`, including `ok 5` through `ok 15` from `perf-summary-route.test.mjs`.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/slices/01-perf-summary-route.md`, `web/scripts/tests/perf-summary-route.test.mjs`, `web/src/app/api/admin/perf-summary/route.ts`, `web/src/lib/perfSummary.d.mts`, and `web/src/lib/perfSummary.mjs`.
+- Scope check passes. The four implementation/test files are listed under "Changed files expected"; this slice file is implicitly allowed.
+
+Acceptance criteria:
+- PASS: `web/src/lib/perfSummary.mjs` exists and exports `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest`.
+- PASS: `web/src/lib/perfSummary.d.mts` declares the helper exports and `PerfSpan` / `PerfTraceRecord` / `StageStats` / `PerfSummary`; `route.ts` resolves the `.mjs` helper under `allowJs: false`, and `web/tsconfig.json` still has `allowJs: false`.
+- PASS: `web/src/app/api/admin/perf-summary/route.ts` imports `aggregatePerfTraces`, `parseN`, and `handlePerfSummaryRequest` from `@/lib/perfSummary.mjs`, parses `?n=` through `parseN`, resolves `process.env.OPENF1_WEB_LOG_DIR ?? path.join(process.cwd(), "logs")`, and joins `chat_query_trace.jsonl`, matching `perfTrace.ts`.
+- PASS: the route remains a thin wrapper around the helper; parsing, filtering, aggregation, percentile math, IO fallback, and production gating live in `perfSummary.mjs`.
+- PASS: `handlePerfSummaryRequest` returns 404 before file IO when `env === "production"`; the test verifies the injected `readFile` call count stays `0`.
+- PASS: malformed JSONL lines, non-perfTrace rows lacking top-level `spans`, and malformed individual spans are skipped without throwing; IO failures return the required empty 200 shape.
+- PASS: `aggregatePerfTraces` uses the last `n` perfTrace records, nearest-rank ceiling percentiles, and 2-decimal rounding; absent stages are omitted.
+- PASS: `parseN` implements the accepted-range `[1, 1000]` / fallback-to-200 policy with no clamping.
+- PASS: `web/scripts/tests/perf-summary-route.test.mjs` is picked up by the existing `node --test scripts/tests/*.test.mjs` gate and imports the plain `.mjs` helper directly.
+- PASS: all gates exit 0.
 
 **[protocol-repair]** Plan-revise loop escalated (4 iterations) with one open Medium: undefined percentile algorithm. Repair: added nearest-rank ceiling definition (`vals[Math.ceil(vals.length * P) - 1]`, sorted ascending, rounded `Math.round(x*100)/100`) to Steps §1 `aggregatePerfTraces` and to the `aggregatePerfTraces` acceptance criterion. Status flipped to revising so implementer can retry.
 
