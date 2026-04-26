@@ -1,8 +1,8 @@
 ---
 slice_id: 01-perf-summary-route
 phase: 1
-status: blocked
-owner: user
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-26T10:18:14-04:00
@@ -36,7 +36,7 @@ None at author time.
    - `export function handlePerfSummaryRequest(args: { env: string | undefined; traceFilePath: string; n: number; readFile: (path: string, encoding: 'utf8') => Promise<string> }): Promise<{ status: 200; body: PerfSummary } | { status: 404; body: string }>;`
 
    The `.mjs` exports:
-   - `aggregatePerfTraces(records, n)` — pure function. `records` is an array of already-parsed perfTrace entries (each `{ spans: [...] }`); `n` is the window size. **Trusts its caller**: assumes `n` is a positive integer; does no clamping or sanitization itself (that responsibility lives entirely in `parseN`). Takes the last `n` records, groups by `spans[].name`, computes `count`, `p50_ms`, `p95_ms`, `max_ms` (numbers, milliseconds, rounded to 2 decimals), and returns `{ window: { requested: <n>, returned: <records.length capped at n> }, stages: { [name]: { count, p50_ms, p95_ms, max_ms } } }`. Stages not present are omitted (no zero-count entries).
+   - `aggregatePerfTraces(records, n)` — pure function. `records` is an array of already-parsed perfTrace entries (each `{ spans: [...] }`); `n` is the window size. **Trusts its caller**: assumes `n` is a positive integer; does no clamping or sanitization itself (that responsibility lives entirely in `parseN`). Takes the last `n` records, groups by `spans[].name`, computes `count`, `p50_ms`, `p95_ms`, `max_ms` (numbers, milliseconds, rounded to 2 decimals), and returns `{ window: { requested: <n>, returned: <records.length capped at n> }, stages: { [name]: { count, p50_ms, p95_ms, max_ms } } }`. Stages not present are omitted (no zero-count entries). **Percentile algorithm** (nearest-rank, ceiling): for a stage with collected `elapsedMs` values sorted ascending as `vals`, `p50_ms = vals[Math.ceil(vals.length * 0.50) - 1]` and `p95_ms = vals[Math.ceil(vals.length * 0.95) - 1]`; both rounded to 2 decimal places via `Math.round(x * 100) / 100`. A stage with exactly one value has `p50_ms === p95_ms === max_ms === that value` (rounded).
    - `parseN(rawValue)` — **sole sanitizer** for the window size. Parses a query-string `n` value: returns the integer if it parses to a finite integer in the accepted range `[1, 1000]`; otherwise returns `200`. **No clamping** — out-of-range values (e.g. `'5000'`, `'-5'`, `'0'`) fall back to `200`, they are not pinned to `1000` or `1`. Every code path that supplies `n` to `aggregatePerfTraces` (the route's GET handler, tests) routes through `parseN` first.
    - `handlePerfSummaryRequest({ env, traceFilePath, n, readFile })` — orchestrator with **dependency-injected** `readFile` (the route passes `fs.promises.readFile`; tests pass a stub that records call counts so the production no-IO check is observable). Behavior:
      - If `env === 'production'`, return `{ status: 404, body: 'Not Found' }` **before calling `readFile`** (the test asserts `readFile` was never invoked in this branch — see Acceptance criteria).
@@ -84,7 +84,7 @@ cd web && npm run test:grading
   - `handlePerfSummaryRequest` invoked with `env: 'development'` and a fixture JSONL containing both an `appendQueryTrace`-shaped entry (no `spans`), a perfTrace entry (with `spans`), and one malformed line returns `{ status: 200, body: { window: { requested: number, returned: number }, stages: { [stageName]: { count: number, p50_ms: number, p95_ms: number, max_ms: number } } } }`; only the perfTrace entry's spans contribute to `stages`; the malformed line is silently skipped.
   - `handlePerfSummaryRequest` invoked with `env: 'production'`, the same fixture path, and a `readFile` stub that records call counts returns `{ status: 404 }` AND the stub's call count is `0` — directly observable proof the production branch performed no file I/O.
   - `handlePerfSummaryRequest` invoked with a `traceFilePath` that does not exist (in dev mode) returns `{ status: 200, body: { window: { requested, returned: 0 }, stages: {} } }`.
-  - `aggregatePerfTraces` with hand-built records produces correct `p50_ms`, `p95_ms`, `max_ms` values (rounded to 2 decimals) and omits stages not present in the window.
+  - `aggregatePerfTraces` with hand-built records produces correct `p50_ms`, `p95_ms`, `max_ms` values using the nearest-rank ceiling algorithm (`vals[Math.ceil(vals.length * P) - 1]`, sorted ascending, rounded to 2 decimals via `Math.round(x * 100) / 100`) and omits stages not present in the window.
   - `parseN` returns 200 for `null`, `undefined`, `''`, `'abc'`, `NaN`, `'-5'`, `'0'`, `'5000'`, and `'1.5'`; returns the integer for `'1'`, `'500'`, `'1000'`. (This is the only invalid-`n` coverage; `aggregatePerfTraces` is not tested with invalid `n`.)
   - The route's default `traceFilePath` resolution matches `web/src/lib/perfTrace.ts::getTraceFilePath` (same env var `OPENF1_WEB_LOG_DIR`, same `chat_query_trace.jsonl` filename) — verified by code review during implementation, since the path resolution itself is in `route.ts` and not directly exercised by the helper tests.
 - [ ] All gates exit 0.
@@ -101,6 +101,8 @@ Rollback: `git revert <commit>`. Route is local-dev only; no persistent state at
 
 ## Audit verdict
 (filled by Codex)
+
+**[protocol-repair]** Plan-revise loop escalated (4 iterations) with one open Medium: undefined percentile algorithm. Repair: added nearest-rank ceiling definition (`vals[Math.ceil(vals.length * P) - 1]`, sorted ascending, rounded `Math.round(x*100)/100`) to Steps §1 `aggregatePerfTraces` and to the `aggregatePerfTraces` acceptance criterion. Status flipped to revising so implementer can retry.
 
 ## Plan-audit verdict (round 1)
 
