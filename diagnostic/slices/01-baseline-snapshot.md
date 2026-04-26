@@ -1,7 +1,7 @@
 ---
 slice_id: 01-baseline-snapshot
 phase: 1
-status: pending
+status: revising
 owner: claude
 user_approval_required: no
 created: 2026-04-26
@@ -29,14 +29,14 @@ Read these before triaging or implementing:
 ## Required services / env
 - Postgres reachable (`NEON_DATABASE_URL` or local Docker).
 - `ANTHROPIC_API_KEY` set (in dev server's env).
-- **Dev server running** in another terminal: `cd web && npm run dev` on `http://127.0.0.1:3000`.
-- `OPENF1_CHAT_BASE_URL=http://127.0.0.1:3000` for the benchmark script.
+- **Dev server running** in another terminal: `cd web && npm run dev` (binds by default to `http://127.0.0.1:3000`; if another process occupies port 3000, start it on a free port instead).
+- **Export `OPENF1_CHAT_BASE_URL`** to match the actual dev-server port before starting this slice (e.g., `export OPENF1_CHAT_BASE_URL=http://127.0.0.1:3000` or `…:3001`). All steps and gate commands read this variable — do not hardcode a port.
 
 Verify the dev server responds before running the benchmark; abort the slice with status=blocked if not.
 
 ## Steps
 1. Capture the UTC date token at slice start: `DATE=$(date -u +%Y-%m-%d)`. Use this exact value for every artifact path produced by this slice (no wildcards, no re-deriving later).
-2. Confirm dev server is up: `curl -fsS http://127.0.0.1:3000/api/admin/perf-summary` returns a 200 JSON response.
+2. Confirm dev server is up: `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary"` returns a 200 JSON response.
 3. **Isolate the trace file before running the benchmark** so the perf-summary fetch in step 5 sees only the 50 requests from this slice's run. The endpoint defaults to summarizing the most recent 200 perfTrace records (records with a top-level `spans` array; see `01-perf-summary-route.md`), so any stale traces left in `web/logs/chat_query_trace.jsonl` from earlier benchmark / dev-server activity would otherwise contaminate the baseline. From the repo root, atomically move any existing trace file aside before the benchmark starts:
    ```bash
    mkdir -p web/logs
@@ -45,8 +45,8 @@ Verify the dev server responds before running the benchmark; abort the slice wit
    fi
    ```
    The dev server will recreate the file on the first traced request. Do not delete the rotated `*.pre-${DATE}` backup; leave it in `web/logs/` (gitignored) for inspection if anomalies appear.
-4. Run the canonical fixed benchmark — the full 50-question intense set — against the chat endpoint. Run from repo root: `(cd web && OPENF1_CHAT_BASE_URL=http://127.0.0.1:3000 npm run healthcheck:chat:intense)`. This MUST be the exact script + question file (`web/scripts/chat-health-check.questions.json`, all 50 entries) and rubric (`web/scripts/chat-health-check.rubric.intense.json`); do not pass `--questions` to subset, and do not invoke `chat-health-check.mjs` directly with a different file. Each request appends one perfTrace record (with a top-level `spans` array) to the freshly recreated `web/logs/chat_query_trace.jsonl`, so the benchmark run produces exactly 50 perfTrace records in that file.
-5. After the benchmark, fetch the aggregated p50/p95 per stage with an explicit window of 50: `curl -fsS 'http://127.0.0.1:3000/api/admin/perf-summary?n=50'`. Verify the response's `window.returned === 50` before continuing — if it is not 50, abort the slice with status=blocked and document which step (rotation, benchmark, or fetch) leaked. (`?n=50` is within the endpoint's accepted `[1, 1000]` range and is honored verbatim — no fallback to the 200 default.)
+4. Run the canonical fixed benchmark — the full 50-question intense set — against the chat endpoint. Run from repo root: `(cd web && npm run healthcheck:chat:intense)` (`OPENF1_CHAT_BASE_URL` is inherited from the parent shell — do not inline-set it here, as that would shadow the exported value). This MUST be the exact script + question file (`web/scripts/chat-health-check.questions.json`, all 50 entries) and rubric (`web/scripts/chat-health-check.rubric.intense.json`); do not pass `--questions` to subset, and do not invoke `chat-health-check.mjs` directly with a different file. Each request appends one perfTrace record (with a top-level `spans` array) to the freshly recreated `web/logs/chat_query_trace.jsonl`, so the benchmark run produces exactly 50 perfTrace records in that file.
+5. After the benchmark, fetch the aggregated p50/p95 per stage with an explicit window of 50: `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary?n=50"`. Verify the response's `window.returned === 50` before continuing — if it is not 50, abort the slice with status=blocked and document which step (rotation, benchmark, or fetch) leaked. (`?n=50` is within the endpoint's accepted `[1, 1000]` range and is honored verbatim — no fallback to the 200 default.)
 6. Save the perf-summary JSON to the exact path `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.json`.
 7. Generate a short human-readable companion at the exact path `diagnostic/artifacts/perf/01-baseline-snapshot_${DATE}.md` with:
    - One-line overall median request time
@@ -75,9 +75,10 @@ Verify the dev server responds before running the benchmark; abort the slice wit
 # Do not re-derive with `date` here; export DATE explicitly so the gates
 # fail loudly if the artifacts were written under a different date.
 : "${DATE:?must export DATE=<UTC-date> matching the artifacts written in steps 5–6}"
+: "${OPENF1_CHAT_BASE_URL:?must export OPENF1_CHAT_BASE_URL=http://127.0.0.1:<PORT> matching the running dev server}"
 
 # Verify the dev server is up (slice-blocking precondition)
-curl -fsS http://127.0.0.1:3000/api/admin/perf-summary >/dev/null
+curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary" >/dev/null
 
 (cd web && npm run build)
 (cd web && npm run typecheck)
@@ -122,7 +123,7 @@ Rollback: `git revert <commit>` removes the artifact files. Runtime trace in `we
 (filled by Claude)
 
 ## Audit verdict
-(filled by Codex)
+[protocol-repair 2026-04-26] Implementer self-blocked because slice hardcoded port 3000 throughout Steps §2/§4/§5 and Gate commands, while the OpenF1 dev server was bound to port 3001 by a port conflict. Fixed by replacing all four literal `:3000` URLs with `${OPENF1_CHAT_BASE_URL}` and adding a Required-services note to export the variable before running the slice. Status flipped to revising/claude for retry.
 
 ## Plan-audit verdict (round 1)
 
