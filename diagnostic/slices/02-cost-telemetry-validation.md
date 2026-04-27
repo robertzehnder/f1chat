@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cost-telemetry-validation
 phase: 2
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-27T05:13:14Z
 ---
 
 ## Goal
@@ -59,3 +59,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite the gate command block so it is paste-safe from repo root; as written, consecutive `cd web && ...` lines will leave the shell in `web/` after the first command and make the next `cd web` fail.
+- [ ] Specify concrete Anthropic and OpenAI billing export paths and the exact validation-window selection rule so the implementer can reproduce "same window" without guessing.
+
+### Medium
+- [ ] Add every conditionally touched implementation file to Changed files expected, including `scripts/loop/post_dispatch_cost.sh` when the delta is outside 5% and any committed one-time script if Step 4 requires one.
+- [ ] Add a testable verification step for the ledger mutation or parser-gap path, such as a command/check that proves only rows in the validation window were flipped or that the parser fix changes the computed comparison.
+
+### Low
+- [ ] Clarify whether `diagnostic/notes/02-cost-telemetry-validation.md` is the validation artifact despite `## Artifact paths` saying `None`.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state concern was found.
