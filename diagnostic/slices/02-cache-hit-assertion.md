@@ -136,7 +136,7 @@ Rollback: `git revert <commit>` removes the new test and artifact. Risk is low: 
 ## Slice-completion note
 
 - Branch: `slice/02-cache-hit-assertion`.
-- Implementation commit: pending (see commit hash recorded by `git log -1` after the implementation commit lands; tagged `[slice:02-cache-hit-assertion][awaiting-audit]`).
+- Implementation commit: `4c60c14` — `feat(test): add gated live cache-hit benchmark for synthesis prefix` (tagged `[slice:02-cache-hit-assertion][awaiting-audit]`).
 - Files added (within scope):
   - `web/scripts/tests/cache-benchmark.test.mjs` — new gated benchmark test (TS-transpile-and-import pattern matching `cache-control-markers.test.mjs`). Skips when `OPENF1_RUN_CACHE_BENCHMARK !== "1"`. When run live, it: (a) reads `model` from `process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6"`, looks it up in the hard-coded `MIN_CACHE_TOKENS_BY_MODEL = { "claude-sonnet-4-6": 1024, "claude-opus-4-7": 1024, "claude-haiku-4-5-20251001": 2048 }`; (b) builds `paddedSystem` with the synthetic padding block at index 0 and `buildSynthesisRequestParams(input).system[0]` at index 1, both carrying `cache_control: { type: "ephemeral" }`; (c) issues two `POST /v1/messages/count_tokens` preflight calls and asserts `cachedSystemTokens >= MIN_CACHE_TOKENS_BY_MODEL[model]`; (d) issues two sequential `POST /v1/messages` calls (cold + warm) sharing the byte-identical `paddedSystem`; (e) asserts `warm.usage.cache_read_input_tokens > 0` and `cold.usage.cache_read_input_tokens === 0`; (f) writes the artifact JSON described below.
 - Files added (artifact from successful live run):
