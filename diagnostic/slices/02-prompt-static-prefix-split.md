@@ -1,11 +1,11 @@
 ---
 slice_id: 02-prompt-static-prefix-split
 phase: 2
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-27T04:14:49Z
 ---
 
 ## Goal
@@ -58,3 +58,20 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Correct the target files and steps so the synthesis prompt split is scoped to the code that actually assembles the synthesis Anthropic request, including `web/src/lib/anthropic.ts`, rather than only `web/src/lib/chatRuntime.ts`.
+- [ ] Specify a pure, testable prompt-part builder API that returns the synthesis `staticPrefix` and `dynamicSuffix` without requiring `ANTHROPIC_API_KEY` or a network call, and have the new unit test assert against that API.
+
+### Medium
+- [ ] Update `Changed files expected` to include every file the revised steps obviously touch, including `web/src/lib/anthropic.ts` and excluding `web/src/lib/chatRuntime.ts` if it is no longer part of the implementation.
+
+### Low
+- [ ] Clarify whether `staticPrefix` is a string or an array joined to a byte-identical string before cache markers are added, so the acceptance test has an unambiguous comparison target.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
