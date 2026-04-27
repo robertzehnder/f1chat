@@ -1,55 +1,120 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T13:53:18Z
+updated: 2026-04-27T15:25:00Z
 ---
 
 ## Goal
-Create `core_build` schema with `core.lap_clean`, `core.session_summary`, `core.driver_summary` materialized views as the foundation for all matview-backed semantic contracts.
+Bootstrap the `core_build` schema and clone the *current* aggregating SELECT of every hot semantic view as a `core_build.<name>` source-definition view. This realizes Phase 3 step 1 only — the canonical query is preserved before any downstream slice replaces a public `core.<name>` view with a thin facade over a `core.<name>_mat` table. **No materialized views, no `_mat` storage tables, no refresh, and no public-view facade swap are in scope here** — those each have dedicated slices (e.g. `03-driver-session-summary-prototype`, `03-laps-enriched-materialize`, …).
+
+## Decisions
+- **Scope narrowed to option (b) of the round-1 audit.** Source-definition views only. Materialization, `_mat` tables, ingest hooks, and facade swap are explicitly punted to per-contract slices, in line with the roadmap's "prototype before scaling out" sequencing.
+- Hot view list comes from the roadmap §4 Phase 3 prototype (`core.driver_session_summary`) plus the scale-out priority list (`laps_enriched`, `stint_summary`, `strategy_summary`, `race_progression_summary`, `grid_vs_finish`, `pit_cycle_summary`, `strategy_evidence_summary`, `lap_phase_summary`, `lap_context_summary`, `telemetry_lap_bridge`). Each gets a `core_build.<name>` view with the identical SELECT body and column ordering as the current `core.<name>` view.
+- The names `core.lap_clean`, `core.session_summary`, `core.driver_summary` from the round-1 plan were placeholders that do not exist in `sql/004..007`. They have been replaced with the actual hot contract names.
 
 ## Inputs
-- `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 3
+- `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 3 (source-definition strategy + scale-out priority list)
+- `sql/006_semantic_lap_layer.sql` (current `core.laps_enriched` definition)
+- `sql/007_semantic_summary_contracts.sql` (current definitions for the remaining hot contracts)
 
 ## Prior context
 - `diagnostic/_state.md`
-- `diagnostic/slices/03-core-build-schema.md`
+- `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 3
 
 ## Required services / env
-`DATABASE_URL` (Neon Postgres). Statement-level `CREATE MATERIALIZED VIEW` requires the role used by the loop to have schema-create privileges on `core_build`.
+- `DATABASE_URL` (Neon Postgres). The role used by the loop must have `CREATE` on the database (to add the `core_build` schema) and `USAGE`/`SELECT` on `raw.*` and `core.*` (so the cloned SELECTs resolve). No `MATERIALIZED VIEW` privilege is needed in this slice.
+- `psql` available on PATH for the gate commands below.
 
 ## Steps
-1. Define the matview's SQL with a stable column ordering.
-2. Add a TS contract type matching the matview columns.
-3. Add a parity test comparing matview output to the equivalent live-query output for ≥3 sessions.
-4. Run gate commands; capture output.
+1. Add `sql/008_core_build_schema.sql`:
+   - `CREATE SCHEMA IF NOT EXISTS core_build;`
+   - For each hot contract listed in **Decisions**, emit `CREATE OR REPLACE VIEW core_build.<name> AS <verbatim SELECT body of core.<name>>` with stable column ordering matching the current `core.<name>` view. Keep the original SELECT byte-for-byte except for the schema-qualified name on the `CREATE` line so a future audit can `diff` the two and prove no semantic drift.
+   - Wrap the file in a single `BEGIN; … COMMIT;` so partial application cannot leave the schema half-built.
+2. Apply the SQL to the database referenced by `DATABASE_URL` (gate command #1 below).
+3. Verify schema and view existence (gate command #2).
+4. For each hot contract, run a bidirectional, session-scoped, multiplicity-preserving parity check between `core_build.<name>` and `core.<name>` for **3 deterministic sessions** selected as:
+   ```sql
+   SELECT session_key
+   FROM core.session_completeness
+   WHERE completeness_status = 'analytic_ready'
+   ORDER BY session_key ASC
+   LIMIT 3;
+   ```
+   Parity SQL per contract per `session_key`:
+   ```sql
+   SELECT count(*) AS diff_rows FROM (
+     (SELECT * FROM core_build.<name> WHERE session_key = $1
+      EXCEPT ALL
+      SELECT * FROM core.<name>           WHERE session_key = $1)
+     UNION ALL
+     (SELECT * FROM core.<name>           WHERE session_key = $1
+      EXCEPT ALL
+      SELECT * FROM core_build.<name> WHERE session_key = $1)
+   ) AS diff;
+   ```
+   `diff_rows` must be `0` for every (contract, session_key) pair. `EXCEPT ALL` (not plain `EXCEPT`) is mandatory per roadmap §4 Phase 3 step 5 so duplicate-row drift is preserved for non-unique-grain contracts (`laps_enriched`, etc.).
+5. Run web gate commands to confirm no upstream code regressed (the SQL change is additive and these should be untouched, but we still run them so the slice ships green).
+6. Capture command outputs into the slice-completion note.
 
 ## Changed files expected
-- `sql/core_build_schema.sql`
+- `sql/008_core_build_schema.sql` (new — schema + ten source-definition views)
+- `diagnostic/slices/03-core-build-schema.md` (this file — frontmatter + slice-completion note)
 
-## Artifact paths
-None.
+No TypeScript contract files, no parity test `.mjs` files, no application code, and no edits to existing `sql/00[1-7]_*.sql` are expected. If implementation finds it must touch any of these, that is a scope alarm and should be flagged in the slice-completion note before submission.
 
 ## Gate commands
 ```bash
+# 1. Apply the schema migration. Must exit 0.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/008_core_build_schema.sql
+
+# 2. Confirm the schema and all ten views exist. Expect rowcount = 10.
+psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
+  SELECT count(*) FROM information_schema.views
+  WHERE table_schema = 'core_build'
+    AND table_name IN (
+      'driver_session_summary','laps_enriched','stint_summary','strategy_summary',
+      'race_progression_summary','grid_vs_finish','pit_cycle_summary',
+      'strategy_evidence_summary','lap_phase_summary','lap_context_summary',
+      'telemetry_lap_bridge'
+    );
+"
+
+# 3. Pick 3 analytic-ready sessions and run parity for every (contract, session_key) pair.
+#    Implementation will script this loop; the planner-level invariant is:
+#    every diff_rows result must be 0.
+psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -f sql/008_core_build_schema.parity.sql
+# (Implementation may inline this as a heredoc instead of a separate file; either form
+#  is acceptable as long as the script exits non-zero if any diff_rows > 0.)
+
+# 4. Web side (no code change expected, but run for regression safety).
 cd web && npm run build
 cd web && npm run typecheck
 cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `Materialized views` exist with non-zero rowcount.
-- [ ] `REFRESH MATERIALIZED VIEW CONCURRENTLY` works without error.
+- [ ] `core_build` schema exists.
+- [ ] All eleven `core_build.<name>` views in **Decisions** exist (gate command #2 returns `11`).
+- [ ] For each hot contract in **Decisions**, the bidirectional `EXCEPT ALL` parity check returns `0` for **each** of the 3 deterministic `analytic_ready` sessions selected by the query in step 4.
+- [ ] `cd web && npm run build`, `npm run typecheck`, and `npm run test:grading` all exit 0.
+- [ ] No file outside `sql/008_core_build_schema.sql` (and optional `sql/008_core_build_schema.parity.sql`) is modified.
 
 ## Out of scope
-- Refresh strategy / cron (later phase or D-3 decision).
-- Cutover from live query to matview in route.ts (later).
+- `core.<name>_mat` storage tables (each contract's own slice).
+- Refresh script `src/refresh_summaries.py` (later Phase 3 slice).
+- Replacing public `core.<name>` views with thin `SELECT * FROM core.<name>_mat` facades (per-contract slices).
+- Ingest hook integration in `src/ingest.py` (later Phase 3 slice).
+- Indexes on `core.*_mat` (Phase 4).
+- Refresh strategy / cron decision (D-3, later phase).
 
 ## Risk / rollback
-Rollback: `git revert <commit>`.
+- Risk: a `core_build.<name>` view that drifts from its `core.<name>` source would silently propagate divergence to every downstream materialize slice. Mitigated by the bidirectional `EXCEPT ALL` parity check in the gate; any drift surfaces as `diff_rows > 0` and fails the slice.
+- Risk: the role used by the loop lacks `CREATE` on the database. Mitigated by the explicit env note above; failure mode is a clean `psql` error, not partial state, because the migration is wrapped in a transaction.
+- Rollback: `git revert <commit>` reverts the SQL file. To remove the schema from the live DB after revert: `DROP SCHEMA core_build CASCADE;` (safe — nothing else depends on `core_build` until later slices land).
 
 ## Slice-completion note
 (filled by Claude)
@@ -62,16 +127,16 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Align the plan with the roadmap's Phase 3 architecture: use `core_build.<name>` as preserved source-definition views plus `core.<name>_mat` real tables and a public facade, or explicitly narrow this slice to source-definition views only; do not require `MATERIALIZED VIEW` objects or `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
-- [ ] Add executable DB gate commands that apply the SQL and verify the acceptance criteria, including rowcount and parity checks against at least three session keys; the current gate list only runs web build/typecheck/tests and cannot prove the database objects exist.
-- [ ] Expand `Changed files expected` to include every file implied by the steps, including the TypeScript contract file and parity test file, or remove those steps from this slice.
+- [x] Align the plan with the roadmap's Phase 3 architecture: use `core_build.<name>` as preserved source-definition views plus `core.<name>_mat` real tables and a public facade, or explicitly narrow this slice to source-definition views only; do not require `MATERIALIZED VIEW` objects or `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
+- [x] Add executable DB gate commands that apply the SQL and verify the acceptance criteria, including rowcount and parity checks against at least three session keys; the current gate list only runs web build/typecheck/tests and cannot prove the database objects exist.
+- [x] Expand `Changed files expected` to include every file implied by the steps, including the TypeScript contract file and parity test file, or remove those steps from this slice.
 
 ### Medium
-- [ ] Correct the target relation names and schema qualification so they match the existing semantic layer and Phase 3 roadmap; `core.session_summary`, `core.driver_summary`, and `core.lap_clean` are not referenced elsewhere, while the hot existing contract is `core.driver_session_summary`.
-- [ ] Specify how the three parity-test sessions are selected, preferably from `core.session_completeness` analytic-ready sessions, so the test is deterministic and reproducible.
+- [x] Correct the target relation names and schema qualification so they match the existing semantic layer and Phase 3 roadmap; `core.session_summary`, `core.driver_summary`, and `core.lap_clean` are not referenced elsewhere, while the hot existing contract is `core.driver_session_summary`.
+- [x] Specify how the three parity-test sessions are selected, preferably from `core.session_completeness` analytic-ready sessions, so the test is deterministic and reproducible.
 
 ### Low
-- [ ] Replace the self-reference in `## Prior context` with the roadmap Phase 3 section or relevant benchmark/perf artifacts, since listing this slice as its own prior context adds no audit value.
+- [x] Replace the self-reference in `## Prior context` with the roadmap Phase 3 section or relevant benchmark/perf artifacts, since listing this slice as its own prior context adds no audit value.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
