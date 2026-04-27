@@ -1,11 +1,11 @@
 ---
 slice_id: 03-driver-session-summary-prototype
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T10:50:08-04:00
+updated: 2026-04-27T11:02:01-04:00
 ---
 
 ## Goal
@@ -244,7 +244,34 @@ npm --prefix web run test:grading
 - Frontmatter: `status: awaiting_audit`, `owner: codex`, `updated: 2026-04-27T10:50:08-04:00`. All 6 Acceptance-criteria checkboxes ticked. No edits to plan body or to prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes.
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS**
+
+[slice:03-driver-session-summary-prototype][pass]
+
+Gate exit codes observed by audit agent:
+- `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/009_driver_session_summary_mat.sql` → exit `0`. Output included `BEGIN`, an already-exists notice for `driver_session_summary_mat`, `CREATE TABLE`, `TRUNCATE TABLE`, `INSERT 0 5436`, `DROP VIEW`, `CREATE VIEW`, and `COMMIT`.
+- Relkind + primary-key assertion DO block → exit `0`. Output: `DO`.
+- Global rowcount + three-session bidirectional `EXCEPT ALL` parity DO block → exit `0`. Output: `DO`.
+- `npm --prefix web run build` → exit `0`.
+- `npm --prefix web run typecheck` → exit `0`.
+- `npm --prefix web run test:grading` → exit `0` (`tests 31`, `pass 21`, `skipped 10`, `fail 0`).
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-driver-session-summary-prototype.md` and `sql/009_driver_session_summary_mat.sql`.
+- This is a subset of "Changed files expected"; the slice file is also explicitly allowed by audit policy.
+- No `.parity.sql`, `.mjs`, TypeScript contract, application-code, or `sql/00[1-8]_*.sql` changes are present in the diff.
+
+Criterion-by-criterion:
+- `core.driver_session_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number)`: verified by gate #1 and gate #2 exit `0`.
+- `core.driver_session_summary` exists as a view facade: verified by gate #2 exit `0`.
+- Global rowcount parity between `core_build.driver_session_summary` and `core.driver_session_summary_mat`: verified by gate #3 exit `0`.
+- Bidirectional, session-scoped, multiplicity-preserving parity for the three deterministic `analytic_ready` sessions: verified by gate #3 exit `0`.
+- Web regression gates passed: build, typecheck, and grading tests all exited `0`.
+- Table signature parity: an audit query comparing `information_schema.columns` for `core_build.driver_session_summary` and `core.driver_session_summary_mat` returned `0 rows` of column-name/type/order mismatches.
+- File scope holds: only the expected SQL migration and this slice file changed.
+
+Decision: PASS. Phase 3 slice, post Phase 0 sign-off; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
