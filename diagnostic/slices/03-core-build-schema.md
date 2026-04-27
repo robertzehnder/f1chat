@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T14:30:00Z
+updated: 2026-04-27T14:07:27Z
 ---
 
 ## Goal
@@ -239,6 +239,22 @@ conflate the two._
 
 ### Low
 - [x] Clarify whether "verbatim SELECT body" should preserve dependencies on `core.*` views or rewrite hot-contract dependencies to `core_build.*`, so later materialization slices do not have to infer the intended source-definition dependency graph.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
+- Prior context path `diagnostic/roadmap_2026-04_performance_and_upgrade.md` exists and was consulted for Phase 3 source-definition sequencing.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify a dependency-safe `CREATE OR REPLACE VIEW` order for `sql/008_core_build_schema.sql` after hot-contract references are rewritten to `core_build.*`, so no view is created before another `core_build` view it references.
+
+### Medium
+- [ ] Reword the Acceptance criteria for gate command #2 to say the command exits 0 after verifying exactly eleven views exist, because the current DO block does not return the value `11`.
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
