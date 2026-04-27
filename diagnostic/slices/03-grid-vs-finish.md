@@ -1,11 +1,11 @@
 ---
 slice_id: 03-grid-vs-finish
 phase: 3
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T18:53:47-04:00
+updated: 2026-04-27T18:55:06-04:00
 ---
 
 ## Goal
@@ -372,6 +372,19 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 - The expanded plan body, `## Slice-completion note`, `## Audit verdict`, and `## Plan-audit verdict (round 1/round 2)` sections match the structure of merged Phase 3 materialization slices, including `03-strategy-summary` (merged at `501c910`, audit verdict PASS), `03-stint-summary` (merged at `9cc249b`), and `03-race-progression-summary` (merged at `7fc151a`). Truncating the plan body would diverge from that established convention and would produce *new* branch-local edits relative to integration (deletions), inverting the audit's intent.
 - All gates re-run from this worktree against `$DATABASE_URL` on 2026-04-27 still exit `0`: gate #0 (`total=7581 distinct_pair=7581 duplicate=0`), gate #1 (`BEGIN / NOTICE relation already exists / CREATE TABLE / TRUNCATE TABLE / INSERT 0 7581 / CREATE VIEW / COMMIT`), gate #2 (structural `DO`), gate #3 (`global rowcount equality: core_build=7581 mat=7581` and `parity ok` for sessions 9102/9110/9118), `npm --prefix web run build` (Next.js 15 build, all routes compiled), `npm --prefix web run typecheck` (`tsc --noEmit` clean), and `npm --prefix web run test:grading` (`# tests 31 / # pass 21 / # fail 0 / # skipped 10`).
 - Scope diff at this revision: `git diff --name-only integration/perf-roadmap HEAD` returns only `sql/014_grid_vs_finish_mat.sql`. The slice file has no two-dot diff against integration. Three-dot diff against the merge-base `8e03f29` still shows `diagnostic/slices/03-grid-vs-finish.md` because the plan-revise expansions are present on the slice branch since divergence; this is expected and consistent with every other Phase 3 materialization slice's three-dot diff at merge time.
+
+**Revision response (round-2 audit verdict REVISE → re-submitted awaiting_audit):**
+- The round-2 audit verdict at `## Audit verdict` recorded `npm --prefix web run typecheck` exit `2` with `TS6053: File '<worktree>/web/.next/types/app/api/admin/perf-summary/route.ts' not found.` and required a fix to the typecheck/build artifact contract so typecheck succeeds from a clean worktree.
+- Reproducibility investigation in this worktree on 2026-04-27 (no web/ files modified between rounds — round-2 was preceded only by an edit to this slice file, see `git log df82b75..1d5971c` and the empty `git diff df82b75..8239d40 -- web/`):
+  - Round-1 audit (commit `df82b75`) recorded `typecheck=0`. Round-2 audit (commit `1d5971c`) recorded `typecheck=2`. Zero web/ code changed between them, so the failure is environmental/transient, not a defect in the typecheck/build contract on this branch.
+  - I cannot reproduce the failure in this worktree. Tested invocations all exit `0`:
+    - After `rm -rf web/.next web/tsconfig.tsbuildinfo` (no Next.js artefacts at all): `npm --prefix web run typecheck` → exit `0`. (`tsc` treats `.next/types/**/*.ts` in `tsconfig.json` `include` as a glob; an empty match is not an error. The triple-slash reference in `web/next-env.d.ts` to `./.next/types/routes.d.ts` is also tolerated when the file is absent.)
+    - After fresh `npm --prefix web run build` followed immediately by `npm --prefix web run typecheck` (the gate-listed order): both exit `0`.
+    - After `rm -rf web/.next/types/app` between build and typecheck (simulating partial Next.js artefacts): typecheck still exits `0`.
+    - `next build` itself runs `Linting and checking validity of types` as part of its pipeline; build exiting `0` implies typecheck would pass on the same artefact set.
+- Fixing the typecheck/build artefact contract would require modifying `web/tsconfig.json` and/or `web/package.json` (e.g. dropping the `.next/types/**/*.ts` entry from `include`, or chaining `next build` into the `typecheck` script). Both are outside this slice's "Changed files expected" (sql/014_grid_vs_finish_mat.sql + this slice file). Per the plan's explicit scope rule — "If implementation finds it must touch any other path, that is a scope alarm and should be flagged in the slice-completion note before submission" — that change cannot land in this slice without re-planning. Flagging here as a scope alarm: a future hardening slice (e.g. against `web/tsconfig.json` or `web/package.json`) is the right home for any robustness fix.
+- All gates re-run fresh from this worktree against `$DATABASE_URL` on 2026-04-27 with `web/.next` and `web/tsconfig.tsbuildinfo` deleted before the web sequence: gate #0 → exit `0` (`total=7581 distinct_pair=7581 duplicate=0`), gate #1 → exit `0` (`BEGIN / NOTICE relation already exists / CREATE TABLE / TRUNCATE TABLE / INSERT 0 7581 / CREATE VIEW / COMMIT`), gate #2 → exit `0`, gate #3 → exit `0` (`global rowcount equality: core_build=7581 mat=7581` and `parity ok` for sessions 9102 / 9110 / 9118), `npm --prefix web run build` → exit `0` (Next.js 15 build, all routes compiled), `npm --prefix web run typecheck` → exit `0` (`tsc --noEmit` clean), `npm --prefix web run test:grading` → exit `0` (`# tests 31 / # pass 21 / # fail 0 / # skipped 10`).
+- Re-audit guidance: please re-run gates in the listed order from this worktree (`npm --prefix web run build` first, then `typecheck`, then `test:grading`). If typecheck still exits non-zero in your environment after a successful build in the same shell session, the failure is in your local Next.js artefact state (not on this branch's tracked files); a `rm -rf web/.next web/tsconfig.tsbuildinfo` followed by re-running build should restore a known-good state. If the failure persists, please attach the full `tsc` output so the next slice can target the actual root cause.
 
 ## Audit verdict
 **REVISE**
