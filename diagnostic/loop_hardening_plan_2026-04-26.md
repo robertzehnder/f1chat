@@ -253,14 +253,48 @@ case "$LOOP_REPAIR_MODE" in
 
   loop-infra)
     # Two commits land locally on integration:
-    #   1. The agent's loop-infra repair commit ([loop-infra-repair])
-    #   2. A blocked-state slice-file flip ([loop-infra-pending])
+    #   1. The agent's loop-infra repair commit ([loop-infra-repair][attempt:N])
+    #   2. A blocked-state slice-file flip ([loop-infra-pending][attempt:N])
     # Neither is pushed without user approval.
+    #
+    # All four state markers (sentinel filename, repair commit subject,
+    # pending commit subject, resumed commit subject) carry the same
+    # [attempt:N] tag (round-10 H-1) so resume decisions can match the
+    # exact attempt instead of any historical attempt for the slice.
+    #
+    # The attempt counter is the same as the existing repair_count_<id>
+    # (post-increment, after dispatch_repair has bumped it).
+
+    local attempt_n
+    attempt_n=$(cat "$LOOP_STATE_DIR/repair_count_${slice_id}" 2>/dev/null || echo "1")
+
+    # Step 1: amend the agent's [loop-infra-repair] commit to include the
+    # attempt tag in the subject AND a dispatcher-injected `Resume-as:`
+    # trailer (round-10 M-2). The agent's commit message is replaced with
+    # a deterministic one — agent-authored Resume-as: trailers and missing
+    # tags are no longer possible.
+    #
+    # The Resume-as: target comes from the slice's pre-block status BEFORE
+    # the repair was triggered, captured up-front in dispatch_repair.sh:
+    #   resume_target=$(read_field "$slice_file" status_before_block)
+    # Default to revising_plan if no status_before_block field; revising
+    # if the slice was in awaiting_audit (impl-side repair).
+    local resume_target
+    resume_target=$(determine_resume_target "$slice_id")   # in slice_helpers.sh
+
+    local agent_summary
+    agent_summary=$(git -C "$LOOP_MAIN_WORKTREE" log -1 --pretty=%s HEAD | sed 's/^\[loop-infra-repair\][^ ]* *//; s/^\[slice:[^]]*\] *//')
+
+    git -C "$LOOP_MAIN_WORKTREE" commit --amend \
+      -m "[loop-infra-repair][slice:${slice_id}][attempt:${attempt_n}] ${agent_summary:-protocol repair}
+
+Resume-as: ${resume_target}
+" >/dev/null
 
     # Round-8 H-2: compute diff_files HERE, since this case branch doesn't
     # share scope with the slice-state branch. Under set -u, referencing an
-    # unset $diff_files would abort. We diff the [loop-infra-repair] commit
-    # the agent just made (HEAD vs HEAD~1).
+    # unset $diff_files would abort. We diff the (now-amended) [loop-infra-repair]
+    # commit the agent just made (HEAD vs HEAD~1).
     local diff_files
     diff_files=$(git -C "$LOOP_MAIN_WORKTREE" diff --name-only HEAD~1 HEAD 2>/dev/null || echo "(could not compute diff)")
 
@@ -273,12 +307,12 @@ $(printf '%s\n' "$diff_files" | sed 's/^/  - /')
 
 Two local commits on integration (not pushed):
   HEAD     [loop-infra-repair][slice:$slice_id] — the protocol change
-  HEAD~?   [loop-infra-pending][slice:$slice_id] — this blocked-state flip
+  HEAD~?   [loop-infra-pending][slice:$slice_id][attempt:$attempt_n] — this blocked-state flip
 
 LIFECYCLE — runner has exited cleanly via circuit breaker. To resume:
 
   Approve (push both commits, slice unblocks):
-    touch diagnostic/slices/.approved-loop-infra-repair/$slice_id
+    touch diagnostic/slices/.approved-loop-infra-repair/${slice_id}__attempt-${attempt_n}
     # Restart runner. The runner's loop-infra-approval-resume hook detects
     # the sentinel, pushes both original commits, flips the slice status,
     # commits the flip, pushes the [loop-infra-resumed] commit, then ONLY
@@ -292,7 +326,7 @@ LIFECYCLE — runner has exited cleanly via circuit breaker. To resume:
     # and prints next steps. Restart runner afterwards.
     # Round-6 H-2 — replaces raw 'git reset --hard' instruction."
     git -C "$LOOP_MAIN_WORKTREE" add diagnostic/slices/${slice_id}.md
-    git -C "$LOOP_MAIN_WORKTREE" commit -m "[loop-infra-pending][slice:${slice_id}] block pending user approval" >/dev/null
+    git -C "$LOOP_MAIN_WORKTREE" commit -m "[loop-infra-pending][slice:${slice_id}][attempt:${attempt_n}] block pending user approval" >/dev/null
 
     # IMPORTANT: do NOT push. Both local commits stay until the user approves.
     # Worktree is now CLEAN (both commits made) — preconditions pass on next
@@ -329,41 +363,59 @@ resume_pending_loop_infra_repair() {
     [[ "$fname" == ".gitkeep" ]] && continue
     local slice_id="$fname"
 
-    # Round-9 H-1: scan BOTH local-only AND origin for pending/resumed
-    # commits. The prior version (round-8) only checked origin..HEAD and
-    # missed a real crash state: first push succeeds (so [loop-infra-pending]
-    # is now on origin, NOT local-only), then runner dies BEFORE creating
-    # [loop-infra-resumed]. On restart with that sentinel, the prior scan
-    # found nothing local-only and incorrectly removed the sentinel.
-    git fetch origin integration/perf-roadmap >/dev/null 2>&1 || true
+    # Round-10 H-1: every loop-infra-repair attempt has an `[attempt:N]`
+    # tag baked into all four state markers (sentinel filename, the
+    # [loop-infra-repair] commit subject, the [loop-infra-pending] commit
+    # subject, the [loop-infra-resumed] commit subject). Resume decisions
+    # MUST match the exact attempt number, not just the slice id, so a
+    # historical reverted attempt for the same slice cannot false-match
+    # the current one.
+    #
+    # Sentinel filename format: <slice_id>__attempt-<N>
+    # Commit subject format:    [<tag>][slice:<id>][attempt:<N>] <summary>
+    local sentinel_basename attempt_n
+    sentinel_basename=$(basename "$sentinel")
+    if [[ "$sentinel_basename" != *__attempt-* ]]; then
+      log "resume: sentinel '$sentinel_basename' missing __attempt-N suffix; skipping (legacy/malformed)"
+      continue
+    fi
+    attempt_n="${sentinel_basename##*__attempt-}"
 
-    # Pending commit can be in either:
-    #   - local-only (origin..HEAD): first push hasn't happened yet
-    #   - on origin: first push succeeded (and possibly we crashed before resumed)
-    # Resumed commit, if it exists, is local-only between origin and HEAD,
-    # OR may already be on origin in fully-resolved-but-sentinel-stale states.
-    local pending_anywhere resumed_local_or_origin
-    pending_anywhere=$( {
-      git log "origin/integration/perf-roadmap..HEAD" --grep="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null
-      git log "origin/integration/perf-roadmap"       --grep="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null
-    } | grep -m1 . || true)
-    resumed_local_or_origin=$( {
-      git log "origin/integration/perf-roadmap..HEAD" --grep="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null
-      git log "origin/integration/perf-roadmap"       --grep="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null
-    } | grep -m1 . || true)
-
-    if [[ -n "$pending_anywhere" || -n "$resumed_local_or_origin" ]]; then
-      # There's work to do (or to verify-and-clean). _do_resume_loop_infra is
-      # idempotent: it'll detect existing local [loop-infra-resumed] and skip
-      # recreation; it'll skip the first push if origin already has pending.
-      with_repo_lock "resume:loop-infra:$slice_id" _do_resume_loop_infra "$slice_id" "$sentinel"
+    # Round-10 L-4: stale-cleanup decisions depend on a fresh origin view.
+    # If fetch fails, refuse to make ANY stale/cleanup decisions for this
+    # slice — preserve the sentinel and continue to next runner start.
+    if ! git fetch origin integration/perf-roadmap >/dev/null 2>&1; then
+      log "resume: git fetch failed for $slice_id (attempt $attempt_n); sentinel preserved (cannot reason about stale state without origin view)"
       continue
     fi
 
-    # Round-9 H-1+L: stronger stale rule. No pending/resumed anywhere AND no
-    # ongoing repair state means safe to remove. Preserve only when the slice
-    # is in a pending-approval/blocked repair state (user pre-approved a
-    # repair that hasn't been agent-dispatched yet).
+    # Round-10 H-1: detection greps must include the attempt-N tag so we
+    # only match THIS attempt, not historical ones for the same slice.
+    local attempt_tag="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+    local resumed_attempt_tag="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+    local pending_anywhere resumed_anywhere
+    pending_anywhere=$( {
+      git log "origin/integration/perf-roadmap..HEAD" --grep="$attempt_tag" --pretty=format:%H 2>/dev/null
+      git log "origin/integration/perf-roadmap"       --grep="$attempt_tag" --pretty=format:%H 2>/dev/null
+    } | grep -m1 . || true)
+    resumed_anywhere=$( {
+      git log "origin/integration/perf-roadmap..HEAD" --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null
+      git log "origin/integration/perf-roadmap"       --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null
+    } | grep -m1 . || true)
+
+    if [[ -n "$pending_anywhere" || -n "$resumed_anywhere" ]]; then
+      # There's work to do (or to verify-and-clean). _do_resume_loop_infra is
+      # idempotent: it'll detect existing [loop-infra-resumed][attempt:N] and
+      # skip recreation; it'll skip the first push if origin already has the
+      # matching pending commit.
+      with_repo_lock "resume:loop-infra:$slice_id:$attempt_n" \
+        _do_resume_loop_infra "$slice_id" "$sentinel" "$attempt_n"
+      continue
+    fi
+
+    # No pending/resumed for THIS attempt anywhere. Stronger stale rule:
+    # preserve when slice is blocked (user pre-approved a future attempt,
+    # which would write a fresh attempt-N+1 marker pair).
     local current_status
     current_status=$(awk '
       /^---$/ { fm = !fm; if (!fm && seen) exit; seen = 1; next }
@@ -371,77 +423,93 @@ resume_pending_loop_infra_repair() {
     ' "diagnostic/slices/${slice_id}.md" 2>/dev/null)
 
     if [[ "$current_status" == "blocked" ]]; then
-      # Slice is blocked; user may have preemptively touched the sentinel
-      # awaiting a future repair attempt. Preserve.
-      log "resume: sentinel preserved for $slice_id (slice blocked, awaiting repair)"
+      log "resume: sentinel preserved for $slice_id attempt $attempt_n (slice blocked, awaiting repair)"
       continue
     fi
 
-    # Truly stale: no commits anywhere, slice not in repair-pending state.
     rm -f "$sentinel"
-    log "resume: stale sentinel removed for $slice_id (no pending/resumed commits, status=$current_status)"
+    log "resume: stale sentinel removed for $slice_id attempt $attempt_n (no pending/resumed for this attempt; status=$current_status)"
   done
 }
 
 _do_resume_loop_infra() {
-  local slice_id="$1" sentinel="$2"
+  local slice_id="$1" sentinel="$2" attempt_n="$3"
   cd "$LOOP_MAIN_WORKTREE"
 
   # The sentinel is the durable retry marker (round-7 H-2). It is retained
   # across runner restarts until ALL pushes succeed AND the [loop-infra-
-  # resumed] commit lands on origin. The hook is idempotent: it can re-run
-  # safely from any partial-failure state.
+  # resumed][attempt:N] commit lands on origin. The hook is idempotent: it
+  # can re-run safely from any partial-failure state.
+  #
+  # All commit-grep lookups MUST include [attempt:${attempt_n}] (round-10 H-1)
+  # so historical reverted attempts cannot false-match.
 
-  # 1. Idempotency check 1 — has [loop-infra-resumed] already been committed
-  #    locally OR landed on origin? Three sub-states:
+  local repair_attempt_tag="\\[loop-infra-repair\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+  local pending_attempt_tag="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+  local resumed_attempt_tag="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+
+  # 1. Idempotency check 1 — has [loop-infra-resumed][attempt:N] already been
+  #    committed locally OR landed on origin? Three sub-states:
   #      a. local-only resumed commit → just retry the final push
   #      b. resumed commit on origin → fully resolved; remove sentinel
   #      c. no resumed commit anywhere → need to create it
   local resumed_local resumed_on_origin
-  resumed_local=$(git log "origin/integration/perf-roadmap..HEAD" --grep="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | head -c1)
-  resumed_on_origin=$(git log "origin/integration/perf-roadmap" --grep="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | head -c1)
+  resumed_local=$(git log "origin/integration/perf-roadmap..HEAD" --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null | head -c1)
+  resumed_on_origin=$(git log "origin/integration/perf-roadmap" --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null | head -c1)
 
   if [[ -n "$resumed_on_origin" ]]; then
     # Fully resolved; sentinel just needs cleanup.
     rm -f "$sentinel"
-    log "resume: [loop-infra-resumed] already on origin for $slice_id; sentinel cleaned up"
+    log "resume: [loop-infra-resumed][attempt:$attempt_n] already on origin for $slice_id; sentinel cleaned up"
     return 0
   fi
 
   if [[ -n "$resumed_local" ]]; then
-    log "resume: [loop-infra-resumed] commit already exists locally for $slice_id; retrying push"
+    log "resume: [loop-infra-resumed][attempt:$attempt_n] commit already exists locally for $slice_id; retrying push"
   else
-    # 2. Round-9 H-1: idempotency check 2 — has the FIRST push (of pending+repair)
-    #    already happened? If origin contains [loop-infra-pending] for this
-    #    slice, the push step is already done; skip it.
+    # 2. Idempotency check 2 — has the FIRST push (of pending+repair)
+    #    already happened? If origin contains [loop-infra-pending][attempt:N]
+    #    for this slice, the push step is already done; skip it.
     local pending_on_origin
-    pending_on_origin=$(git log "origin/integration/perf-roadmap" --grep="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | head -c1)
+    pending_on_origin=$(git log "origin/integration/perf-roadmap" --grep="$pending_attempt_tag" --pretty=format:%H 2>/dev/null | head -c1)
 
     if [[ -z "$pending_on_origin" ]]; then
-      # Original commits aren't on origin yet. Push them now.
       if ! git push >/dev/null 2>&1; then
-        log "resume: initial push failed for $slice_id; sentinel retained for retry"
+        log "resume: initial push failed for $slice_id attempt $attempt_n; sentinel retained for retry"
         return 1
       fi
     else
-      log "resume: [loop-infra-pending] already on origin for $slice_id; skipping initial push"
+      log "resume: [loop-infra-pending][attempt:$attempt_n] already on origin for $slice_id; skipping initial push"
     fi
 
-    # 3. Flip slice file back to its pre-block state (revising_plan or revising,
-    #    whichever the agent intended — recorded in the [loop-infra-repair]
-    #    commit's trailer "Resume-as: revising_plan" or similar).
-    #    The [loop-infra-repair] commit might be HEAD~1 (if we're crash-recovering
-    #    before the flip-commit was made) or origin's HEAD~1. Read its trailer
-    #    via a more robust lookup.
-    local repair_commit
-    repair_commit=$(git log "origin/integration/perf-roadmap" --grep="\\[loop-infra-repair\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | head -1)
-    [[ -z "$repair_commit" ]] && repair_commit=$(git log --grep="\\[loop-infra-repair\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | head -1)
-    local resume_status
+    # 3. Flip slice file back to its pre-block state. The Resume-as: trailer
+    #    is dispatcher-injected (round-10 M-2): dispatch_repair amended the
+    #    [loop-infra-repair] commit to include `Resume-as: revising_plan` or
+    #    `Resume-as: revising` per the parent slice's pre-block status. The
+    #    trailer is REQUIRED — agent-authored or missing trailers fail this
+    #    function rather than silently defaulting to revising_plan.
+    local repair_commit resume_status
+    repair_commit=$(git log "origin/integration/perf-roadmap" --grep="$repair_attempt_tag" --pretty=format:%H 2>/dev/null | head -1)
+    [[ -z "$repair_commit" ]] && repair_commit=$(git log --grep="$repair_attempt_tag" --pretty=format:%H 2>/dev/null | head -1)
+    if [[ -z "$repair_commit" ]]; then
+      log "resume: FAIL — no [loop-infra-repair][attempt:$attempt_n] commit found for $slice_id; sentinel retained"
+      return 1
+    fi
     resume_status=$(git log -1 --pretty=%B "$repair_commit" 2>/dev/null | sed -nE 's/^Resume-as: (.+)$/\1/p' | head -1)
-    [[ -z "$resume_status" ]] && resume_status="revising_plan"   # safe default
+    if [[ -z "$resume_status" ]]; then
+      log "resume: FAIL — Resume-as: trailer missing on repair commit $repair_commit for $slice_id; sentinel retained (dispatcher must inject)"
+      return 1
+    fi
+    case "$resume_status" in
+      revising_plan|revising) ;;
+      *)
+        log "resume: FAIL — Resume-as: '$resume_status' is not a valid resume target; sentinel retained"
+        return 1
+        ;;
+    esac
     flip_slice_status "$slice_id" "$resume_status" "claude"
     git add "diagnostic/slices/${slice_id}.md"
-    git commit -m "[loop-infra-resumed][slice:${slice_id}] resume after user-approved repair" >/dev/null
+    git commit -m "[loop-infra-resumed][slice:${slice_id}][attempt:${attempt_n}] resume after user-approved repair" >/dev/null
   fi
 
   # 4. Push (the resumed commit, plus any catch-up if origin moved).
@@ -486,8 +554,17 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 slice_id="${1:?slice_id required}"
-expected_top="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]"
-expected_below="\\[loop-infra-repair\\]\\[slice:${slice_id}\\]"
+# Round-10 H-1: HEAD must include the [attempt:N] tag so we don't false-match
+# a historical reverted attempt. The attempt number is taken from HEAD's
+# subject (single source of truth at this point).
+head_attempt=$(git log -1 --pretty=%s HEAD | sed -nE 's/.*\[attempt:([0-9]+)\].*/\1/p' | head -1)
+if [[ -z "$head_attempt" ]]; then
+  echo "FAIL: HEAD subject does not contain [attempt:N] tag — cannot identify the repair attempt." >&2
+  echo "  HEAD subject: $(git log -1 --pretty=%s HEAD)" >&2
+  exit 1
+fi
+expected_top="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]\\[attempt:${head_attempt}\\]"
+expected_below="\\[loop-infra-repair\\]\\[slice:${slice_id}\\]\\[attempt:${head_attempt}\\]"
 
 # 1. Verify HEAD is on integration/perf-roadmap (won't reset other branches).
 current=$(git rev-parse --abbrev-ref HEAD)
@@ -539,11 +616,13 @@ fi
 # pushed (or its content was pushed at some point and is reachable).
 head_sha=$(git rev-parse HEAD)
 head_subject=$(git log -1 --pretty=%s HEAD)
-if ! echo "$head_subject" | grep -qE "\\[loop-infra-pending\\]\\[slice:${slice_id}\\]"; then
-  echo "FAIL: HEAD is not the [loop-infra-pending][slice:${slice_id}] commit." >&2
+if ! echo "$head_subject" | grep -qE "\\[loop-infra-pending\\]\\[slice:${slice_id}\\]\\[attempt:${head_attempt}\\]"; then
+  echo "FAIL: HEAD is not the [loop-infra-pending][slice:${slice_id}][attempt:${head_attempt}] commit." >&2
   echo "  HEAD subject: $head_subject" >&2
   exit 1
 fi
+# Also clean up the matching sentinel after a successful reset.
+sentinel_to_clean="diagnostic/slices/.approved-loop-infra-repair/${slice_id}__attempt-${head_attempt}"
 if git merge-base --is-ancestor "$head_sha" origin/integration/perf-roadmap 2>/dev/null; then
   cat <<EOF
 FAIL: HEAD ($head_sha, [loop-infra-pending][slice:${slice_id}]) is an
@@ -589,16 +668,15 @@ if ! echo "$below_msg" | grep -qE "$expected_below"; then
 fi
 
 # 4. Safe to reset.
-echo "Verified: 2 local commits match [loop-infra-pending|repair][slice:${slice_id}]"
+echo "Verified: 2 local commits match [loop-infra-pending|repair][slice:${slice_id}][attempt:${head_attempt}]"
 echo "Resetting to origin/integration/perf-roadmap..."
 git reset --hard origin/integration/perf-roadmap
 
-# 5. Clean up sentinel if it exists.
-sentinel="diagnostic/slices/.approved-loop-infra-repair/${slice_id}"
-[[ -f "$sentinel" ]] && rm -f "$sentinel" && echo "Removed sentinel $sentinel"
+# 5. Clean up the matching attempt's sentinel if it exists (round-10 H-1).
+[[ -f "$sentinel_to_clean" ]] && rm -f "$sentinel_to_clean" && echo "Removed sentinel $sentinel_to_clean"
 
-echo "Rejection complete. Slice ${slice_id} returned to its pre-repair status."
-echo "Restart the runner; auto-repair will attempt again per LOOP_MAX_REPAIRS budget."
+echo "Rejection complete. Slice ${slice_id} attempt ${head_attempt} returned to its pre-repair status."
+echo "Restart the runner; auto-repair will attempt again per LOOP_MAX_REPAIRS budget (next attempt would be ${head_attempt}+1)."
 ```
 
 This script refuses to do the destructive reset unless every precondition is met. The user-facing instruction in the slice file becomes:
@@ -1685,7 +1763,36 @@ After landing Items 1–12 and stubbing the 71 slice files:
 
 25. **Mode-classification quote-vs-action (round-6 M-3).** Synthesize a slice file whose latest audit verdict has the word `runner.sh` in a Note ("the existing runner.sh circuit breaker is sufficient") but no protocol-fix items in High/Medium. Verify `classify_repair_mode` returns `slice-state`, NOT `loop-infra`.
 
-26. **Partial-resume-failure recovery — two crash points (round-8 H-1 + M-4 + round-9 M-3).** Two scenarios must both pass.
+26. **Partial-resume-failure recovery — two crash points (round-8 H-1 + M-4 + round-9 M-3 + round-10 M-3).** Two scenarios must both pass. Both use a deterministic fault injection point via `LOOP_TEST_INJECT_FAULT` env var. The runner reads this env var inside `_do_resume_loop_infra` at named fault sites and `exit 137` (simulating SIGKILL) when it matches. Supported values:
+
+    - `LOOP_TEST_INJECT_FAULT=after_initial_push_before_resumed_commit` — after the first push succeeds (`[loop-infra-repair]` and `[loop-infra-pending]` are now on origin) but BEFORE the slice-status flip + `[loop-infra-resumed]` commit is made
+    - `LOOP_TEST_INJECT_FAULT=after_resumed_commit_before_final_push` — after the `[loop-infra-resumed]` commit exists locally but BEFORE the final push to origin
+    - (any other value) — disabled
+
+    **26a. Failure AFTER `[loop-infra-resumed]` commit exists locally:**
+    Set `LOOP_TEST_INJECT_FAULT=after_resumed_commit_before_final_push`. Trigger the resume hook with both repair commits local + sentinel touched. Verify mid-state:
+    - Origin has `[loop-infra-repair]` + `[loop-infra-pending]`.
+    - `[loop-infra-resumed]` commit exists locally on integration.
+    - Sentinel STILL exists.
+    Restart with the env var unset. Verify:
+    - Resume hook re-enters via SENTINEL scan.
+    - Idempotency check detects existing local `[loop-infra-resumed]` and skips recreation.
+    - Final push succeeds; sentinel removed; loop continues.
+
+    **26b. Failure BEFORE `[loop-infra-resumed]` commit exists (round-9 H-1 + round-10 M-3):**
+    Set `LOOP_TEST_INJECT_FAULT=after_initial_push_before_resumed_commit`. Trigger the resume hook with both repair commits local + sentinel touched. Verify mid-state:
+    - Origin has `[loop-infra-repair]` + `[loop-infra-pending]` (first push succeeded).
+    - NO `[loop-infra-resumed]` commit (anywhere).
+    - Sentinel STILL exists.
+    Restart with the env var unset. Verify:
+    - Resume hook re-enters via SENTINEL scan.
+    - `pending_anywhere` detector sees pending on origin → routes into `_do_resume_loop_infra`.
+    - `_do_resume_loop_infra` finds no resumed commit, sees pending on origin → skips first push, proceeds to flip + commit + push.
+    - Final push succeeds; sentinel removed; loop continues.
+
+    **Round-10 M-2 sub-case: `Resume-as: revising` path.** Synthesize a parent slice that was at `awaiting_audit` BEFORE the repair was triggered (impl-side repair). Trigger the loop-infra repair flow. Verify:
+    - Dispatcher's `[loop-infra-repair]` commit (after amend) contains the trailer `Resume-as: revising` (NOT the default `revising_plan`).
+    - On approval + restart, the resume hook reads the trailer and flips the slice to `revising`, not `revising_plan`.
 
     **26a. Failure AFTER `[loop-infra-resumed]` commit exists locally (post-flip push fails):**
     - Both `[loop-infra-repair]` and `[loop-infra-pending]` commits are local-only.
@@ -1898,13 +2005,28 @@ After all 27 verifications pass, the loop is ready for end-to-end kickoff.
 - Offline reject + sentinel composition: SHA-based check (M-2 fix) ensures the rejection is symmetric with the resume hook's anywhere-scan.
 - Smoke scope: step 26 with both crash sub-cases (a + b) is sufficient; no need for separate unit-style synthesis.
 
-### Remaining open for Codex round 10
+### Resolved by Codex round-10 audit (1 High + 2 Medium + 1 Low + 3 L-answers)
 
-1. **`pending_on_origin` shows `[loop-infra-pending]` from a prior reverted attempt.** If a user previously reverted a `[loop-infra-pending]` commit, the original commit message is still in origin's history. `_do_resume_loop_infra`'s "skip first push if pending already on origin" check would erroneously skip the push for a fresh repair attempt. Mitigation: scope the origin check to commits NOT yet ancestor of any local revert. Or: include the slice's repair counter in the commit message so each attempt has a unique tag. My read: include `[attempt-N]` in the commit subject — `[loop-infra-pending][slice:X][attempt-2]` — so message-grep distinguishes attempts. Codex agree?
+| Round-10 finding | How resolved |
+|---|---|
+| H-1: resume path uses slice-only message greps over all origin history | Every state marker (sentinel filename, `[loop-infra-repair]` commit, `[loop-infra-pending]` commit, `[loop-infra-resumed]` commit) now carries an `[attempt:N]` tag matching the slice's `repair_count_<id>`. All resume-decision greps include the attempt tag, so historical reverted attempts cannot false-match. Sentinel filename pattern: `<slice_id>__attempt-<N>`. |
+| M-2: `Resume-as:` should be dispatcher-injected, not agent-authored | Dispatcher amends the agent's `[loop-infra-repair]` commit after the agent runs to inject the deterministic format: `[loop-infra-repair][slice:X][attempt:N] <summary>` body + `Resume-as: revising_plan|revising` trailer. `_do_resume_loop_infra` FAILS (sentinel retained) if the trailer is missing or has an invalid value — no silent default. Verification 26 includes a `Resume-as: revising` sub-case. |
+| M-3: kill-point precision in step 26 | New env var `LOOP_TEST_INJECT_FAULT` with two named fault sites: `after_initial_push_before_resumed_commit` and `after_resumed_commit_before_final_push`. Step 26a + 26b each use a specific value for reproducible recovery testing. |
+| L-4: resume scan `git fetch ... || true` made stale decisions silently | Resume scan now FAILS the sentinel-decision branch if `git fetch` fails — preserves the sentinel and continues to next slice/runner-start. No stale/cleanup decisions made from an unverified origin view. |
 
-2. **Trailer parsing fragility for `Resume-as:`.** I'm reading `Resume-as: revising_plan` from the `[loop-infra-repair]` commit message via `sed -nE`. If the agent's commit message format drifts (different trailer format, missing trailer entirely), the safe-default kicks in (`revising_plan`). For `revising` cases (impl-side repair), this would silently route the slice to the wrong state. Mitigation: dispatcher injects `Resume-as:` into the commit message AFTER the agent commits, so we control the format. Codex agree?
+### Round-10 L-answers + open-question resolutions
 
-3. **Verification 26b's "kill -9 between flip-commit and push" precision.** The test description says "mock the runner to die HERE." Where exactly is "here"? Need to pick a reproducible kill point — e.g. between `git commit` and `git push`. Probably easiest: introduce a `LOOP_TEST_INJECT_FAULT` env var that, if set, exits between specific steps. Codex agree, or is that over-engineering for a verification step?
+- `pending_on_origin` false positives: resolved via `[attempt:N]` tags throughout (H-1).
+- `Resume-as:` fragility: resolved by dispatcher-injection (M-2).
+- 26b kill-point precision: resolved by `LOOP_TEST_INJECT_FAULT` env var (M-3).
+
+### Remaining open for Codex round 11
+
+1. **Attempt-tag plumbing in `slice_helpers.sh`.** `determine_resume_target` and `flip_slice_status` need to know how to find the right `repair_count_<id>` value at the right moment. The dispatcher reads it AFTER incrementing in `dispatch_repair.sh` (per existing flow). The resume hook reads `[attempt:N]` from the sentinel filename. These are two independent paths into the same value. Confirming they stay in sync — the dispatcher writes attempt N to the sentinel filename when creating it, and the resume hook reads it back from the same filename. Codex agree?
+
+2. **Reverted-attempt cleanup of stale `repair_count_<id>`.** When the user rejects an attempt via `reject_loop_infra_repair.sh`, the slice's `repair_count_<id>` is preserved (per the script's exit message) so the next attempt is N+1, not N. But what if the slice eventually merges and `repair_count_<id>` is reset by the merger (existing flow)? A new repair down the road would start at attempt 1 again, and a stale sentinel from the prior cycle (if not cleaned up) would now collide. Mitigation: merger should also clean up any `.approved-loop-infra-repair/<slice_id>__attempt-*` sentinels for the merged slice. My read: yes, add to merger's reset path. Codex agree?
+
+3. **`LOOP_TEST_INJECT_FAULT` lifetime.** Should the env var be supported only when a `LOOP_TEST_MODE=1` flag is also set, to ensure it can't fire in production? Or is the explicit name (`*_INJECT_FAULT`) signal enough? My read: gate by `LOOP_TEST_MODE=1` for defense-in-depth. Codex agree?
 
 ### Resolved by Codex round-1 audit
 1. ~~Worktree disk usage~~ — **Acceptable** if cleanup/prune verified. Verification step 11 added.
@@ -1951,25 +2073,26 @@ Webhook events fire on every blocked / repaired / phase-boundary state for visib
 
 ---
 
-## 11. Codex round-10 audit ask
+## 11. Codex round-11 audit ask
 
-This is round-10 (round-9 returned 1 High + 2 Medium + 3 L-answers; all addressed):
+This is round-11 (round-10 returned 1 High + 2 Medium + 1 Low + 3 L-answers; all addressed):
 
-| Round-9 finding | How resolved |
+| Round-10 finding | How resolved |
 |---|---|
-| H-1: stale-sentinel rule missed crash-before-resumed state | Sentinel scan now checks BOTH local-only AND origin for pending/resumed commits. Stronger stale rule: remove only when (no commits anywhere) AND (slice NOT in `blocked` state). `_do_resume_loop_infra` handles 3 idempotency sub-states: resumed-on-origin (cleanup), resumed-local (retry push), nothing-yet (skip-first-push-if-pending-already-on-origin then create resumed). |
-| M-2: reject-after-push uses commit-message grep | Replaced with HEAD-SHA + `git merge-base --is-ancestor HEAD origin/integration/perf-roadmap`. Won't false-match historical pushed-and-reverted attempts. Recovery instructions use HEAD/HEAD~1 SHAs directly. |
-| M-3: verification 26 missing crash-before-resumed | Split into 26a (failure AFTER resumed commit exists) + 26b (crash BEFORE resumed commit; only origin has pending). Both must pass. |
+| H-1: resume path uses slice-only message greps | Every state marker (sentinel filename, repair commit, pending commit, resumed commit) now carries `[attempt:N]` tag matching `repair_count_<id>`. All resume-decision greps match exact attempt; historical reverted attempts cannot false-match. Sentinel pattern: `<slice_id>__attempt-<N>`. |
+| M-2: `Resume-as:` should be dispatcher-injected | Dispatcher amends agent's `[loop-infra-repair]` commit to inject deterministic subject + `Resume-as:` trailer. Resume hook FAILS if trailer missing or invalid (no silent default). Verification 26 includes `Resume-as: revising` sub-case. |
+| M-3: kill-point precision in step 26 | `LOOP_TEST_INJECT_FAULT` env var with two named fault sites: `after_initial_push_before_resumed_commit` and `after_resumed_commit_before_final_push`. |
+| L-4: resume scan `git fetch ... || true` made silent stale decisions | Resume scan now preserves sentinel + continues if `git fetch` fails. No stale-cleanup from unverified origin view. |
 
-L-answers applied:
-- Stronger sentinel preservation rule (origin pending → resume; nothing anywhere AND not blocked → stale-cleanup; nothing anywhere AND blocked → preserve)
-- SHA-based reject-after-push composes correctly with offline override (M-2)
-- Step 26 with sub-cases sufficient (no separate unit-style synthesis needed)
+L-answers all applied:
+- attempt-N tags throughout state markers
+- Dispatcher-injected `Resume-as:`
+- Test fault env var
 
-Round-10 review please:
-- Round-9 fixes in §4 (anywhere-scan + stronger stale rule, three-sub-state idempotency, SHA-based ancestor check, M-2 commit message recovery)
-- Verification step 26a + 26b in §7
-- Round-10 open questions in §9 (revert-history false-positive on `pending_on_origin`, `Resume-as:` trailer fragility, kill-point precision in 26b)
+Round-11 review please:
+- Round-10 fixes in §4 (attempt-N tags, dispatcher-injected Resume-as, fault-injection env var, fail-closed fetch)
+- Verification step 26 (with 26a, 26b, and Resume-as: revising sub-case)
+- Round-11 open questions in §9 (attempt-tag plumbing sync, merger cleanup of stale attempt sentinels, LOOP_TEST_MODE gate)
 
 Triage as `High` / `Medium` / `Low`. Approving this round means implementation kicks off.
 
