@@ -1,11 +1,11 @@
 ---
 slice_id: 03-race-progression-summary
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T17:04:52Z
+updated: 2026-04-27T17:09:58Z
 ---
 
 ## Goal
@@ -14,7 +14,7 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
 ## Decisions
 - **Object model: real table + facade view, NOT `CREATE MATERIALIZED VIEW`.** Same rationale as `03-driver-session-summary-prototype` Decisions §1, `03-laps-enriched-materialize` Decisions §1, `03-stint-summary` Decisions §1, and `03-strategy-summary` Decisions §1: roadmap §3 / §4 Phase 3 prescribe real `_mat` tables refreshed incrementally, not Postgres materialized views (full-refresh cost, opaque semantics under the pooled Neon endpoint, no clean parity story). Storage relation is `CREATE TABLE core.race_progression_summary_mat`; the public `core.race_progression_summary` is replaced via `CREATE OR REPLACE VIEW core.race_progression_summary AS SELECT * FROM core.race_progression_summary_mat`. The "matview" framing in the round-0 plan body is the conceptual pattern, not the SQL object kind. The round-0 deliverables that required `MATERIALIZED VIEW` and `REFRESH MATERIALIZED VIEW` privileges are explicitly removed.
 - **Facade swap uses `CREATE OR REPLACE VIEW`, not `DROP VIEW … CREATE VIEW`.** A public dependent already exists: `core.pit_cycle_summary` (defined in `sql/007_semantic_summary_contracts.sql:401` ff.) reads from `core.race_progression_summary` (`LEFT JOIN core.race_progression_summary rp` at `sql/007_semantic_summary_contracts.sql:431`). A `DROP VIEW core.race_progression_summary` would fail at apply time with `cannot drop view core.race_progression_summary because other objects depend on it`, even inside a transaction. `CREATE OR REPLACE VIEW` is dependency-safe in Postgres provided the new view returns the same column names, types, and ordering as the existing view. Step 1.1 declares the storage table's column list to exactly mirror the original view's projection, so `SELECT * FROM core.race_progression_summary_mat` is column-compatible and the swap succeeds without disturbing the dependent.
-- **Grain: unique `(session_key, driver_number, lap_number)` → real `PRIMARY KEY`.** Per the canonical query at `sql/007_semantic_summary_contracts.sql:333` ff., the source-definition `core.race_progression_summary` is one row per `(session_key, driver_number, lap_number)` produced by per-lap window functions over `core.laps_enriched` rows that satisfy `lap_number IS NOT NULL AND position_end_of_lap IS NOT NULL AND LOWER(COALESCE(session_type, session_name, '')) LIKE '%race%'`. The `_mat` table declares `PRIMARY KEY (session_key, driver_number, lap_number)`. A grain-discovery query is not added as a separate gate because if the grain were non-unique on this triple, the bulk `INSERT … SELECT` in Steps §1.2 would abort the migration with a clean PK-violation error and roll back the transaction — the assertion is stronger than a separate SELECT (same logic as `03-driver-session-summary-prototype` Decisions §3, `03-stint-summary` Decisions §3, and `03-strategy-summary` Decisions §3).
+- **Grain: unique `(session_key, driver_number, lap_number)` → real `PRIMARY KEY`, gated by an explicit pre-flight grain probe over the filtered source.** Per the canonical query at `sql/007_semantic_summary_contracts.sql:333` ff., the source-definition `core.race_progression_summary` is one row per filtered `core.laps_enriched` row produced by per-lap window functions over rows that satisfy `lap_number IS NOT NULL AND position_end_of_lap IS NOT NULL AND LOWER(COALESCE(session_type, session_name, '')) LIKE '%race%'`. Crucially, this is **not** a `GROUP BY` aggregation (unlike `03-driver-session-summary-prototype`, `03-stint-summary`, and `03-strategy-summary`), so uniqueness on the triple is not inherent to the projection — it is inherited from the filtered subset of `core_build.laps_enriched`. `diagnostic/notes/03-laps-enriched-grain.md` records 7,379 duplicate rows across all of `core_build.laps_enriched` on `(session_key, driver_number, lap_number)` (167,172 total / 159,793 distinct), so uniqueness on the unfiltered base relation is **already disproved**; uniqueness on `core_build.race_progression_summary` is therefore a claim about the residual triple-uniqueness *after* the three-predicate WHERE clause has run, not a derivation from the base. To address the round-3 audit item directly with explicit grain evidence (rather than relying solely on the bulk-INSERT PK-violation rollback as the assertion), the plan adds a **pre-flight grain probe** as gate command #0 that runs before the migration is applied: it queries `core_build.race_progression_summary` for `total_rows`, `distinct_triple`, and `duplicate_rows = total_rows - distinct_triple`, and **`RAISE EXCEPTION` if `duplicate_rows <> 0`**. Gate #0 fails non-zero before any DDL is run, so a non-unique triple is discovered with diagnostics rather than via opaque PK-violation rollback. If gate #0 fails on a future apply, the follow-up is to switch this slice to the heap-with-indexes pattern of `03-laps-enriched-materialize` (declared explicitly in Risk / rollback as the documented fallback). The bulk `INSERT … SELECT` in Steps §1.2 remains a secondary backstop assertion, but is no longer the *only* grain check — gate #0 is the primary, plan-time evidence the auditor asked for.
 - **Single SQL migration; no TypeScript contract or `.mjs` parity test.** Same rationale as the precedent slices: one numbered SQL file plus an inline `psql` heredoc parity check in the gate. The round-0 deliverables `web/src/lib/contracts/raceProgressionSummary.ts` and `web/scripts/tests/parity-race-progression.test.mjs` are therefore explicitly removed from `Changed files expected` and from `Steps`. A TypeScript contract type would duplicate the public view's column list with no current caller (no runtime path is being switched in this slice — `web/src/lib/deterministicSql.ts` and `web/src/lib/queries.ts` already read `core.race_progression_summary` through the public view, which transparently swings to the matview after the facade swap), and a `.mjs` parity script would split the parity logic across two languages and CI surfaces when one migration-time SQL check is sufficient and matches the proven pattern. If a future runtime path needs the typed columns, it can land in its own slice next to the consumer that needs it.
 - **Initial population at migration time.** The migration `TRUNCATE` + `INSERT INTO core.race_progression_summary_mat SELECT * FROM core_build.race_progression_summary` so the facade view is non-empty from first apply. Re-running the migration is idempotent because of the `TRUNCATE` before `INSERT`. Per-session incremental refresh and the ingest hook are deferred to a later Phase 3 slice. (Per the roadmap §4 Phase 3 row-count snapshot, `core.race_progression_summary` carries ~17,864 rows, well within bulk-insert range for a single transaction.)
 - **Numbered SQL filename.** Existing convention is `sql/00N_*.sql`; the next free integer after `sql/012_strategy_summary_mat.sql` is `013`, so this slice ships `sql/013_race_progression_summary_mat.sql`. The round-0 deliverable `sql/race_progression_summary.sql` is therefore replaced.
@@ -49,7 +49,8 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
 - `psql` available on PATH for the gate commands below (same prerequisite as the precedent slices).
 
 ## Steps
-1. Add `sql/013_race_progression_summary_mat.sql`, wrapped in a single `BEGIN; … COMMIT;` so partial application cannot leave the schema half-built. Contents in this order:
+1. **Pre-flight grain probe (run BEFORE applying the migration).** Execute gate command #0 below to confirm that `core_build.race_progression_summary` is unique on `(session_key, driver_number, lap_number)`. If gate #0 reports `duplicate_rows <> 0`, **stop**: the PK plan is invalid and the slice must be re-planned as a heap-with-indexes (mirroring `03-laps-enriched-materialize`) before any DDL is run. If gate #0 exits `0`, proceed.
+2. Add `sql/013_race_progression_summary_mat.sql`, wrapped in a single `BEGIN; … COMMIT;` so partial application cannot leave the schema half-built. Contents in this order:
    1. `CREATE TABLE IF NOT EXISTS core.race_progression_summary_mat ( … )` declaring the **exact column list, types, and ordering of the public `core.race_progression_summary` view** as defined at `sql/007_semantic_summary_contracts.sql:333` ff. The 19 columns, in order, are: `session_key`, `meeting_key`, `year`, `session_name`, `session_type`, `country_name`, `location`, `driver_number`, `driver_name`, `team_name`, `lap_number`, `frame_time`, `position_end_of_lap`, `previous_position`, `positions_gained_this_lap`, `opening_position`, `latest_position`, `best_position`, `worst_position`. Types must match the view's projected types (sourced from `sql/006_semantic_lap_layer.sql` and `sql/010_laps_enriched_mat.sql`):
       - `session_key`, `meeting_key` are `BIGINT` (raw `BIGINT` columns from `raw.sessions` / `raw.meetings`).
       - `year`, `driver_number` are `INTEGER` (raw `INTEGER` columns).
@@ -57,12 +58,12 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
       - `lap_number` is `INTEGER` (`core.laps_enriched.lap_number INTEGER`, see `sql/010_laps_enriched_mat.sql`).
       - `frame_time` is `TIMESTAMPTZ` (projected from `le.lap_end_ts`, declared `TIMESTAMPTZ` at `sql/010_laps_enriched_mat.sql:26`).
       - `position_end_of_lap`, `previous_position`, `positions_gained_this_lap`, `opening_position`, `latest_position`, `best_position`, `worst_position` are `INTEGER` (the underlying `position_end_of_lap` is declared `INTEGER` at `sql/010_laps_enriched_mat.sql:40`; `LAG`, `FIRST_VALUE`, `LAST_VALUE`, `MIN`, `MAX` over an `integer` preserve type; `previous_position - position_end_of_lap` of two `integer` operands also resolves to `integer`).
-      Implementation: copy the column-and-type signature from the existing view (e.g. via `pg_typeof()` on each column or by reading the source column types from `sql/007` and `sql/010`) so the `_mat` table is positionally compatible with the source-definition view. **Declare `PRIMARY KEY (session_key, driver_number, lap_number)`** — the verified unique grain.
-   2. `TRUNCATE core.race_progression_summary_mat;` then `INSERT INTO core.race_progression_summary_mat SELECT * FROM core_build.race_progression_summary;` for initial population. The `TRUNCATE` before `INSERT` makes re-running the migration idempotent. The bulk `INSERT … SELECT` doubles as a grain assertion: a non-unique grain on `(session_key, driver_number, lap_number)` would abort the transaction with a clean PK-violation error and roll back the migration.
-   3. `CREATE OR REPLACE VIEW core.race_progression_summary AS SELECT * FROM core.race_progression_summary_mat;` — replace the public view body in place with the facade. **Do not** use `DROP VIEW … CREATE VIEW`: `core.pit_cycle_summary` (`sql/007_semantic_summary_contracts.sql:401` ff., specifically the `LEFT JOIN core.race_progression_summary rp` at `sql/007_semantic_summary_contracts.sql:431`) depends on `core.race_progression_summary` and would block the drop, even in a single transaction. `CREATE OR REPLACE VIEW` succeeds dependency-free because step 1.1 declares the storage table's columns in exactly the same names, types, and order as the original view's projection.
-2. Apply the SQL to `$DATABASE_URL` (gate command #1).
-3. Verify (a) the storage relation is a base table (`relkind = 'r'`), (b) the public relation is a view (`relkind = 'v'`), (c) the storage relation carries `PRIMARY KEY (session_key, driver_number, lap_number)` in that exact column order, and (d) the public view is actually a thin facade over the matview (its only relation dependency in schemas `core` / `core_build` / `raw`, sourced from `pg_depend` joined through `pg_rewrite`, is `core.race_progression_summary_mat`) — gate command #2. Without check (d), gate #2 would pass if the migration accidentally left the original aggregating view body in place, since that would still be a view (`relkind = 'v'`).
-4. Run the bidirectional, session-scoped, multiplicity-preserving `EXCEPT ALL` parity check between `core_build.race_progression_summary` (canonical query) and `core.race_progression_summary_mat` (storage) for the **3 deterministic `analytic_ready` sessions** selected by:
+      Implementation: copy the column-and-type signature from the existing view (e.g. via `pg_typeof()` on each column or by reading the source column types from `sql/007` and `sql/010`) so the `_mat` table is positionally compatible with the source-definition view. **Declare `PRIMARY KEY (session_key, driver_number, lap_number)`** — gated by gate #0's pre-flight grain probe (Steps §1).
+   2. `TRUNCATE core.race_progression_summary_mat;` then `INSERT INTO core.race_progression_summary_mat SELECT * FROM core_build.race_progression_summary;` for initial population. The `TRUNCATE` before `INSERT` makes re-running the migration idempotent. The bulk `INSERT … SELECT` is a secondary grain backstop: even if some future change to the canonical view body sneaks duplicates past gate #0, a non-unique grain on `(session_key, driver_number, lap_number)` would abort the transaction with a clean PK-violation error and roll back the migration.
+   3. `CREATE OR REPLACE VIEW core.race_progression_summary AS SELECT * FROM core.race_progression_summary_mat;` — replace the public view body in place with the facade. **Do not** use `DROP VIEW … CREATE VIEW`: `core.pit_cycle_summary` (`sql/007_semantic_summary_contracts.sql:401` ff., specifically the `LEFT JOIN core.race_progression_summary rp` at `sql/007_semantic_summary_contracts.sql:431`) depends on `core.race_progression_summary` and would block the drop, even in a single transaction. `CREATE OR REPLACE VIEW` succeeds dependency-free because step 2.1 declares the storage table's columns in exactly the same names, types, and order as the original view's projection.
+3. Apply the SQL to `$DATABASE_URL` (gate command #1).
+4. Verify (a) the storage relation is a base table (`relkind = 'r'`), (b) the public relation is a view (`relkind = 'v'`), (c) the storage relation carries `PRIMARY KEY (session_key, driver_number, lap_number)` in that exact column order, and (d) the public view is actually a thin facade over the matview (its only relation dependency in schemas `core` / `core_build` / `raw`, sourced from `pg_depend` joined through `pg_rewrite`, is `core.race_progression_summary_mat`) — gate command #2. Without check (d), gate #2 would pass if the migration accidentally left the original aggregating view body in place, since that would still be a view (`relkind = 'v'`).
+5. Run the bidirectional, session-scoped, multiplicity-preserving `EXCEPT ALL` parity check between `core_build.race_progression_summary` (canonical query) and `core.race_progression_summary_mat` (storage) for the **3 deterministic `analytic_ready` sessions** selected by:
    ```sql
    SELECT session_key
    FROM core.session_completeness
@@ -71,8 +72,8 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
    LIMIT 3;
    ```
    This is the same deterministic selector used by `03-core-build-schema`, `03-driver-session-summary-prototype`, `03-laps-enriched-materialize`, `03-stint-summary`, and `03-strategy-summary`, so implementers and auditors test the same sessions. Plus a global rowcount-equality check across the whole table. Gate command #3 is a single `psql` heredoc that performs both. The block fails non-zero if (a) fewer than 3 `analytic_ready` sessions are returned by the selector, (b) any session reports `diff_rows > 0` (bidirectional `EXCEPT ALL`), or (c) the global rowcount of `core.race_progression_summary_mat` differs from the global rowcount of `core_build.race_progression_summary`.
-5. Run web gate commands to confirm no upstream code regressed (purely SQL change; these should be untouched and ship green). Use `npm --prefix web …` so the three commands chain from one shell.
-6. Capture command outputs into the slice-completion note.
+6. Run web gate commands to confirm no upstream code regressed (purely SQL change; these should be untouched and ship green). Use `npm --prefix web …` so the three commands chain from one shell.
+7. Capture command outputs into the slice-completion note.
 
 ## Changed files expected
 - `sql/013_race_progression_summary_mat.sql` (new — single transaction; `CREATE TABLE … PRIMARY KEY (session_key, driver_number, lap_number)`, `TRUNCATE`/`INSERT … SELECT * FROM core_build.race_progression_summary`, `CREATE OR REPLACE VIEW core.race_progression_summary AS SELECT * FROM core.race_progression_summary_mat` — no `DROP VIEW`, because `core.pit_cycle_summary` depends on `core.race_progression_summary`).
@@ -85,6 +86,43 @@ None.
 
 ## Gate commands
 ```bash
+# 0. Pre-flight grain probe over core_build.race_progression_summary. Must exit 0,
+#    AND must report duplicate_rows = 0, BEFORE the migration is applied. This is
+#    the explicit grain evidence the round-3 audit asked for: the canonical query
+#    is a per-row window-function projection over filtered core_build.laps_enriched
+#    (NOT a GROUP BY aggregation), and core_build.laps_enriched is documented as
+#    non-unique on (session_key, driver_number, lap_number) per
+#    diagnostic/notes/03-laps-enriched-grain.md (7,379 duplicate rows of 167,172).
+#    Whether the residual triple is unique after the WHERE clause
+#      lap_number IS NOT NULL AND position_end_of_lap IS NOT NULL
+#      AND LOWER(COALESCE(session_type, session_name, '')) LIKE '%race%'
+#    is what this gate verifies. The DO block RAISES if duplicate_rows <> 0; if it
+#    raises, the PK plan is invalid and the slice must be re-planned as
+#    heap-with-indexes (mirroring 03-laps-enriched-materialize) before any DDL is
+#    applied.
+psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE
+  total_rows bigint;
+  distinct_rows bigint;
+  duplicate_rows bigint;
+BEGIN
+  SELECT count(*) INTO total_rows FROM core_build.race_progression_summary;
+  SELECT count(*) INTO distinct_rows FROM (
+    SELECT DISTINCT session_key, driver_number, lap_number
+    FROM core_build.race_progression_summary
+  ) d;
+  duplicate_rows := total_rows - distinct_rows;
+  RAISE NOTICE 'core_build.race_progression_summary grain probe: total=% distinct_triple=% duplicate=%',
+    total_rows, distinct_rows, duplicate_rows;
+  IF duplicate_rows <> 0 THEN
+    RAISE EXCEPTION
+      'grain non-unique on (session_key, driver_number, lap_number): total=% distinct=% duplicate=% — PK plan invalid, re-plan as heap-with-indexes before applying migration',
+      total_rows, distinct_rows, duplicate_rows;
+  END IF;
+END $$;
+SQL
+
 # 1. Apply the migration. Must exit 0.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/013_race_progression_summary_mat.sql
 
@@ -234,11 +272,12 @@ npm --prefix web run test:grading
 ```
 
 ## Acceptance criteria
+- [ ] Pre-flight grain probe over `core_build.race_progression_summary` reports `duplicate_rows = 0` — gate #0 exits `0` (its DO block does **not** raise the `grain non-unique on (session_key, driver_number, lap_number) … PK plan invalid` exception). This must be true before gate #1 is run.
 - [ ] `core.race_progression_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number, lap_number)` — gate #1 (`psql -f sql/013_race_progression_summary_mat.sql`) exits `0` and gate #2 exits `0` (its DO block raises unless `relkind = 'r'` AND the table carries a primary-key constraint whose columns are exactly `['session_key','driver_number','lap_number']` in that order, sourced from `pg_constraint` with `contype = 'p'`).
 - [ ] `core.race_progression_summary` exists as a view (the facade) — gate #2 exits `0` (the same DO block raises unless `relkind = 'v'`).
 - [ ] `core.race_progression_summary` is a thin facade over `core.race_progression_summary_mat` — gate #2 exits `0` (the DO block's fourth assertion raises unless `pg_depend`-via-`pg_rewrite` reports `core.race_progression_summary_mat` as the **only** relation the view depends on within schemas `core` / `core_build` / `raw`; this is the check that distinguishes the facade swap from the original aggregating view body, which depended on `core.laps_enriched`, `core.session_drivers`, etc.).
 - [ ] Global rowcount of `core.race_progression_summary_mat` equals the global rowcount of `core_build.race_progression_summary` — gate #3 exits `0` (the DO block's `RAISE EXCEPTION 'global rowcount mismatch …'` branch does not fire).
-- [ ] Bidirectional `EXCEPT ALL` parity returns `0` for each of the 3 deterministic `analytic_ready` sessions selected per Steps §4 — gate #3 exits `0` (the DO block's `RAISE EXCEPTION 'parity drift …'` branch does not fire and the sub-3 session-count guard does not trigger).
+- [ ] Bidirectional `EXCEPT ALL` parity returns `0` for each of the 3 deterministic `analytic_ready` sessions selected per Steps §5 — gate #3 exits `0` (the DO block's `RAISE EXCEPTION 'parity drift …'` branch does not fire and the sub-3 session-count guard does not trigger).
 - [ ] `npm --prefix web run build` exits `0`.
 - [ ] `npm --prefix web run typecheck` exits `0`.
 - [ ] `npm --prefix web run test:grading` exits `0`.
@@ -253,8 +292,8 @@ npm --prefix web run test:grading
 
 ## Risk / rollback
 - Risk: the facade swap could break public dependents of `core.race_progression_summary`. `core.pit_cycle_summary` depends on it (`sql/007_semantic_summary_contracts.sql:431`). Mitigation: the swap uses `CREATE OR REPLACE VIEW`, not `DROP VIEW … CREATE VIEW` — Postgres's `CREATE OR REPLACE VIEW` rewrites the view body in place without disturbing dependents, provided the new query produces the same column names, types, and ordering as the existing view. Step 1.1 declares the storage table to mirror that signature exactly, so the rewrite is dependency-safe. A `DROP VIEW` would have failed at apply time with `cannot drop view core.race_progression_summary because other objects depend on it` and rolled back the whole transaction.
-- Risk: column order or type mismatch between the new `_mat` table and the original public view would (a) cause `CREATE OR REPLACE VIEW` to fail with `cannot change name/type of view column …` and roll back the migration, or (b) silently shift the public column signature under `SELECT *`. Mitigation: the table's column declarations in step 1.1 are explicit and ordered to match `core.race_progression_summary` as defined in `sql/007_semantic_summary_contracts.sql:333` ff.; if the declarations diverge from the view, `CREATE OR REPLACE VIEW` rejects the migration in gate #1; gate #3's `EXCEPT ALL` parity is positional and type-strict, so any reordering or implicit type coercion that does slip past `CREATE OR REPLACE VIEW` still fails the gate.
-- Risk: PK violation on `(session_key, driver_number, lap_number)` if the source view's grain is non-unique on that triple. Mitigation: this is intentionally asserted by the bulk `INSERT … SELECT` in step 1.2 — a violation aborts the transaction with a clean error and no half-built state. The grain is the verified grain for `race_progression_summary` per the canonical query's per-lap window-function projection over `core.laps_enriched`. If the assertion fires, that is itself a signal worth surfacing rather than silencing.
+- Risk: column order or type mismatch between the new `_mat` table and the original public view would (a) cause `CREATE OR REPLACE VIEW` to fail with `cannot change name/type of view column …` and roll back the migration, or (b) silently shift the public column signature under `SELECT *`. Mitigation: the table's column declarations in step 2.1 are explicit and ordered to match `core.race_progression_summary` as defined in `sql/007_semantic_summary_contracts.sql:333` ff.; if the declarations diverge from the view, `CREATE OR REPLACE VIEW` rejects the migration in gate #1; gate #3's `EXCEPT ALL` parity is positional and type-strict, so any reordering or implicit type coercion that does slip past `CREATE OR REPLACE VIEW` still fails the gate.
+- Risk: PK violation on `(session_key, driver_number, lap_number)` if the source view's grain is non-unique on that triple. Primary mitigation: gate #0's pre-flight grain probe runs before any DDL is applied and `RAISE EXCEPTION` if `duplicate_rows <> 0`, so a non-unique triple is caught with explicit numbers (`total / distinct / duplicate`) rather than via the opaque PK-violation rollback. **Documented heap-with-indexes fallback:** if gate #0 ever fires (whether on first apply, or on a future re-apply after the canonical view body changes), the slice must be re-planned to mirror `03-laps-enriched-materialize` exactly — drop `PRIMARY KEY`, declare two non-unique btree indexes `(session_key, driver_number, lap_number)` and `(session_key)`, switch the gate #2 assertions accordingly, and ship as a separate revision. Secondary backstop: even if gate #0 is somehow bypassed, the bulk `INSERT … SELECT` in step 2.2 still aborts the transaction with a clean PK-violation error and no half-built state. The grain claim for the **filtered** subset is plausible per the canonical query's per-lap window-function projection over the WHERE-filtered `core.laps_enriched` rows, but is not assumed — it is gate-enforced.
 - Risk: applying the migration on a database where slice `03-core-build-schema` has not yet been applied (no `core_build.race_progression_summary`). Mitigation: gate #1 fails non-zero with a clean `relation core_build.race_progression_summary does not exist` error and the transaction rolls back; the loop's slice ordering already merged `03-core-build-schema` at `67bdeff` before this slice can ship.
 - Rollback: `git revert <commit>` reverts the SQL file. To return the live DB to its pre-slice state after revert, the public dependent `core.pit_cycle_summary` must continue to work throughout. Use the same dependency-safe pattern as the forward migration: `CREATE OR REPLACE VIEW` to swing `core.race_progression_summary`'s body off the `_mat` table and back to the original aggregating query, then drop the now-orphan storage table. Run inside one transaction:
   ```sql
@@ -324,7 +363,7 @@ npm --prefix web run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Add explicit grain evidence for `core_build.race_progression_summary` before declaring `PRIMARY KEY (session_key, driver_number, lap_number)`, or change the storage shape to a non-unique heap/index plan if the triple is not globally unique; the current rationale derives uniqueness from `core_build.laps_enriched`, whose `(session_key, driver_number, lap_number)` triple is already documented as non-unique.
+- [x] Add explicit grain evidence for `core_build.race_progression_summary` before declaring `PRIMARY KEY (session_key, driver_number, lap_number)`, or change the storage shape to a non-unique heap/index plan if the triple is not globally unique; the current rationale derives uniqueness from `core_build.laps_enriched`, whose `(session_key, driver_number, lap_number)` triple is already documented as non-unique.
 
 ### Medium
 
