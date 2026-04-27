@@ -206,19 +206,13 @@ export async function POST(request: Request) {
     let sessionPinNoteForTrace: string | null = null;
 
     try {
-      // runtime_classify and resolve_db both bracket the same buildChatRuntime call:
-      // classification and DB resolution happen inside the same call, so the spans run concurrently.
-      const runtimeClassifySpan = startTrackedSpan(startSpan("runtime_classify"));
-      const resolveDbSpan = startTrackedSpan(startSpan("resolve_db"));
-      try {
-        runtime = await buildChatRuntime({
-          message,
-          context: body.context
-        });
-      } finally {
-        endTrackedSpan(runtimeClassifySpan);
-        endTrackedSpan(resolveDbSpan);
-      }
+      runtime = await buildChatRuntime({
+        message,
+        context: body.context,
+        recordSpan: (record) => {
+          traceRecords.push(record);
+        }
+      });
       let autoResolutionNote: string | undefined;
       autoResolutionNoteForTrace = autoResolutionNote ?? null;
 

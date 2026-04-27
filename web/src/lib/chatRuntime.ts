@@ -9,6 +9,7 @@ import {
   type DriverResolutionRow,
   type SessionResolutionRow
 } from "@/lib/queries";
+import { startSpan, type SpanRecord } from "@/lib/perfTrace";
 
 type ChatContext = {
   sessionKey?: number;
@@ -1203,13 +1204,24 @@ function buildQueryPlan(args: {
 export async function buildChatRuntime(input: {
   message: string;
   context?: ChatContext;
+  recordSpan?: (record: SpanRecord) => void;
 }): Promise<ChatRuntimeResult> {
   const startedAt = Date.now();
   const stageLogs: ChatRuntimeStageLog[] = [];
   const normalizedMessage = normalize(input.message);
+  const { recordSpan } = input;
 
   const intakeStarted = Date.now();
-  const questionType = classifyQuestion(input.message);
+  let questionType: QuestionType;
+  const classifySpan = startSpan("runtime_classify");
+  try {
+    questionType = classifyQuestion(input.message);
+  } finally {
+    recordSpan?.(classifySpan.end());
+  }
+
+  const resolveDbSpan = startSpan("resolve_db");
+  try {
   const shouldRequireSession = requiresResolvedSession(questionType, normalizedMessage);
   const requiredTables = requiredTablesForQuestion(questionType, normalizedMessage);
   const followUp = isFollowUp(input.message);
@@ -2033,4 +2045,7 @@ export async function buildChatRuntime(input: {
     stageLogs,
     durationMs: Date.now() - startedAt
   };
+  } finally {
+    recordSpan?.(resolveDbSpan.end());
+  }
 }
