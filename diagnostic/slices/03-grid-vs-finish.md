@@ -327,7 +327,7 @@ npm --prefix web run test:grading
 
 No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-3]_*.sql`, no application code. Scope clean.
 
-**Commit hashes (this slice — to be filled after `git commit`):** see commit body / `git log slice/03-grid-vs-finish --not integration/perf-roadmap`.
+**Commit hashes (this slice):** `cd492e8` (`slice 03-grid-vs-finish: materialize core.grid_vs_finish`). Branch pushed to origin: `641e130..cd492e8 slice/03-grid-vs-finish -> slice/03-grid-vs-finish`.
 
 **Decisions applied (verbatim from plan):**
 - Grain confirmed unique by gate #0 (`total=7581 distinct_pair=7581 duplicate=0`), so the storage table carries `PRIMARY KEY (session_key, driver_number)` per Decisions §3 — heap-with-indexes fallback was not triggered.
