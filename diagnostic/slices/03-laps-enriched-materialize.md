@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-materialize
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T12:00:11-04:00
+updated: 2026-04-27T12:11:08-04:00
 ---
 
 ## Goal
@@ -428,7 +428,34 @@ DO
 - `git status` at end of implementation: 1 modified slice file, 1 new SQL file. No edits to any other path. No `.parity.sql`, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql`, no application code.
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS**
+
+[slice:03-laps-enriched-materialize][pass]
+
+Gate exit codes observed by audit agent:
+- `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/010_laps_enriched_mat.sql` → exit `0`. Output included `BEGIN`, already-exists notices for the table and both indexes, `CREATE TABLE`, `CREATE INDEX` twice, `TRUNCATE TABLE`, `INSERT 0 167172`, `CREATE VIEW`, and `COMMIT`.
+- Schema / no-PK / index assertion DO block → exit `0`. Output: `DO`.
+- Global rowcount + three-session bidirectional `EXCEPT ALL` parity DO block → exit `0`. Output: `DO`.
+- `npm --prefix web run build` → exit `0`.
+- `npm --prefix web run typecheck` → exit `0`.
+- `npm --prefix web run test:grading` → exit `0` (`tests 31`, `pass 21`, `skipped 10`, `fail 0`).
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-laps-enriched-materialize.md` and `sql/010_laps_enriched_mat.sql`.
+- This is a subset of "Changed files expected"; the slice file is also explicitly allowed by audit policy.
+
+Criterion-by-criterion:
+- `core.laps_enriched_mat` exists as a base table with no primary key: verified by gate #1 apply and gate #2 exit `0`.
+- `core.laps_enriched` exists as a facade view: verified by gate #2 exit `0`.
+- `laps_enriched_mat_session_driver_lap_idx` exists as a non-unique btree index on `(session_key, driver_number, lap_number)`: verified by gate #2 exit `0`.
+- `laps_enriched_mat_session_idx` exists as a non-unique btree index on `(session_key)`: verified by gate #2 exit `0`.
+- Global rowcount equality between `core_build.laps_enriched` and `core.laps_enriched_mat` holds: verified by gate #3 exit `0`; gate #1 loaded `167172` rows.
+- Bidirectional, session-scoped, multiplicity-preserving `EXCEPT ALL` parity holds for the three deterministic `analytic_ready` sessions: verified by gate #3 exit `0`.
+- Web regression gates passed: build, typecheck, and grading tests all exited `0`.
+- File scope and artifact constraints hold: no `.parity.sql`, TypeScript contract, `.mjs` parity test, application code, or `sql/00[1-9]_*.sql` edits are present in the diff.
+
+Decision: PASS. Phase 3 slice, post Phase 0 sign-off; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
