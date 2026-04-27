@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-control-markers
 phase: 2
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-27T04:26:38Z
 ---
 
 ## Goal
@@ -57,3 +57,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Correct the target file and steps to apply cache-control markers at the synthesis Anthropic request assembly in `web/src/lib/anthropic.ts`, because prior slice `02-prompt-static-prefix-split` explicitly left `web/src/lib/chatRuntime.ts` read-only and confirmed it does not assemble the synthesis prompt.
+- [ ] Specify the exact Anthropic request shape that carries `cache_control` for the static prefix, including whether the existing string `system` field must become a content-block array or another SDK-supported structure.
+
+### Medium
+- [ ] Update `Changed files expected` to include every file the revised steps touch, including `web/src/lib/anthropic.ts`, and exclude `web/src/lib/chatRuntime.ts` unless the revised plan identifies a concrete runtime change there.
+- [ ] Make the beta-header requirement testable by naming the exact header/configuration to add for the repo's installed Anthropic SDK version, or explicitly state that no beta header is required and why.
+- [ ] Update the unit-test step wording so it asserts cache-control on the static prefix request payload rather than a "prefix message", since the prior split exposes `staticPrefix` as the synthesis `system` content and the dynamic suffix as `messages[0].content`.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
