@@ -1,11 +1,11 @@
 ---
 slice_id: 03-driver-session-summary-prototype
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T10:45:14-04:00
+updated: 2026-04-27T10:47:04-04:00
 ---
 
 ## Goal
@@ -71,15 +71,16 @@ None.
 # 1. Apply the migration. Must exit 0.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/009_driver_session_summary_mat.sql
 
-# 2. Confirm the storage relation is a base table and the public relation is a view.
-#    Must exit 0; the DO block raises (and ON_ERROR_STOP=1 forces non-zero exit) unless
-#    `core.driver_session_summary_mat` has relkind 'r' AND `core.driver_session_summary`
-#    has relkind 'v'.
+# 2. Confirm (a) the storage relation is a base table, (b) the public relation is a view,
+#    and (c) the storage relation carries `PRIMARY KEY (session_key, driver_number)` in
+#    that exact column order. Must exit 0; the DO block raises (and ON_ERROR_STOP=1 forces
+#    non-zero exit) unless all three assertions hold.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
   table_kind text;
   view_kind text;
+  pk_cols text[];
 BEGIN
   SELECT c.relkind::text INTO table_kind
   FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -95,6 +96,23 @@ BEGIN
   IF view_kind IS DISTINCT FROM 'v' THEN
     RAISE EXCEPTION
       'expected core.driver_session_summary as view (relkind v), got %', view_kind;
+  END IF;
+
+  -- Assert PRIMARY KEY (session_key, driver_number) exists in that exact column order.
+  -- Order is preserved by sorting attribute names by their position in c.conkey.
+  SELECT array_agg(a.attname::text ORDER BY array_position(c.conkey, a.attnum))
+    INTO pk_cols
+  FROM pg_constraint c
+  JOIN pg_class cl ON cl.oid = c.conrelid
+  JOIN pg_namespace n ON n.oid = cl.relnamespace
+  JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+  WHERE n.nspname = 'core'
+    AND cl.relname = 'driver_session_summary_mat'
+    AND c.contype = 'p';
+  IF pk_cols IS DISTINCT FROM ARRAY['session_key','driver_number']::text[] THEN
+    RAISE EXCEPTION
+      'expected core.driver_session_summary_mat PRIMARY KEY (session_key, driver_number), got %',
+      pk_cols;
   END IF;
 END $$;
 SQL
@@ -165,7 +183,7 @@ npm --prefix web run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `core.driver_session_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number)` — gate #1 applies without error and gate #2 exits `0` (its DO block raises and ON_ERROR_STOP=1 forces non-zero exit unless `relkind = 'r'`; PK violation in gate #1's `INSERT` would have aborted the migration before gate #2 runs).
+- [ ] `core.driver_session_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number)` — gate #1 applies without error and gate #2 exits `0` (its DO block raises unless `relkind = 'r'` AND the table carries a primary-key constraint whose columns are exactly `['session_key','driver_number']` in that order, sourced from `pg_constraint` with `contype = 'p'`).
 - [ ] `core.driver_session_summary` exists as a view (the facade) — gate #2 exits `0` (the same DO block raises unless `relkind = 'v'`).
 - [ ] Global rowcount of `core.driver_session_summary_mat` equals the global rowcount of `core_build.driver_session_summary` — gate #3 exits `0` (rowcount inequality raises).
 - [ ] Bidirectional `EXCEPT ALL` parity returns `0` for each of the 3 deterministic `analytic_ready` sessions selected per Steps §4 — gate #3 exits `0` (the DO block raises on `diff <> 0` or on a sub-3 session count).
@@ -220,7 +238,7 @@ npm --prefix web run test:grading
 - _None._
 
 ### Medium
-- [ ] Add an executable primary-key assertion to the database gates, because gate #2 currently verifies only `relkind = 'r'` for `core.driver_session_summary_mat` and does not prove the acceptance criterion that `PRIMARY KEY (session_key, driver_number)` exists.
+- [x] Add an executable primary-key assertion to the database gates, because gate #2 currently verifies only `relkind = 'r'` for `core.driver_session_summary_mat` and does not prove the acceptance criterion that `PRIMARY KEY (session_key, driver_number)` exists.
 
 ### Low
 - _None._
