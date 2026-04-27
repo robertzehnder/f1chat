@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T16:06:00Z
+updated: 2026-04-27T11:29:57-04:00
 ---
 
 ## Goal
@@ -335,7 +335,92 @@ npm --prefix web run test:grading
 - Rollback: `git revert <commit>` removes the grain note. No DB state is created or modified by this slice, so there is nothing to roll back on the database side.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/03-laps-enriched-grain-discovery` (worktree `/Users/robertzehnder/.openf1-loop-worktrees/03-laps-enriched-grain-discovery`).
+
+**Files changed (matches "Changed files expected"):**
+- `diagnostic/notes/03-laps-enriched-grain.md` — new grain note with the four required sections (raw numbers, chosen grain, reasoning, recommendation for `03-laps-enriched-materialize`).
+- `diagnostic/slices/03-laps-enriched-grain-discovery.md` — frontmatter (status, owner, updated) + this Slice-completion note only; no edits to the body.
+
+No SQL, TypeScript, test, or application files were touched.
+
+**Gate command exit codes (all 0):**
+
+| Gate | Command | Exit code |
+| --- | --- | ---: |
+| #1 | global grain-discovery probe over `core_build.laps_enriched` | 0 |
+| #2 | per-session grain probe (sessions 9102, 9110, 9118) | 0 |
+| #3 | global candidate-grain + nullability probe | 0 |
+| #4a | `npm --prefix web run build` | 0 |
+| #4b | `npm --prefix web run typecheck` | 0 |
+| #4c | `npm --prefix web run test:grading` | 0 |
+
+Gate #4 was preceded by `npm --prefix web install` (the worktree had no `web/node_modules`); install itself is not a gate command. The web slice is regression-only — no web code was modified.
+
+**Captured numbers (verbatim, also quoted in the grain note):**
+
+Gate #1:
+```
+total_rows|167172
+distinct_triple|159793
+duplicate_rows|7379
+```
+
+Gate #2:
+```
+NOTICE:  session_key=9102 total=1312 distinct_triple=1312 duplicate_rows=0
+NOTICE:  session_key=9110 total=1352 distinct_triple=1318 duplicate_rows=34
+NOTICE:  session_key=9110 candidate-discriminator distribution (column, distinct_with_column, dup_after_column):
+NOTICE:    stint_number → distinct=1350, dup_after=2
+NOTICE:    compound_name → distinct=1340, dup_after=12
+NOTICE:    compound_raw → distinct=1340, dup_after=12
+NOTICE:    is_pit_out_lap → distinct=1318, dup_after=34
+NOTICE:    is_pit_lap → distinct=1318, dup_after=34
+NOTICE:    is_valid → distinct=1318, dup_after=34
+NOTICE:    is_personal_best_proxy → distinct=1318, dup_after=34
+NOTICE:  session_key=9118 total=1355 distinct_triple=1355 duplicate_rows=0
+DO
+```
+
+Gate #3:
+```
+total_rows|167172
+distinct_triple|159793
+distinct_4tuple_with_stint_number|167170
+distinct_4tuple_with_compound_name|161978
+distinct_4tuple_with_compound_raw|161978
+distinct_4tuple_with_is_pit_out_lap|159793
+distinct_4tuple_with_is_pit_lap|159793
+distinct_4tuple_with_is_valid|159812
+distinct_4tuple_with_is_personal_best_proxy|159793
+distinct_5tuple_with_stint_and_compound_name|167170
+distinct_5tuple_with_stint_and_is_pit_out_lap|167170
+distinct_5tuple_with_stint_and_is_pit_lap|167170
+null_count_session_key|0
+null_count_driver_number|0
+null_count_lap_number|0
+null_count_stint_number|1059
+null_count_compound_name|0
+null_count_compound_raw|1155
+null_count_is_pit_out_lap|0
+null_count_is_pit_lap|0
+null_count_is_valid|0
+null_count_is_personal_best_proxy|10
+```
+
+**Decision (per Steps §5 PK-eligibility rule):**
+
+No candidate tuple is fully unique across the 167,172 rows of `core_build.laps_enriched`:
+- The triple has 159,793 distinct rows (7,379 duplicates).
+- The strongest 4-tuple (`+ stint_number`) and the three 5-tuples extending it stop at 167,170 distinct rows (two short of `total_rows = 167172`); criterion (a) fails for every probed tuple.
+- Even ignoring nullability, no PK candidate exists. (Separately, `stint_number` carries 1,059 NULLs, `compound_raw` 1,155, `is_personal_best_proxy` 10, so several of the closest tuples would also fail criterion (b).)
+
+→ Canonical grain is **non-unique**. Recommendation for `03-laps-enriched-materialize`: heap-with-indexes (no PK), btree indexes on `(session_key, driver_number, lap_number)` and `(session_key)`, delete-then-insert refresh per `session_key` from `core_build.laps_enriched`. Sentinel/coalesce-derived PK columns are explicitly out of scope (Steps §5).
+
+**Self-checks:**
+- Acceptance criteria 1–6 each satisfied (gates exit 0; verbatim numbers quoted in the note; note has the four required sections; web gates green; only the two allowed paths modified).
+- No SQL objects created or modified; probes are read-only `SELECT`s.
+- Nothing was committed yet at the time this note was written; commit hash will be the single commit on `slice/03-laps-enriched-grain-discovery` after `[awaiting-audit]`.
 
 ## Audit verdict
 (filled by Codex — implementation-audit slot. Plan audits are tracked separately in the appended `## Plan-audit verdict (round N)` sections below.)
