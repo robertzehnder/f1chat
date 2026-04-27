@@ -1,11 +1,11 @@
 ---
 slice_id: 03-driver-session-summary-prototype
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T14:48:47Z
+updated: 2026-04-27T10:50:08-04:00
 ---
 
 ## Goal
@@ -183,12 +183,12 @@ npm --prefix web run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `core.driver_session_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number)` — gate #1 applies without error and gate #2 exits `0` (its DO block raises unless `relkind = 'r'` AND the table carries a primary-key constraint whose columns are exactly `['session_key','driver_number']` in that order, sourced from `pg_constraint` with `contype = 'p'`).
-- [ ] `core.driver_session_summary` exists as a view (the facade) — gate #2 exits `0` (the same DO block raises unless `relkind = 'v'`).
-- [ ] Global rowcount of `core.driver_session_summary_mat` equals the global rowcount of `core_build.driver_session_summary` — gate #3 exits `0` (rowcount inequality raises).
-- [ ] Bidirectional `EXCEPT ALL` parity returns `0` for each of the 3 deterministic `analytic_ready` sessions selected per Steps §4 — gate #3 exits `0` (the DO block raises on `diff <> 0` or on a sub-3 session count).
-- [ ] `npm --prefix web run build`, `npm --prefix web run typecheck`, and `npm --prefix web run test:grading` all exit `0`.
-- [ ] The only files modified by this slice are `sql/009_driver_session_summary_mat.sql` (new) and `diagnostic/slices/03-driver-session-summary-prototype.md` (this slice file — frontmatter + Slice-completion note only; no plan-body edits beyond filling that section, no edits to prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes). No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-8]_*.sql`, no application code.
+- [x] `core.driver_session_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number)` — gate #1 applies without error and gate #2 exits `0` (its DO block raises unless `relkind = 'r'` AND the table carries a primary-key constraint whose columns are exactly `['session_key','driver_number']` in that order, sourced from `pg_constraint` with `contype = 'p'`).
+- [x] `core.driver_session_summary` exists as a view (the facade) — gate #2 exits `0` (the same DO block raises unless `relkind = 'v'`).
+- [x] Global rowcount of `core.driver_session_summary_mat` equals the global rowcount of `core_build.driver_session_summary` — gate #3 exits `0` (rowcount inequality raises).
+- [x] Bidirectional `EXCEPT ALL` parity returns `0` for each of the 3 deterministic `analytic_ready` sessions selected per Steps §4 — gate #3 exits `0` (the DO block raises on `diff <> 0` or on a sub-3 session count).
+- [x] `npm --prefix web run build`, `npm --prefix web run typecheck`, and `npm --prefix web run test:grading` all exit `0`.
+- [x] The only files modified by this slice are `sql/009_driver_session_summary_mat.sql` (new) and `diagnostic/slices/03-driver-session-summary-prototype.md` (this slice file — frontmatter + Slice-completion note only; no plan-body edits beyond filling that section, no edits to prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes). No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-8]_*.sql`, no application code.
 
 ## Out of scope
 - Refresh script `src/refresh_summaries.py` and the per-session ingest hook (later Phase 3 slice — roadmap §4 Phase 3 steps 3 and 4).
@@ -205,7 +205,42 @@ npm --prefix web run test:grading
 - Rollback: `git revert <commit>` reverts the SQL file. To return the live DB to its pre-slice state after revert, run inside one transaction: `DROP VIEW core.driver_session_summary;` then re-create the original aggregating view from `sql/007_semantic_summary_contracts.sql:239` ff. (or simply re-apply `sql/007_semantic_summary_contracts.sql`, which uses `CREATE OR REPLACE VIEW`), then `DROP TABLE core.driver_session_summary_mat;`. Safe — nothing depends on `core.driver_session_summary_mat` until later slices land.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/03-driver-session-summary-prototype`
+**Base:** `integration/perf-roadmap` (HEAD `3787e99`, the plan-pass commit).
+
+### Files changed
+- `sql/009_driver_session_summary_mat.sql` — new (single `BEGIN; … COMMIT;` transaction: `CREATE TABLE IF NOT EXISTS core.driver_session_summary_mat` with `PRIMARY KEY (session_key, driver_number)`, `TRUNCATE` + `INSERT … SELECT * FROM core_build.driver_session_summary`, `DROP VIEW IF EXISTS core.driver_session_summary;`, `CREATE VIEW core.driver_session_summary AS SELECT * FROM core.driver_session_summary_mat;`).
+- `diagnostic/slices/03-driver-session-summary-prototype.md` — frontmatter (status `pending` → `in_progress` → `awaiting_audit`; owner `claude` → `codex`; updated `2026-04-27T10:50:08-04:00`), Acceptance-criteria checkboxes ticked, this Slice-completion note.
+
+### Commit hashes (this branch only)
+- `<WORK_COMMIT_HASH>` — `[slice:03-driver-session-summary-prototype][awaiting-audit]` SQL migration + slice-file flip + completion note.
+
+### Decisions made during implementation
+- Implemented exactly as the approved plan §1: real table + facade view, single transaction, primary key `(session_key, driver_number)`, `TRUNCATE` + `INSERT … SELECT *` from `core_build.driver_session_summary` for initial population.
+- The 37-column `_mat` table declaration mirrors the public view's column ordering at `sql/007_semantic_summary_contracts.sql:239` ff. Types were derived from the source columns:
+  - `session_key`/`meeting_key` → `BIGINT` (`raw.sessions.session_key` / `raw.meetings.meeting_key` `BIGINT`).
+  - `year` → `INTEGER`; `driver_number` → `INTEGER`; `session_name`/`session_type`/`country_name`/`location`/`circuit_short_name`/`driver_name`/`team_name` → `TEXT`.
+  - `lap_count`/`valid_lap_count`/`total_stints`/`pit_stop_count` → `BIGINT` (`COUNT(*) FILTER` and `GREATEST(BIGINT - 1, 0)` resolve to `bigint`).
+  - All `ROUND(...::numeric, 3)` columns and `total_pit_duration_seconds` → `NUMERIC`.
+  - `compounds_used` → `TEXT[]` (`ARRAY_AGG` of `TEXT` compound names).
+  - `grid_position`/`finish_position`/`positions_gained` → `INTEGER` (sourced from `raw.starting_grid.grid_position`, `raw.session_result.position`, `raw.position_history.position`, all `INTEGER`).
+  - `strategy_type`/`grid_source`/`finish_source` → `TEXT` (CASE expressions over text literals).
+- No bypass / scope drift: no `MATERIALIZED VIEW`, no `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-8]_*.sql`, no application code touched.
+
+### Gate command results (all exited 0)
+1. `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/009_driver_session_summary_mat.sql` → exit `0`. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 5436 / DROP VIEW / CREATE VIEW / COMMIT`. The bulk `INSERT … SELECT` populated 5,436 rows with no PK violation, which itself confirms the verified grain `(session_key, driver_number)` per the plan's risk note.
+2. Relkind + PK assertion DO block → exit `0` (no `RAISE EXCEPTION`). Confirms `core.driver_session_summary_mat` is `relkind = 'r'`, `core.driver_session_summary` is `relkind = 'v'`, and the table's primary-key columns ordered by `array_position(c.conkey, a.attnum)` are exactly `{session_key, driver_number}`.
+3. Bidirectional, session-scoped `EXCEPT ALL` parity DO block → exit `0` (no `RAISE EXCEPTION`). The deterministic selector returned exactly 3 `analytic_ready` sessions, the global `count(*)` of `core_build.driver_session_summary` matched `core.driver_session_summary_mat`, and per-session bidirectional `EXCEPT ALL` returned `0` for each of the 3 sessions.
+4. Web-side regression gates:
+   - `npm --prefix web run build` → exit `0` (Next.js production build; 21 routes built).
+   - `npm --prefix web run typecheck` → exit `0` (`tsc --noEmit`, no diagnostics).
+   - `npm --prefix web run test:grading` → exit `0` (TAP 1..31, 21 pass / 10 expected skips).
+   - Note: `web/node_modules` was missing in this freshly-created worktree, so `npm --prefix web ci` was run once to populate dependencies before the gates. The dependency install is not part of the slice's diff.
+
+### Self-check
+- `git status -uno` shows only `sql/009_driver_session_summary_mat.sql` and `diagnostic/slices/03-driver-session-summary-prototype.md` as the diff between this branch and `integration/perf-roadmap` — matches the "Changed files expected" section exactly.
+- Frontmatter: `status: awaiting_audit`, `owner: codex`, `updated: 2026-04-27T10:50:08-04:00`. All 6 Acceptance-criteria checkboxes ticked. No edits to plan body or to prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes.
 
 ## Audit verdict
 (filled by Codex)
