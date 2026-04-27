@@ -34,6 +34,58 @@ PIDFILE="$LOOP_STATE_DIR/runner.pid"
 
 mkdir -p "$LOOP_STATE_DIR"
 
+# ----- auto-load env from .env files -----
+# Load order (later wins):
+#   1. $LOOP_MAIN_WORKTREE/.env             (root: Postgres DB_* defaults)
+#   2. $LOOP_MAIN_WORKTREE/web/.env.local   (web: ANTHROPIC_API_KEY, OPENF1_*)
+# Existing env (caller's exports) wins over both — we only set vars that
+# aren't already in the environment so explicit shell exports take priority.
+# Lines starting with # are skipped; values are NOT shell-evaluated (no
+# command substitution / no var expansion) so secrets stay literal.
+_load_env_file() {
+  local f="$1"
+  [[ -f "$f" ]] || return 0
+  local key val line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    case "$line" in
+      ''|'#'*) continue ;;
+      *=*)
+        key="${line%%=*}"
+        val="${line#*=}"
+        # Strip surrounding quotes from val if present.
+        case "$val" in
+          \"*\") val="${val%\"}"; val="${val#\"}" ;;
+          \'*\') val="${val%\'}"; val="${val#\'}" ;;
+        esac
+        # Trim trailing whitespace from key.
+        key="${key%"${key##*[![:space:]]}"}"
+        # Skip if already set in env (caller's explicit export wins).
+        if [[ -z "${!key:-}" ]]; then
+          export "$key=$val"
+        fi
+        ;;
+    esac
+  done < "$f"
+}
+_load_env_file "$LOOP_MAIN_WORKTREE/.env"
+_load_env_file "$LOOP_MAIN_WORKTREE/web/.env.local"
+
+# Derive DATABASE_URL from DB_* parts if not set explicitly. db.ts expects
+# either DATABASE_URL/NEON_DATABASE_URL or the full DB_HOST/USER/PASSWORD/
+# NAME/PORT set; some agent dispatchers shell out to psql/etc. and want a
+# single connection string.
+if [[ -z "${DATABASE_URL:-}" && -z "${NEON_DATABASE_URL:-}" ]]; then
+  if [[ -n "${DB_HOST:-}" && -n "${DB_USER:-}" && -n "${DB_NAME:-}" ]]; then
+    : "${DB_PORT:=5432}"
+    : "${DB_PASSWORD:=}"
+    if [[ -n "$DB_PASSWORD" ]]; then
+      export DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    else
+      export DATABASE_URL="postgres://${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    fi
+  fi
+fi
+
 # ----- runtime knobs -----
 TICK="${LOOP_TICK:-30}"
 DRY_RUN="${LOOP_DRY_RUN:-0}"
