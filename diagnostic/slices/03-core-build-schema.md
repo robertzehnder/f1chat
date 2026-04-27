@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T15:25:00Z
+updated: 2026-04-27T13:58:48Z
 ---
 
 ## Goal
@@ -140,3 +140,21 @@ cd web && npm run test:grading
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Reconcile the hot-contract count everywhere: the Decisions list and SQL definitions contain eleven views, but Steps/Changed files/Gate command #2 say ten and gate #2 expects rowcount `10`; make the list, prose, SQL existence query, and expected rowcount all agree.
+- [ ] Rewrite the web gate commands so they can be executed in the listed order from one shell without failing on `cd web` after the first command, for example by using `npm --prefix web ...` or a single subshell.
+
+### Medium
+- [ ] Add `sql/008_core_build_schema.parity.sql` to `Changed files expected` when the gate references it as the default parity command, or make the gate explicitly require an inline heredoc and remove the optional file allowance from Acceptance criteria.
+
+### Low
+- [ ] Remove or fill the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict` sections remain the single source of audit status.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
+- Prior context path `diagnostic/roadmap_2026-04_performance_and_upgrade.md` exists and was consulted for Phase 3 source-definition sequencing.
