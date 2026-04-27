@@ -2,22 +2,26 @@
 # scripts/loop/check_budget.sh
 # Sums today's cost ledger entries and exits non-zero if over the daily cap.
 #
-# Cost capture is currently SCAFFOLDING: dispatchers append rows with
-# cost_usd=0 because the Claude / Codex CLIs do not expose token usage in
-# their non-interactive modes. Until real cost capture is wired, this script
-# only enforces the cap when external tooling backfills real cost values.
-# Until then, treat the daily cap as advisory.
+# Cost telemetry is now wired (round-12 Item 9): post_dispatch_cost.sh parses
+# the most recently modified Claude/Codex session log and writes real
+# cost_usd rows per dispatch. Until the validation slice runs, all rows are
+# tagged `estimated: true` and the daily cap remains advisory in spirit.
+#
+# Default cap raised to $100/day (round-12) for the multi-day autonomous run.
+# 86 slices × ~25 dispatches × ~$0.50 = ~$1,000 total; cap enforces a sane
+# per-day rate without blocking long sessions.
 #
 # Ledger format (one JSON object per line, no spaces around colons):
 #   {"ts":"2026-04-25T13:16:42Z","slice":"00-foo","agent":"claude",
-#    "model":"claude-cli","input_tokens":0,"output_tokens":0,
-#    "cache_read_tokens":0,"cost_usd":0}
+#    "model":"claude-opus-4-7","input_tokens":42000,"output_tokens":3100,
+#    "cache_read_tokens":18000,"cost_usd":0.847,"source":"session-log",
+#    "estimated":true}
 
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
 LEDGER="scripts/loop/state/cost_ledger.jsonl"
-CAP="${LOOP_DAILY_USD_CAP:-20}"
+CAP="${LOOP_DAILY_USD_CAP:-100}"
 
 [[ -f "$LEDGER" ]] || { exit 0; }
 

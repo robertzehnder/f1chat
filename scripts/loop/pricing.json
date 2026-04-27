@@ -1,0 +1,34 @@
+{
+  "_comment": "USD per 1M tokens. Sources: Anthropic + OpenAI public pricing pages as of 2026-04-26. Update _updated when revised; agents log a warning if stale > 30 days.",
+  "_updated": "2026-04-26",
+  "models": {
+    "claude-opus-4-7": {
+      "input_per_mtok": 15.00,
+      "output_per_mtok": 75.00,
+      "cache_read_per_mtok": 1.50,
+      "cache_write_per_mtok": 18.75
+    },
+    "claude-sonnet-4-6": {
+      "input_per_mtok": 3.00,
+      "output_per_mtok": 15.00,
+      "cache_read_per_mtok": 0.30,
+      "cache_write_per_mtok": 3.75
+    },
+    "claude-haiku-4-5-20251001": {
+      "input_per_mtok": 0.80,
+      "output_per_mtok": 4.00,
+      "cache_read_per_mtok": 0.08,
+      "cache_write_per_mtok": 1.00
+    },
+    "gpt-5": {
+      "input_per_mtok": 10.00,
+      "output_per_mtok": 30.00
+    },
+    "claude-cli": {
+      "_note": "placeholder model name when token usage cannot be parsed; uses opus-4-7 pricing as a conservative ceiling",
+      "input_per_mtok": 15.00,
+      "output_per_mtok": 75.00,
+      "cache_read_per_mtok": 1.50
+    }
+  }
+}

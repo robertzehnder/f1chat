@@ -38,13 +38,6 @@ echo "[$stamp] dispatch_slice_audit $slice_id begin" >> "$LOG"
 LEDGER="$LOOP_STATE_DIR/cost_ledger.jsonl"
 mkdir -p "$(dirname "$LEDGER")"
 
-append_ledger() {
-  local agent="${1:-codex-slice-audit}" cost="${2:-0}"
-  printf '{"ts":"%s","slice":"%s","agent":"%s","cost_usd":%s,"estimated":true}\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slice_id" "$agent" "$cost" \
-    >> "$LEDGER"
-}
-
 # Ensure the slice's worktree exists (locked).
 worktree_path_file="$LOOP_STATE_DIR/.worktree_path_${slice_id}.$$"
 trap 'rm -f "$worktree_path_file"' EXIT
@@ -112,17 +105,21 @@ EOF
 }
 
 agent_rc=0
+agent_kind=""
 if command -v codex >/dev/null 2>&1; then
   run_codex_native || agent_rc=$?
-  append_ledger codex-slice-audit 0
+  agent_kind="codex-slice-audit"
 elif command -v claude >/dev/null 2>&1; then
   echo "[$(date -Iseconds)] codex CLI not found; using claude fallback for slice audit" >> "$LOG"
   run_claude_fallback || agent_rc=$?
-  append_ledger codex-slice-audit-claude-fallback 0
+  agent_kind="codex-slice-audit-claude-fallback"
 else
   echo "neither codex nor claude CLI available" >&2
   exit 3
 fi
+
+# Cost telemetry (round-12 Item 9).
+"$LOOP_MAIN_WORKTREE/scripts/loop/post_dispatch_cost.sh" "$slice_id" "$agent_kind" || true
 
 # Mirror the slice file from slice branch back to integration under lock.
 # Expected terminal states for plan-audit: pending | revising_plan | blocked.

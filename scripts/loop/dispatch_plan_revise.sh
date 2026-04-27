@@ -148,5 +148,7 @@ with_repo_lock "dispatch_plan_revise:$slice_id:mirror" \
   mirror_slice_to_integration "$slice_id" "pending_plan_audit|blocked" \
   || logmsg "mirror returned non-zero"
 
+"$LOOP_MAIN_WORKTREE/scripts/loop/post_dispatch_cost.sh" "$slice_id" claude-revise || true
+
 logmsg "end (agent_rc=$agent_rc)"
 exit $agent_rc

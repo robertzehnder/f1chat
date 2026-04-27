@@ -51,15 +51,6 @@ with_repo_lock "dispatch_claude:$slice_id:worktree-prep" \
 slice_worktree=$(cat "$worktree_path_file")
 
 # 2. Run the agent inside the slice worktree (no main-worktree mutation).
-LEDGER="$LOOP_STATE_DIR/cost_ledger.jsonl"
-mkdir -p "$(dirname "$LEDGER")"
-
-append_ledger() {
-  local in_tok="${1:-0}" out_tok="${2:-0}" cache_tok="${3:-0}" cost="${4:-0}" model="${5:-unknown}"
-  printf '{"ts":"%s","slice":"%s","agent":"claude","model":"%s","input_tokens":%s,"output_tokens":%s,"cache_read_tokens":%s,"cost_usd":%s,"estimated":true}\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slice_id" "$model" "$in_tok" "$out_tok" "$cache_tok" "$cost" \
-    >> "$LEDGER"
-}
 
 # Run the agent in the slice worktree via subshell. Note: the working dir
 # must be the slice worktree so claude sees the right git context.
@@ -102,8 +93,8 @@ with_repo_lock "dispatch_claude:$slice_id:mirror" \
   mirror_slice_to_integration "$slice_id" "awaiting_audit|blocked" \
   || echo "[$stamp] dispatch_claude $slice_id mirror returned non-zero" >> "$LOG"
 
-# Telemetry placeholder until cost-parsing helper lands.
-append_ledger 0 0 0 0 "claude-cli"
+# Cost telemetry — best-effort token parse + estimated cost (round-12 Item 9).
+"$LOOP_MAIN_WORKTREE/scripts/loop/post_dispatch_cost.sh" "$slice_id" claude || true
 
 echo "[$(date -Iseconds)] dispatch_claude $slice_id end (agent_rc=$agent_rc)" >> "$LOG"
 exit $agent_rc

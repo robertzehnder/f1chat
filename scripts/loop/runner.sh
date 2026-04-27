@@ -57,7 +57,39 @@ MAX_SESSION_SECONDS="${LOOP_MAX_SESSION_SECONDS:-345600}"   # 4 days
 SESSION_START=$(date +%s)
 TOTAL_DISPATCHES=0
 
-log() { printf '%s %s\n' "$(date -Iseconds)" "$*" | tee -a "$LOG"; }
+log() {
+  local msg
+  msg="$(date -Iseconds) $*"
+  printf '%s\n' "$msg" | tee -a "$LOG"
+  # Webhook notify on key events (round-12 Item 11). LOOP_NOTIFY_WEBHOOK
+  # is a generic JSON POST endpoint — any tool the user wires.
+  case "$*" in
+    *"CIRCUIT BREAKER"*|*"USER ATTENTION"*|*"merged and pushed"*|*"runner exit"*|*"REGRESSION"*|*"resume:"*"approved and pushed"*)
+      _notify_webhook "$*"
+      ;;
+  esac
+}
+
+_notify_webhook() {
+  [[ -z "${LOOP_NOTIFY_WEBHOOK:-}" ]] && return 0
+  local raw="$1" event slice short_sha payload
+  case "$raw" in
+    *"CIRCUIT BREAKER"*) event="circuit_breaker" ;;
+    *"USER ATTENTION"*)  event="user_attention" ;;
+    *"merged and pushed"*) event="merged" ;;
+    *"runner exit"*)     event="runner_exit" ;;
+    *"REGRESSION"*)      event="regression" ;;
+    *"resume:"*)         event="loop_infra_resumed" ;;
+    *)                   event="info" ;;
+  esac
+  slice=$(echo "$raw" | sed -nE 's/.*slice=([^ ]+).*/\1/p' | head -1)
+  short_sha=$(git -C "$LOOP_MAIN_WORKTREE" rev-parse --short HEAD 2>/dev/null || echo unknown)
+  payload=$(printf '{"ts":"%s","event":"%s","slice_id":"%s","commit":"%s","message":%s}' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$event" "$slice" "$short_sha" \
+    "$(printf '%s' "$raw" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')")
+  curl -fsS -X POST -H 'Content-Type: application/json' \
+    -d "$payload" "$LOOP_NOTIFY_WEBHOOK" >/dev/null 2>&1 || true
+}
 
 # ----- source helpers -----
 # repo_lock.sh provides with_repo_lock; worktree_helpers.sh provides

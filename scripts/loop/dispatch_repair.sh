@@ -119,6 +119,8 @@ EOF
       mirror_slice_to_integration "$slice_id" "revising|blocked" \
       || logmsg "mirror returned non-zero"
 
+    "$LOOP_MAIN_WORKTREE/scripts/loop/post_dispatch_cost.sh" "$slice_id" claude-repair || true
+
     logmsg "end (slice-state agent_rc=$agent_rc)"
     exit $agent_rc
     ;;
@@ -234,6 +236,8 @@ git commit -m "[loop-infra-pending][slice:${slice_id}][attempt:${count}] block p
 
 # Do NOT push. Both local commits stay until user approval.
 INFRA_BLOCK
+
+    "$LOOP_MAIN_WORKTREE/scripts/loop/post_dispatch_cost.sh" "$slice_id" claude-repair || true
 
     logmsg "end (loop-infra; 2 local commits awaiting approval)"
     exit 4   # signals runner to exit via circuit breaker
