@@ -1,11 +1,11 @@
 ---
 slice_id: 03-grid-vs-finish
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T18:30:03-04:00
+updated: 2026-04-27T18:31:01-04:00
 ---
 
 ## Goal
@@ -318,7 +318,53 @@ npm --prefix web run test:grading
   ```
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/03-grid-vs-finish`
+
+**Files changed (only these — confirmed by `git status` / `git diff --name-only`):**
+- `sql/014_grid_vs_finish_mat.sql` (new, 49 lines, single `BEGIN; … COMMIT;`)
+- `diagnostic/slices/03-grid-vs-finish.md` (frontmatter `status pending → awaiting_audit`, `owner claude → codex`, `updated 2026-04-27T18:30:03-04:00 → 2026-04-27T18:31:01-04:00`; this Slice-completion note filled in; round-1 audit checkboxes ticked already in plan-revise commits, no changes here)
+
+No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-3]_*.sql`, no application code. Scope clean.
+
+**Commit hashes (this slice):** `cd492e8` (`slice 03-grid-vs-finish: materialize core.grid_vs_finish`). Branch pushed to origin: `641e130..cd492e8 slice/03-grid-vs-finish -> slice/03-grid-vs-finish`.
+
+**Decisions applied (verbatim from plan):**
+- Grain confirmed unique by gate #0 (`total=7581 distinct_pair=7581 duplicate=0`), so the storage table carries `PRIMARY KEY (session_key, driver_number)` per Decisions §3 — heap-with-indexes fallback was not triggered.
+- Storage relation: `core.grid_vs_finish_mat` real base table (`relkind='r'`).
+- Public relation: `core.grid_vs_finish` swapped via `CREATE OR REPLACE VIEW` to `SELECT * FROM core.grid_vs_finish_mat` (per Decisions §2; no `DROP VIEW`).
+- Initial population: `TRUNCATE` + `INSERT … SELECT * FROM core_build.grid_vs_finish` inside the same transaction. 7581 rows inserted on first apply.
+- Single SQL migration; no TypeScript contract, no `.mjs` parity script (Decisions §4).
+- Numbered `sql/014_grid_vs_finish_mat.sql` per Decisions §6.
+
+**Gate command exit codes (run from this worktree against `$DATABASE_URL`):**
+- Gate #0 — pre-flight grain probe over `core_build.grid_vs_finish` on `(session_key, driver_number)` — **exit 0**. NOTICE: `total=7581 distinct_pair=7581 duplicate=0`.
+- Gate #1 — `psql -v ON_ERROR_STOP=1 -f sql/014_grid_vs_finish_mat.sql` — **exit 0**. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 7581 / CREATE VIEW / COMMIT`.
+- Gate #2 — structural assertions DO block (relkind='r' on `_mat`; relkind='v' on the public view; PK columns exactly `['session_key','driver_number']` in that order; the view's only `pg_depend`-via-`pg_rewrite` reference within `core`/`core_build`/`raw` is `core.grid_vs_finish_mat`) — **exit 0**.
+- Gate #3 — parity DO block (3-session sentinel; global rowcount equality; bidirectional `EXCEPT ALL` per session) — **exit 0**. Output:
+  - `global rowcount equality: core_build=7581 mat=7581`
+  - `parity ok: session_key=9102 diff_rows=0`
+  - `parity ok: session_key=9110 diff_rows=0`
+  - `parity ok: session_key=9118 diff_rows=0`
+- `npm --prefix web run build` — **exit 0** (Next.js 15 build successful, all routes compiled).
+- `npm --prefix web run typecheck` — **exit 0** (`tsc --noEmit` clean).
+- `npm --prefix web run test:grading` — **exit 0** (`# tests 31 / # pass 21 / # fail 0 / # skipped 10`).
+
+**Self-check vs Acceptance criteria:**
+- [x] Gate #0 exits `0` (`duplicate_rows = 0`).
+- [x] `core.grid_vs_finish_mat` exists as base table with `PRIMARY KEY (session_key, driver_number)` — gate #1 exit 0, gate #2 exit 0.
+- [x] `core.grid_vs_finish` exists as a view (the facade) — gate #2 exit 0.
+- [x] `core.grid_vs_finish` is a thin facade over `core.grid_vs_finish_mat` — gate #2 exit 0 (the only relation reference is `core.grid_vs_finish_mat`).
+- [x] Global rowcount equality: `core_build.grid_vs_finish` = `core.grid_vs_finish_mat` = 7581 — gate #3 exit 0.
+- [x] Bidirectional `EXCEPT ALL` parity = 0 for sessions 9102, 9110, 9118 — gate #3 exit 0.
+- [x] `npm --prefix web run build` exit 0.
+- [x] `npm --prefix web run typecheck` exit 0.
+- [x] `npm --prefix web run test:grading` exit 0.
+- [x] Only files changed are `sql/014_grid_vs_finish_mat.sql` (new) and this slice file (frontmatter + Slice-completion note). Verified by `git status` (web/node_modules and web/.next are gitignored, so the local `npm install` left no tracked changes).
+
+**Notes for the auditor:**
+- The grain probe was reported in the plan as "plausible but not provable from SQL alone" because `core.session_drivers` has no `DISTINCT`/`GROUP BY` over `raw.drivers`. Empirically on this database, `raw.drivers` is unique on `(session_key, driver_number)` for the merged 7581-row corpus, so the LEFT JOIN does not multiply rows. The PK was therefore declared per the plan's "if gate #0 passes" branch. Should `raw.drivers` ever ingest duplicate `(session_key, driver_number)` pairs, gate #0 will fire on the next re-apply and the slice must be re-planned to the heap-with-indexes fallback documented in Risk / rollback.
+- No web cutover happened in this slice. `web/src/lib/queries.ts`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/chatRuntime.ts` continue to read `core.grid_vs_finish` through the public view, which now transparently resolves to the matview via the facade.
 
 ## Audit verdict
 (filled by Codex)
