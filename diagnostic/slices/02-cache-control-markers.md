@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-control-markers
 phase: 2
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T04:30:34Z
+updated: 2026-04-27T00:31:25-04:00
 ---
 
 ## Goal
@@ -93,7 +93,32 @@ cd web && npm run build
 Rollback: `git revert <commit>`. Risk is low: the change is a structural reshape of the `system` field of one outgoing request (string → single-block array with cache marker). The text content of the static prefix is unchanged, the user-message content is unchanged, and the new builder is a pure additive export. If Anthropic ever rejects the array-form `system`, revert is one commit.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/02-cache-control-markers`
+- Implementation commit: `26b0082` — feat: attach ephemeral cache_control to synthesis static prefix
+  - Adds exported pure function `buildSynthesisRequestParams(input)` in `web/src/lib/anthropic.ts` that returns `{ system: [{ type: "text", text: staticPrefix, cache_control: { type: "ephemeral" } }], messages: [{ role: "user", content: dynamicSuffix }] }`. It calls `buildSynthesisPromptParts(input)` for prefix/suffix; performs no I/O, reads no `process.env`, and does not call `fetch`.
+  - Refactors `synthesizeAnswerWithAnthropic` (lines ~475–509 post-edit) to destructure `{ system, messages } = buildSynthesisRequestParams(input)` and pass them into the request body. URL, method, headers (`content-type`, `x-api-key`, `anthropic-version: 2023-06-01`), `model`, `max_tokens`, and `temperature` are unchanged. No new HTTP header (no `anthropic-beta`).
+  - `generateSqlWithAnthropic` and `repairSqlWithAnthropic` are untouched.
+  - Adds `web/scripts/tests/cache-control-markers.test.mjs` (TS-transpile-and-import, mirrors `prompt-prefix-split.test.mjs`). Deletes `ANTHROPIC_API_KEY`/`DATABASE_URL`, monkey-patches `globalThis.fetch` to throw, then asserts: `system` length 1, `system[0].type === "text"`, `system[0].text === buildSynthesisPromptParts(input).staticPrefix`, `system[0].cache_control` deep-equals `{ type: "ephemeral" }`, byte-identical static prefix across inputs, `messages.length === 1`, `messages[0].role === "user"`, `messages[0].content === dynamicSuffix`, plain string content, no own `cache_control` on the user message, suffix differs across inputs, and `fetchCalled === false`.
+
+### Decisions
+- Kept `buildSynthesisPromptParts` unchanged and made `buildSynthesisRequestParams` call it, so the prior slice's contract (string `staticPrefix`/`dynamicSuffix`) is preserved and the new builder is purely additive.
+- No `anthropic-beta` header added: prompt caching is GA on `anthropic-version: 2023-06-01`, matching the slice's "no beta header" decision.
+- Cache marker placed only on the static-prefix system block. No `cache_control` on the user message or its `content`.
+
+### Gate command results
+- `cd web && npm run typecheck` → exit 0
+- `cd web && npm run test:grading` → exit 0 (30 tests, 21 pass, 9 skipped, 0 fail; new test `buildSynthesisRequestParams attaches ephemeral cache_control to the static prefix only, with no env or network` passes)
+- `cd web && npm run build` → exit 0 (Next.js build succeeded; static pages generated; route table unchanged)
+
+### Self-check vs. acceptance criteria
+- [x] `buildSynthesisRequestParams` is exported and pure — verified by inspection (no `process.env`, no `fetch`, no other I/O) and by the new test running with `ANTHROPIC_API_KEY`/`DATABASE_URL` deleted and a throwing `fetch`.
+- [x] Outgoing `system` is `[{ type: "text", text: <staticPrefix>, cache_control: { type: "ephemeral" } }]` with `<staticPrefix>` byte-equal to `buildSynthesisPromptParts(input).staticPrefix` — asserted in the test.
+- [x] User message remains `{ role: "user", content: <dynamicSuffix> }` with no `cache_control` on the message or its `content` — asserted in the test (`hasOwnProperty('cache_control') === false`, `typeof content === "string"`).
+- [x] No new HTTP header; `anthropic-version: 2023-06-01` unchanged — verified by diff (header block untouched).
+- [x] Test runs offline under `npm run test:grading` and exits 0 — confirmed.
+- [x] `npm run typecheck` and `npm run build` succeed — confirmed.
+- [x] `generateSqlWithAnthropic` and `repairSqlWithAnthropic` unchanged — verified by diff (only the synthesis call site and a new export were modified).
 
 ## Audit verdict
 (filled by Codex)
