@@ -32,12 +32,14 @@ Baseline (gates Phase 1):
 - `01-route-stage-timings`
 - `01-perf-summary-route`
 - `01-baseline-snapshot`
+- `01-perf-trace-fix-spans`
 
 ## Phase 2 — Anthropic Prompt Caching
 
 - `02-prompt-static-prefix-split`
 - `02-cache-control-markers`
 - `02-cache-hit-assertion`
+- `02-cost-telemetry-validation`
 
 ## Phase 3 — Materialize Hot Semantic Contracts
 
