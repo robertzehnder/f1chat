@@ -1,68 +1,175 @@
 ---
 slice_id: 01-perf-trace-fix-spans
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26T23:31:40-04:00
+updated: 2026-04-27T00:05:00-04:00
 ---
 
 ## Goal
-Fix the span-boundary bug where `runtime_classify` and `resolve_db` report identical p50/p95 latencies (~7190ms each) in `01-baseline-snapshot_2026-04-26.json`. Local-only logic cannot take 7s; either spans share a parent that bleeds time, span ends are double-counted, or stage names are aliased. Once fixed, re-capture the baseline so Phase 2/3 measurements have a trustworthy "before" number.
+Fix the span-boundary bug where `runtime_classify` and `resolve_db` report numerically identical p50/p95 latencies (`p50=7190.91ms`, `p95=16718.68ms`, n=50 each) in `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json`. The cause is documented in `01-route-stage-timings.md` step 2: both spans are started immediately before `buildChatRuntime` and ended immediately after it, intentionally as concurrent spans wrapping the same call (because `buildChatRuntime` does both classification and DB resolution internally). That slice deferred the split as out-of-scope. **This slice does the split**: move the spans *inside* `buildChatRuntime` so `runtime_classify` covers only the local `classifyQuestion` work and `resolve_db` covers only the DB-resolution work. After the fix, re-capture the Phase 1 baseline so Phase 2/3 measurements have a trustworthy "before" number that doesn't alias the two stages.
 
 ## Inputs
-- `web/src/lib/perfTrace.ts` (span helpers; idempotent `Span.end()`).
-- `web/src/app/api/chat/route.ts` (where spans wrap stages).
-- `web/src/lib/chatRuntime.ts` (where `runtime_classify` work actually executes).
-- `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json` (the misleading baseline).
+- `web/src/lib/perfTrace.ts` (span helpers; idempotent `Span.end()`; `flushTrace` writes to `web/logs/chat_query_trace.jsonl`).
+- `web/src/app/api/chat/route.ts` (where the two concurrent spans currently wrap `buildChatRuntime`; see lines ~209–221).
+- `web/src/lib/chatRuntime.ts` (`classifyQuestion` at ~line 516 and the entity-resolution work that follows in `buildChatRuntime`).
+- `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json` (the misleading baseline; aliased stages are documented in its companion `.md`).
+- `diagnostic/slices/01-route-stage-timings.md` (the slice that introduced the concurrent-span workaround and explicitly deferred the split).
+- `diagnostic/slices/01-baseline-snapshot.md` (the canonical procedure for capturing a Phase 1 perf baseline — re-used verbatim in Steps below).
 
 ## Prior context
-- `diagnostic/_state.md`
-- `diagnostic/slices/01-baseline-snapshot.md`
-- `diagnostic/slices/01-route-stage-timings.md`
+
+Read these before triaging or implementing:
+
+- `diagnostic/_state.md` — current phase counts, "Latest perf baseline" headline, recent merges, accumulated auditor notes.
+- `diagnostic/slices/01-baseline-snapshot.md` — canonical baseline procedure: trace-isolation rotation, full 50-question benchmark, `?n=50` window check, repo-root subshell gate pattern, exact artifact path convention `diagnostic/artifacts/perf/<slice>_<UTC-date>.{json,md}`. This slice's re-baseline reuses that procedure with only the slice prefix changed.
+- `diagnostic/slices/01-route-stage-timings.md` — defines the 10 stage names and the existing concurrent-span workaround for `runtime_classify` / `resolve_db`. The Steps and acceptance criteria here MUST keep the `route-trace.test.mjs` static-analysis assertions passing (all 10 `startSpan("<stage>")` call sites must still appear somewhere reachable from the route — moving them into `chatRuntime.ts` is allowed only if the spans are still sourced from `@/lib/perfTrace`).
+- `diagnostic/slices/01-perf-trace-helpers.md` — the `startSpan` / `Span.end` / `flushTrace` API contract (`Span.end()` returns a `SpanRecord`; `flushTrace(requestId, SpanRecord[])`).
+- `web/src/app/api/chat/route.ts` (lines ~205–225) — the current concurrent-span block, which this slice replaces with a single delegate that lets `buildChatRuntime` start/end the two spans internally.
+- `web/src/lib/chatRuntime.ts` (the `buildChatRuntime` body and `classifyQuestion` at ~line 516) — confirms the natural split point: `classifyQuestion` is synchronous and local; the entity-resolution / DB-touching work happens after it.
 
 ## Required services / env
-- `DATABASE_URL` (read-replica via Neon pooler) — needed for the re-baseline run.
-- `OPENF1_RUN_BENCHMARKS=1` if benchmark scripts gate on it.
+
+The implementation work (span split + new perf-trace span unit test) does not require live services. The re-baseline run does. Environment for the **re-baseline only**:
+
+- **Postgres reachable** — `NEON_DATABASE_URL` (or local Docker) set in the dev server's environment, exactly as `01-baseline-snapshot` requires. The 50-question benchmark exercises real DB queries via `/api/chat`.
+- **Anthropic API access** — `ANTHROPIC_API_KEY` set in the dev server's environment. The benchmark exercises `sqlgen_llm`, `synthesize_llm`, and possibly `repair_llm`.
+- **Dev server running** in another terminal: `cd web && npm run dev` (Next binds by default to `http://127.0.0.1:3000`; if port 3000 is occupied, it picks the next free port — confirm where it actually bound).
+- **Export `OPENF1_CHAT_BASE_URL`** in the parent shell that runs the slice steps to match the actual dev-server port (e.g. `export OPENF1_CHAT_BASE_URL=http://127.0.0.1:3001`). All re-baseline steps and the corresponding gate checks read this variable verbatim — do not hardcode a port.
+- `OPENF1_RUN_BENCHMARKS` is **not** required by `npm run healthcheck:chat:intense` (this slice does not introduce a new gate); do not export it unless an unrelated script needs it.
+
+Verify the dev server responds before running the benchmark; abort the slice with `status=blocked` if `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary"` does not return 200 JSON.
 
 ## Steps
-1. Read `web/src/app/api/chat/route.ts`. Identify every `startSpan(...)` / `Span.end()` call site. Confirm spans nest correctly (no overlapping `runtime_classify` and `resolve_db`).
-2. Read `web/src/lib/chatRuntime.ts:516` area (where `runtime_classify` decisions live). Confirm the span around classification ends BEFORE `resolve_db` begins, not after the resolve work runs.
-3. If the bug is double-counting (e.g. an outer span around both stages), tighten the boundaries so each stage's span captures only its own work.
-4. Add a unit / integration test under `web/scripts/tests/perf-trace-spans.test.mjs` that asserts: when both `runtime_classify` and `resolve_db` spans run sequentially, their `elapsedMs` sums approximately match the wall-clock total (within 5%) and neither exceeds the realistic ceiling for that stage (`runtime_classify` < 50ms, `resolve_db` reflects actual DB time).
-5. Re-run `01-baseline-snapshot` (manual: `npm run benchmark:trace` or whatever the project script is) to produce a fresh `01-baseline-snapshot-v2_<date>.json` artifact. Verify the two stages no longer report identical p50/p95.
-6. Update `diagnostic/_state.md`'s "Latest perf baseline" headline to reference the v2 artifact.
+1. **Confirm the bug shape** — read `web/src/app/api/chat/route.ts:205–225` and `web/src/lib/chatRuntime.ts` (`classifyQuestion` ~line 516, then the entity-resolution body). Confirm the two spans currently bracket the same `buildChatRuntime` call concurrently (matching the comment at route.ts:209). No edits in this step; it just locks in the diagnosis.
+2. **Move the span boundaries inside `buildChatRuntime`** — in `web/src/lib/chatRuntime.ts`, import `startSpan` and the `SpanRecord` type from `@/lib/perfTrace`. Wrap only `classifyQuestion(input.message)` (synchronous, local) with a `runtime_classify` span; end it before any DB / entity-resolution work begins. Then start a `resolve_db` span and end it after the entity-resolution / DB-touching block completes. Return the two `SpanRecord`s from `buildChatRuntime` in a new field (e.g. `runtimeSpans: SpanRecord[]`) on `ChatRuntimeResult` so the route can append them to its own `spans: SpanRecord[]` array before `flushTrace`. The two spans are **sequential and non-overlapping**, not concurrent.
+3. **Update `web/src/app/api/chat/route.ts`** — remove the concurrent `runtime_classify` / `resolve_db` `startSpan` calls at lines ~211–212 and the matching `endTrackedSpan` calls at ~219–220. Replace them with: call `buildChatRuntime`, then push `runtime.runtimeSpans` into the request's accumulated `spans: SpanRecord[]`. Keep the surrounding `try { ... } finally { ... }` and `flushTrace` flow unchanged. Confirm the static-analysis test `web/scripts/tests/route-trace.test.mjs` still passes — its assertion is "at least one `startSpan("<stage>")` call appears in `route.ts`"; since both `runtime_classify` and `resolve_db` `startSpan` call sites have moved to `chatRuntime.ts`, the test must be updated in step 4 to scan both files (not relax the assertion).
+4. **Update `web/scripts/tests/route-trace.test.mjs`** — change the static-analysis target from "read `route.ts`" to "read `route.ts` AND `chatRuntime.ts`, concatenate, then run the existing `startSpan("<stage>")` regex against the union". Keep all 10 stage names required. The `flushTrace(` and `} finally {` assertions stay scoped to `route.ts` only (those genuinely live there). This change is mechanical; the test file remains a static-analysis test (no live services).
+5. **Add a new perf-trace span unit test** at `web/scripts/tests/perf-trace-spans.test.mjs` using the existing `node:test` + `node:assert/strict` pattern (see `web/scripts/tests/perf-trace.test.mjs` and `route-trace.test.mjs`). The test does **not** invoke the route or hit live services; it asserts the span-boundary contract directly:
+   - **Static-analysis assertion**: read `web/src/lib/chatRuntime.ts` as text and assert that the `runtime_classify` `startSpan` / `Span.end` block ends before any code that contains `await ` (the entity-resolution block). Concretely: locate `startSpan("runtime_classify")` and the matching `.end()`, then locate `startSpan("resolve_db")` and its matching `.end()`. Assert (a) the `runtime_classify` block contains no `await ` between its start and end, (b) the `runtime_classify` `.end()` appears at a source position strictly before the `resolve_db` `startSpan(` (i.e. the spans are sequential, not concurrent).
+   - **Behavioral assertion using the real `perfTrace` API** (no DB, no LLM): in-process, call `startSpan("runtime_classify")`, `await new Promise(r => setTimeout(r, 5))`, `.end()`, then `startSpan("resolve_db")`, `await new Promise(r => setTimeout(r, 80))`, `.end()`. Assert the recorded `elapsedMs` for the `runtime_classify` `SpanRecord` is `< 50` and the `resolve_db` `SpanRecord`'s `elapsedMs` is at least `5×` the `runtime_classify` one. The fixed sleep budget keeps this deterministic on CI; it does not depend on real DB timing.
+   - The test does **not** assert the live benchmark numbers — those are checked separately in step 8 by inspecting the re-baseline artifact.
+6. **Capture UTC date token** at re-baseline start: `DATE=$(date -u +%Y-%m-%d)`. Use this exact value for both v2 artifact paths.
+7. **Re-baseline (mirror `01-baseline-snapshot` Steps 2–7 verbatim, with only the artifact prefix changed)**:
+   - 7a. Confirm dev server is up: `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary"` returns 200 JSON. Abort with `status=blocked` otherwise.
+   - 7b. **Trace isolation** — from the repo root, atomically rotate any existing `web/logs/chat_query_trace.jsonl` aside before the benchmark so the perf-summary fetch sees only this run's 50 records:
+     ```bash
+     mkdir -p web/logs
+     if [ -f web/logs/chat_query_trace.jsonl ]; then
+       mv web/logs/chat_query_trace.jsonl "web/logs/chat_query_trace.jsonl.pre-fix-${DATE}"
+     fi
+     ```
+     Leave the `.pre-fix-${DATE}` backup in place (gitignored) for inspection.
+   - 7c. **Run the canonical fixed benchmark** — the full 50-question intense set, not a subset — from the repo root: `(cd web && npm run healthcheck:chat:intense)`. Inherit `OPENF1_CHAT_BASE_URL` from the parent shell (do not inline-set it). Use the unmodified `web/scripts/chat-health-check.questions.json` (50 entries) and `web/scripts/chat-health-check.rubric.intense.json` rubric. No `--questions` flag.
+   - 7d. **Fetch the aggregated summary with explicit window**: `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary?n=50"`. Verify `window.requested === 50` AND `window.returned === 50` before continuing — abort with `status=blocked` otherwise (document which step leaked: rotation, benchmark, or fetch).
+   - 7e. Save the JSON to the exact path `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json` (slice-prefixed, mirroring the baseline-snapshot convention; **not** a `-v2` suffix).
+   - 7f. Generate a companion markdown at `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.md` with one-line overall median, per-stage p50/p95/max table sorted by p95 desc, and a Notes section that explicitly calls out the now-separated `runtime_classify` vs `resolve_db` numbers (this is the headline result of the slice).
+8. **Verify the alias is gone** — inspect the new JSON: `runtime_classify.p50_ms` MUST be `< 50` (local logic), and `runtime_classify.p50_ms` and `resolve_db.p50_ms` MUST differ by at least 10× (i.e. they no longer report identical numbers). If either fails, the span fix is incomplete; do not promote — abort with `status=blocked` and document.
+9. **Promote** — update `diagnostic/_state.md`'s "Latest perf baseline" block to reference `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json` and re-list the slowest stages by p50 from the new artifact. Keep the previous baseline artifact files in place (additive).
 
 ## Changed files expected
-- `web/src/app/api/chat/route.ts` (span boundary fix)
-- `web/src/lib/chatRuntime.ts` (if the span lives inside the classifier)
-- `web/scripts/tests/perf-trace-spans.test.mjs` (new test)
-- `diagnostic/artifacts/perf/01-baseline-snapshot-v2_2026-04-26.json` (new artifact)
+- `web/src/lib/chatRuntime.ts` (move `runtime_classify` and `resolve_db` spans here; sequential, non-overlapping; export `runtimeSpans` on `ChatRuntimeResult`)
+- `web/src/app/api/chat/route.ts` (drop the concurrent `runtime_classify` / `resolve_db` spans; merge `runtime.runtimeSpans` into the request's spans array before `flushTrace`)
+- `web/scripts/tests/route-trace.test.mjs` (broaden the static-analysis target to `route.ts ∪ chatRuntime.ts`; keep all 10 stages required)
+- `web/scripts/tests/perf-trace-spans.test.mjs` (new — static-analysis + behavioral test, no live services)
+- `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json` (new re-baseline JSON; exact `${DATE}` from step 6)
+- `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.md` (new companion markdown; exact `${DATE}` from step 6)
+- `diagnostic/_state.md` ("Latest perf baseline" headline updated in step 9)
+- `diagnostic/slices/01-perf-trace-fix-spans.md` (slice-completion note + audit verdict; always implicitly allowed)
 
 ## Artifact paths
-- `diagnostic/artifacts/perf/01-baseline-snapshot-v2_2026-04-26.json`
+- `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json` — machine-readable per-stage summary, slice-prefixed (matches the convention established by `01-baseline-snapshot_${DATE}.json`).
+- `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.md` — human-readable companion, same `${DATE}`. The `.md` companion is required (not optional): `01-baseline-snapshot` produces both, and downstream slices that read perf artifacts (Phase 2/3) inspect the `.md` Notes section for caveats.
 
 ## Gate commands
 ```bash
-cd web && npm run build
-cd web && npm run typecheck
-cd web && npm run test:grading
+# Run all gates from the repo root. Each `web/` command uses a subshell
+# `(cd web && ...)` so the cwd is restored to the repo root afterward —
+# avoid bare `cd web && ...` chained across lines, which leaves you in
+# `web/` and turns the next `cd web` into `web/web` (and the artifact
+# `test -f` checks below into `web/diagnostic/...`).
+
+# DATE must match the UTC date token captured in step 6, used verbatim
+# in both v2 artifact paths. Fail loudly if the implementer forgot to export it.
+: "${DATE:?must export DATE=<UTC-date> matching the artifacts written in steps 7e–7f}"
+: "${OPENF1_CHAT_BASE_URL:?must export OPENF1_CHAT_BASE_URL=http://127.0.0.1:<PORT> matching the running dev server}"
+
+# Verify the dev server is up (slice-blocking precondition for the re-baseline)
+curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary" >/dev/null
+
+(cd web && npm run build)
+(cd web && npm run typecheck)
+(cd web && npm run test:grading)
+
+# Verify both new artifact files exist at the EXACT slice-prefixed paths
+# (no wildcards — wildcards can match stale `01-baseline-snapshot_*` files
+# from prior slices). These run from the repo root because the subshells
+# above did not change the parent shell's cwd.
+test -f "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json"
+test -f "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.md"
+
+# Verify the new artifact's window matches the 50-question benchmark — direct
+# evidence that the trace-isolation rotation worked and the summary was not
+# contaminated by stale perfTrace records. Uses node so this is portable
+# without jq.
+node -e '
+  const j = require("./diagnostic/artifacts/perf/01-perf-trace-fix-spans_'"${DATE}"'.json");
+  if (j.window?.returned !== 50 || j.window?.requested !== 50) {
+    console.error("window mismatch:", JSON.stringify(j.window));
+    process.exit(1);
+  }
+'
+
+# Verify the alias is gone — the headline result of the slice. Both checks
+# read the new artifact directly so the gate fails loudly if the span split
+# did not actually reduce `runtime_classify.p50_ms` and de-alias it from
+# `resolve_db.p50_ms`.
+node -e '
+  const j = require("./diagnostic/artifacts/perf/01-perf-trace-fix-spans_'"${DATE}"'.json");
+  const rc = j.stages?.runtime_classify?.p50_ms;
+  const rd = j.stages?.resolve_db?.p50_ms;
+  if (typeof rc !== "number" || typeof rd !== "number") {
+    console.error("missing stages:", JSON.stringify({ rc, rd }));
+    process.exit(1);
+  }
+  if (rc >= 50) {
+    console.error("runtime_classify.p50_ms >= 50:", rc);
+    process.exit(1);
+  }
+  if (rd / Math.max(rc, 0.001) < 10) {
+    console.error("runtime_classify and resolve_db p50 differ by < 10x:", { rc, rd });
+    process.exit(1);
+  }
+'
+
+# Verify _state.md was updated to point at the new artifact (step 9).
+grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnostic/_state.md >/dev/null
 ```
 
 ## Acceptance criteria
-- [ ] In the new perf-trace test, `runtime_classify` p50 < 50ms (it's local logic).
-- [ ] In the new perf-trace test, `runtime_classify` and `resolve_db` p50 differ by ≥10× (i.e. they no longer alias).
-- [ ] Re-captured baseline artifact shows the same separation (real benchmark run, not synthetic).
-- [ ] All gate commands exit 0.
-- [ ] `_state.md` "Latest perf baseline" points at the v2 artifact.
+- [ ] `runtime_classify` and `resolve_db` spans live in `web/src/lib/chatRuntime.ts` and are sequential / non-overlapping (verified by the static-analysis half of `web/scripts/tests/perf-trace-spans.test.mjs`).
+- [ ] The behavioral half of `web/scripts/tests/perf-trace-spans.test.mjs` (deterministic `setTimeout`-based, no live services) asserts `runtime_classify.elapsedMs < 50` and `resolve_db.elapsedMs >= 5 × runtime_classify.elapsedMs`. The test passes under `npm run test:grading`.
+- [ ] `web/scripts/tests/route-trace.test.mjs` still passes after broadening its static-analysis target to `route.ts ∪ chatRuntime.ts`; all 10 stage `startSpan` call sites are present in the union.
+- [ ] Both re-baseline artifact files exist at the exact slice-prefixed paths `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.{json,md}` where `${DATE}` is the UTC date captured in step 6.
+- [ ] The new JSON's `window.requested === 50` AND `window.returned === 50` — direct evidence the perf-summary fetch was isolated to this run's 50 perfTrace records.
+- [ ] The new JSON's `stages.runtime_classify.p50_ms < 50` (local logic now actually measured locally).
+- [ ] The new JSON's `stages.runtime_classify.p50_ms` and `stages.resolve_db.p50_ms` differ by at least 10× (the alias is gone).
+- [ ] Companion markdown contains a per-stage p50/p95/max table and a Notes section that explicitly contrasts the new (separated) `runtime_classify` vs `resolve_db` numbers against the prior baseline's aliased numbers.
+- [ ] `diagnostic/_state.md` "Latest perf baseline" block points at `diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json` and lists the slowest stages by p50 from that file.
+- [ ] Slice-completion note records `${DATE}` and quotes the new `runtime_classify` p50, `resolve_db` p50, and overall `total` p50/p95.
+- [ ] All gate commands exit `0`.
 
 ## Out of scope
-- Changing what `runtime_classify` actually does (just fixing the timing boundary).
+- Reducing `resolve_db` latency (Phase 2/3 caching/materialization work).
+- Changing what `classifyQuestion` or the entity-resolution body actually do — only the timing boundary.
+- Splitting `buildChatRuntime` into separate exported functions (the span split is internal; the public signature only grows by the new `runtimeSpans` field).
 - Phase 2 prompt-caching work.
 
 ## Risk / rollback
-Rollback: `git revert <commit>`. The original baseline artifact is preserved; v2 is additive.
+- **Rollback**: `git revert <commit>`. The previous baseline artifact (`01-baseline-snapshot_2026-04-26.{json,md}`) is preserved untouched; the v2 artifacts are additive. Reverting also restores the previous `_state.md` "Latest perf baseline" headline (it was edited in this slice's commit).
+- **Risk**: if the span split inside `buildChatRuntime` accidentally double-counts (e.g. starts `resolve_db` while `runtime_classify` is still open), the alias would persist and the gate `node -e` checks above would fail — caught before commit.
 
 ## Slice-completion note
 (filled by Claude)
@@ -75,14 +182,14 @@ Rollback: `git revert <commit>`. The original baseline artifact is preserved; v2
 **Status: REVISE**
 
 ### High
-- [ ] Replace the repeated `cd web && ...` gate block with commands that preserve the intended working directory, such as repo-root subshells `(cd web && npm run build)`, `(cd web && npm run typecheck)`, and `(cd web && npm run test:grading)`.
-- [ ] Specify the exact re-baseline command, benchmark size, trace-isolation procedure, required `OPENF1_CHAT_BASE_URL`, and window validation so the v2 baseline is reproducible and cannot pass using stale perfTrace records.
+- [x] Replace the repeated `cd web && ...` gate block with commands that preserve the intended working directory, such as repo-root subshells `(cd web && npm run build)`, `(cd web && npm run typecheck)`, and `(cd web && npm run test:grading)`.
+- [x] Specify the exact re-baseline command, benchmark size, trace-isolation procedure, required `OPENF1_CHAT_BASE_URL`, and window validation so the v2 baseline is reproducible and cannot pass using stale perfTrace records.
 
 ### Medium
-- [ ] Add `diagnostic/_state.md` to "Changed files expected" because step 6 and the acceptance criteria require updating the "Latest perf baseline" headline.
-- [ ] Tighten `Required services / env` to include every service and secret needed for the re-baseline run, including the running dev server URL and LLM/database environment variables required by the benchmark path.
-- [ ] Decide whether the v2 baseline should follow the existing perf artifact convention by producing both `.json` and `.md`; if not, state explicitly why this repair slice only promotes the JSON artifact.
-- [ ] Make the new perf-trace span test acceptance testable without live DB timing assumptions, or document the exact service dependency and deterministic assertions it will use when `resolve_db` reflects actual DB time.
+- [x] Add `diagnostic/_state.md` to "Changed files expected" because step 6 and the acceptance criteria require updating the "Latest perf baseline" headline.
+- [x] Tighten `Required services / env` to include every service and secret needed for the re-baseline run, including the running dev server URL and LLM/database environment variables required by the benchmark path.
+- [x] Decide whether the v2 baseline should follow the existing perf artifact convention by producing both `.json` and `.md`; if not, state explicitly why this repair slice only promotes the JSON artifact.
+- [x] Make the new perf-trace span test acceptance testable without live DB timing assumptions, or document the exact service dependency and deterministic assertions it will use when `resolve_db` reflects actual DB time.
 
 ### Low
 
