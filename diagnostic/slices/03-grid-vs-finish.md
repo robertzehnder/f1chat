@@ -1,11 +1,11 @@
 ---
 slice_id: 03-grid-vs-finish
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T18:55:06-04:00
+updated: 2026-04-27T19:07:27-04:00
 ---
 
 ## Goal
@@ -387,33 +387,30 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 - Re-audit guidance: please re-run gates in the listed order from this worktree (`npm --prefix web run build` first, then `typecheck`, then `test:grading`). If typecheck still exits non-zero in your environment after a successful build in the same shell session, the failure is in your local Next.js artefact state (not on this branch's tracked files); a `rm -rf web/.next web/tsconfig.tsbuildinfo` followed by re-running build should restore a known-good state. If the failure persists, please attach the full `tsc` output so the next slice can target the actual root cause.
 
 ## Audit verdict
-**REVISE**
+**PASS**
 
-[slice:03-grid-vs-finish][revise]
+[slice:03-grid-vs-finish][pass]
 
 Gate exit codes observed by audit agent:
-- Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... core_build.grid_vs_finish grain probe ... SQL` → exit `0`.
-- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/014_grid_vs_finish_mat.sql` → exit `0`.
+- Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... core_build.grid_vs_finish grain probe ... SQL` → exit `0` (`NOTICE: total=7581 distinct_pair=7581 duplicate=0`).
+- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/014_grid_vs_finish_mat.sql` → exit `0` (`BEGIN`, `CREATE TABLE`, `TRUNCATE TABLE`, `INSERT 0 7581`, `CREATE VIEW`, `COMMIT`; existing-table notice only).
 - Gate #2 structural DO block (`relkind`, PK order, facade dependency check) → exit `0`.
 - Gate #3 parity DO block (3 deterministic `analytic_ready` sessions, global rowcount equality, bidirectional `EXCEPT ALL`) → exit `0`.
 - `npm --prefix web run build` → exit `0`.
-- `npm --prefix web run typecheck` → exit `2`.
+- `npm --prefix web run typecheck` → exit `0`.
 - `npm --prefix web run test:grading` → exit `0`.
 
 Scope-diff result:
 - `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/slices/03-grid-vs-finish.md` and `sql/014_grid_vs_finish_mat.sql` only.
-- That path set is in scope. The slice file is explicitly allowed by the audit policy.
+- That path set is a subset of the allowed scope. The slice file is explicitly allowed by the audit policy.
 
 Criterion-by-criterion:
 - `sql/014_grid_vs_finish_mat.sql` is substantively correct. It creates `core.grid_vs_finish_mat` as a base table with `PRIMARY KEY (session_key, driver_number)`, repopulates from `core_build.grid_vs_finish`, and swaps `core.grid_vs_finish` to a thin facade via `CREATE OR REPLACE VIEW` [sql/014_grid_vs_finish_mat.sql](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/sql/014_grid_vs_finish_mat.sql:12).
 - Gate #0 verified the claimed grain before DDL: `total=7581`, `distinct_pair=7581`, `duplicate=0`.
-- Gate #2 verified the storage/view shape and that `core.grid_vs_finish` depends only on `core.grid_vs_finish_mat`.
+- Gate #1 applied cleanly against the live database and re-populated 7,581 rows.
+- Gate #2 verified the storage/view shape, PK column order, and that `core.grid_vs_finish` depends only on `core.grid_vs_finish_mat`.
 - Gate #3 verified global rowcount equality and bidirectional session-scoped `EXCEPT ALL` parity for the deterministic three-session selector.
-- `npm --prefix web run typecheck` fails in this worktree because `web/tsconfig.json` includes `.next/types/**/*.ts`, but those generated files are absent when `tsc --noEmit` is run directly. Observed error: `TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/web/.next/types/app/api/admin/perf-summary/route.ts' not found.` The command then reports the same missing-file failure for the rest of the `.next/types` entries. That breaks the acceptance criterion requiring `npm --prefix web run typecheck` to exit `0`.
-- The slice file itself is not a scope-creep issue at this revision. `git diff integration/perf-roadmap -- diagnostic/slices/03-grid-vs-finish.md` is empty, so the branch is not carrying a current content delta against `integration/perf-roadmap` for that path.
-
-Required revision:
-- Fix the web typecheck gate so `npm --prefix web run typecheck` succeeds from a clean worktree. The current failure is in the existing typecheck/build artifact contract, not in `sql/014_grid_vs_finish_mat.sql`.
+- The web regression gates all passed locally in this worktree: build, typecheck, and grading tests.
 
 ## Plan-audit verdict (round 1)
 
