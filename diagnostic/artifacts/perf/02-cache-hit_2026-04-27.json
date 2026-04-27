@@ -1,0 +1,42 @@
+{
+  "slice_id": "02-cache-hit-assertion",
+  "captured_at": "2026-04-27T05:01:29.729Z",
+  "model": "claude-sonnet-4-6",
+  "anthropic_version": "2023-06-01",
+  "model_minimum_cache_tokens": 1024,
+  "static_prefix_bytes": 976,
+  "padding_bytes": 12822,
+  "cached_blocks": [
+    {
+      "role": "padding",
+      "bytes": 12822
+    },
+    {
+      "role": "production_prefix",
+      "bytes": 976
+    }
+  ],
+  "cached_system_tokens": 2858,
+  "cold": {
+    "response_id": "msg_016QUEZ6h47LSLHaGwyFUqKA",
+    "usage": {
+      "input_tokens": 82,
+      "output_tokens": 207,
+      "cache_creation_input_tokens": 2851,
+      "cache_read_input_tokens": 0
+    }
+  },
+  "warm": {
+    "response_id": "msg_01PTRMvWg61dVufMcLswHKhb",
+    "usage": {
+      "input_tokens": 3,
+      "output_tokens": 200,
+      "cache_creation_input_tokens": 79,
+      "cache_read_input_tokens": 2851
+    }
+  },
+  "delta": {
+    "input_tokens_saved": 79,
+    "cache_read_input_tokens_warm": 2851
+  }
+}
