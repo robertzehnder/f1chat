@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-hit-assertion
 phase: 2
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T01:02:00-04:00
+updated: 2026-04-27T01:10:58-04:00
 ---
 
 ## Goal
@@ -175,7 +175,32 @@ Rollback: `git revert <commit>` removes the new test and artifact. Risk is low: 
 - [x] Production code under `web/src/lib/` is unchanged by this slice (verified by `git diff --name-only integration/perf-roadmap...HEAD` after commit — only the slice file, the new test file, and the artifact JSON appear in the diff).
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS**
+
+[slice:02-cache-hit-assertion][pass]
+
+Gate exit codes observed locally:
+- `cd web && npm run typecheck` -> exit 0.
+- `cd web && npm run test:grading` -> exit 0.
+- `cd web && npm run build` -> exit 0.
+- `cd web && OPENF1_RUN_CACHE_BENCHMARK=1 ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" node --test scripts/tests/cache-benchmark.test.mjs` -> first attempt exit 1 because `cold.usage.cache_read_input_tokens` was `2851`, matching the test's documented stale-cache TTL failure mode. After waiting 320 seconds, the same command was rerun and exited 0.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/artifacts/perf/02-cache-hit_2026-04-27.json`, `diagnostic/slices/02-cache-hit-assertion.md`, and `web/scripts/tests/cache-benchmark.test.mjs`.
+- This is within the expected changed files plus the implicit slice-file allowance.
+
+Acceptance criteria:
+- PASS: `web/scripts/tests/cache-benchmark.test.mjs` exists and skips cleanly when `OPENF1_RUN_CACHE_BENCHMARK` is unset; `npm run test:grading` reported `# SKIP OPENF1_RUN_CACHE_BENCHMARK not set` and exited 0.
+- PASS: The live benchmark uses direct `globalThis.fetch` calls to Anthropic `count_tokens` and `messages`, with `paddedSystem` built once as `[padding block, production prefix block]`. Both blocks carry `cache_control: { type: "ephemeral" }`; the production block comes from `buildSynthesisRequestParams(input).system[0]`.
+- PASS: The benchmark hard-codes `MIN_CACHE_TOKENS_BY_MODEL`, uses deterministic committed `PADDING_TEXT`, fails on unknown models, and checks `cachedSystemTokens >= minCacheTokens` before issuing Messages calls. The successful live artifact recorded `cached_system_tokens: 2858` and `model_minimum_cache_tokens: 1024`.
+- PASS: The test asserts `warm.usage.cache_read_input_tokens > 0` and `cold.usage.cache_read_input_tokens === 0`. The successful live artifact recorded cold read `0` and warm read `2851`.
+- PASS: The artifact at `diagnostic/artifacts/perf/02-cache-hit_2026-04-27.json` records `model`, `anthropic_version`, `model_minimum_cache_tokens`, `static_prefix_bytes`, `padding_bytes`, `cached_blocks` in send-order, `cached_system_tokens`, cold/warm `usage` blocks with all four required fields, and `delta`.
+- PASS: `npm run typecheck`, `npm run test:grading`, and `npm run build` all succeeded offline.
+- PASS: Production code under `web/src/lib/` is unchanged by this slice; the scope diff contains no production source files.
+
+Additional check:
+- The live rerun refreshed `diagnostic/artifacts/perf/02-cache-hit_2026-04-27.json` with response IDs `msg_01GKtZMRCwYFduvmFGbZ2gej` and `msg_01C9UhyzU3vrQFEgDXu1Btut`, preserving the required artifact shape.
 
 ## Plan-audit verdict (round 1)
 

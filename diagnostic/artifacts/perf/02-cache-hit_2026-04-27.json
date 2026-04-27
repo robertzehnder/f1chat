@@ -1,6 +1,6 @@
 {
   "slice_id": "02-cache-hit-assertion",
-  "captured_at": "2026-04-27T05:01:29.729Z",
+  "captured_at": "2026-04-27T05:10:38.906Z",
   "model": "claude-sonnet-4-6",
   "anthropic_version": "2023-06-01",
   "model_minimum_cache_tokens": 1024,
@@ -18,19 +18,19 @@
   ],
   "cached_system_tokens": 2858,
   "cold": {
-    "response_id": "msg_016QUEZ6h47LSLHaGwyFUqKA",
+    "response_id": "msg_01GKtZMRCwYFduvmFGbZ2gej",
     "usage": {
       "input_tokens": 82,
-      "output_tokens": 207,
+      "output_tokens": 172,
       "cache_creation_input_tokens": 2851,
       "cache_read_input_tokens": 0
     }
   },
   "warm": {
-    "response_id": "msg_01PTRMvWg61dVufMcLswHKhb",
+    "response_id": "msg_01C9UhyzU3vrQFEgDXu1Btut",
     "usage": {
       "input_tokens": 3,
-      "output_tokens": 200,
+      "output_tokens": 176,
       "cache_creation_input_tokens": 79,
       "cache_read_input_tokens": 2851
     }
