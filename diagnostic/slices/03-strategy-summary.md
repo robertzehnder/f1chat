@@ -1,11 +1,11 @@
 ---
 slice_id: 03-strategy-summary
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T12:40:50-04:00
+updated: 2026-04-27T12:41:45-04:00
 ---
 
 ## Goal
@@ -238,7 +238,33 @@ npm --prefix web run test:grading
   ```
 
 ## Slice-completion note
-(filled by Claude)
+
+- **Branch:** `slice/03-strategy-summary` (off `integration/perf-roadmap`).
+- **Implementation commit:** filled in by the same commit that flips `status=awaiting_audit` (see `git log slice/03-strategy-summary`).
+- **Files changed (verified `git diff --name-only integration/perf-roadmap...HEAD`):**
+  - `sql/012_strategy_summary_mat.sql` (new)
+  - `diagnostic/slices/03-strategy-summary.md` (frontmatter + this note only)
+  No other files were touched. No `.parity.sql`, no TypeScript contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[01]_*.sql`.
+- **Decisions executed verbatim from the approved plan:**
+  - Storage relation is a real base table `core.strategy_summary_mat` with `PRIMARY KEY (session_key, driver_number)`. The 21 columns are declared in the exact order, names, and types of the public `core.strategy_summary` view (`sql/007_semantic_summary_contracts.sql:159` ff.): `BIGINT` for `session_key`/`meeting_key`/`total_stints`/`pit_stop_count`/`pit_event_rows`; `INTEGER` for `year`/`driver_number`/`opening_stint_laps`/`closing_stint_laps`/`shortest_stint_laps`/`longest_stint_laps`; `TEXT` for `session_name`/`session_type`/`country_name`/`location`/`driver_name`/`team_name`/`strategy_type`; `TEXT[]` for `compounds_used`; `INTEGER[]` for `pit_laps`; `NUMERIC` for `total_pit_duration_seconds`.
+  - Initial population at migration time via `TRUNCATE` then `INSERT INTO core.strategy_summary_mat SELECT * FROM core_build.strategy_summary` — idempotent on re-apply, and the bulk insert doubles as the grain assertion (a non-unique grain on `(session_key, driver_number)` would have aborted with a PK-violation and rolled the transaction back).
+  - Facade swap uses `CREATE OR REPLACE VIEW core.strategy_summary AS SELECT * FROM core.strategy_summary_mat;` — **not** `DROP VIEW … CREATE VIEW`. The dependent `core.pit_cycle_summary` (`sql/007_semantic_summary_contracts.sql:419`) would have blocked any drop. The replace succeeds because the storage table mirrors the original view's projection signature exactly.
+  - One numbered SQL migration (`sql/012_strategy_summary_mat.sql`); no TypeScript contract, no `.mjs` parity test (the round-0 `web/src/lib/contracts/strategySummary.ts` and `web/scripts/tests/parity-strategy-summary.test.mjs` were explicitly removed from scope by the approved plan).
+- **Gate command exit codes (run in order):**
+  1. `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/012_strategy_summary_mat.sql` → exit `0`. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 5554 / CREATE VIEW / COMMIT`.
+  2. Structural-assertion `DO` block (`relkind='r'` for `core.strategy_summary_mat`, `relkind='v'` for `core.strategy_summary`, `pg_constraint`-derived PK column array equals `['session_key','driver_number']` in that order) → exit `0`. Output: `DO`.
+  3. Parity heredoc (deterministic 3-session selector via `core.session_completeness` `analytic_ready` ASC, global `count(*)` equality `core_build.strategy_summary` vs `core.strategy_summary_mat`, plus per-session bidirectional `EXCEPT ALL`) → exit `0`. Output: `DO` (no `RAISE EXCEPTION` branches fired).
+  4. `npm --prefix web run build` → exit `0`. Next.js 15.5.15 production build completed; all 21 routes compiled successfully.
+  5. `npm --prefix web run typecheck` → exit `0`. `tsc --noEmit` reported no errors.
+  6. `npm --prefix web run test:grading` → exit `0`. 31 tests, 21 pass, 10 skipped (the skipped tests gate on `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1` / `OPENF1_RUN_CACHE_BENCHMARK`, which is the expected default in this loop), 0 fail.
+- **Database side effects observed:**
+  - `INSERT 0 5554` rows materialized into `core.strategy_summary_mat` from `core_build.strategy_summary` — global rowcount equality with `core_build.strategy_summary` was independently re-asserted by the parity gate's `count(*)` comparison.
+  - `core.strategy_summary` is now a thin facade view over `core.strategy_summary_mat`; the dependent `core.pit_cycle_summary` was preserved unchanged through the `CREATE OR REPLACE VIEW` swap (no dependent objects were dropped or recreated).
+- **Self-checks:**
+  - `git diff --name-only integration/perf-roadmap...HEAD` confirms only the two expected paths changed.
+  - The slice file edits are confined to the frontmatter (`status`, `owner`, `updated`) and this `Slice-completion note`; no plan-body edits, no edits to prior `## Plan-audit verdict` sections beyond the round-1 checkboxes that were already ticked at plan-revise time.
+  - No scope alarms.
+- **Frontmatter transition:** `status=awaiting_audit`, `owner=codex`, `updated=2026-04-27T12:41:45-04:00`.
 
 ## Audit verdict
 (filled by Codex)
