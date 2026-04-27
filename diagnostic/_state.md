@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-27T15:03:18Z
+# Project state — last updated: 2026-04-27T15:44:11Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -11,7 +11,7 @@ accumulated context the loop carries between slices._
 | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 1 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 2 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 3 | 13 | 2 | 0 | 11 | 0 | 0 | 0 | 0 | 0 |
+| 3 | 13 | 3 | 0 | 10 | 0 | 0 | 0 | 0 | 0 |
 | 4 | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
 | 6 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `7d6ee18` merge: 03-laps-enriched-grain-discovery [pass] — 2026-04-27
 - `5ec9cea` merge: 03-driver-session-summary-prototype [pass] — 2026-04-27
 - `67bdeff` merge: 03-core-build-schema [pass] — 2026-04-27
 - `6fb3c6a` merge: 02-cache-hit-assertion [pass] — 2026-04-27
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `eb5a31a` merge: 01-baseline-snapshot [pass] — 2026-04-26
 - `c0993ea` merge: 01-perf-summary-route [pass] — 2026-04-26
 - `551dedc` merge: 01-route-stage-timings [pass] — 2026-04-26
-- `4621b9f` merge: 01-perf-trace-helpers [pass] — 2026-04-25
 
 ## Open architectural decisions
 
