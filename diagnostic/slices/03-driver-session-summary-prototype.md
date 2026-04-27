@@ -215,7 +215,7 @@ npm --prefix web run test:grading
 
 ### Commit hashes (this branch only)
 - `0b094ef` — `[slice:03-driver-session-summary-prototype][awaiting-audit]` SQL migration + slice-file flip + initial completion note.
-- `<META_COMMIT_HASH>` — `[slice:03-driver-session-summary-prototype][awaiting-audit]` fills the work-commit hash above (slice-file metadata only).
+- `906417e` — `[slice:03-driver-session-summary-prototype][awaiting-audit]` fills the work-commit hash above (slice-file metadata only).
 
 ### Decisions made during implementation
 - Implemented exactly as the approved plan §1: real table + facade view, single transaction, primary key `(session_key, driver_number)`, `TRUNCATE` + `INSERT … SELECT *` from `core_build.driver_session_summary` for initial population.
