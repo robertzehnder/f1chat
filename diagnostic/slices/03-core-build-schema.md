@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T14:11:31Z
+updated: 2026-04-27T10:13:01-04:00
 ---
 
 ## Goal
@@ -194,7 +194,30 @@ npm --prefix web run test:grading
 - Rollback: `git revert <commit>` reverts the SQL file. To remove the schema from the live DB after revert: `DROP SCHEMA core_build CASCADE;` (safe — nothing else depends on `core_build` until later slices land).
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/03-core-build-schema`.
+- Commit: filled at commit time below — see `[slice:03-core-build-schema][awaiting-audit]` commit on this branch for the diff.
+- Files changed (matches "Changed files expected" exactly):
+  - `sql/008_core_build_schema.sql` (new — single transaction; `CREATE SCHEMA IF NOT EXISTS core_build` plus eleven `CREATE OR REPLACE VIEW` statements in the dependency-safe order from the slice plan).
+  - `diagnostic/slices/03-core-build-schema.md` (this file — frontmatter + this note only).
+- Implementation decisions:
+  - Each `core_build.<name>` view body is the verbatim SELECT body of the corresponding `core.<name>` view from `sql/006_semantic_lap_layer.sql` / `sql/007_semantic_summary_contracts.sql`, with the two rewrites required by Steps §1 applied: (i) the schema qualification on the `CREATE` line, and (ii) every reference to a hot contract within the SELECT body rewritten from `core.<name>` to `core_build.<name>`. Non-hot relations (`core.lap_semantic_bridge`, `core.valid_lap_policy`, `core.session_drivers`, `core.sessions`, `core.compound_alias_lookup`, all `raw.*` tables) are preserved unchanged so the source-definition graph is closed under itself for the eleven hot contracts only.
+  - Views are emitted in this order so no view forward-references another `core_build.*` view: `laps_enriched`, `grid_vs_finish`, `stint_summary`, `strategy_summary`, `race_progression_summary`, `lap_phase_summary`, `lap_context_summary`, `telemetry_lap_bridge`, `driver_session_summary`, `pit_cycle_summary`, `strategy_evidence_summary`. Postgres `CREATE OR REPLACE VIEW` does not allow forward references; this order resolves the topological constraint.
+  - The whole migration is wrapped in a single `BEGIN; … COMMIT;`, so a partial apply cannot leave the schema half-built.
+  - No materialized views, `_mat` tables, refresh script edits, public-view facade swap, ingest hooks, or TypeScript/test files were created. Per Out-of-scope: those each have dedicated slices.
+- Gate command exit codes (run in this worktree against `$DATABASE_URL`):
+  1. `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/008_core_build_schema.sql` → exit `0`. Output: `BEGIN`, `CREATE SCHEMA`, eleven × `CREATE VIEW`, `COMMIT`.
+  2. `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL' DO …` (eleven-view-existence check) → exit `0`. The DO block did not raise — confirms exactly eleven `core_build.*` views exist with the expected names.
+  3. `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' DO …` (deterministic 3-session bidirectional `EXCEPT ALL` parity, as inline heredoc — no `.parity.sql` file created) → exit `0`. The DO block did not raise either of its two `RAISE EXCEPTION` branches, which means: (a) `core.session_completeness` returned exactly 3 `analytic_ready` sessions for the deterministic selector, and (b) for every one of the 33 `(contract, session_key)` pairs (11 contracts × 3 sessions), the bidirectional `EXCEPT ALL` count was `0`. Multiplicity-preserving parity holds.
+  4. `npm --prefix web run build` → exit `0`. Next.js production build completed; route table emitted (no schema-related regressions).
+  5. `npm --prefix web run typecheck` → exit `0`. `tsc --noEmit` clean.
+  6. `npm --prefix web run test:grading` → exit `0`. tests=31 pass=21 skipped=10 fail=0 (the 10 skips are guarded by `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1` and are unrelated to this slice).
+- Self-checks against acceptance criteria:
+  - [x] `core_build` schema exists (gate 1 emits `CREATE SCHEMA`; gate 2 implicitly verifies — its `information_schema.views` query targets `table_schema = 'core_build'` and finds 11 rows).
+  - [x] All eleven `core_build.<name>` views exist (gate 2 exit `0`).
+  - [x] Bidirectional `EXCEPT ALL` parity returns `0` for every (contract, session_key) pair across the 3 deterministic `analytic_ready` sessions (gate 3 exit `0`; the `RAISE EXCEPTION` branch on `diff <> 0` did not fire, and the 3-session minimum check passed).
+  - [x] `npm --prefix web run build`, `…typecheck`, `…test:grading` each exited `0`.
+  - [x] Only `sql/008_core_build_schema.sql` (new) and this slice file (frontmatter + this Slice-completion note) were modified — verified via `git status` showing exactly those two paths. No `.parity.sql` file, no contract `.ts`, no `.mjs` test, no edits to `sql/00[1-7]_*.sql`, no application code.
 
 ## Audit verdict
 _Pending implementation. Filled by Codex post-implementation (PASS / FAIL). Plan-audit
