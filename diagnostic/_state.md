@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-27T03:55:00Z
+# Project state — last updated: 2026-04-27T04:13:19Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -9,8 +9,18 @@ accumulated context the loop carries between slices._
 | Phase | Total | Done | Pending | Pending plan-audit | Revising plan | Awaiting audit | Ready to merge | Blocked | Missing |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 1 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| ? | 71 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 71 |
+| 1 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 2 | 4 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
+| 3 | 13 | 0 | 0 | 13 | 0 | 0 | 0 | 0 | 0 |
+| 4 | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
+| 5 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
+| 6 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
+| 7 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
+| 8 | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 |
+| 9 | 21 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 |
+| 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
+| 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
+| 12 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
 
 ## Latest benchmark headline
 
@@ -26,15 +36,15 @@ accumulated context the loop carries between slices._
 - File: `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.json`
 - Slowest stages by p50:
   - `total` p50=12479.77ms p95=27861.57ms n=50
-  - `resolve_db` p50=6990.80ms p95=16343.94ms n=50
-  - `synthesize_llm` p50=4589.59ms p95=7429.50ms n=46
+  - `resolve_db` p50=6990.8ms p95=16343.94ms n=50
+  - `synthesize_llm` p50=4589.59ms p95=7429.5ms n=46
   - `sqlgen_llm` p50=3280.96ms p95=13902.69ms n=12
   - `repair_llm` p50=2345.44ms p95=5434.11ms n=2
 - Overall p50=12479.77ms p95=27861.57ms
-- `runtime_classify` and `resolve_db` are now sequential and de-aliased (`runtime_classify` p50=0.01ms, `resolve_db` p50=6990.80ms).
 
 ## Recent slice merges (last 10)
 
+- `44cde24` merge: 01-perf-trace-fix-spans [pass] — 2026-04-27
 - `eb5a31a` merge: 01-baseline-snapshot [pass] — 2026-04-26
 - `c0993ea` merge: 01-perf-summary-route [pass] — 2026-04-26
 - `551dedc` merge: 01-route-stage-timings [pass] — 2026-04-26
@@ -44,7 +54,6 @@ accumulated context the loop carries between slices._
 - `87e1e1b` merge: 00-font-network-doc [pass] — 2026-04-25
 - `38c8704` merge: 00-dep-patches [pass] — 2026-04-25
 - `c2c2442` merge: 00-ci-workflow [pass] — 2026-04-25
-- `d395a74` merge: 00-codex-handoff-protocol [pass] — 2026-04-25
 
 ## Open architectural decisions
 
