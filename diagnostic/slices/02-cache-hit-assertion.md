@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-hit-assertion
 phase: 2
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T05:30:00Z
+updated: 2026-04-27T04:45:46Z
 ---
 
 ## Goal
@@ -147,4 +147,19 @@ Rollback: `git revert <commit>` removes the new test and artifact. Risk is low: 
 
 ### Notes (informational only — no action)
 - Prior round action items are resolved in the current plan body.
+- `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify how the live benchmark guarantees a cacheable static prefix of at least Anthropic's documented minimum length for the selected model, because the current `buildSynthesisRequestParams(input).system[0].text` is too short for Sonnet prompt caching and the warm call can legitimately report `cache_read_input_tokens: 0`.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- Prior round action items remain resolved in the current plan body.
 - `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
