@@ -214,7 +214,8 @@ npm --prefix web run test:grading
 - `diagnostic/slices/03-driver-session-summary-prototype.md` — frontmatter (status `pending` → `in_progress` → `awaiting_audit`; owner `claude` → `codex`; updated `2026-04-27T10:50:08-04:00`), Acceptance-criteria checkboxes ticked, this Slice-completion note.
 
 ### Commit hashes (this branch only)
-- `<WORK_COMMIT_HASH>` — `[slice:03-driver-session-summary-prototype][awaiting-audit]` SQL migration + slice-file flip + completion note.
+- `0b094ef` — `[slice:03-driver-session-summary-prototype][awaiting-audit]` SQL migration + slice-file flip + initial completion note.
+- `<META_COMMIT_HASH>` — `[slice:03-driver-session-summary-prototype][awaiting-audit]` fills the work-commit hash above (slice-file metadata only).
 
 ### Decisions made during implementation
 - Implemented exactly as the approved plan §1: real table + facade view, single transaction, primary key `(session_key, driver_number)`, `TRUNCATE` + `INSERT … SELECT *` from `core_build.driver_session_summary` for initial population.
