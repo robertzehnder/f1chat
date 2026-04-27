@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-hit-assertion
 phase: 2
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T05:11:00Z
+updated: 2026-04-27T05:30:00Z
 ---
 
 ## Goal
@@ -48,7 +48,7 @@ No `DATABASE_URL` is required (the test does not run SQL or call into chatRuntim
    Headers: `content-type: application/json`, `x-api-key: <ANTHROPIC_API_KEY>`, `anthropic-version: 2023-06-01`. The `model` value must be read from `process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6"` to match the production default in `web/src/lib/anthropic.ts`.
 5. For each response, parse JSON and read `payload.usage` keeping these fields explicitly: `input_tokens`, `output_tokens`, `cache_creation_input_tokens` (may be `0`/absent on warm), `cache_read_input_tokens` (expected `0` cold, `> 0` warm). Also record `payload.model` and `payload.id` for traceability.
 6. Assert `warm.usage.cache_read_input_tokens > 0`. Also assert `cold.usage.cache_read_input_tokens === 0` (or absent) so the test fails loudly if the cold call accidentally hits a pre-existing cache entry from a prior run within the same 5-minute TTL window — re-running after the TTL expires is the documented mitigation.
-7. Write the artifact JSON. Default path: `diagnostic/artifacts/perf/02-cache-hit_<DATE>.json` where `<DATE>` is computed at runtime as `new Date().toISOString().slice(0, 10)` (UTC, `YYYY-MM-DD`). If `OPENF1_CACHE_BENCHMARK_OUT` is set, use that path instead. Artifact shape:
+7. Write the artifact JSON. Default path: `<repo_root>/diagnostic/artifacts/perf/02-cache-hit_<DATE>.json` where `<DATE>` is computed at runtime as `new Date().toISOString().slice(0, 10)` (UTC, `YYYY-MM-DD`). The test must resolve this path from its own location (the test file lives at `web/scripts/tests/cache-benchmark.test.mjs`, so the repo root is `path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..")`); do NOT use `process.cwd()`, so the artifact lands in `<repo_root>/diagnostic/...` regardless of which directory the live gate is invoked from. If `OPENF1_CACHE_BENCHMARK_OUT` is set, use that path verbatim instead (the operator is responsible for absolute vs relative resolution in that case). Artifact shape:
    ```json
    {
      "slice_id": "02-cache-hit-assertion",
@@ -96,7 +96,7 @@ cd web && OPENF1_RUN_CACHE_BENCHMARK=1 ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
 - [ ] `web/scripts/tests/cache-benchmark.test.mjs` exists and skips cleanly (exit 0) when `OPENF1_RUN_CACHE_BENCHMARK` is unset, so `npm run test:grading` remains offline.
 - [ ] When run with `OPENF1_RUN_CACHE_BENCHMARK=1` and a valid `ANTHROPIC_API_KEY`, the test issues two real Anthropic Messages calls reusing the byte-identical `system[0].text` from `buildSynthesisRequestParams(input)`.
 - [ ] The test asserts `warm.usage.cache_read_input_tokens > 0` and `cold.usage.cache_read_input_tokens` is `0` or absent.
-- [ ] Artifact JSON at `diagnostic/artifacts/perf/02-cache-hit_<DATE>.json` records `model`, `anthropic_version`, `static_prefix_bytes`, and the cold/warm `usage` blocks with all four fields (`input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`), plus a `delta` block.
+- [ ] Artifact JSON at `<repo_root>/diagnostic/artifacts/perf/02-cache-hit_<DATE>.json` (path resolved from the test file location, not `process.cwd()`, so the live gate may be run from either `web/` or the repo root and the artifact still lands under `<repo_root>/diagnostic/artifacts/perf/`) records `model`, `anthropic_version`, `static_prefix_bytes`, and the cold/warm `usage` blocks with all four fields (`input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`), plus a `delta` block.
 - [ ] `npm run typecheck`, `npm run test:grading`, and `npm run build` succeed offline.
 - [ ] Production code under `web/src/lib/` is unchanged by this slice (the benchmark only imports `buildSynthesisRequestParams`; it does not modify it).
 
@@ -141,7 +141,7 @@ Rollback: `git revert <commit>` removes the new test and artifact. Risk is low: 
 ### High
 
 ### Medium
-- [ ] Specify that the default `diagnostic/artifacts/perf/02-cache-hit_<DATE>.json` path is resolved from the repository root, or change the live gate command to run from the repository root, because the current live gate runs from `web/` and an unqualified relative path would write under `web/diagnostic/...`.
+- [x] Specify that the default `diagnostic/artifacts/perf/02-cache-hit_<DATE>.json` path is resolved from the repository root, or change the live gate command to run from the repository root, because the current live gate runs from `web/` and an unqualified relative path would write under `web/diagnostic/...`.
 
 ### Low
 
