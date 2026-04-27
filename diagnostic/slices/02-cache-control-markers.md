@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-control-markers
 phase: 2
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T00:31:25-04:00
+updated: 2026-04-27T04:35:39Z
 ---
 
 ## Goal
@@ -121,7 +121,31 @@ Rollback: `git revert <commit>`. Risk is low: the change is a structural reshape
 - [x] `generateSqlWithAnthropic` and `repairSqlWithAnthropic` unchanged — verified by diff (only the synthesis call site and a new export were modified).
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS**
+
+[slice:02-cache-control-markers][pass]
+
+Gate exit codes observed locally:
+- `cd web && npm run typecheck` -> exit 0.
+- `cd web && npm run test:grading` -> exit 0.
+- `cd web && npm run build` -> exit 0.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/02-cache-control-markers.md`, `web/scripts/tests/cache-control-markers.test.mjs`, and `web/src/lib/anthropic.ts`.
+- This is within the expected changed files plus the implicit slice-file allowance.
+
+Acceptance criteria:
+- PASS: `buildSynthesisRequestParams` is exported from `web/src/lib/anthropic.ts` and its function body only calls `buildSynthesisPromptParts(input)` and constructs return data; it does not read `process.env`, call `fetch`, or perform I/O. The offline test deletes `ANTHROPIC_API_KEY` and `DATABASE_URL` and monkey-patches `globalThis.fetch` to fail if invoked.
+- PASS: `synthesizeAnswerWithAnthropic` now sends `system` from `buildSynthesisRequestParams(input)`, a one-element text block array whose `text` is the byte-identical `buildSynthesisPromptParts(input).staticPrefix` and whose `cache_control` is `{ type: "ephemeral" }`.
+- PASS: The outgoing user message remains `{ role: "user", content: dynamicSuffix }`; the test asserts `content` is a plain string and the message has no own `cache_control` property.
+- PASS: No synthesis HTTP headers changed. The header block still contains `content-type`, `x-api-key`, and `anthropic-version: 2023-06-01`; no `anthropic-beta` header was introduced.
+- PASS: `web/scripts/tests/cache-control-markers.test.mjs` ran under `npm run test:grading` with no API-key, database, or network dependency; subtest 1 passed.
+- PASS: `npm run typecheck` and `npm run build` succeeded.
+- PASS: `generateSqlWithAnthropic` and `repairSqlWithAnthropic` are unchanged by the diff and have no `cache_control` markers.
+
+Additional checks:
+- `rg -n "cache_control|anthropic-beta"` shows cache markers only in the synthesis request builder and its test, and no `anthropic-beta` header.
 
 ## Plan-audit verdict (round 1)
 
