@@ -1,11 +1,11 @@
 ---
 slice_id: 03-stint-summary
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T16:20:40Z
+updated: 2026-04-27T12:21:48-04:00
 ---
 
 ## Goal
@@ -237,7 +237,33 @@ npm --prefix web run test:grading
   ```
 
 ## Slice-completion note
-(filled by Claude)
+
+- **Branch:** `slice/03-stint-summary` (off `integration/perf-roadmap`).
+- **Implementation commit:** filled in by the same commit that flips `status=awaiting_audit` (see `git log slice/03-stint-summary`).
+- **Files changed (verified `git diff --name-only integration/perf-roadmap...HEAD`):**
+  - `sql/011_stint_summary_mat.sql` (new)
+  - `diagnostic/slices/03-stint-summary.md` (frontmatter + this note only)
+  No other files were touched. No `.parity.sql`, no TypeScript contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/010_*.sql`.
+- **Decisions executed verbatim from the approved plan:**
+  - Storage relation is a real base table `core.stint_summary_mat` with `PRIMARY KEY (session_key, driver_number, stint_number)`. The 24 columns are declared in the exact order, names, and types of the public `core.stint_summary` view (`sql/007_semantic_summary_contracts.sql:98` ff.): `BIGINT` for `session_key`/`meeting_key`; `INTEGER` for `year`/`driver_number`/`stint_number`/`lap_start`/`lap_end`/`tyre_age_at_start`/`stint_length_laps`; `TEXT` for `session_name`/`session_type`/`country_name`/`location`/`driver_name`/`team_name`/`compound_name`; `BOOLEAN` for `fresh_tyre`; `BIGINT` for `lap_count`/`valid_lap_count`; `NUMERIC` for `avg_lap`/`best_lap`/`avg_valid_lap`/`best_valid_lap`/`degradation_per_lap`.
+  - Initial population at migration time via `TRUNCATE` then `INSERT INTO core.stint_summary_mat SELECT * FROM core_build.stint_summary` — idempotent on re-apply, and the bulk insert doubles as the grain assertion (a non-unique grain would have aborted with a PK-violation and rolled the transaction back).
+  - Facade swap uses `CREATE OR REPLACE VIEW core.stint_summary AS SELECT * FROM core.stint_summary_mat;` — **not** `DROP VIEW … CREATE VIEW`. The dependent `core.strategy_summary` (`sql/007_semantic_summary_contracts.sql:165`) would have blocked any drop. The replace succeeds because the storage table mirrors the original view's projection signature exactly.
+  - One numbered SQL migration (`sql/011_stint_summary_mat.sql`); no TypeScript contract, no `.mjs` parity test (the round-0 `web/src/lib/contracts/stintSummary.ts` and `web/scripts/tests/parity-stint-summary.test.mjs` were explicitly removed from scope by the approved plan).
+- **Gate command exit codes (run in order):**
+  1. `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/011_stint_summary_mat.sql` → exit `0`. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 20654 / CREATE VIEW / COMMIT`.
+  2. Structural-assertion `DO` block (`relkind='r'` for `core.stint_summary_mat`, `relkind='v'` for `core.stint_summary`, `pg_constraint`-derived PK column array equals `['session_key','driver_number','stint_number']` in that order) → exit `0`. Output: `DO`.
+  3. Parity heredoc (deterministic 3-session selector via `core.session_completeness` `analytic_ready` ASC, global `count(*)` equality `core_build.stint_summary` vs `core.stint_summary_mat`, plus per-session bidirectional `EXCEPT ALL`) → exit `0`. Output: `DO` (no `RAISE EXCEPTION` branches fired).
+  4. `npm --prefix web run build` → exit `0`. Next.js production build completed; all 19 routes compiled.
+  5. `npm --prefix web run typecheck` → exit `0`. `tsc --noEmit` reported no errors.
+  6. `npm --prefix web run test:grading` → exit `0`. 31 tests, 21 pass, 10 skipped (the skipped tests gate on `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`, which is the expected default in this loop), 0 fail.
+- **Database side effects observed:**
+  - `INSERT 0 20654` rows materialized into `core.stint_summary_mat` from `core_build.stint_summary` — global rowcount equality with `core_build.stint_summary` was independently re-asserted by the parity gate's `count(*)` comparison.
+  - `core.stint_summary` is now a thin facade view over `core.stint_summary_mat`; the dependent `core.strategy_summary` was preserved unchanged through the `CREATE OR REPLACE VIEW` swap (no dependent objects were dropped or recreated).
+- **Self-checks:**
+  - `git diff --name-only integration/perf-roadmap...HEAD` confirms only the two expected paths changed.
+  - The slice file edits are confined to the frontmatter (`status`, `owner`, `updated`) and this `Slice-completion note`; no plan-body edits, no edits to prior `## Plan-audit verdict` sections beyond the round-1 checkboxes that were already ticked at plan-revise time.
+  - No scope alarms.
+- **Frontmatter transition:** `status=awaiting_audit`, `owner=codex`, `updated=2026-04-27T12:21:48-04:00`.
 
 ## Audit verdict
 (filled by Codex)
