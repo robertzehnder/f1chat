@@ -305,9 +305,11 @@ Resume-as: ${resume_target}
 "The repair agent proposed protocol changes touching:
 $(printf '%s\n' "$diff_files" | sed 's/^/  - /')
 
-Two local commits on integration (not pushed):
-  HEAD     [loop-infra-repair][slice:$slice_id] — the protocol change
-  HEAD~?   [loop-infra-pending][slice:$slice_id][attempt:$attempt_n] — this blocked-state flip
+Two local commits on integration (not pushed). Note the order — the
+[loop-infra-pending] flip is committed AFTER the dispatcher amends the
+[loop-infra-repair] commit, so HEAD is the pending flip:
+  HEAD     [loop-infra-pending][slice:$slice_id][attempt:$attempt_n] — this blocked-state flip
+  HEAD~1   [loop-infra-repair][slice:$slice_id][attempt:$attempt_n] — the protocol change (round-11 M-4 fix)
 
 LIFECYCLE — runner has exited cleanly via circuit breaker. To resume:
 
@@ -355,31 +357,38 @@ resume_pending_loop_infra_repair() {
   local sentinel_dir="diagnostic/slices/.approved-loop-infra-repair"
   [[ -d "$sentinel_dir" ]] || return 0
 
-  # Iterate every sentinel file (slice IDs); ignore .gitkeep.
+  # Iterate every sentinel file; ignore .gitkeep.
+  #
+  # Round-10 H-1: every loop-infra-repair attempt has an `[attempt:N]`
+  # tag baked into all four state markers (sentinel filename, the
+  # [loop-infra-repair] commit subject, the [loop-infra-pending] commit
+  # subject, the [loop-infra-resumed] commit subject). Resume decisions
+  # MUST match the exact attempt number, not just the slice id, so a
+  # historical reverted attempt for the same slice cannot false-match
+  # the current one.
+  #
+  # Sentinel filename format: <slice_id>__attempt-<N>
+  # Commit subject format:    [<tag>][slice:<id>][attempt:<N>] <summary>
   for sentinel in "$sentinel_dir"/*; do
     [[ -f "$sentinel" ]] || continue
-    local fname
-    fname=$(basename "$sentinel")
-    [[ "$fname" == ".gitkeep" ]] && continue
-    local slice_id="$fname"
-
-    # Round-10 H-1: every loop-infra-repair attempt has an `[attempt:N]`
-    # tag baked into all four state markers (sentinel filename, the
-    # [loop-infra-repair] commit subject, the [loop-infra-pending] commit
-    # subject, the [loop-infra-resumed] commit subject). Resume decisions
-    # MUST match the exact attempt number, not just the slice id, so a
-    # historical reverted attempt for the same slice cannot false-match
-    # the current one.
-    #
-    # Sentinel filename format: <slice_id>__attempt-<N>
-    # Commit subject format:    [<tag>][slice:<id>][attempt:<N>] <summary>
-    local sentinel_basename attempt_n
+    local sentinel_basename slice_id attempt_n
     sentinel_basename=$(basename "$sentinel")
+    [[ "$sentinel_basename" == ".gitkeep" ]] && continue
+
+    # Round-11 H-1 fix: the prior parse set slice_id=<full filename>, so
+    # downstream greps looked for [slice:my-slice__attempt-2][attempt:2]
+    # and never matched. Now slice_id strips the suffix; attempt_n is
+    # extracted separately and validated to be numeric.
     if [[ "$sentinel_basename" != *__attempt-* ]]; then
       log "resume: sentinel '$sentinel_basename' missing __attempt-N suffix; skipping (legacy/malformed)"
       continue
     fi
+    slice_id="${sentinel_basename%__attempt-*}"
     attempt_n="${sentinel_basename##*__attempt-}"
+    if ! [[ "$attempt_n" =~ ^[0-9]+$ ]]; then
+      log "resume: sentinel '$sentinel_basename' has non-numeric attempt '$attempt_n'; skipping"
+      continue
+    fi
 
     # Round-10 L-4: stale-cleanup decisions depend on a fresh origin view.
     # If fetch fails, refuse to make ANY stale/cleanup decisions for this
@@ -482,6 +491,16 @@ _do_resume_loop_infra() {
       log "resume: [loop-infra-pending][attempt:$attempt_n] already on origin for $slice_id; skipping initial push"
     fi
 
+    # FAULT INJECTION POINT (round-11 M-2): after_initial_push_before_resumed_commit
+    # Only fires when both LOOP_TEST_MODE=1 (defense-in-depth gate, round-11 L)
+    # AND LOOP_TEST_INJECT_FAULT matches this site name. Used by verification
+    # step 26b to deterministically reproduce the "first push succeeded but
+    # crashed before flip+resumed-commit" recovery path.
+    if [[ "${LOOP_TEST_MODE:-0}" == "1" && "${LOOP_TEST_INJECT_FAULT:-}" == "after_initial_push_before_resumed_commit" ]]; then
+      log "TEST FAULT: injecting exit 137 at after_initial_push_before_resumed_commit"
+      exit 137
+    fi
+
     # 3. Flip slice file back to its pre-block state. The Resume-as: trailer
     #    is dispatcher-injected (round-10 M-2): dispatch_repair amended the
     #    [loop-infra-repair] commit to include `Resume-as: revising_plan` or
@@ -510,6 +529,17 @@ _do_resume_loop_infra() {
     flip_slice_status "$slice_id" "$resume_status" "claude"
     git add "diagnostic/slices/${slice_id}.md"
     git commit -m "[loop-infra-resumed][slice:${slice_id}][attempt:${attempt_n}] resume after user-approved repair" >/dev/null
+  fi
+
+  # FAULT INJECTION POINT (round-11 M-2): after_resumed_commit_before_final_push
+  # Only fires when both LOOP_TEST_MODE=1 AND LOOP_TEST_INJECT_FAULT matches.
+  # Used by verification step 26a to deterministically reproduce the
+  # "[loop-infra-resumed] commit exists locally but final push didn't happen"
+  # recovery path. The sentinel is retained on this exit (it's only removed
+  # at step 5 after the final push succeeds), which is exactly what we want.
+  if [[ "${LOOP_TEST_MODE:-0}" == "1" && "${LOOP_TEST_INJECT_FAULT:-}" == "after_resumed_commit_before_final_push" ]]; then
+    log "TEST FAULT: injecting exit 137 at after_resumed_commit_before_final_push"
+    exit 137
   fi
 
   # 4. Push (the resumed commit, plus any catch-up if origin moved).
@@ -894,6 +924,22 @@ cleanup_slice_worktree() {
     ( cd "$LOOP_MAIN_WORKTREE" && git worktree remove "$slice_worktree" --force ) 2>/dev/null || rm -rf "$slice_worktree"
   fi
   ( cd "$LOOP_MAIN_WORKTREE" && git worktree prune ) 2>/dev/null || true
+}
+
+# Round-11 L (merger sentinel cleanup): on slice merge, the merger calls
+# cleanup_slice_state which resets repair_count_<id>, plan_iter_count_<id>,
+# fail_count_<id>, and ALSO purges any leftover loop-infra-repair sentinels
+# for this slice id (across all attempt-N suffixes). Without this, a slice
+# that merged after a prior repair cycle could leave behind stale sentinel
+# files that would re-trigger the resume hook on the next runner start.
+# The sentinel format is `<slice_id>__attempt-<N>` so we glob all attempts.
+cleanup_slice_state() {
+  local slice_id="$1"
+  rm -f "$LOOP_STATE_DIR/repair_count_${slice_id}" \
+        "$LOOP_STATE_DIR/plan_iter_count_${slice_id}" \
+        "$LOOP_STATE_DIR/fail_count_${slice_id}"
+  # Glob all attempt-N sentinels for this slice id.
+  rm -f "$LOOP_MAIN_WORKTREE/diagnostic/slices/.approved-loop-infra-repair/${slice_id}__attempt-"*
 }
 ```
 
@@ -1443,6 +1489,7 @@ acquire repo lock
   ├─ commit "mark <id> done after auto-merge"
   ├─ git push integration  (single push includes merge + done commit)
   ├─ git branch -D slice/<id>; cleanup_slice_worktree
+  ├─ cleanup_slice_state <id>   ← round-11 L: also purges stale attempt-N sentinels
   ├─ scripts/loop/update_state.sh  (regenerates _state.md, separate commit + push)
 release repo lock
 ```
@@ -1794,43 +1841,21 @@ After landing Items 1–12 and stubbing the 71 slice files:
     - Dispatcher's `[loop-infra-repair]` commit (after amend) contains the trailer `Resume-as: revising` (NOT the default `revising_plan`).
     - On approval + restart, the resume hook reads the trailer and flips the slice to `revising`, not `revising_plan`.
 
-    **26a. Failure AFTER `[loop-infra-resumed]` commit exists locally (post-flip push fails):**
-    - Both `[loop-infra-repair]` and `[loop-infra-pending]` commits are local-only.
-    - Approval sentinel is touched.
-    - Runner is started; resume hook runs; FIRST push succeeds (both commits land on origin).
-    - Mock the SECOND push (`[loop-infra-resumed]`) to fail.
-    Verify mid-state:
-    - `[loop-infra-resumed]` commit exists locally on integration (one local-only commit).
-    - Origin already has `[loop-infra-repair]` + `[loop-infra-pending]`.
-    - Sentinel STILL exists.
-    - Runner exits with logged warning.
-    Restart with network restored. Verify:
-    - Resume hook is entered via the SENTINEL scan (round-9 H-1 fix — local-only commits search would also find `[loop-infra-resumed]`, but the sentinel is the trigger).
-    - Idempotency check detects existing local `[loop-infra-resumed]` and skips recreation.
-    - Final push succeeds; sentinel removed; loop continues.
-
-    **26b. Failure BEFORE `[loop-infra-resumed]` commit exists (round-9 H-1):**
-    - Both `[loop-infra-repair]` and `[loop-infra-pending]` commits are local-only.
-    - Approval sentinel is touched.
-    - Runner is started; resume hook runs; FIRST push succeeds (both commits on origin).
-    - Mock the runner to die HERE (kill -9) BEFORE the slice-status flip + commit step is reached.
-    Verify mid-state:
-    - Origin has `[loop-infra-repair]` + `[loop-infra-pending]`.
-    - NO local-only `[loop-infra-pending]` (the push succeeded).
-    - NO local `[loop-infra-resumed]` (we crashed first).
-    - Sentinel STILL exists.
-    Restart with network up. Verify:
-    - Resume hook is entered via SENTINEL scan (NOT via the prior round-8 commit scan, which would have found nothing local-only and incorrectly treated this as stale).
-    - The new "pending on origin" detector (`pending_anywhere`) sees `[loop-infra-pending]` on origin and routes into `_do_resume_loop_infra`.
-    - `_do_resume_loop_infra` finds no local `[loop-infra-resumed]`, skips the first-push step (origin already has the commits), proceeds to flip slice + commit + push.
-    - Final push succeeds; sentinel removed; loop continues.
+    **Round-11 M-2 prerequisite for both 26a + 26b:** the runner must export
+    `LOOP_TEST_MODE=1` in addition to `LOOP_TEST_INJECT_FAULT=...`. Without
+    `LOOP_TEST_MODE=1` the injection block is dead code (round-11 L gate).
 
 27. **Reject script offline behavior (round-8 M-3).** Run `reject_loop_infra_repair.sh <slice_id>` with `git fetch origin` mocked to fail. Verify:
     - Script refuses by default (exit 2 with clear network-failure message).
     - Override `reject_loop_infra_repair.sh <slice_id> --offline-local-only` proceeds with a loud warning.
     - Without the override, no destructive operation is performed.
 
-After all 27 verifications pass, the loop is ready for end-to-end kickoff.
+28. **Merger sentinel cleanup (round-11 L).** Synthesize a slice that completed a loop-infra-repair cycle (attempts 1+2) and was eventually merged. After the merger runs:
+    - Verify `diagnostic/slices/.approved-loop-infra-repair/<slice_id>__attempt-1` and `<slice_id>__attempt-2` are removed (both pruned by `cleanup_slice_state`).
+    - Verify `repair_count_<slice_id>`, `plan_iter_count_<slice_id>`, and `fail_count_<slice_id>` state files are removed.
+    - Restart the runner. Verify the resume hook does NOT re-fire for this slice (no leftover sentinels).
+
+After all 28 verifications pass, the loop is ready for end-to-end kickoff.
 
 ---
 
@@ -2020,13 +2045,30 @@ After all 27 verifications pass, the loop is ready for end-to-end kickoff.
 - `Resume-as:` fragility: resolved by dispatcher-injection (M-2).
 - 26b kill-point precision: resolved by `LOOP_TEST_INJECT_FAULT` env var (M-3).
 
-### Remaining open for Codex round 11
+### Resolved by Codex round-11 audit (1 High + 3 Medium + 2 L-answers)
 
-1. **Attempt-tag plumbing in `slice_helpers.sh`.** `determine_resume_target` and `flip_slice_status` need to know how to find the right `repair_count_<id>` value at the right moment. The dispatcher reads it AFTER incrementing in `dispatch_repair.sh` (per existing flow). The resume hook reads `[attempt:N]` from the sentinel filename. These are two independent paths into the same value. Confirming they stay in sync — the dispatcher writes attempt N to the sentinel filename when creating it, and the resume hook reads it back from the same filename. Codex agree?
+| Round-11 finding | How resolved |
+|---|---|
+| H-1: sentinel filename parsing bug — `slice_id="$fname"` left the `__attempt-N` suffix on slice_id, so all downstream greps for `[slice:...]` would never match | Resume hook now strips the suffix: `slice_id="${sentinel_basename%__attempt-*}"`; `attempt_n="${sentinel_basename##*__attempt-}"`; numeric validation rejects malformed names with a logged skip. See §4 Item 2 for the new for-sentinel-loop body. |
+| M-2: `LOOP_TEST_INJECT_FAULT` injection blocks were missing from the implementation pseudocode (only mentioned in verification) | Two explicit `if [[ ${LOOP_TEST_MODE:-0} == 1 && ${LOOP_TEST_INJECT_FAULT:-} == ... ]]; exit 137; fi` blocks now appear inside `_do_resume_loop_infra` at the named fault sites: after the initial push (before `[loop-infra-resumed]` commit) and after the resumed commit (before final push). |
+| M-3: duplicate/stale older 26a/26b verification block | Removed. Step 26 now has exactly one authoritative pair (26a + 26b) using the `LOOP_TEST_INJECT_FAULT` env var, plus the `Resume-as: revising` sub-case + a `LOOP_TEST_MODE=1` prerequisite note. |
+| M-4: approval prose `HEAD [loop-infra-repair]` / `HEAD~? [loop-infra-pending]` ordering wrong — pending is committed AFTER the dispatcher amends the repair commit, so HEAD is pending | Prose now reads `HEAD [loop-infra-pending]...` / `HEAD~1 [loop-infra-repair]...` with explicit note about the commit order. |
+| L-answer: gate `LOOP_TEST_INJECT_FAULT` behind `LOOP_TEST_MODE=1` | Both fault-injection blocks now require `LOOP_TEST_MODE=1` AND the matching `LOOP_TEST_INJECT_FAULT` value. Production env (without `LOOP_TEST_MODE`) treats the var as dead code. |
+| L-answer: merger should clean up stale attempt-N sentinels on slice merge | New `cleanup_slice_state <slice_id>` helper in `worktree_helpers.sh` removes `repair_count_<id>` + `plan_iter_count_<id>` + `fail_count_<id>` AND globs `.approved-loop-infra-repair/<slice_id>__attempt-*`. Wired into the merger flow after `cleanup_slice_worktree`. New verification step 28 covers this. |
 
-2. **Reverted-attempt cleanup of stale `repair_count_<id>`.** When the user rejects an attempt via `reject_loop_infra_repair.sh`, the slice's `repair_count_<id>` is preserved (per the script's exit message) so the next attempt is N+1, not N. But what if the slice eventually merges and `repair_count_<id>` is reset by the merger (existing flow)? A new repair down the road would start at attempt 1 again, and a stale sentinel from the prior cycle (if not cleaned up) would now collide. Mitigation: merger should also clean up any `.approved-loop-infra-repair/<slice_id>__attempt-*` sentinels for the merged slice. My read: yes, add to merger's reset path. Codex agree?
+### Round-11 L-answer + open-question resolutions
 
-3. **`LOOP_TEST_INJECT_FAULT` lifetime.** Should the env var be supported only when a `LOOP_TEST_MODE=1` flag is also set, to ensure it can't fire in production? Or is the explicit name (`*_INJECT_FAULT`) signal enough? My read: gate by `LOOP_TEST_MODE=1` for defense-in-depth. Codex agree?
+- Attempt-tag plumbing sync (round-11 §9 Q1): confirmed — dispatcher writes the attempt-N sentinel filename when creating it; resume hook reads it back. The state file `repair_count_<id>` is the single source of truth read by both paths at their respective moments. No further change needed.
+- Stale sentinel cleanup on merge (round-11 §9 Q2): added `cleanup_slice_state` to merger flow.
+- `LOOP_TEST_MODE=1` gate (round-11 §9 Q3): added; production env cannot accidentally fault-inject.
+
+### Remaining open for Codex round 12
+
+1. **Final pass on the integrated recipe.** All round-11 items are surgical fixes (parse bug, prose ordering, fault-injection wiring, merger cleanup). After round-11 fixes land, request a final read-through to confirm nothing else regressed during the surface-level edits. Particularly: did removing the duplicate 26a/26b block leave any cross-references (e.g. §9 round-9/10 entries that pointed at the old text) stale? My read: cross-refs all reference the verification step number (`26a`, `26b`), not the prose, so they remain valid. Confirm?
+
+2. **Smoke / verification step 28.** Step 28 (merger sentinel cleanup, round-11 L) is new and depends on a slice that has actually completed a loop-infra-repair cycle. Practically this means stage 28 cannot be run until at least one such cycle has occurred — likely Day 3 of the kickoff. Acceptable to run step 28 as a post-kickoff check (recorded as a verification action with synthetic input) rather than gating the whole pre-kickoff run on synthesizing a multi-attempt repair? My read: yes, verification 28 can be a synthetic test using `touch` to fake the sentinels + a manual `cleanup_slice_state` invocation; no need to drive it through a real repair cycle.
+
+3. **Final approval bar.** Are there any remaining concerns Codex would want addressed before APPROVED-for-implementation? If round-12 returns clean, I'll begin implementing the actual scripts (Item 2 first per §5 sequencing) and stub Phase 9 with explicit per-file mappings.
 
 ### Resolved by Codex round-1 audit
 1. ~~Worktree disk usage~~ — **Acceptable** if cleanup/prune verified. Verification step 11 added.
@@ -2073,26 +2115,28 @@ Webhook events fire on every blocked / repaired / phase-boundary state for visib
 
 ---
 
-## 11. Codex round-11 audit ask
+## 11. Codex round-12 audit ask
 
-This is round-11 (round-10 returned 1 High + 2 Medium + 1 Low + 3 L-answers; all addressed):
+This is round-12 (round-11 returned 1 High + 3 Medium + 2 L-answers; all addressed):
 
-| Round-10 finding | How resolved |
+| Round-11 finding | How resolved |
 |---|---|
-| H-1: resume path uses slice-only message greps | Every state marker (sentinel filename, repair commit, pending commit, resumed commit) now carries `[attempt:N]` tag matching `repair_count_<id>`. All resume-decision greps match exact attempt; historical reverted attempts cannot false-match. Sentinel pattern: `<slice_id>__attempt-<N>`. |
-| M-2: `Resume-as:` should be dispatcher-injected | Dispatcher amends agent's `[loop-infra-repair]` commit to inject deterministic subject + `Resume-as:` trailer. Resume hook FAILS if trailer missing or invalid (no silent default). Verification 26 includes `Resume-as: revising` sub-case. |
-| M-3: kill-point precision in step 26 | `LOOP_TEST_INJECT_FAULT` env var with two named fault sites: `after_initial_push_before_resumed_commit` and `after_resumed_commit_before_final_push`. |
-| L-4: resume scan `git fetch ... || true` made silent stale decisions | Resume scan now preserves sentinel + continues if `git fetch` fails. No stale-cleanup from unverified origin view. |
+| H-1: sentinel filename parse bug — `slice_id` retained the `__attempt-N` suffix, so all downstream `[slice:...]` greps would never match | Resume hook strips the suffix: `slice_id="${sentinel_basename%__attempt-*}"`; `attempt_n="${sentinel_basename##*__attempt-}"`; numeric validation rejects malformed names. |
+| M-2: `LOOP_TEST_INJECT_FAULT` blocks missing from implementation pseudocode | Two explicit `if [[ ${LOOP_TEST_MODE:-0} == 1 && ${LOOP_TEST_INJECT_FAULT:-} == ... ]]; exit 137; fi` blocks added inside `_do_resume_loop_infra` at the named fault sites. |
+| M-3: duplicate/stale older 26a/26b verification block | Removed. Step 26 now has exactly one authoritative pair using the env var. |
+| M-4: approval prose HEAD/HEAD~1 order wrong | Now reads `HEAD [loop-infra-pending]` / `HEAD~1 [loop-infra-repair]` with explicit note about commit order. |
+| L: gate fault-injection behind `LOOP_TEST_MODE=1` | Both injection blocks require `LOOP_TEST_MODE=1` AND matching `LOOP_TEST_INJECT_FAULT` value. |
+| L: merger should clean up stale attempt sentinels on slice merge | New `cleanup_slice_state` helper purges per-slice repair/plan-iter/fail counters AND globs `.approved-loop-infra-repair/<slice_id>__attempt-*`. Wired into merger flow. New verification step 28. |
 
 L-answers all applied:
-- attempt-N tags throughout state markers
-- Dispatcher-injected `Resume-as:`
-- Test fault env var
+- `LOOP_TEST_MODE=1` defense-in-depth gate
+- Merger cleanup of stale attempt-N sentinels (verification step 28)
 
-Round-11 review please:
-- Round-10 fixes in §4 (attempt-N tags, dispatcher-injected Resume-as, fault-injection env var, fail-closed fetch)
-- Verification step 26 (with 26a, 26b, and Resume-as: revising sub-case)
-- Round-11 open questions in §9 (attempt-tag plumbing sync, merger cleanup of stale attempt sentinels, LOOP_TEST_MODE gate)
+Round-12 review please:
+- Round-11 fixes in §4 (sentinel parse, fault-injection blocks in pseudocode, prose ordering, `cleanup_slice_state`)
+- Verification step 26 (now single authoritative 26a + 26b + Resume-as: revising sub-case + LOOP_TEST_MODE prerequisite)
+- New verification step 28 (merger sentinel cleanup)
+- Round-12 open questions in §9 (cross-reference cleanliness, step-28 timing, final approval bar)
 
 Triage as `High` / `Medium` / `Low`. Approving this round means implementation kicks off.
 
