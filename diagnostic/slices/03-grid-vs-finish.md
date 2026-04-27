@@ -1,11 +1,11 @@
 ---
 slice_id: 03-grid-vs-finish
 phase: 3
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T18:41:28-04:00
+updated: 2026-04-27T18:53:47-04:00
 ---
 
 ## Goal
@@ -384,7 +384,7 @@ Gate exit codes observed by audit agent:
 - Gate #2 structural DO block (`relkind`, PK order, facade dependency check) → exit `0`.
 - Gate #3 parity DO block (3 deterministic `analytic_ready` sessions, global rowcount equality, bidirectional `EXCEPT ALL`) → exit `0`.
 - `npm --prefix web run build` → exit `0`.
-- `npm --prefix web run typecheck` → exit `0`.
+- `npm --prefix web run typecheck` → exit `2`.
 - `npm --prefix web run test:grading` → exit `0`.
 
 Scope-diff result:
@@ -396,11 +396,11 @@ Criterion-by-criterion:
 - Gate #0 verified the claimed grain before DDL: `total=7581`, `distinct_pair=7581`, `duplicate=0`.
 - Gate #2 verified the storage/view shape and that `core.grid_vs_finish` depends only on `core.grid_vs_finish_mat`.
 - Gate #3 verified global rowcount equality and bidirectional session-scoped `EXCEPT ALL` parity for the deterministic three-session selector.
-- The web gates pass when run in the declared sequential order.
-- The slice still fails its own file-content constraint. The allowed scope for the slice file is “frontmatter + Slice-completion note only; no edits to the plan body or to any prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes” [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:83). Compared against `integration/perf-roadmap`, this branch rewrites the plan body at [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:12), [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:24), [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:54), and appends prior plan-audit sections at [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:372). That violates the last acceptance criterion even though the SQL work itself passes.
+- `npm --prefix web run typecheck` fails in this worktree because `web/tsconfig.json` includes `.next/types/**/*.ts`, but those generated files are absent when `tsc --noEmit` is run directly. Observed error: `TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/web/.next/types/app/api/admin/perf-summary/route.ts' not found.` The command then reports the same missing-file failure for the rest of the `.next/types` entries. That breaks the acceptance criterion requiring `npm --prefix web run typecheck` to exit `0`.
+- The slice file itself is not a scope-creep issue at this revision. `git diff integration/perf-roadmap -- diagnostic/slices/03-grid-vs-finish.md` is empty, so the branch is not carrying a current content delta against `integration/perf-roadmap` for that path.
 
 Required revision:
-- Restore `diagnostic/slices/03-grid-vs-finish.md` so the only branch-local edits relative to `integration/perf-roadmap` are the permitted frontmatter changes, the `## Slice-completion note`, and this `## Audit verdict` section. Remove the branch-local rewrites to the plan body and the appended prior `## Plan-audit verdict` sections.
+- Fix the web typecheck gate so `npm --prefix web run typecheck` succeeds from a clean worktree. The current failure is in the existing typecheck/build artifact contract, not in `sql/014_grid_vs_finish_mat.sql`.
 
 ## Plan-audit verdict (round 1)
 
