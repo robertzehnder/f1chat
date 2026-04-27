@@ -332,7 +332,7 @@ npm --prefix web run test:grading
 
 No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-4]_*.sql`, no application code. Scope clean.
 
-**Commit hashes (this slice):** see commit body / `git log slice/03-pit-cycle-summary --not integration/perf-roadmap`. The migration + slice-frontmatter + Slice-completion note ship as one commit tagged `[slice:03-pit-cycle-summary][awaiting-audit]`.
+**Commit hashes (this slice):** `7c28a34` (`slice 03-pit-cycle-summary: materialize core.pit_cycle_summary`) — the migration + slice-frontmatter + Slice-completion note shipped as one commit tagged `[slice:03-pit-cycle-summary][awaiting-audit]`. A follow-up commit on this same branch records this hash and the push confirmation in this note.
 
 **Decisions applied (verbatim from plan):**
 - Object model: real `core.pit_cycle_summary_mat` base table + facade view `core.pit_cycle_summary` (Decisions §1). No `CREATE MATERIALIZED VIEW`, no `REFRESH MATERIALIZED VIEW`.
