@@ -1,7 +1,7 @@
 ---
 slice_id: 02-prompt-static-prefix-split
 phase: 2
-status: ready_to_merge
+status: done
 owner: codex
 user_approval_required: no
 created: 2026-04-26
