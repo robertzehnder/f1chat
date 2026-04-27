@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-hit-assertion
 phase: 2
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T04:51:24Z
+updated: 2026-04-27T04:53:07Z
 ---
 
 ## Goal
@@ -27,6 +27,7 @@ Run a real synthesis pair (cold + warm) against the Anthropic Messages API and v
 Live benchmark requires:
 - `ANTHROPIC_API_KEY` — used by the benchmark's direct `fetch` call to Anthropic.
 - `OPENF1_RUN_CACHE_BENCHMARK=1` — gate flag. When unset, the test calls `t.skip(...)` and exits 0 so `npm run test:grading` stays offline by default.
+- `ANTHROPIC_MODEL` (optional) — overrides the model id sent to both the count_tokens preflight and the two Messages calls. **Default: `claude-sonnet-4-6`** (matches the production default in `web/src/lib/anthropic.ts`). Any override value MUST already exist as a key in the test's hard-coded `MIN_CACHE_TOKENS_BY_MODEL` map; if not, the test fails with a clear "add prompt-cache minimum for <model> to MIN_CACHE_TOKENS_BY_MODEL" message rather than silently proceeding.
 - `OPENF1_CACHE_BENCHMARK_OUT` (optional) — overrides the default artifact path if set.
 
 No `DATABASE_URL` is required (the test does not run SQL or call into chatRuntime).
@@ -39,7 +40,10 @@ No `DATABASE_URL` is required (the test does not run SQL or call into chatRuntim
 3. Construct one `AnswerSynthesisInput` (e.g. `question: "Who won the 2024 Monaco Grand Prix?"`, a small synthetic `rows` array, `rowCount: 1`, a minimal `runtime`). Call `buildSynthesisRequestParams(input)` once to obtain `{ system: productionSystem, messages }`. The cached content for both calls will be derived from `productionSystem` plus deterministic synthetic padding (next step) so the cached portion is byte-identical between cold and warm.
 3a. Guarantee the cached `system` content meets the Anthropic prompt-cache minimum:
     - Define `MIN_CACHE_TOKENS_BY_MODEL` as a hard-coded map in the test (e.g. `{ "claude-sonnet-4-6": 1024, "claude-opus-4-7": 1024, "claude-haiku-4-5-20251001": 2048 }`). The selected `model` is read from `process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6"`. If the model is not in the map, fail the test with a clear message ("add prompt-cache minimum for <model> to MIN_CACHE_TOKENS_BY_MODEL"); do not silently proceed.
-    - Build a `paddedSystem` array starting with `productionSystem[0]` (the production prefix block, unchanged). Then prepend or append a single deterministic synthetic padding content block: `{ type: "text", text: PADDING_TEXT, cache_control: { type: "ephemeral" } }`. The padding precedes the production block when a content array contains multiple cached blocks Anthropic considers the longest contiguous prefix of cache-hit blocks; placing the synthetic block FIRST guarantees that even if the production prefix is too small to participate, the synthetic block alone yields the cache hit. Both blocks carry `cache_control: { type: "ephemeral" }`.
+    - Build `paddedSystem` as a two-element content array in this exact send-order:
+      1. **Index 0 — synthetic padding block:** `{ type: "text", text: PADDING_TEXT, cache_control: { type: "ephemeral" } }`.
+      2. **Index 1 — production prefix block:** `productionSystem[0]` (unchanged), which already carries `cache_control: { type: "ephemeral" }` from `buildSynthesisRequestParams`.
+      The synthetic padding block MUST be first. Anthropic considers the longest contiguous prefix of cache-marked blocks when matching a cache entry, so placing the synthetic block at index 0 guarantees a cache hit on the warm call even if the production prefix is by itself below the model minimum. The artifact's `cached_blocks` array MUST mirror this same send-order (padding first, then production_prefix).
     - `PADDING_TEXT` is a fixed multi-paragraph string compiled into the test (a literal constant — committed to git, not generated at run time, not read from disk). It must be deterministically byte-identical across runs and large enough that on its own it exceeds the *largest* model minimum in the map (≥ 2048 tokens). A safe construction: a fixed lorem-ipsum-style narrative of repeated, deterministic English text targeting ~12 KB on disk (~3000 tokens by the conservative `bytes / 4 ≈ tokens` proxy). The literal must NOT include UUIDs, timestamps, or any other run-varying tokens.
     - Call `POST https://api.anthropic.com/v1/messages/count_tokens` once with `{ model, system: paddedSystem, messages }` and the same headers as step 4. Read `response.input_tokens` and assert that the *cached portion* (everything in `paddedSystem`) is at least `MIN_CACHE_TOKENS_BY_MODEL[model]`. To approximate the cached-portion token count, issue a second count_tokens call with `{ model, system: paddedSystem, messages: [{ role: "user", content: "" }] }` and use that response's `input_tokens` as `cachedSystemTokens` (with the empty message removed, the count is dominated by `system`). If `cachedSystemTokens < MIN_CACHE_TOKENS_BY_MODEL[model]`, fail the test with a message listing actual vs required tokens — this prevents the warm assertion from passing trivially or failing for the wrong reason.
     - Both cold and warm Messages calls send `paddedSystem` (byte-identical), guaranteeing the cached content is the same and meets the minimum.
@@ -188,10 +192,10 @@ Rollback: `git revert <commit>` removes the new test and artifact. Risk is low: 
 **Status: REVISE**
 
 ### High
-- [ ] Resolve the contradictory `paddedSystem` construction so the steps unambiguously send the synthetic padding block first and the production prefix block second, with `cached_blocks` documented in the same send-order.
+- [x] Resolve the contradictory `paddedSystem` construction so the steps unambiguously send the synthetic padding block first and the production prefix block second, with `cached_blocks` documented in the same send-order.
 
 ### Medium
-- [ ] Add optional `ANTHROPIC_MODEL` to `Required services / env`, including its default value and the requirement that any override must exist in `MIN_CACHE_TOKENS_BY_MODEL`.
+- [x] Add optional `ANTHROPIC_MODEL` to `Required services / env`, including its default value and the requirement that any override must exist in `MIN_CACHE_TOKENS_BY_MODEL`.
 
 ### Low
 
