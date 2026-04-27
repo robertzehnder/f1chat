@@ -1,11 +1,11 @@
 ---
 slice_id: 03-race-progression-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T17:02:44Z
+updated: 2026-04-27T17:04:52Z
 ---
 
 ## Goal
@@ -317,4 +317,20 @@ npm --prefix web run test:grading
 
 ### Notes (informational only — no action)
 - Round 1's materialization-pattern, file-scope, deterministic-selector, prerequisite, and filename items are addressed in the revised plan body.
+- `diagnostic/_state.md` was last updated on 2026-04-27, so it is current for this audit.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Add explicit grain evidence for `core_build.race_progression_summary` before declaring `PRIMARY KEY (session_key, driver_number, lap_number)`, or change the storage shape to a non-unique heap/index plan if the triple is not globally unique; the current rationale derives uniqueness from `core_build.laps_enriched`, whose `(session_key, driver_number, lap_number)` triple is already documented as non-unique.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- Round 2's facade-dependency gate item is addressed by gate #2's `pg_depend` / `pg_rewrite` assertion.
+- All listed Prior context paths exist and were consulted.
 - `diagnostic/_state.md` was last updated on 2026-04-27, so it is current for this audit.
