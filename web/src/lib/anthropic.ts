@@ -146,6 +146,19 @@ Return JSON only.
   };
 }
 
+export function buildSynthesisRequestParams(
+  input: AnswerSynthesisInput
+): {
+  system: Array<{ type: "text"; text: string; cache_control: { type: "ephemeral" } }>;
+  messages: Array<{ role: "user"; content: string }>;
+} {
+  const { staticPrefix, dynamicSuffix } = buildSynthesisPromptParts(input);
+  return {
+    system: [{ type: "text", text: staticPrefix, cache_control: { type: "ephemeral" } }],
+    messages: [{ role: "user", content: dynamicSuffix }]
+  };
+}
+
 function stripModelTraceNoise(text: string): string {
   return text.replace(/\s*\|\s*session_pin_[a-z0-9_]+\([^)]*\)\s*$/gim, "").trim();
 }
@@ -468,7 +481,7 @@ export async function synthesizeAnswerWithAnthropic(
   }
 
   const model = DEFAULT_ANTHROPIC_MODEL;
-  const { staticPrefix, dynamicSuffix } = buildSynthesisPromptParts(input);
+  const { system, messages } = buildSynthesisRequestParams(input);
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -481,13 +494,8 @@ export async function synthesizeAnswerWithAnthropic(
       model,
       max_tokens: ANSWER_MAX_TOKENS,
       temperature: 0,
-      system: staticPrefix,
-      messages: [
-        {
-          role: "user",
-          content: dynamicSuffix
-        }
-      ]
+      system,
+      messages
     })
   });
 
