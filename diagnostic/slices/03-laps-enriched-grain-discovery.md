@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T15:20:40Z
+updated: 2026-04-27T15:22:16Z
 ---
 
 ## Goal
@@ -385,6 +385,22 @@ npm --prefix web run test:grading
 - [x] Add a global nullability/non-null probe for every candidate discriminator tuple and require the decision tree to recommend a future PK only when all PK columns are both globally unique and non-null; otherwise recommend a non-PK strategy or an explicitly defined non-null/coalesced discriminator.
 
 ### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T15:03:18Z`).
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] Add gate evidence for any coalesced/sentinel PK recommendation path, such as min/max or sentinel-absence probes for nullable candidate columns, or remove that optional path and require the default non-PK heap-with-indexes recommendation when a unique tuple contains NULLs.
+
+### Medium
+- [ ] Reconcile the target relation for discovery with the Phase 3 source-definition architecture: either run the discovery probes against `core_build.laps_enriched`, or explicitly justify why probing `core.laps_enriched` is equivalent for this slice after `03-core-build-schema`.
+- [ ] Reconcile gate #2 with the plan text by either making the SQL emit actual duplicate-bearing row distributions grouped by candidate discriminator values, or changing the prose and acceptance criteria to describe the current `distinct_with_column` / `dup_after_column` summary counts.
 
 ### Low
 
