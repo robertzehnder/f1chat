@@ -1,7 +1,7 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -423,7 +423,33 @@ No candidate tuple is fully unique across the 167,172 rows of `core_build.laps_e
 - Nothing was committed yet at the time this note was written; commit hash will be the single commit on `slice/03-laps-enriched-grain-discovery` after `[awaiting-audit]`.
 
 ## Audit verdict
-(filled by Codex — implementation-audit slot. Plan audits are tracked separately in the appended `## Plan-audit verdict (round N)` sections below.)
+
+**PASS**
+
+[slice:03-laps-enriched-grain-discovery][pass]
+
+Gate exit codes observed by audit agent:
+- Gate #1 global grain-discovery probe over `core_build.laps_enriched` -> exit `0`. Output:
+  `total_rows|167172`, `distinct_triple|159793`, `duplicate_rows|7379`.
+- Gate #2 per-session grain probe over the first three deterministic `analytic_ready` sessions -> exit `0`. The DO block did not raise; observed sessions were `9102`, `9110`, `9118`, with duplicate-bearing session `9110` matching the note's discriminator lines.
+- Gate #3 global candidate-grain + nullability probe over `core_build.laps_enriched` -> exit `0`. Output matched every `distinct_*` and `null_count_*` row quoted in the note.
+- `npm --prefix web run build` -> exit `0`.
+- `npm --prefix web run typecheck` -> exit `0`.
+- `npm --prefix web run test:grading` -> exit `0` (`tests 31`, `pass 21`, `skipped 10`, `fail 0`).
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/notes/03-laps-enriched-grain.md` and `diagnostic/slices/03-laps-enriched-grain-discovery.md`.
+- This is within "Changed files expected"; the slice file is also explicitly allowed by audit policy.
+
+Criterion-by-criterion:
+- Gate #1 exits `0` and its three metrics are quoted verbatim in `diagnostic/notes/03-laps-enriched-grain.md`.
+- Gate #2 exits `0`; the three-session minimum check passed, and the per-session/discriminator outputs are quoted verbatim in the grain note.
+- Gate #3 exits `0`; all emitted candidate-grain and nullability rows are quoted verbatim. The note applies the required PK-eligibility rule correctly: no probed tuple reaches `total_rows = 167172`, so it recommends the heap-with-indexes path and does not propose a sentinel/coalesce-derived PK.
+- The grain note exists and contains the four required sections: raw numbers, chosen grain, reasoning, and recommendation for `03-laps-enriched-materialize`.
+- Web regression gates passed.
+- No SQL, TypeScript, test, or application files are modified by the slice.
+
+Decision: PASS. Phase 3 slice, post Phase 0 sign-off; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
