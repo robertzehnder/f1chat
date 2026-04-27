@@ -1,11 +1,11 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:55:00Z
+updated: 2026-04-28T00:00:00Z
 ---
 
 ## Goal
@@ -342,6 +342,21 @@ npm --prefix web run test:grading
 
 ### Low
 - [x] Clarify the Goal wording so it matches the existing `core.pit_cycle_summary` contract being materialized; the current shorthand "in-lap, out-lap, duration, time loss" does not describe the broader public column set preserved by this slice.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated at `2026-04-27T23:09:08Z`, so no staleness note is required for this round.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Make the gate-command block fail fast by chaining the commands with `&&` or adding `set -e` before the multi-command sequence; as written, an earlier failing gate can be masked by a later successful command because the block ends with `npm --prefix web run test:grading`.
+
+### Medium
+- [ ] Replace the rollback guidance that re-applies `sql/007_semantic_summary_contracts.sql` with the narrower `CREATE OR REPLACE VIEW core.pit_cycle_summary AS ...` body only, because re-applying the full file would also revert already-materialized public views such as `core.strategy_summary` and `core.race_progression_summary`.
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated at `2026-04-27T23:09:08Z`, so no staleness note is required for this round.
