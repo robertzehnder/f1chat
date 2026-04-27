@@ -1,11 +1,11 @@
 ---
 slice_id: 03-race-progression-summary
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T17:45:02-04:00
+updated: 2026-04-27T17:55:14-04:00
 ---
 
 ## Goal
@@ -464,9 +464,33 @@ npm --prefix web run test:grading
 - No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-2]_*.sql`, no application code.
 
 ## Audit verdict
-(filled by Codex)
 
-**[repair-retry — 2026-04-27]** Gate #0 confirmed 174 duplicate rows on `(session_key, driver_number, lap_number)` in `core_build.race_progression_summary`, invalidating the PRIMARY KEY plan. Per the documented fallback in Risk/rollback, plan pivoted to heap-with-indexes (mirroring `03-laps-enriched-materialize`): Steps, Gate commands, and Acceptance criteria updated — PK removed, two non-unique btree indexes added, gate #0 demoted to NOTICE-only, gate #2 PK assertion replaced with no-PK + index assertions. Status flipped to `revising` for implementer retry.
+**PASS**
+
+[slice:03-race-progression-summary][pass]
+
+Gate exit codes observed locally:
+- Gate #0 pre-flight grain probe: exit `0`; NOTICE reported `total=17864 distinct_triple=17690 duplicate=174`.
+- Gate #1 migration apply: exit `0`; output included `BEGIN`, `CREATE TABLE`, two `CREATE INDEX`, `TRUNCATE TABLE`, `INSERT 0 17864`, `CREATE VIEW`, `COMMIT`.
+- Gate #2 storage/facade/index assertions: exit `0`.
+- Gate #3 bidirectional `EXCEPT ALL` parity plus global rowcount equality: exit `0`.
+- `npm --prefix web run build`: exit `0`.
+- `npm --prefix web run typecheck`: exit `0`.
+- `npm --prefix web run test:grading`: exit `0` (`31` tests, `21` pass, `10` skipped, `0` failed).
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-race-progression-summary.md` and `sql/013_race_progression_summary_mat.sql`; both are in scope.
+
+Acceptance criteria:
+- Verified `core.race_progression_summary_mat` is a base table with no primary key.
+- Verified `core.race_progression_summary` is a view.
+- Verified the two expected non-unique btree indexes exist with exact names and columns: `(session_key, driver_number, lap_number)` and `(session_key)`.
+- Verified the public view is a thin facade whose only relation dependency in `core` / `core_build` / `raw` is `core.race_progression_summary_mat`.
+- Verified global rowcount equality between `core_build.race_progression_summary` and `core.race_progression_summary_mat`.
+- Verified bidirectional, session-scoped, multiplicity-preserving `EXCEPT ALL` parity for the deterministic three `analytic_ready` sessions.
+- Verified no `.parity.sql`, TypeScript contract, `.mjs` parity test, application code, or earlier SQL migration files were added or modified.
+
+Verdict: PASS. Phase 3 slice is ready to merge; owner remains `codex`.
 
 ## Plan-audit verdict (round 1)
 
