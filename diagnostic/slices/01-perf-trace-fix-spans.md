@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-trace-fix-spans
 phase: 1
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T03:42:31Z
+updated: 2026-04-27T03:45:34Z
 ---
 
 ## Goal
@@ -47,12 +47,13 @@ Verify the dev server responds before running the benchmark; abort the slice wit
 2. **Move the span boundaries inside `buildChatRuntime`** — in `web/src/lib/chatRuntime.ts`, import `startSpan` and the `SpanRecord` type from `@/lib/perfTrace`. Extend `BuildChatRuntimeInput` (or the call signature of `buildChatRuntime`) to accept an optional `recordSpan?: (record: SpanRecord) => void` callback supplied by the caller. Wrap only `classifyQuestion(input.message)` (synchronous, local) in a `try { startSpan("runtime_classify") ... } finally { recordSpan?.(span.end()) }` block so the `SpanRecord` is pushed to the caller's accumulator **before any error propagates**. Repeat the same `try/finally` pattern around the DB / entity-resolution block with `startSpan("resolve_db")`. The two spans are **sequential and non-overlapping**, not concurrent. Do **not** return spans on `ChatRuntimeResult` — the result-only handoff would lose records when `buildChatRuntime` throws (the route's outer `flushTrace` still runs in its `finally`, but it would see an empty `runtimeSpans`). Sourcing the spans through a callback into the route's existing `traceRecords: SpanRecord[]` accumulator (see route.ts:141) makes the records error-safe by construction.
 3. **Update `web/src/app/api/chat/route.ts`** — remove the concurrent `runtime_classify` / `resolve_db` `startSpan` calls at lines ~211–212 and the matching `endTrackedSpan` calls at ~219–220, plus the inner `try { ... } finally { ... }` block that bracketed `buildChatRuntime`. Replace them with a single `await buildChatRuntime({ message, context: body.context, recordSpan: (record) => { traceRecords.push(record); } })`. Because `buildChatRuntime` now ends each span inside its own `try/finally`, an exception inside it still pushes whatever spans completed onto `traceRecords` before propagating; the route's outer `} finally { ... await flushTrace(requestId, traceRecords); }` at ~line 871/883 then flushes them on the error path exactly as it does today for `request_intake` etc. Confirm the static-analysis test `web/scripts/tests/route-trace.test.mjs` still passes — its assertion is "at least one `startSpan("<stage>")` call appears in `route.ts`"; since both `runtime_classify` and `resolve_db` `startSpan` call sites have moved to `chatRuntime.ts`, the test must be updated in step 4 to scan both files (not relax the assertion).
 4. **Update `web/scripts/tests/route-trace.test.mjs`** — change the static-analysis target from "read `route.ts`" to "read `route.ts` AND `chatRuntime.ts`, concatenate, then run the existing `startSpan("<stage>")` regex against the union". Keep all 10 stage names required. The `flushTrace(` and `} finally {` assertions stay scoped to `route.ts` only (those genuinely live there). This change is mechanical; the test file remains a static-analysis test (no live services).
-5. **Add a new perf-trace span unit test** at `web/scripts/tests/perf-trace-spans.test.mjs` using the existing `node:test` + `node:assert/strict` pattern (see `web/scripts/tests/perf-trace.test.mjs` and `route-trace.test.mjs`). The test does **not** invoke the route or hit live services; it asserts the span-boundary contract directly:
-   - **Static-analysis assertion**: read `web/src/lib/chatRuntime.ts` as text and assert that the `runtime_classify` `startSpan` / `Span.end` block ends before any code that contains `await ` (the entity-resolution block). Concretely: locate `startSpan("runtime_classify")` and the matching `.end()`, then locate `startSpan("resolve_db")` and its matching `.end()`. Assert (a) the `runtime_classify` block contains no `await ` between its start and end, (b) the `runtime_classify` `.end()` appears at a source position strictly before the `resolve_db` `startSpan(` (i.e. the spans are sequential, not concurrent).
-   - **Behavioral assertion using the real `perfTrace` API** (no DB, no LLM): in-process, call `startSpan("runtime_classify")`, `await new Promise(r => setTimeout(r, 5))`, `.end()`, then `startSpan("resolve_db")`, `await new Promise(r => setTimeout(r, 80))`, `.end()`. Assert the recorded `elapsedMs` for the `runtime_classify` `SpanRecord` is `< 50` and the `resolve_db` `SpanRecord`'s `elapsedMs` is at least `5×` the `runtime_classify` one. The fixed sleep budget keeps this deterministic on CI; it does not depend on real DB timing.
-   - **Error-path assertion** (no DB, no LLM): import `buildChatRuntime` directly from `@/lib/chatRuntime` and invoke it with a stub `context` and a `message` crafted to make the entity-resolution / DB block throw (e.g. an obviously unmatchable identifier; if the existing code path cannot be made to throw deterministically without DB access, instead pass a `recordSpan` callback plus a monkeypatched module dep that throws after `classifyQuestion` returns — document the chosen approach inline). Collect the `SpanRecord`s pushed via `recordSpan` and assert: (a) the call rejected, (b) the collected records contain a `runtime_classify` entry (the span that already ended before the throw), and (c) if `resolve_db` was started, its record was also pushed (proving the inner `try/finally` flushed before the exception propagated). This locks in the round-2 round-trip guarantee that buildChatRuntime exceptions do not lose runtime-stage records.
-   - The test does **not** assert the live benchmark numbers — those are checked separately in step 8 by inspecting the re-baseline artifact.
-6. **Capture UTC date token** at re-baseline start: `DATE=$(date -u +%Y-%m-%d)`. Use this exact value for both v2 artifact paths.
+5. **Add a new perf-trace span unit test** at `web/scripts/tests/perf-trace-spans.test.mjs` using the existing `node:test` + `node:assert/strict` pattern (see `web/scripts/tests/perf-trace.test.mjs` and `route-trace.test.mjs`). The test runs under the existing `npm run test:grading` (`node --test scripts/tests/*.test.mjs`); **no new test runner, no new dev-dep, no path-alias resolver, no `chatRuntime.ts` import**. It asserts the span-boundary contract via two complementary halves: static analysis of `chatRuntime.ts` source text (proves the *real* code has the pattern), and behavioral execution of the *pattern itself* using only `perfTrace.ts` (which `perf-trace.test.mjs` already demonstrates is transpilable in isolation via the `typescript` package). Both halves run without live DB or LLM services.
+   - **Static-analysis half** — read `web/src/lib/chatRuntime.ts` as text (no transpile, no import). Locate `startSpan("runtime_classify")` and its matching `.end()`, then `startSpan("resolve_db")` and its matching `.end()`. Assert: (a) the `runtime_classify` block (between its `startSpan(` and `.end()`) contains no `await ` token, confirming `classifyQuestion` is invoked synchronously inside the span; (b) the `runtime_classify` `.end()` source position is strictly less than the `resolve_db` `startSpan(` source position, confirming the spans are sequential and non-overlapping; (c) each of the two spans appears inside a `try { ... } finally { ... recordSpan?.( ... .end()) ... }` shape (regex-match `recordSpan?.(` or `recordSpan(` within the same `finally` block); (d) the `buildChatRuntime` signature accepts a `recordSpan` parameter (regex `recordSpan\??:\s*\(record:\s*SpanRecord\)\s*=>\s*void` or equivalent in the input type). Assertions (c) and (d) lock in the error-safe pattern by source structure rather than runtime execution, which is what makes this test runnable without resolving `@/lib/queries`.
+   - **Behavioral half** — re-use the `transpileAndImportPerfTrace()` helper pattern from `perf-trace.test.mjs` to load `perfTrace.ts` in isolation (it has zero path-aliased imports and zero DB/LLM deps, so plain `ts.transpileModule` + `import()` from a temp dir works as already proven). With `{ startSpan }` in hand, define a local async `simulateRuntime(recordSpan, { rejectOnDb })` that mirrors the production pattern: `try { const s = startSpan("runtime_classify"); await new Promise(r => setTimeout(r, 5)); recordSpan(s.end()); } { ... }` and similarly for `resolve_db` with an 80ms sleep, optionally throwing inside its `try` after starting the span. Run two scenarios:
+     - **Happy path**: call `simulateRuntime(records.push.bind(records), { rejectOnDb: false })`. Assert the collected `records` array has length 2, `records[0].name === "runtime_classify"` with `elapsedMs < 50`, `records[1].name === "resolve_db"` with `elapsedMs >= 5 × records[0].elapsedMs`. The fixed sleep budget keeps this deterministic on CI without real DB timing.
+     - **Error path**: call `simulateRuntime(records.push.bind(records), { rejectOnDb: true })` inside `assert.rejects(...)`. After the rejection, assert the collected `records` contains BOTH a `runtime_classify` entry AND a `resolve_db` entry, proving that the inner `try/finally` + `recordSpan` callback pushes each `SpanRecord` *before* the exception propagates — exactly the round-2 guarantee. This validates the *pattern*; the static-analysis half above proves `chatRuntime.ts` uses that same pattern.
+   - The test does **not** assert the live benchmark numbers — those are checked separately in step 8 by inspecting the re-baseline artifact. The test does **not** import `@/lib/chatRuntime`, does **not** spawn the dev server, and does **not** require any environment variables.
+6. **Capture UTC date token** at re-baseline start: `DATE=$(date -u +%Y-%m-%d)`. Use this exact value for both slice-prefixed artifact paths in step 7e–7f (`diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json` and `.md` — no `-v2` suffix).
 7. **Re-baseline (mirror `01-baseline-snapshot` Steps 2–7 verbatim, with only the artifact prefix changed)**:
    - 7a. Confirm dev server is up: `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary"` returns 200 JSON. Abort with `status=blocked` otherwise.
    - 7b. **Trace isolation** — from the repo root, atomically rotate any existing `web/logs/chat_query_trace.jsonl` aside before the benchmark so the perf-summary fetch sees only this run's 50 records:
@@ -92,8 +93,9 @@ Verify the dev server responds before running the benchmark; abort the slice wit
 # `web/` and turns the next `cd web` into `web/web` (and the artifact
 # `test -f` checks below into `web/diagnostic/...`).
 
-# DATE must match the UTC date token captured in step 6, used verbatim
-# in both v2 artifact paths. Fail loudly if the implementer forgot to export it.
+# DATE must match the UTC date token captured in step 6, used verbatim in
+# both slice-prefixed artifact paths (`01-perf-trace-fix-spans_${DATE}.{json,md}`).
+# Fail loudly if the implementer forgot to export it.
 : "${DATE:?must export DATE=<UTC-date> matching the artifacts written in steps 7e–7f}"
 : "${OPENF1_CHAT_BASE_URL:?must export OPENF1_CHAT_BASE_URL=http://127.0.0.1:<PORT> matching the running dev server}"
 
@@ -167,11 +169,11 @@ grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnos
 ## Out of scope
 - Reducing `resolve_db` latency (Phase 2/3 caching/materialization work).
 - Changing what `classifyQuestion` or the entity-resolution body actually do — only the timing boundary.
-- Splitting `buildChatRuntime` into separate exported functions (the span split is internal; the public signature only grows by the new `runtimeSpans` field).
+- Splitting `buildChatRuntime` into separate exported functions (the span split is internal; the public signature only grows by the new optional `recordSpan?: (record: SpanRecord) => void` parameter — `ChatRuntimeResult` is **not** extended with a `runtimeSpans` field, since the round-2 design routes spans through the callback, not the result).
 - Phase 2 prompt-caching work.
 
 ## Risk / rollback
-- **Rollback**: `git revert <commit>`. The previous baseline artifact (`01-baseline-snapshot_2026-04-26.{json,md}`) is preserved untouched; the v2 artifacts are additive. Reverting also restores the previous `_state.md` "Latest perf baseline" headline (it was edited in this slice's commit).
+- **Rollback**: `git revert <commit>`. The previous baseline artifact (`01-baseline-snapshot_2026-04-26.{json,md}`) is preserved untouched; the new `01-perf-trace-fix-spans_${DATE}.{json,md}` artifacts are additive. Reverting also restores the previous `_state.md` "Latest perf baseline" headline (it was edited in this slice's commit).
 - **Risk**: if the span split inside `buildChatRuntime` accidentally double-counts (e.g. starts `resolve_db` while `runtime_classify` is still open), the alias would persist and the gate `node -e` checks above would fail — caught before commit.
 - **Risk (error-path span loss)**: a result-only handoff (`runtime.runtimeSpans`) would silently drop runtime-stage records whenever `buildChatRuntime` threw, since the rejected promise has no usable result. The plan therefore uses an inner `try/finally` + caller-supplied `recordSpan` callback that writes into the route's existing `traceRecords` accumulator, so the outer `flushTrace` (which already runs in the route's top-level `finally`) sees every span that managed to end before the throw. The error-path assertion in `perf-trace-spans.test.mjs` locks this in.
 
@@ -221,13 +223,13 @@ grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnos
 **Status: REVISE**
 
 ### High
-- [ ] Specify an executable strategy for `web/scripts/tests/perf-trace-spans.test.mjs` to load `web/src/lib/chatRuntime.ts` under the existing plain `node --test` runner, including how it will transpile TypeScript and resolve or stub path-alias/database dependencies without requiring live DB or LLM services.
+- [x] Specify an executable strategy for `web/scripts/tests/perf-trace-spans.test.mjs` to load `web/src/lib/chatRuntime.ts` under the existing plain `node --test` runner, including how it will transpile TypeScript and resolve or stub path-alias/database dependencies without requiring live DB or LLM services.
 
 ### Medium
-- [ ] Fix the `Out of scope` contradiction that says the public signature grows by a new `runtimeSpans` field; this plan now requires a `recordSpan` callback and explicitly forbids returning spans on `ChatRuntimeResult`.
+- [x] Fix the `Out of scope` contradiction that says the public signature grows by a new `runtimeSpans` field; this plan now requires a `recordSpan` callback and explicitly forbids returning spans on `ChatRuntimeResult`.
 
 ### Low
-- [ ] Rename the gate-command comments that still refer to "v2 artifact paths" so they match the exact non-v2 artifact paths required by Steps 7e-7f.
+- [x] Rename the gate-command comments that still refer to "v2 artifact paths" so they match the exact non-v2 artifact paths required by Steps 7e-7f.
 
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T15:24:13Z`, which is less than 24 hours old at audit time.
