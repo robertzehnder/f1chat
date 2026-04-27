@@ -1,11 +1,11 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T00:00:00Z
+updated: 2026-04-27T23:21:35Z
 ---
 
 ## Goal
@@ -90,6 +90,8 @@ None.
 
 ## Gate commands
 ```bash
+set -euo pipefail
+
 # 0. Pre-flight grain probe over core_build.pit_cycle_summary on
 #    (session_key, driver_number, pit_sequence). Must exit 0; the DO block
 #    raises (and ON_ERROR_STOP=1 forces non-zero exit) if duplicate_rows > 0,
@@ -296,21 +298,21 @@ npm --prefix web run test:grading
 - Risk: column order or type mismatch between the new `_mat` table and the original public view would (a) cause `CREATE OR REPLACE VIEW` to fail with `cannot change name/type of view column …` and roll back the migration, or (b) silently shift the public column signature under `SELECT *`. Mitigation: the table's column declarations in step 2.1 are explicit and ordered to match `core.pit_cycle_summary` as defined in `sql/007_semantic_summary_contracts.sql:401` ff.; if the declarations diverge from the view, `CREATE OR REPLACE VIEW` rejects the migration in gate #1; gate #3's `EXCEPT ALL` parity is positional and type-strict, so any reordering or implicit type coercion that does slip past `CREATE OR REPLACE VIEW` still fails the gate.
 - Risk: PK violation on `(session_key, driver_number, pit_sequence)` if the source view's grain is non-unique on that triple. Primary mitigation: gate #0's pre-flight grain probe runs before any DDL is applied and `RAISE EXCEPTION` if `duplicate_rows <> 0`, so a non-unique triple is caught with explicit numbers (`total / distinct / duplicate`) rather than via the opaque PK-violation rollback. **Documented heap-with-indexes fallback:** if gate #0 ever fires (whether on first apply, or on a future re-apply after the canonical view body changes), the slice must be re-planned to mirror `03-laps-enriched-materialize` / `03-race-progression-summary` exactly — drop `PRIMARY KEY`, declare two non-unique btree indexes `(session_key, driver_number, pit_sequence)` and `(session_key)`, switch the gate #2 assertions accordingly, and ship as a separate revision. Secondary backstop: even if gate #0 is somehow bypassed, the bulk `INSERT … SELECT` in step 2.2 still aborts the transaction with a clean PK-violation error and no half-built state. The grain claim is plausible by construction (`pit_sequence` is `ROW_NUMBER()` over each `(session_key, driver_number)` partition) but is not assumed — it is gate-enforced.
 - Risk: applying the migration on a database where slice `03-core-build-schema` has not yet been applied (no `core_build.pit_cycle_summary`, since it depends transitively on `core_build.strategy_summary`, `core_build.race_progression_summary`, `core_build.laps_enriched`). Mitigation: gate #0 / gate #1 fail non-zero with a clean `relation core_build.pit_cycle_summary does not exist` error and the transaction rolls back; the loop's slice ordering already merged `03-core-build-schema` at `67bdeff` before this slice can ship.
-- Rollback: `git revert <commit>` reverts the SQL file. To return the live DB to its pre-slice state after revert, the public dependent `core.strategy_evidence_summary` must continue to work throughout. Use the same dependency-safe pattern as the forward migration: `CREATE OR REPLACE VIEW` to swing `core.pit_cycle_summary`'s body off the `_mat` table and back to the original aggregating query, then drop the now-orphan storage table. Run inside one transaction:
+- Rollback: `git revert <commit>` reverts the SQL file. To return the live DB to its pre-slice state after revert, the public dependent `core.strategy_evidence_summary` must continue to work throughout. Use the same dependency-safe pattern as the forward migration: `CREATE OR REPLACE VIEW` to swing `core.pit_cycle_summary`'s body off the `_mat` table and back to the original aggregating query, then drop the now-orphan storage table. Run inside one transaction. **Do NOT re-apply `sql/007_semantic_summary_contracts.sql`** as a shortcut: that file also defines `core.strategy_summary`, `core.race_progression_summary`, and other contracts that have since been materialized by their own slices (`03-strategy-summary`, `03-race-progression-summary`, etc.) and now exist as facade views over their own `_mat` tables; re-running `sql/007` would clobber those facade swaps and replace them with the original aggregating bodies, silently breaking the other materializations. Paste **only** the `CREATE OR REPLACE VIEW core.pit_cycle_summary AS …` body from `sql/007_semantic_summary_contracts.sql:401` ff. verbatim:
   ```sql
   BEGIN;
   -- Step 1: Restore core.pit_cycle_summary to its original aggregating body.
   -- This MUST be CREATE OR REPLACE VIEW, NOT DROP VIEW + CREATE VIEW: dropping
   -- the view would fail with "cannot drop view core.pit_cycle_summary because
   -- other objects depend on it" because core.strategy_evidence_summary
-  -- references it.
-  -- The cleanest way is to re-apply sql/007_semantic_summary_contracts.sql,
-  -- which uses CREATE OR REPLACE VIEW for core.pit_cycle_summary and is idempotent:
-  --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/007_semantic_summary_contracts.sql
-  -- (Re-applying sql/007 also re-runs CREATE OR REPLACE VIEW on every other
-  -- view in that file, which is safe because each is also idempotent.)
-  -- Alternatively, paste the CREATE OR REPLACE VIEW core.pit_cycle_summary AS
-  -- SELECT … block from sql/007_semantic_summary_contracts.sql:401 ff. verbatim.
+  -- references it. Paste ONLY the core.pit_cycle_summary view definition from
+  -- sql/007_semantic_summary_contracts.sql:401 ff. verbatim — do NOT re-run
+  -- the whole file, because that would also revert the facade swaps for
+  -- core.strategy_summary, core.race_progression_summary, and other views
+  -- that have since been materialized by later slices.
+  CREATE OR REPLACE VIEW core.pit_cycle_summary AS
+    -- … exact body copied from sql/007_semantic_summary_contracts.sql:401 ff. …
+  ;
   -- Step 2: Drop the now-orphan storage table. This is safe ONLY after Step 1,
   -- because before Step 1 the public view's body still references
   -- core.pit_cycle_summary_mat and DROP TABLE would fail with "cannot drop
@@ -351,10 +353,10 @@ npm --prefix web run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Make the gate-command block fail fast by chaining the commands with `&&` or adding `set -e` before the multi-command sequence; as written, an earlier failing gate can be masked by a later successful command because the block ends with `npm --prefix web run test:grading`.
+- [x] Make the gate-command block fail fast by chaining the commands with `&&` or adding `set -e` before the multi-command sequence; as written, an earlier failing gate can be masked by a later successful command because the block ends with `npm --prefix web run test:grading`.
 
 ### Medium
-- [ ] Replace the rollback guidance that re-applies `sql/007_semantic_summary_contracts.sql` with the narrower `CREATE OR REPLACE VIEW core.pit_cycle_summary AS ...` body only, because re-applying the full file would also revert already-materialized public views such as `core.strategy_summary` and `core.race_progression_summary`.
+- [x] Replace the rollback guidance that re-applies `sql/007_semantic_summary_contracts.sql` with the narrower `CREATE OR REPLACE VIEW core.pit_cycle_summary AS ...` body only, because re-applying the full file would also revert already-materialized public views such as `core.strategy_summary` and `core.race_progression_summary`.
 
 ### Low
 
