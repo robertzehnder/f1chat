@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-27T13:53:18Z
 ---
 
 ## Goal
@@ -56,3 +56,22 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Align the plan with the roadmap's Phase 3 architecture: use `core_build.<name>` as preserved source-definition views plus `core.<name>_mat` real tables and a public facade, or explicitly narrow this slice to source-definition views only; do not require `MATERIALIZED VIEW` objects or `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
+- [ ] Add executable DB gate commands that apply the SQL and verify the acceptance criteria, including rowcount and parity checks against at least three session keys; the current gate list only runs web build/typecheck/tests and cannot prove the database objects exist.
+- [ ] Expand `Changed files expected` to include every file implied by the steps, including the TypeScript contract file and parity test file, or remove those steps from this slice.
+
+### Medium
+- [ ] Correct the target relation names and schema qualification so they match the existing semantic layer and Phase 3 roadmap; `core.session_summary`, `core.driver_summary`, and `core.lap_clean` are not referenced elsewhere, while the hot existing contract is `core.driver_session_summary`.
+- [ ] Specify how the three parity-test sessions are selected, preferably from `core.session_completeness` analytic-ready sessions, so the test is deterministic and reproducible.
+
+### Low
+- [ ] Replace the self-reference in `## Prior context` with the roadmap Phase 3 section or relevant benchmark/perf artifacts, since listing this slice as its own prior context adds no audit value.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
