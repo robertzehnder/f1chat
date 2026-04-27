@@ -768,25 +768,34 @@ _REPO_LOCK_PRIOR_TRAP=""
 # the counter increments; release only happens when it returns to zero.
 _REPO_LOCK_DEPTH=0
 
-# Bash 4+ required (round-6 M-5). BASHPID was added in bash 4.0; macOS ships
-# bash 3.2 by default. The runner's preconditions.sh asserts this at startup;
-# this primitive also asserts it defensively in case it's sourced from a
-# non-standard caller.
-if [[ -z "${BASH_VERSINFO[0]:-}" || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
-  echo "FATAL: repo_lock.sh requires bash 4+ (found bash ${BASH_VERSION:-unknown}). On macOS, install Homebrew bash." >&2
-  return 1 2>/dev/null || exit 1
-fi
-
-# Use BASHPID (the actual current shell PID, including subshells) instead
-# of $$ (parent shell PID, which is identical in subshells under bash).
-# Without this, a subshell that calls with_repo_lock would see the parent's
-# stored PID and incorrectly reenter the lock. Round-5 H-1 fix.
+# Owner identification (post-implementation note, 2026-04-26):
+# BASHPID was added in bash 4.0; macOS ships bash 3.2 by default. The
+# original plan required bash 4+ and asserted it at startup. During Item 2
+# implementation we found this is not portable enough — the user's macOS
+# was on bash 3.2 and the smoke test demonstrated false-reentry between
+# parallel forks (both reading empty `BASHPID` strings, both matching).
+#
+# The shipping primitive supports both bash versions:
+#  - When BASHPID is set (bash 4+): use it directly.
+#  - When BASHPID is unset (bash 3.2): lazily generate a per-process nonce
+#    of the form `$$.RAND.RAND` on first call. The nonce is cached in
+#    `_LOCK_OWNER_NONCE` and is stable across subsequent calls within the
+#    same process. Forked subshells get fresh `$RANDOM` seeds (verified
+#    empirically), so parallel forks generate distinct nonces — preventing
+#    false-reentry.
+#  - Stale-PID detection extracts the leading numeric portion of the
+#    stored ID for `kill -0` (parent shell PID is always the leading dot-
+#    separated component, valid for liveness checks).
+_LOCK_OWNER_NONCE=""
 _lock_owner_pid() {
   if [[ -n "${BASHPID:-}" ]]; then
     echo "$BASHPID"
-  else
-    echo "$$"   # legacy fallback (won't fire under bash 4+ assertion above)
+    return
   fi
+  if [[ -z "$_LOCK_OWNER_NONCE" ]]; then
+    _LOCK_OWNER_NONCE="$$.$RANDOM.$RANDOM"
+  fi
+  echo "$_LOCK_OWNER_NONCE"
 }
 
 acquire_repo_lock() {

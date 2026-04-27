@@ -2,36 +2,244 @@
 # scripts/loop/runner.sh
 # Long-running orchestrator for the OpenF1 perf-roadmap loop.
 # See diagnostic/automation_2026-04_loop_runner.md §4 for spec.
+#
+# Item 2 (round-12) migration:
+#  - Exports LOOP_MAIN_WORKTREE + LOOP_STATE_DIR (absolute paths) for all
+#    helpers and dispatchers (round-2 H-3).
+#  - Sources repo_lock.sh + worktree_helpers.sh + slice_helpers.sh +
+#    state_transitions.sh.
+#  - Resume hook for pending loop-infra repairs runs FIRST, BEFORE
+#    preconditions.sh (round-6 H-1). Without this, ahead-of-origin state
+#    or sentinel files would otherwise cause preconditions to refuse start.
+#  - dispatch_with_guards uses is_valid_terminal_transition allow-list
+#    (round-7 C-5 — verdict-landed-by-status detection).
+#  - DISPATCH_TIMEOUT default 86400s (24h, round-12 user-set) for the long
+#    autonomous run; per-dispatch overrides still honored.
+#  - max-session and max-total-dispatches scaled up for multi-day runs.
 
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
 
-LOOP_DIR="scripts/loop"
-STATE_DIR="$LOOP_DIR/state"
-LOG="$STATE_DIR/runner.log"
-PIDFILE="$STATE_DIR/runner.pid"
+# Resolve the main worktree's absolute path BEFORE anything else.
+LOOP_MAIN_WORKTREE="$(git rev-parse --show-toplevel)"
+export LOOP_MAIN_WORKTREE
 
+cd "$LOOP_MAIN_WORKTREE"
+
+LOOP_DIR="$LOOP_MAIN_WORKTREE/scripts/loop"
+LOOP_STATE_DIR="$LOOP_DIR/state"
+export LOOP_STATE_DIR
+
+LOG="$LOOP_STATE_DIR/runner.log"
+PIDFILE="$LOOP_STATE_DIR/runner.pid"
+
+mkdir -p "$LOOP_STATE_DIR"
+
+# ----- runtime knobs -----
 TICK="${LOOP_TICK:-30}"
-MAX_SLICE_DURATION="${LOOP_MAX_SLICE_DURATION:-3600}"
 DRY_RUN="${LOOP_DRY_RUN:-0}"
 
+# Per-dispatch wall-clock budget (round-12 user-set 24h default).
+# Asymmetric with LOCK_TIMEOUT (300s) — locks are short, dispatches can
+# legitimately take hours.
+DISPATCH_TIMEOUT="${LOOP_DISPATCH_TIMEOUT:-86400}"
+
+# Optional per-dispatch overrides (most agents finish in minutes; some don't).
+PLAN_AUDIT_TIMEOUT="${LOOP_PLAN_AUDIT_TIMEOUT:-1800}"      # 30 min
+PLAN_REVISE_TIMEOUT="${LOOP_PLAN_REVISE_TIMEOUT:-1800}"    # 30 min
+IMPL_AUDIT_TIMEOUT="${LOOP_IMPL_AUDIT_TIMEOUT:-3600}"      # 1 hour
+MERGER_TIMEOUT="${LOOP_MERGER_TIMEOUT:-1200}"              # 20 min
+REPAIR_TIMEOUT="${LOOP_REPAIR_TIMEOUT:-1800}"              # 30 min
+
 # Circuit breakers — graceful exits to avoid token-burning runaways.
-MAX_SLICE_FAILURES="${LOOP_MAX_SLICE_FAILURES:-5}"     # consecutive non-zero dispatches on same slice
-MAX_TOTAL_DISPATCHES="${LOOP_MAX_TOTAL_DISPATCHES:-50}" # total dispatches in this session
-MAX_SESSION_SECONDS="${LOOP_MAX_SESSION_SECONDS:-14400}" # 4 hours
+MAX_SLICE_FAILURES="${LOOP_MAX_SLICE_FAILURES:-5}"
+MAX_TOTAL_DISPATCHES="${LOOP_MAX_TOTAL_DISPATCHES:-2000}"   # 86 slices × ~25 dispatches each
+MAX_SESSION_SECONDS="${LOOP_MAX_SESSION_SECONDS:-345600}"   # 4 days
 SESSION_START=$(date +%s)
 TOTAL_DISPATCHES=0
 
 log() { printf '%s %s\n' "$(date -Iseconds)" "$*" | tee -a "$LOG"; }
 
-mkdir -p "$STATE_DIR"
+# ----- source helpers -----
+# repo_lock.sh provides with_repo_lock; worktree_helpers.sh provides
+# WORKTREE_BASE + ensure_slice_worktree + cleanup_slice_state.
+# shellcheck disable=SC1091
+source "$LOOP_DIR/repo_lock.sh"
+# shellcheck disable=SC1091
+source "$LOOP_DIR/worktree_helpers.sh"
+# shellcheck disable=SC1091
+source "$LOOP_DIR/slice_helpers.sh"
+# shellcheck disable=SC1091
+source "$LOOP_DIR/state_transitions.sh"
+
 echo "$$" > "$PIDFILE"
 trap 'rm -f "$PIDFILE"; log "runner exit"; exit 0' INT TERM
 
-log "runner start pid=$$ tick=$TICK dry_run=$DRY_RUN guards: max_slice_failures=$MAX_SLICE_FAILURES max_total_dispatches=$MAX_TOTAL_DISPATCHES max_session_seconds=$MAX_SESSION_SECONDS"
+log "runner start pid=$$ tick=$TICK dry_run=$DRY_RUN main_worktree=$LOOP_MAIN_WORKTREE"
+log "guards: max_slice_failures=$MAX_SLICE_FAILURES max_total_dispatches=$MAX_TOTAL_DISPATCHES max_session_seconds=$MAX_SESSION_SECONDS"
+log "timeouts: dispatch=${DISPATCH_TIMEOUT}s plan_audit=${PLAN_AUDIT_TIMEOUT}s plan_revise=${PLAN_REVISE_TIMEOUT}s impl_audit=${IMPL_AUDIT_TIMEOUT}s merger=${MERGER_TIMEOUT}s"
 
-# --- circuit-breaker helpers ---
-fail_counter_path() { echo "$STATE_DIR/fail_count_$1"; }
+# ============================================================
+# RESUME HOOK — runs BEFORE preconditions.sh (round-6 H-1)
+# ============================================================
+# Scans for pending loop-infra repairs via approval sentinels (round-8 H-1).
+# Each sentinel has the form `<slice_id>__attempt-<N>` (round-10 H-1).
+# Idempotent: safe to re-run from any partial-failure state.
+
+resume_pending_loop_infra_repair() {
+  cd "$LOOP_MAIN_WORKTREE"
+  local sentinel_dir="diagnostic/slices/.approved-loop-infra-repair"
+  [[ -d "$sentinel_dir" ]] || return 0
+
+  local sentinel sentinel_basename slice_id attempt_n
+  for sentinel in "$sentinel_dir"/*; do
+    [[ -f "$sentinel" ]] || continue
+    sentinel_basename=$(basename "$sentinel")
+    [[ "$sentinel_basename" == ".gitkeep" ]] && continue
+
+    if [[ "$sentinel_basename" != *__attempt-* ]]; then
+      log "resume: sentinel '$sentinel_basename' missing __attempt-N suffix; skipping (legacy/malformed)"
+      continue
+    fi
+    slice_id="${sentinel_basename%__attempt-*}"
+    attempt_n="${sentinel_basename##*__attempt-}"
+    if ! [[ "$attempt_n" =~ ^[0-9]+$ ]]; then
+      log "resume: sentinel '$sentinel_basename' has non-numeric attempt '$attempt_n'; skipping"
+      continue
+    fi
+
+    # Round-10 L-4: stale-cleanup decisions need fresh origin view.
+    if ! git fetch origin integration/perf-roadmap >/dev/null 2>&1; then
+      log "resume: git fetch failed for $slice_id (attempt $attempt_n); sentinel preserved"
+      continue
+    fi
+
+    local attempt_tag="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+    local resumed_attempt_tag="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+    local pending_anywhere resumed_anywhere
+    pending_anywhere=$( {
+      git log "origin/integration/perf-roadmap..HEAD" --grep="$attempt_tag" --pretty=format:%H 2>/dev/null
+      git log "origin/integration/perf-roadmap"       --grep="$attempt_tag" --pretty=format:%H 2>/dev/null
+    } | grep -m1 . || true)
+    resumed_anywhere=$( {
+      git log "origin/integration/perf-roadmap..HEAD" --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null
+      git log "origin/integration/perf-roadmap"       --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null
+    } | grep -m1 . || true)
+
+    if [[ -n "$pending_anywhere" || -n "$resumed_anywhere" ]]; then
+      with_repo_lock "resume:loop-infra:$slice_id:$attempt_n" \
+        _do_resume_loop_infra "$slice_id" "$sentinel" "$attempt_n" || true
+      continue
+    fi
+
+    # No pending/resumed for THIS attempt anywhere. Stronger stale rule:
+    # preserve when slice is blocked (user pre-approved a future attempt).
+    local current_status
+    current_status=$(read_slice_field "$slice_id" "status" 2>/dev/null || true)
+    if [[ "$current_status" == "blocked" ]]; then
+      log "resume: sentinel preserved for $slice_id attempt $attempt_n (slice blocked, awaiting repair)"
+      continue
+    fi
+
+    rm -f "$sentinel"
+    log "resume: stale sentinel removed for $slice_id attempt $attempt_n (status=$current_status)"
+  done
+}
+
+_do_resume_loop_infra() {
+  local slice_id="$1" sentinel="$2" attempt_n="$3"
+  cd "$LOOP_MAIN_WORKTREE"
+
+  local repair_attempt_tag="\\[loop-infra-repair\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+  local pending_attempt_tag="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+  local resumed_attempt_tag="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]\\[attempt:${attempt_n}\\]"
+
+  # 1. Idempotency check 1 — has [loop-infra-resumed][attempt:N] already
+  #    been committed locally OR landed on origin?
+  local resumed_local resumed_on_origin
+  resumed_local=$(git log "origin/integration/perf-roadmap..HEAD" --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null | head -c1)
+  resumed_on_origin=$(git log "origin/integration/perf-roadmap" --grep="$resumed_attempt_tag" --pretty=format:%H 2>/dev/null | head -c1)
+
+  if [[ -n "$resumed_on_origin" ]]; then
+    rm -f "$sentinel"
+    log "resume: [loop-infra-resumed][attempt:$attempt_n] already on origin for $slice_id; sentinel cleaned up"
+    return 0
+  fi
+
+  if [[ -n "$resumed_local" ]]; then
+    log "resume: [loop-infra-resumed][attempt:$attempt_n] commit already exists locally for $slice_id; retrying push"
+  else
+    # 2. Idempotency check 2 — has the FIRST push (of pending+repair)
+    #    already happened? If origin already has [loop-infra-pending]
+    #    for this attempt, skip the first push.
+    local pending_on_origin
+    pending_on_origin=$(git log "origin/integration/perf-roadmap" --grep="$pending_attempt_tag" --pretty=format:%H 2>/dev/null | head -c1)
+
+    if [[ -z "$pending_on_origin" ]]; then
+      if ! git push >/dev/null 2>&1; then
+        log "resume: initial push failed for $slice_id attempt $attempt_n; sentinel retained for retry"
+        return 1
+      fi
+    else
+      log "resume: [loop-infra-pending][attempt:$attempt_n] already on origin for $slice_id; skipping initial push"
+    fi
+
+    # FAULT INJECTION POINT (round-11 M-2): after_initial_push_before_resumed_commit
+    if [[ "${LOOP_TEST_MODE:-0}" == "1" && "${LOOP_TEST_INJECT_FAULT:-}" == "after_initial_push_before_resumed_commit" ]]; then
+      log "TEST FAULT: injecting exit 137 at after_initial_push_before_resumed_commit"
+      exit 137
+    fi
+
+    # 3. Flip slice file back to its pre-block state. Resume-as: trailer
+    #    is dispatcher-injected (round-10 M-2) — required, fail closed.
+    local repair_commit resume_status
+    repair_commit=$(git log "origin/integration/perf-roadmap" --grep="$repair_attempt_tag" --pretty=format:%H 2>/dev/null | head -1)
+    [[ -z "$repair_commit" ]] && repair_commit=$(git log --grep="$repair_attempt_tag" --pretty=format:%H 2>/dev/null | head -1)
+    if [[ -z "$repair_commit" ]]; then
+      log "resume: FAIL — no [loop-infra-repair][attempt:$attempt_n] commit found for $slice_id"
+      return 1
+    fi
+    resume_status=$(git log -1 --pretty=%B "$repair_commit" 2>/dev/null | sed -nE 's/^Resume-as: (.+)$/\1/p' | head -1)
+    if [[ -z "$resume_status" ]]; then
+      log "resume: FAIL — Resume-as: trailer missing on repair commit $repair_commit for $slice_id"
+      return 1
+    fi
+    case "$resume_status" in
+      revising_plan|revising) ;;
+      *)
+        log "resume: FAIL — Resume-as: '$resume_status' invalid; sentinel retained"
+        return 1
+        ;;
+    esac
+    flip_slice_status "$slice_id" "$resume_status" "claude"
+    git add "diagnostic/slices/${slice_id}.md"
+    git commit -m "[loop-infra-resumed][slice:${slice_id}][attempt:${attempt_n}] resume after user-approved repair" >/dev/null
+  fi
+
+  # FAULT INJECTION POINT (round-11 M-2): after_resumed_commit_before_final_push
+  if [[ "${LOOP_TEST_MODE:-0}" == "1" && "${LOOP_TEST_INJECT_FAULT:-}" == "after_resumed_commit_before_final_push" ]]; then
+    log "TEST FAULT: injecting exit 137 at after_resumed_commit_before_final_push"
+    exit 137
+  fi
+
+  # 4. Push the resumed commit. Sentinel only removed AFTER push succeeds.
+  if ! git push >/dev/null 2>&1; then
+    log "resume: post-flip push failed for $slice_id; sentinel retained for retry on next runner start"
+    return 1
+  fi
+
+  rm -f "$sentinel"
+  log "resume: loop-infra repair approved and pushed for $slice_id attempt $attempt_n"
+}
+
+# Resume FIRST (round-6 H-1).
+log "running loop-infra resume hook"
+resume_pending_loop_infra_repair || log "resume hook returned non-zero (sentinels preserved); continuing"
+
+# ============================================================
+# circuit-breaker / dispatch helpers
+# ============================================================
+
+fail_counter_path() { echo "$LOOP_STATE_DIR/fail_count_$1"; }
 
 slice_fail_count() {
   local sid="$1"; local f
@@ -51,7 +259,6 @@ slice_fail_reset() {
 }
 
 check_circuit_breakers() {
-  # Returns 0 = keep going, 1 = trip and exit.
   local now elapsed
   now=$(date +%s)
   elapsed=$((now - SESSION_START))
@@ -69,10 +276,14 @@ check_circuit_breakers() {
   return 0
 }
 
-# Wrap a dispatch invocation with bookkeeping: counts dispatch, tracks per-slice
-# failures, trips the circuit breaker if a slice fails too many times in a row.
-# Args: <slice_id> <command> [args...]
+# Wrap a dispatch invocation with bookkeeping + verdict-landed-by-status
+# detection (round-7 C-5). The dispatch is treated as success ONLY if the
+# slice frontmatter transitioned from `before` to a known terminal state for
+# `dispatch_type` — regardless of the dispatcher's exit code.
+#
+# Args: <dispatch_type> <slice_id> <command> [args...]
 dispatch_with_guards() {
+  local dispatch_type="$1"; shift
   local sid="$1"; shift
   TOTAL_DISPATCHES=$((TOTAL_DISPATCHES + 1))
 
@@ -80,18 +291,28 @@ dispatch_with_guards() {
   fc=$(slice_fail_count "$sid")
   if [[ "$fc" -ge "$MAX_SLICE_FAILURES" ]]; then
     log "CIRCUIT BREAKER: slice=$sid has failed $fc times consecutively (limit $MAX_SLICE_FAILURES); exiting cleanly"
-    return 2  # signal to outer loop to exit
+    return 2
   fi
 
-  if "$@"; then
-    rc=0
+  local status_before status_after
+  status_before=$(read_slice_field "$sid" "status" 2>/dev/null || echo "")
+
+  set +e
+  "$@"
+  rc=$?
+  set -e
+
+  status_after=$(read_slice_field "$sid" "status" 2>/dev/null || echo "")
+
+  if [[ -n "$status_before" && -n "$status_after" ]] \
+     && is_valid_terminal_transition "$dispatch_type" "$status_before" "$status_after"; then
     slice_fail_reset "$sid"
+    log "dispatch ok slice=$sid type=$dispatch_type ${status_before} → ${status_after} (rc=$rc)"
   else
-    rc=$?
     slice_fail_increment "$sid"
-    log "dispatch failed slice=$sid rc=$rc consecutive_failures=$(slice_fail_count "$sid")"
+    log "dispatch failed slice=$sid type=$dispatch_type rc=$rc before='$status_before' after='$status_after' consecutive_failures=$(slice_fail_count "$sid")"
   fi
-  return 0  # bookkept; let outer loop continue
+  return 0
 }
 
 # Resolve a portable timeout command. macOS lacks both `timeout` (GNU) and
@@ -108,7 +329,6 @@ run_with_timeout() {
   if [[ -n "$TIMEOUT_BIN" ]]; then
     "$TIMEOUT_BIN" "$secs" "$@"
   else
-    # perl alarm shim — works on stock macOS.
     perl -e '
       use POSIX ":sys_wait_h";
       my $secs = shift;
@@ -122,6 +342,10 @@ run_with_timeout() {
   fi
 }
 log "timeout backend: ${TIMEOUT_BIN:-perl-alarm-shim}"
+
+# ============================================================
+# main loop
+# ============================================================
 
 while true; do
   if ! check_circuit_breakers; then
@@ -150,51 +374,36 @@ while true; do
   guard_rc=0
   case "$owner:$status" in
     claude:pending|claude:revising)
-      dispatch_with_guards "$slice_id" \
-        run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_claude.sh" "$slice_id" \
+      dispatch_with_guards "impl" "$slice_id" \
+        run_with_timeout "$DISPATCH_TIMEOUT" "$LOOP_DIR/dispatch_claude.sh" "$slice_id" \
         || guard_rc=$?
       ;;
     codex:pending_plan_audit)
-      # Plan-audit phase: Codex reviews the slice file for plan bugs BEFORE
-      # any Claude implementation runs. Returns triaged High/Medium/Low
-      # action items. Iterates with claude:revising_plan until the triage
-      # list is empty (Codex returns APPROVED).
-      dispatch_with_guards "$slice_id" \
-        run_with_timeout 900 "$LOOP_DIR/dispatch_slice_audit.sh" "$slice_id" \
+      dispatch_with_guards "plan_audit" "$slice_id" \
+        run_with_timeout "$PLAN_AUDIT_TIMEOUT" "$LOOP_DIR/dispatch_slice_audit.sh" "$slice_id" \
         || guard_rc=$?
       ;;
     claude:revising_plan)
-      # Plan-revise phase: Claude addresses the triaged items, edits the
-      # slice file only, flips status back to pending_plan_audit for the
-      # next Codex round. Bounded by LOOP_MAX_PLAN_ITERATIONS (default 4).
-      dispatch_with_guards "$slice_id" \
-        run_with_timeout 900 "$LOOP_DIR/dispatch_plan_revise.sh" "$slice_id" \
+      dispatch_with_guards "plan_revise" "$slice_id" \
+        run_with_timeout "$PLAN_REVISE_TIMEOUT" "$LOOP_DIR/dispatch_plan_revise.sh" "$slice_id" \
         || guard_rc=$?
       ;;
     codex:awaiting_audit)
-      dispatch_with_guards "$slice_id" \
-        run_with_timeout "$MAX_SLICE_DURATION" "$LOOP_DIR/dispatch_codex.sh" "$slice_id" \
+      dispatch_with_guards "impl_audit" "$slice_id" \
+        run_with_timeout "$IMPL_AUDIT_TIMEOUT" "$LOOP_DIR/dispatch_codex.sh" "$slice_id" \
         || guard_rc=$?
       ;;
     user:ready_to_merge)
-      # Auto-merge by default. Approval-flagged slices still require a sentinel
-      # at diagnostic/slices/.approved-merge/<slice_id>; the merger checks that
-      # itself and exits 0 (no-op) if not present.
       log "auto-merging slice=$slice_id"
-      dispatch_with_guards "$slice_id" \
-        run_with_timeout 600 "$LOOP_DIR/dispatch_merger.sh" "$slice_id" \
+      dispatch_with_guards "merger" "$slice_id" \
+        run_with_timeout "$MERGER_TIMEOUT" "$LOOP_DIR/dispatch_merger.sh" "$slice_id" \
         || guard_rc=$?
       ;;
     user:blocked)
-      # If LOOP_AUTO_REPAIR=1, try to autonomously repair the protocol or
-      # flip the slice back to revising. Bounded by LOOP_MAX_REPAIRS (default 3).
-      # If the repair dispatcher exits 4, give up and fall through to USER ATTENTION.
       if [[ "${LOOP_AUTO_REPAIR:-0}" == "1" ]]; then
         log "auto-repair attempt for slice=$slice_id"
         TOTAL_DISPATCHES=$((TOTAL_DISPATCHES + 1))
-        if run_with_timeout 600 "$LOOP_DIR/dispatch_repair.sh" "$slice_id"; then
-          # Dispatcher succeeded; status should now be revising or escalated.
-          # Loop continues; selector will pick up whatever the new state is.
+        if run_with_timeout "$REPAIR_TIMEOUT" "$LOOP_DIR/dispatch_repair.sh" "$slice_id"; then
           continue
         else
           rc=$?
@@ -205,7 +414,6 @@ while true; do
           else
             log "auto-repair failed (rc=$rc) for slice=$slice_id"
           fi
-          # fall through to USER ATTENTION
         fi
       fi
       log "USER ATTENTION: slice=$slice_id status=blocked"
@@ -218,7 +426,6 @@ while true; do
       ;;
   esac
 
-  # If a guard tripped (rc=2 from dispatch_with_guards), exit cleanly.
   if [[ $guard_rc -eq 2 ]]; then
     rm -f "$PIDFILE"; exit 0
   fi

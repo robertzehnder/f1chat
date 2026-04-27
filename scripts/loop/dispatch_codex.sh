@@ -1,130 +1,148 @@
 #!/usr/bin/env bash
 # scripts/loop/dispatch_codex.sh
-# Headless invocation of OpenAI Codex CLI as the auditor agent.
+# Headless invocation of OpenAI Codex CLI as the impl-audit agent.
 # Falls back to Claude in adversarial-auditor mode if Codex CLI is unavailable.
 # Usage: dispatch_codex.sh <slice_id>
+#
+# Item 2 (round-12): runs the auditor in a per-slice worktree under
+# WORKTREE_BASE/<slice_id>/ on branch slice/<slice_id>. Mirror onto
+# integration is performed by THIS dispatcher (round-2 H-3 + C-6) — no
+# longer the agent's responsibility.
 
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
+
+: "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE must be exported by runner}"
+: "${LOOP_STATE_DIR:?LOOP_STATE_DIR must be exported by runner}"
+
+cd "$LOOP_MAIN_WORKTREE"
+
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/repo_lock.sh"
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/worktree_helpers.sh"
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/mirror_helper.sh"
 
 slice_id="${1:?slice_id required}"
-slice_file="diagnostic/slices/${slice_id}.md"
-prompt_file="scripts/loop/prompts/codex_auditor.md"
-log="scripts/loop/state/runner.log"
+slice_file_main="$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md"
+prompt_file="$LOOP_MAIN_WORKTREE/scripts/loop/prompts/codex_auditor.md"
+LOG="$LOOP_STATE_DIR/runner.log"
 
-[[ -f "$slice_file" ]] || { echo "missing $slice_file" >&2; exit 2; }
+[[ -f "$slice_file_main" ]] || { echo "missing $slice_file_main" >&2; exit 2; }
 [[ -f "$prompt_file" ]] || { echo "missing $prompt_file" >&2; exit 2; }
 
 stamp=$(date -Iseconds)
-echo "[$stamp] dispatch_codex $slice_id begin" >> "$log"
+echo "[$stamp] dispatch_codex $slice_id begin" >> "$LOG"
 
-LEDGER="scripts/loop/state/cost_ledger.jsonl"
+LEDGER="$LOOP_STATE_DIR/cost_ledger.jsonl"
 mkdir -p "$(dirname "$LEDGER")"
 
 append_ledger() {
   local agent="${1:-codex}" cost="${2:-0}"
-  printf '{"ts":"%s","slice":"%s","agent":"%s","cost_usd":%s}\n' \
+  printf '{"ts":"%s","slice":"%s","agent":"%s","cost_usd":%s,"estimated":true}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slice_id" "$agent" "$cost" \
     >> "$LEDGER"
 }
 
+# 1. Ensure the slice's worktree exists (locked).
+worktree_path_file="$LOOP_STATE_DIR/.worktree_path_${slice_id}.$$"
+trap 'rm -f "$worktree_path_file"' EXIT
+
+with_repo_lock "dispatch_codex:$slice_id:worktree-prep" \
+  _ensure_slice_worktree_to_file "$slice_id" "$worktree_path_file" || {
+  echo "failed to ensure worktree for $slice_id" >&2
+  exit 4
+}
+slice_worktree=$(cat "$worktree_path_file")
+
 run_codex_native() {
-  # Codex CLI doesn't accept --system. Inject the static auditor prompt as the
-  # first part of the user message instead. The CLI prints a verdict to stdout;
-  # the audit-side commit/push is performed by codex itself per the prompt.
-  {
-    cat "$prompt_file"
-    echo
-    echo "---"
-    echo
-    cat <<EOF
-You are the Codex audit agent. Slice: ${slice_file}, branch: slice/${slice_id}.
+  (
+    cd "$slice_worktree"
+    {
+      cat "$prompt_file"
+      echo
+      echo "---"
+      echo
+      cat <<EOF
+You are the Codex audit agent. Slice: diagnostic/slices/${slice_id}.md.
+
+You are running in a dedicated worktree at: ${slice_worktree}
+You are ALREADY on branch slice/${slice_id} — do NOT switch branches.
 
 Audit:
-1. Pull branch slice/${slice_id}.
-2. Run every command in the slice's "Gate commands" block; record exit codes verbatim in the audit verdict.
-3. Verify only files listed under "Changed files expected" were modified. Use: git diff --name-only integration/perf-roadmap...HEAD
-4. Run each "Acceptance criteria" check.
-5. Write the slice's "Audit verdict" section with PASS, REVISE, or REJECT.
-6. Update frontmatter:
+1. Run every command in the slice's "Gate commands" block; record exit codes verbatim in the audit verdict.
+2. Verify only files listed under "Changed files expected" were modified. Use: git diff --name-only integration/perf-roadmap...HEAD
+3. Run each "Acceptance criteria" check.
+4. Write the slice's "Audit verdict" section with PASS, REVISE, or REJECT.
+5. Update frontmatter:
    - PASS  → status=ready_to_merge; owner=user (Phase 0) or owner=codex (Phase 1+ post sign-off)
    - REVISE → status=revising, owner=claude
    - REJECT → status=blocked, owner=user
-7. Commit on slice/${slice_id} with message tag [slice:${slice_id}][pass|revise|reject].
-8. Push slice/${slice_id}.
+6. Commit on slice/${slice_id} with message tag [slice:${slice_id}][pass|revise|reject].
+7. Push slice/${slice_id}.
 
-9. CRITICAL — mirror the slice file onto integration/perf-roadmap so the runner sees the new state:
-     git checkout integration/perf-roadmap
-     git pull --ff-only origin integration/perf-roadmap || true
-     git show slice/${slice_id}:${slice_file} > ${slice_file}
-     git add ${slice_file}
-     git commit -m "audit: mirror $verdict_lower verdict for ${slice_id} onto integration
-
-[slice:${slice_id}][\$verdict_lower][protocol-mirror]"
-     git push
-   Without this, the runner reads stale frontmatter from integration's worktree
-   and re-dispatches Claude on a slice that has already been audited.
+DO NOT mirror the slice file to integration. The dispatcher (this wrapper)
+mirrors deterministically AFTER you exit, regardless of your exit code.
+DO NOT touch any other worktree on disk.
 
 Be skeptical. Substantive correctness over cosmetic compliance.
 EOF
-  } | codex exec --sandbox danger-full-access -
-  # --sandbox danger-full-access is required so Codex can write to .git/index.lock
-  # for `git checkout`, `git commit`, `git push`. The default workspace-write sandbox
-  # blocks those operations and Codex exits non-zero before producing a verdict,
-  # which causes the runner to re-dispatch indefinitely. Observed: 11 wasted runs on
-  # 00-ci-workflow before this fix landed.
+    } | codex exec --sandbox danger-full-access -
+  )
 }
 
 run_claude_fallback() {
-  claude --print \
-    --append-system-prompt "$(cat "$prompt_file")
+  (
+    cd "$slice_worktree"
+    claude --print \
+      --append-system-prompt "$(cat "$prompt_file")
 ROLEPLAY: You are the Codex audit agent. You did NOT implement this slice. Be more skeptical than usual. Assume the implementer cut corners. Read the diff with fresh eyes; do not trust 'Slice-completion note' claims without re-running the gate commands yourself." \
-    --permission-mode acceptEdits \
-    --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
-Audit slice ${slice_file} on branch slice/${slice_id}.
+      --permission-mode acceptEdits \
+      --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
+Audit slice diagnostic/slices/${slice_id}.md.
+
+You are in a dedicated worktree at: ${slice_worktree}
+You are ALREADY on branch slice/${slice_id} — do NOT switch branches.
 
 Steps:
-1. git checkout slice/${slice_id}
-2. Run every command in the slice's "Gate commands" block; record exit codes.
-3. git diff --name-only integration/perf-roadmap...HEAD must match "Changed files expected".
-4. Run each "Acceptance criteria" check.
-5. Write "Audit verdict" with PASS / REVISE / REJECT and exit codes observed.
-6. Update frontmatter status + owner per outcome:
+1. Run every command in the slice's "Gate commands" block; record exit codes.
+2. git diff --name-only integration/perf-roadmap...HEAD must match "Changed files expected".
+3. Run each "Acceptance criteria" check.
+4. Write "Audit verdict" with PASS / REVISE / REJECT and exit codes observed.
+5. Update frontmatter status + owner per outcome:
    - PASS  → status=ready_to_merge; owner=user (Phase 0) or owner=codex (Phase 1+)
    - REVISE → status=revising, owner=claude
    - REJECT → status=blocked, owner=user
-7. Note in the audit verdict: "AUDITED IN CLAUDE-FALLBACK MODE (Codex CLI unavailable)".
-8. Commit on slice/${slice_id} with [slice:${slice_id}][pass|revise|reject][fallback].
-9. Push slice/${slice_id}.
+6. Note in the audit verdict: "AUDITED IN CLAUDE-FALLBACK MODE (Codex CLI unavailable)".
+7. Commit on slice/${slice_id} with [slice:${slice_id}][pass|revise|reject][fallback].
+8. Push slice/${slice_id}.
 
-10. CRITICAL — mirror the updated slice file onto integration/perf-roadmap so the runner sees the new state:
-      git checkout integration/perf-roadmap
-      git pull --ff-only origin integration/perf-roadmap || true
-      git show slice/${slice_id}:${slice_file} > ${slice_file}
-      git add ${slice_file}
-      git commit -m "audit: mirror <verdict> verdict for ${slice_id} onto integration
-
-[slice:${slice_id}][<verdict>][protocol-mirror][fallback]"
-      git push
-    Without this, the runner reads stale frontmatter from integration's worktree
-    and re-dispatches the implementer on a slice that has already been audited.
+DO NOT mirror to integration — the dispatcher does that.
+DO NOT touch any other worktree on disk.
 EOF
+  )
 }
 
-# TELEMETRY SCAFFOLD ONLY: cost_usd=0 placeholder until real usage capture is
-# wired (Codex CLI does not surface token usage in `codex exec` mode). Daily
-# cap in check_budget.sh is therefore advisory. See dispatch_claude.sh for
-# the full TODO context.
+# Run the agent. Capture rc but do NOT abort on non-zero — Codex frequently
+# exits rc=1 even on successful audits (round-7 C-5).
+agent_rc=0
 if command -v codex >/dev/null 2>&1; then
-  run_codex_native
+  run_codex_native || agent_rc=$?
   append_ledger codex 0
 elif command -v claude >/dev/null 2>&1; then
-  echo "[$(date -Iseconds)] codex CLI not found; using claude fallback" >> "$log"
-  run_claude_fallback
+  echo "[$(date -Iseconds)] codex CLI not found; using claude fallback" >> "$LOG"
+  run_claude_fallback || agent_rc=$?
   append_ledger codex-claude-fallback 0
 else
   echo "neither codex nor claude CLI available" >&2
   exit 3
 fi
 
-echo "[$(date -Iseconds)] dispatch_codex $slice_id end" >> "$log"
+# Mirror the slice file from slice branch back to integration under lock.
+# Expected terminal states for impl-audit: ready_to_merge | revising | blocked.
+with_repo_lock "dispatch_codex:$slice_id:mirror" \
+  mirror_slice_to_integration "$slice_id" "ready_to_merge|revising|blocked" \
+  || echo "[$stamp] dispatch_codex $slice_id mirror returned non-zero" >> "$LOG"
+
+echo "[$(date -Iseconds)] dispatch_codex $slice_id end (agent_rc=$agent_rc)" >> "$LOG"
+exit $agent_rc

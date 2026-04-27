@@ -6,14 +6,15 @@
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
-# 1. Clean worktree, but ignore approval-sentinel touch files. The .approved/
-#    and .approved-merge/ directories are tracked (via their .gitkeep), but
-#    the token files inside them are intentionally git-ignored — otherwise
-#    every approval would taint the worktree and the loop would block forever.
+# 1. Clean worktree, but ignore approval-sentinel touch files. The .approved/,
+#    .approved-merge/, and .approved-loop-infra-repair/ directories are tracked
+#    (via their .gitkeep), but the token files inside them are intentionally
+#    git-ignored — otherwise every approval would taint the worktree and the
+#    loop would block forever.
 #    The grep below is belt-and-suspenders: even if a stray untracked sentinel
 #    appears (e.g. on a fresh checkout before .gitignore is loaded), we skip
 #    it here so the loop keeps moving.
-dirty=$(git status --porcelain | grep -vE '^\?\?[[:space:]]+diagnostic/slices/\.approved(-merge)?/[^/]+$' || true)
+dirty=$(git status --porcelain | grep -vE '^\?\?[[:space:]]+diagnostic/slices/\.approved(-merge|-loop-infra-repair)?/[^/]+$' || true)
 if [[ -n "$dirty" ]]; then
   echo "FAIL: dirty worktree (ignoring approval sentinels)" >&2
   echo "  Files dirty:" >&2

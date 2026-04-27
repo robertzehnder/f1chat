@@ -5,27 +5,40 @@
 # file and edits ONLY the slice file to resolve them, then flips status back
 # to pending_plan_audit so Codex can re-audit.
 #
-# Bounded: at most LOOP_MAX_PLAN_ITERATIONS (default 4) per slice. After that,
-# the runner / next audit will escalate to blocked.
+# Item 2 (round-12): runs in slice's worktree on slice/<id> (uniform model);
+# dispatcher mirrors back to integration deterministically. Plan-iter cap
+# raised from 4 to 10 (round-12).
 #
 # Usage: dispatch_plan_revise.sh <slice_id>
 
 set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
+
+: "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE must be exported by runner}"
+: "${LOOP_STATE_DIR:?LOOP_STATE_DIR must be exported by runner}"
+
+cd "$LOOP_MAIN_WORKTREE"
+
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/repo_lock.sh"
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/worktree_helpers.sh"
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/mirror_helper.sh"
 
 slice_id="${1:?slice_id required}"
-slice_file="diagnostic/slices/${slice_id}.md"
-prompt_file="scripts/loop/prompts/claude_plan_reviser.md"
-log="scripts/loop/state/runner.log"
-counter_file="scripts/loop/state/plan_iter_count_${slice_id}"
+slice_file_main="$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md"
+prompt_file="$LOOP_MAIN_WORKTREE/scripts/loop/prompts/claude_plan_reviser.md"
+LOG="$LOOP_STATE_DIR/runner.log"
+counter_file="$LOOP_STATE_DIR/plan_iter_count_${slice_id}"
 
-MAX_ITERATIONS="${LOOP_MAX_PLAN_ITERATIONS:-4}"
+# Round-12: raise cap from 4 to 10. After iteration 9, auditor may APPROVE-with-deferred.
+MAX_ITERATIONS="${LOOP_MAX_PLAN_ITERATIONS:-10}"
 
-[[ -f "$slice_file" ]]  || { echo "missing $slice_file"  >&2; exit 2; }
+[[ -f "$slice_file_main" ]]  || { echo "missing $slice_file_main"  >&2; exit 2; }
 [[ -f "$prompt_file" ]] || { echo "missing $prompt_file" >&2; exit 2; }
 
 stamp() { date -Iseconds; }
-logmsg() { printf '[%s] dispatch_plan_revise %s %s\n' "$(stamp)" "$slice_id" "$*" | tee -a "$log"; }
+logmsg() { printf '[%s] dispatch_plan_revise %s %s\n' "$(stamp)" "$slice_id" "$*" | tee -a "$LOG"; }
 
 mkdir -p "$(dirname "$counter_file")"
 count=$(cat "$counter_file" 2>/dev/null || echo 0)
@@ -36,28 +49,46 @@ logmsg "plan-revise iteration $count of $MAX_ITERATIONS"
 
 if [[ "$count" -gt "$MAX_ITERATIONS" ]]; then
   logmsg "MAX_PLAN_ITERATIONS exceeded ($count > $MAX_ITERATIONS); escalating"
-  # Flip slice to blocked so the runner surfaces USER ATTENTION.
-  awk -v ts="$(stamp)" '
-    BEGIN { in_fm = 0 }
-    /^---$/ { in_fm = !in_fm; print; next }
-    in_fm && /^status:/ { print "status: blocked"; next }
-    in_fm && /^owner:/  { print "owner: user"; next }
-    in_fm && /^updated:/ { print "updated: " ts; next }
-    { print }
-  ' "$slice_file" > "$slice_file.tmp" && mv "$slice_file.tmp" "$slice_file"
 
-  cat >> "$slice_file" <<EOF
+  # Ensure worktree exists for the escalation commit.
+  worktree_path_file="$LOOP_STATE_DIR/.worktree_path_${slice_id}.escalate.$$"
+  with_repo_lock "dispatch_plan_revise:$slice_id:escalate-prep" \
+    _ensure_slice_worktree_to_file "$slice_id" "$worktree_path_file" || {
+    logmsg "failed to ensure worktree for escalation"
+    rm -f "$worktree_path_file"
+    exit 4
+  }
+  slice_worktree=$(cat "$worktree_path_file")
+  rm -f "$worktree_path_file"
+
+  with_repo_lock "dispatch_plan_revise:$slice_id:escalate-commit" bash -c "
+    cd '$slice_worktree' && \
+    awk -v ts='$(stamp)' '
+      BEGIN { in_fm = 0 }
+      /^---\$/ { in_fm = !in_fm; print; next }
+      in_fm && /^status:/ { print \"status: blocked\"; next }
+      in_fm && /^owner:/  { print \"owner: user\"; next }
+      in_fm && /^updated:/ { print \"updated: \" ts; next }
+      { print }
+    ' diagnostic/slices/${slice_id}.md > diagnostic/slices/${slice_id}.md.tmp && \
+    mv diagnostic/slices/${slice_id}.md.tmp diagnostic/slices/${slice_id}.md && \
+    cat >> diagnostic/slices/${slice_id}.md <<ESC
 
 ## Plan-revise escalation
 
 Hit \`LOOP_MAX_PLAN_ITERATIONS=$MAX_ITERATIONS\` without converging on APPROVED. Latest audit verdict still has open items. User intervention required.
-EOF
+ESC
+    git add diagnostic/slices/${slice_id}.md && \
+    git commit -m 'plan-revise: escalate $slice_id after $MAX_ITERATIONS iterations [slice:$slice_id][plan-escalate]' >/dev/null 2>&1 && \
+    git push >/dev/null 2>&1 || true
+  "
 
-  git add "$slice_file"
-  git commit -m "plan-revise: escalate $slice_id after $MAX_ITERATIONS iterations" >/dev/null 2>&1
-  git push >/dev/null 2>&1 || true
+  with_repo_lock "dispatch_plan_revise:$slice_id:escalate-mirror" \
+    mirror_slice_to_integration "$slice_id" "blocked" \
+    || logmsg "escalation mirror returned non-zero"
+
   logmsg "escalated to blocked"
-  exit 4   # signals to runner: max iterations reached
+  exit 4
 fi
 
 if ! command -v claude >/dev/null 2>&1; then
@@ -65,33 +96,57 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 3
 fi
 
+# Ensure worktree exists.
+worktree_path_file="$LOOP_STATE_DIR/.worktree_path_${slice_id}.$$"
+trap 'rm -f "$worktree_path_file"' EXIT
+
+with_repo_lock "dispatch_plan_revise:$slice_id:worktree-prep" \
+  _ensure_slice_worktree_to_file "$slice_id" "$worktree_path_file" || {
+  logmsg "failed to ensure worktree"
+  exit 4
+}
+slice_worktree=$(cat "$worktree_path_file")
+
 logmsg "begin"
 
-claude --print \
-  --model "${LOOP_CLAUDE_REVISE_MODEL:-claude-opus-4-7}" \
-  --append-system-prompt "$(cat "$prompt_file")" \
-  --permission-mode acceptEdits \
-  --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
+(
+  cd "$slice_worktree"
+  claude --print \
+    --model "${LOOP_CLAUDE_REVISE_MODEL:-claude-opus-4-7}" \
+    --append-system-prompt "$(cat "$prompt_file")" \
+    --permission-mode acceptEdits \
+    --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
 You are the Claude PLAN-REVISER. The slice's plan-audit returned a triaged list of action items.
 
-Slice file: ${slice_file}
+Slice file: diagnostic/slices/${slice_id}.md
 Iteration: ${count} of ${MAX_ITERATIONS}
+Worktree: ${slice_worktree}
+Branch: slice/${slice_id} (already checked out — do NOT switch branches)
 
 Steps:
-1. Verify you are on integration/perf-roadmap. \`git checkout integration/perf-roadmap\` if needed.
-2. Read ${slice_file}. Find the latest \`## Plan-audit verdict (round N)\` section.
-3. For each \`- [ ]\` item under High / Medium / Low, edit the slice's body (Steps, Gate commands, Required services / env, Changed files expected, Acceptance criteria, etc.) to address it. Tick the box \`- [x]\` after you've made the corresponding edit. For Low items you choose to skip, leave \`- [ ]\` and append \`DEFER: <reason>\`.
-4. Notes section: read but do not act.
-5. Refresh frontmatter \`updated:\` timestamp; set \`status: pending_plan_audit\`, \`owner: codex\`.
-6. Commit on integration/perf-roadmap with message tag \`[slice:${slice_id}][plan-revise]\`.
-7. Push.
+1. Read diagnostic/slices/${slice_id}.md. Find the latest \`## Plan-audit verdict (round N)\` section.
+2. For each \`- [ ]\` item under High / Medium / Low, edit the slice's body (Steps, Gate commands, Required services / env, Changed files expected, Acceptance criteria, etc.) to address it. Tick the box \`- [x]\` after you've made the corresponding edit. For Low items you choose to skip, leave \`- [ ]\` and append \`DEFER: <reason>\`.
+3. Notes section: read but do not act.
+4. Refresh frontmatter \`updated:\` timestamp; set \`status: pending_plan_audit\`, \`owner: codex\`.
+5. Commit on slice/${slice_id} with message tag \`[slice:${slice_id}][plan-revise]\`.
+6. Push.
 
 CRITICAL CONSTRAINTS:
-- Operate ONLY on integration/perf-roadmap.
-- Touch ONLY ${slice_file}.
+- Operate ONLY on slice/${slice_id} in this worktree.
+- Touch ONLY diagnostic/slices/${slice_id}.md.
 - Do NOT modify previous rounds' verdict text (other than ticking checkboxes).
 - Do NOT add new "Plan-audit verdict" sections — only Codex writes those.
+- DO NOT mirror to integration — the dispatcher does that.
 - After commit + push, exit. The runner will re-dispatch Codex for round $((count + 1)).
 EOF
+)
+agent_rc=$?
 
-logmsg "end"
+# Mirror the slice file back to integration.
+# Expected terminal states for plan-revise: pending_plan_audit | blocked.
+with_repo_lock "dispatch_plan_revise:$slice_id:mirror" \
+  mirror_slice_to_integration "$slice_id" "pending_plan_audit|blocked" \
+  || logmsg "mirror returned non-zero"
+
+logmsg "end (agent_rc=$agent_rc)"
+exit $agent_rc

@@ -13,8 +13,12 @@
 #    a depth counter; release only happens when the outermost call returns.
 #  - Stale-PID detection: if the lock owner PID is dead, force-release.
 #  - EXIT trap STACKS the prior trap instead of clobbering (round-2 M-5).
-#  - Uses BASHPID (NOT $$) for owner detection so a subshell that inherited
-#    its parent's $$ can't falsely re-enter the parent's lock (round-5 H-1).
+#  - Owner identification uses BASHPID when available (bash 4+); on macOS's
+#    bash 3.2 where BASHPID is unset, falls back to a lazy-initialized
+#    per-process nonce ($$.$RANDOM.$RANDOM). The nonce is initialized on
+#    first call and stable across calls within the same process; forked
+#    subshells get a fresh init because $RANDOM is reseeded per process
+#    (round-5 H-1 + bash-3.2 portability).
 #
 # Source this file; do not exec it.
 #
@@ -33,10 +37,23 @@ LOCK_POLL="${LOOP_LOCK_POLL:-1}"
 _REPO_LOCK_DEPTH=0
 _REPO_LOCK_PRIOR_TRAP=""
 
-# Owner-PID resolver: BASHPID, not $$. In a subshell, $$ is the parent's PID;
-# BASHPID is the actual subshell's PID. Using BASHPID prevents a subshell
-# from falsely matching its parent's lock owner (round-5 H-1).
-_lock_owner_pid() { echo "$BASHPID"; }
+# Owner-PID resolver. Bash 4+ has BASHPID; bash 3.2 (macOS default) does not.
+# Fallback strategy: lazily generate a per-process nonce on first call and
+# cache it in a shell variable that survives subsequent function calls
+# within the same process. Forked subshells get fresh $RANDOM seeds, so the
+# nonce will differ per fork — preventing parallel forks from false-matching
+# each other's lock entries.
+_LOCK_OWNER_NONCE=""
+_lock_owner_pid() {
+  if [[ -n "${BASHPID:-}" ]]; then
+    echo "$BASHPID"
+    return
+  fi
+  if [[ -z "$_LOCK_OWNER_NONCE" ]]; then
+    _LOCK_OWNER_NONCE="$$.$RANDOM.$RANDOM"
+  fi
+  echo "$_LOCK_OWNER_NONCE"
+}
 
 # Acquire the lock. Blocks until acquired or LOCK_TIMEOUT exceeded.
 # If the existing lock's owner PID is dead, force-release and re-acquire.
@@ -67,10 +84,13 @@ acquire_repo_lock() {
     fi
 
     # Lock exists. Stale-check: is the owner PID still alive?
-    local stored_pid stored_owner
+    # Owner ID is either a bare PID (BASHPID path) or "$$.RAND.RAND" (nonce
+    # fallback for bash 3.2). For staleness, extract the leading numeric PID.
+    local stored_pid stored_owner stored_pid_check
     stored_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
     stored_owner=$(cat "$LOCK_DIR/owner" 2>/dev/null || echo "?")
-    if [[ -n "$stored_pid" ]] && ! kill -0 "$stored_pid" 2>/dev/null; then
+    stored_pid_check="${stored_pid%%.*}"
+    if [[ -n "$stored_pid_check" ]] && ! kill -0 "$stored_pid_check" 2>/dev/null; then
       echo "lock: stale owner pid=$stored_pid (tag=$stored_owner) — force-releasing" >&2
       rm -rf "$LOCK_DIR"
       continue

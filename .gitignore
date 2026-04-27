@@ -18,16 +18,20 @@
 !diagnostic/slices/.approved/.gitkeep
 !diagnostic/slices/.approved-merge/
 !diagnostic/slices/.approved-merge/.gitkeep
+!diagnostic/slices/.approved-loop-infra-repair/
+!diagnostic/slices/.approved-loop-infra-repair/.gitkeep
 !scripts/loop/
 !scripts/loop/**
 
-# Approval sentinels (touch files inside .approved/ and .approved-merge/) are
-# expected runtime artifacts; keep ignored so they don't bloat git. Only the
-# .gitkeep above is tracked.
+# Approval sentinels (touch files inside .approved/, .approved-merge/, and
+# .approved-loop-infra-repair/) are expected runtime artifacts; keep ignored
+# so they don't bloat git. Only the .gitkeep above is tracked.
 diagnostic/slices/.approved/*
 !diagnostic/slices/.approved/.gitkeep
 diagnostic/slices/.approved-merge/*
 !diagnostic/slices/.approved-merge/.gitkeep
+diagnostic/slices/.approved-loop-infra-repair/*
+!diagnostic/slices/.approved-loop-infra-repair/.gitkeep
 
 # Loop runtime state — fully ephemeral. Everything in scripts/loop/state/ is
 # ignored except a .gitkeep so the directory itself is tracked.
