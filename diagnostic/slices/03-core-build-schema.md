@@ -196,7 +196,7 @@ npm --prefix web run test:grading
 ## Slice-completion note
 
 - Branch: `slice/03-core-build-schema`.
-- Commit: filled at commit time below — see `[slice:03-core-build-schema][awaiting-audit]` commit on this branch for the diff.
+- Commit: `98c897b` ("core_build: clone hot semantic contracts as source-definition views"), tagged `[slice:03-core-build-schema][awaiting-audit]`. (This Slice-completion note edit is the head commit; the file scope rule still holds because both head commits touch only the two paths in "Changed files expected".)
 - Files changed (matches "Changed files expected" exactly):
   - `sql/008_core_build_schema.sql` (new — single transaction; `CREATE SCHEMA IF NOT EXISTS core_build` plus eleven `CREATE OR REPLACE VIEW` statements in the dependency-safe order from the slice plan).
   - `diagnostic/slices/03-core-build-schema.md` (this file — frontmatter + this note only).
