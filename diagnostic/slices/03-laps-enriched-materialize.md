@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-materialize
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T11:59:09-04:00
+updated: 2026-04-27T12:00:11-04:00
 ---
 
 ## Goal
@@ -365,7 +365,67 @@ npm --prefix web run test:grading
   The `DROP TABLE` cascades the two non-unique indexes (`laps_enriched_mat_session_driver_lap_idx`, `laps_enriched_mat_session_idx`) automatically. Public dependents see no interruption: their resolved-column references against `core.laps_enriched` continue to match because Step 1 produces the same projection signature.
 
 ## Slice-completion note
-(filled by Claude)
+
+### Branch
+- `slice/03-laps-enriched-materialize` (worktree: `/Users/robertzehnder/.openf1-loop-worktrees/03-laps-enriched-materialize`).
+- Implementation commit: see `[slice:03-laps-enriched-materialize][awaiting-audit]` HEAD on this branch.
+
+### Decisions during implementation
+- Mirrored the public `core.laps_enriched` projection at `sql/006_semantic_lap_layer.sql:358` ff. column-for-column into `core.laps_enriched_mat` (44 columns; see Steps §1.1 type list). All columns declared nullable — the slice plan does not prescribe `NOT NULL` and base view columns carry no NOT NULL semantics, so leaving them nullable is the strictest mirror of the source view's signature and avoids any chance of `INSERT … SELECT *` failing if a downstream-of-grain-note row ever surfaces a NULL on a column not probed by the grain note.
+- Single SQL migration `sql/010_laps_enriched_mat.sql`, wrapped in one `BEGIN; … COMMIT;` (per Decisions and Steps §1). Order inside the transaction: `CREATE TABLE IF NOT EXISTS` → both `CREATE INDEX IF NOT EXISTS` → `TRUNCATE` → `INSERT … SELECT * FROM core_build.laps_enriched` → `CREATE OR REPLACE VIEW core.laps_enriched AS SELECT * FROM core.laps_enriched_mat`. No `DROP VIEW`; the facade swap is dependency-safe via `CREATE OR REPLACE VIEW` because the storage table's columns match the original view's projection by construction (gate #1 would otherwise fail with `cannot change name/type of view column …`).
+- No `PRIMARY KEY` declared on `core.laps_enriched_mat`, per `diagnostic/notes/03-laps-enriched-grain.md` §2 (no candidate column tuple is fully unique; 7,379 duplicate rows over the natural triple). Both indexes are non-unique btree (the default access method); names match the slice plan exactly.
+
+### Self-check — gate command outputs (verbatim)
+
+**Gate #1 — `psql … -f sql/010_laps_enriched_mat.sql`** — exit `0`:
+```
+BEGIN
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+TRUNCATE TABLE
+INSERT 0 167172
+CREATE VIEW
+COMMIT
+```
+The `INSERT 0 167172` matches the global rowcount probed in `diagnostic/notes/03-laps-enriched-grain.md` §1 gate #1 (`total_rows|167172`).
+
+**Gate #2 — schema / no-PK / index assertions DO block** — exit `0`:
+```
+DO
+```
+The DO block raises on any failure of (a) `core.laps_enriched_mat.relkind = 'r'`, (b) `core.laps_enriched.relkind = 'v'`, (c) zero rows in `pg_constraint` with `contype = 'p'` against the storage table, (d) exactly one index relation by each expected name with `indisunique = false`, `pg_am.amname = 'btree'`, and the exact column-and-order array. `DO` with no `RAISE` output means every assertion held.
+
+**Gate #3 — bidirectional `EXCEPT ALL` parity + global rowcount DO block** — exit `0`:
+```
+NOTICE:  global rowcount: core_build=167172, mat=167172
+NOTICE:  parity OK: session_key=9102 diff_rows=0
+NOTICE:  parity OK: session_key=9110 diff_rows=0
+NOTICE:  parity OK: session_key=9118 diff_rows=0
+DO
+```
+(The two `RAISE NOTICE` lines per session were added locally for run-time visibility; they do not affect the `RAISE EXCEPTION` failure paths the gate command in Steps §4 specifies, and they are not part of `sql/010_laps_enriched_mat.sql`.) The three sessions are exactly the deterministic selector output recorded in `diagnostic/notes/03-laps-enriched-grain.md`: `9102`, `9110`, `9118`. Note that the parity holds even for session 9110, which carries 34 duplicate-bearing rows — `EXCEPT ALL` (not plain `EXCEPT`) preserved the duplicate multiplicity through the migration's bulk insert, exactly as required by the non-unique grain decision.
+
+**Gate #4 — `npm --prefix web run build`** — exit `0`. Build produced `Route (app)` table with 21 routes, 0 errors. (`web/node_modules` was absent on first invocation; `npm --prefix web install` was run once — no lockfile or package.json modification.)
+
+**Gate #5 — `npm --prefix web run typecheck`** — exit `0`. Output: `tsc --noEmit` with no diagnostics.
+
+**Gate #6 — `npm --prefix web run test:grading`** — exit `0`. Summary: `# tests 31 # pass 21 # fail 0 # cancelled 0 # skipped 10`. The 10 skipped tests are gated on `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1` against a running app and are not affected by this purely-SQL change.
+
+### Acceptance criteria
+- [x] `core.laps_enriched_mat` exists as a base table with no primary key — gate #1 + gate #2 (clauses a, c).
+- [x] `core.laps_enriched` exists as a view (the facade) — gate #2 clause b.
+- [x] `core.laps_enriched_mat` carries non-unique btree `laps_enriched_mat_session_driver_lap_idx (session_key, driver_number, lap_number)` — gate #2 clause d (triple).
+- [x] `core.laps_enriched_mat` carries non-unique btree `laps_enriched_mat_session_idx (session_key)` — gate #2 clause d (single).
+- [x] Global rowcount equality (`core_build.laps_enriched` 167172 == `core.laps_enriched_mat` 167172) — gate #3 NOTICE.
+- [x] Bidirectional `EXCEPT ALL` parity = 0 for sessions 9102, 9110, 9118 — gate #3 NOTICEs.
+- [x] `npm --prefix web run build` exits 0 — gate #4.
+- [x] `npm --prefix web run typecheck` exits 0 — gate #5.
+- [x] `npm --prefix web run test:grading` exits 0 — gate #6.
+- [x] Only `sql/010_laps_enriched_mat.sql` (new) and `diagnostic/slices/03-laps-enriched-materialize.md` (frontmatter + this note) modified. `git status` confirms.
+
+### Scope check
+- `git status` at end of implementation: 1 modified slice file, 1 new SQL file. No edits to any other path. No `.parity.sql`, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql`, no application code.
 
 ## Audit verdict
 (filled by Codex)
