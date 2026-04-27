@@ -1,11 +1,11 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T19:24:38-04:00
+updated: 2026-04-27T19:37:12-04:00
 ---
 
 ## Goal
@@ -373,7 +373,42 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 - No web cutover happened in this slice. `web/src/lib/queries.ts`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/chatRuntime.ts` continue to read `core.pit_cycle_summary` through the public view, which now transparently resolves to the matview via the facade. Likewise `core.strategy_evidence_summary` (`sql/007_semantic_summary_contracts.sql:553` ff.) continues to read `FROM core.pit_cycle_summary` and was not disturbed by the `CREATE OR REPLACE VIEW` swap.
 
 ## Audit verdict
-(filled by Codex)
+**REVISE**
+
+[slice:03-pit-cycle-summary][revise]
+
+Gate exit codes observed by audit agent:
+- Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... core_build.pit_cycle_summary grain probe ... SQL` → exit `0`. Output: `NOTICE: core_build.pit_cycle_summary grain probe: total=18718 distinct_triple=18718 duplicate=0`, then `DO`.
+- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/015_pit_cycle_summary_mat.sql` → exit `0`. Output included `BEGIN`, `CREATE TABLE`, `NOTICE: relation "pit_cycle_summary_mat" already exists, skipping`, `TRUNCATE TABLE`, `INSERT 0 18718`, `CREATE VIEW`, `COMMIT`.
+- Gate #2 structural assertion block → exit `0`. Output: `DO`.
+- Gate #3 parity block → exit `0`. Output: `DO`.
+- `npm --prefix web run build` → exit `0`.
+- `npm --prefix web run typecheck` → exit `0` when run after `build` as specified by the slice.
+- `npm --prefix web run test:grading` → exit `0` (`tests 31`, `pass 21`, `fail 0`, `skipped 10`).
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-pit-cycle-summary.md` and `sql/015_pit_cycle_summary_mat.sql`.
+- That path set is within scope, but the slice still fails its own file-content acceptance rule for the slice file.
+
+Findings:
+- `diagnostic/slices/03-pit-cycle-summary.md:11-324` rewrites the slice plan body (`Goal`, `Decisions`, `Inputs`, `Prior context`, `Required services / env`, `Steps`, `Changed files expected`, `Gate commands`, `Acceptance criteria`, `Out of scope`, `Risk / rollback`). Acceptance criterion at `diagnostic/slices/03-pit-cycle-summary.md:287` allows this file to change only in frontmatter plus the `Slice-completion note`; plan-body rewrites are explicitly out of bounds for the implementation diff.
+- `diagnostic/slices/03-pit-cycle-summary.md:378-420` appends full `Plan-audit verdict` sections instead of only preserving the already-approved state. The same acceptance criterion at line 287 forbids edits to prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes.
+- `diagnostic/slices/03-pit-cycle-summary.md:350-354` claims gate #3 emitted per-session parity lines and a rowcount message. Re-running gate #3 produced only `DO`; those claimed output lines were not observed in the command actually specified by the slice.
+
+Criterion-by-criterion:
+- Pre-flight grain probe on `(session_key, driver_number, pit_sequence)`: verified.
+- `core.pit_cycle_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number, pit_sequence)`: verified.
+- `core.pit_cycle_summary` exists as a view: verified.
+- `core.pit_cycle_summary` is a thin facade over `core.pit_cycle_summary_mat`: verified.
+- Global rowcount equality between `core_build.pit_cycle_summary` and `core.pit_cycle_summary_mat`: verified by gate #3 exit `0`.
+- Bidirectional `EXCEPT ALL` parity across the three deterministic `analytic_ready` sessions: verified by gate #3 exit `0`.
+- `npm --prefix web run build`: verified.
+- `npm --prefix web run typecheck`: verified when run after `build` in the required order.
+- `npm --prefix web run test:grading`: verified.
+- Slice-file content restriction: failed for the reasons above.
+
+Required revision:
+- Reduce the `diagnostic/slices/03-pit-cycle-summary.md` diff so this file contains only the allowed frontmatter transitions, the `Slice-completion note`, and the audit section. Remove the implementation-time rewrites to the plan body and the appended prior `Plan-audit verdict` sections from the branch diff.
 
 ## Plan-audit verdict (round 1)
 
