@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-trace-fix-spans
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T03:40:43Z
+updated: 2026-04-27T03:42:31Z
 ---
 
 ## Goal
@@ -215,3 +215,20 @@ grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnos
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T15:24:13Z`, which is less than 24 hours old at audit time.
 - Prior context was read; the prior route-stage-timings slice requires the route to flush trace records on generic error paths, so this split must not make `buildChatRuntime` failures lose the runtime-stage records.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify an executable strategy for `web/scripts/tests/perf-trace-spans.test.mjs` to load `web/src/lib/chatRuntime.ts` under the existing plain `node --test` runner, including how it will transpile TypeScript and resolve or stub path-alias/database dependencies without requiring live DB or LLM services.
+
+### Medium
+- [ ] Fix the `Out of scope` contradiction that says the public signature grows by a new `runtimeSpans` field; this plan now requires a `recordSpan` callback and explicitly forbids returning spans on `ChatRuntimeResult`.
+
+### Low
+- [ ] Rename the gate-command comments that still refer to "v2 artifact paths" so they match the exact non-v2 artifact paths required by Steps 7e-7f.
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T15:24:13Z`, which is less than 24 hours old at audit time.
+- Prior context was read; the previous round's error-safe span handoff is addressed by the `recordSpan` callback design, but the proposed direct `@/lib/chatRuntime` test import is not yet runnable as specified under the current test harness.
