@@ -1,11 +1,11 @@
 ---
 slice_id: 02-prompt-static-prefix-split
 phase: 2
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T00:19:46-04:00
+updated: 2026-04-27T04:24:36Z
 ---
 
 ## Goal
@@ -92,7 +92,31 @@ Rollback: `git revert <commit>`. Risk is low because the refactor is behaviour-p
 - Out-of-scope follow-up: none observed. `web/src/lib/chatRuntime.ts` does not assemble the synthesis prompt itself (it consumes `synthesizeAnswerWithAnthropic` via `mapChatResponse`/runtime glue), so no scope-expansion follow-up is needed for this slice.
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS**
+
+[slice:02-prompt-static-prefix-split][pass]
+
+Gate exit codes observed locally:
+- `cd web && npm run typecheck` -> exit 0.
+- `cd web && npm run test:grading` -> exit 0.
+- `cd web && npm run build` -> exit 0.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/02-prompt-static-prefix-split.md`, `web/scripts/tests/prompt-prefix-split.test.mjs`, and `web/src/lib/anthropic.ts`.
+- This is within the expected changed files plus the implicit slice-file allowance.
+
+Acceptance criteria:
+- PASS: `buildSynthesisPromptParts` is exported from `web/src/lib/anthropic.ts` and its function body performs no I/O, reads no `process.env`, and does not call `fetch`; the offline test deletes `ANTHROPIC_API_KEY` and `DATABASE_URL` and monkey-patches `globalThis.fetch` to fail if called.
+- PASS: `staticPrefix` is a single string returned from `buildAnswerSynthesisPrompt()` and is strictly equal across different inputs in subtest 19.
+- PASS: `dynamicSuffix` differs across the two test inputs in subtest 19.
+- PASS: `synthesizeAnswerWithAnthropic` still sends `system: staticPrefix` and user `content: dynamicSuffix`; the moved template is byte-for-byte the prior trimmed user prompt body and `staticPrefix` is the prior `buildAnswerSynthesisPrompt()` output.
+- PASS: `web/scripts/tests/prompt-prefix-split.test.mjs` ran under `npm run test:grading` with no network/API-key dependency.
+- PASS: `npm run typecheck` and `npm run build` succeeded.
+
+Additional checks:
+- `web/src/lib/chatRuntime.ts` does not assemble the synthesis prompt.
+- `web/src/lib/synthesisPrompts/` was not created.
 
 ## Plan-audit verdict (round 1)
 
