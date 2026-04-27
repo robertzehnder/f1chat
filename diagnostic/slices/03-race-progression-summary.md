@@ -1,11 +1,11 @@
 ---
 slice_id: 03-race-progression-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T17:25:00Z
+updated: 2026-04-27T17:00:02Z
 ---
 
 ## Goal
@@ -269,4 +269,19 @@ npm --prefix web run test:grading
 - [x] Replace the vague SQL filename `sql/race_progression_summary.sql` with the repository's Phase 3 migration naming convention or explicitly justify the new path.
 
 ### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so it is current for this audit.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Add a gate assertion that `core.race_progression_summary` is actually a thin facade over `core.race_progression_summary_mat` (for example via `pg_depend` or `pg_get_viewdef`), because the current gate only proves the public relation is some view and would pass if the migration left the original aggregating view in place.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- Round 1's materialization-pattern, file-scope, deterministic-selector, prerequisite, and filename items are addressed in the revised plan body.
 - `diagnostic/_state.md` was last updated on 2026-04-27, so it is current for this audit.
