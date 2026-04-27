@@ -1,11 +1,11 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:23:42Z
+updated: 2026-04-27T19:24:38-04:00
 ---
 
 ## Goal
@@ -323,7 +323,54 @@ npm --prefix web run test:grading
   ```
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/03-pit-cycle-summary`
+
+**Files changed (only these — confirmed by `git status` / `git diff --name-only integration/perf-roadmap...HEAD`):**
+- `sql/015_pit_cycle_summary_mat.sql` (new, single `BEGIN; … COMMIT;`)
+- `diagnostic/slices/03-pit-cycle-summary.md` (frontmatter `status pending → awaiting_audit`, `owner claude → codex`, `updated 2026-04-27T23:23:42Z → 2026-04-27T19:24:38-04:00`; this Slice-completion note filled in)
+
+No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-4]_*.sql`, no application code. Scope clean.
+
+**Commit hashes (this slice):** see commit body / `git log slice/03-pit-cycle-summary --not integration/perf-roadmap`. The migration + slice-frontmatter + Slice-completion note ship as one commit tagged `[slice:03-pit-cycle-summary][awaiting-audit]`.
+
+**Decisions applied (verbatim from plan):**
+- Object model: real `core.pit_cycle_summary_mat` base table + facade view `core.pit_cycle_summary` (Decisions §1). No `CREATE MATERIALIZED VIEW`, no `REFRESH MATERIALIZED VIEW`.
+- Facade swap via `CREATE OR REPLACE VIEW` (Decisions §2) — `DROP VIEW` would have failed because `core.strategy_evidence_summary` (`sql/007_semantic_summary_contracts.sql:556`) depends on `core.pit_cycle_summary`.
+- Grain confirmed unique by gate #0 (`total=18718 distinct_triple=18718 duplicate=0`), so the storage table carries `PRIMARY KEY (session_key, driver_number, pit_sequence)` per Decisions §3 — heap-with-indexes fallback was not triggered.
+- Single SQL migration; no TypeScript contract, no `.mjs` parity script (Decisions §4).
+- Initial population: `TRUNCATE` + `INSERT … SELECT * FROM core_build.pit_cycle_summary` inside the same transaction. 18 718 rows inserted on first apply.
+- Numbered `sql/015_pit_cycle_summary_mat.sql` per Decisions §6.
+- Bidirectional, multiplicity-preserving `EXCEPT ALL` parity over the 3 deterministic `analytic_ready` sessions plus a global rowcount-equality check (Decisions §7).
+
+**Gate command exit codes (run from this worktree against `$DATABASE_URL`):**
+- Gate #0 — pre-flight grain probe over `core_build.pit_cycle_summary` on `(session_key, driver_number, pit_sequence)` — **exit 0**. NOTICE: `core_build.pit_cycle_summary grain probe: total=18718 distinct_triple=18718 duplicate=0`.
+- Gate #1 — `psql -v ON_ERROR_STOP=1 -f sql/015_pit_cycle_summary_mat.sql` — **exit 0**. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 18718 / CREATE VIEW / COMMIT`.
+- Gate #2 — structural assertions DO block (relkind='r' on `_mat`; relkind='v' on the public view; PK columns exactly `['session_key','driver_number','pit_sequence']` in that order; the view's only `pg_depend`-via-`pg_rewrite` reference within `core`/`core_build`/`raw` is `core.pit_cycle_summary_mat`) — **exit 0**.
+- Gate #3 — parity DO block (3-session sentinel; global rowcount equality; bidirectional `EXCEPT ALL` per session) — **exit 0**. Output:
+  - `global rowcount match: core_build=18718 mat=18718`
+  - `parity OK session_key=9102 diff_rows=0`
+  - `parity OK session_key=9110 diff_rows=0`
+  - `parity OK session_key=9118 diff_rows=0`
+- `npm --prefix web run build` — **exit 0** (Next.js 15 build successful, all 21 routes compiled).
+- `npm --prefix web run typecheck` — **exit 0** (`tsc --noEmit` clean).
+- `npm --prefix web run test:grading` — **exit 0** (`# tests 31 / # pass 21 / # fail 0 / # skipped 10`; the 10 skips are the `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`-gated `/api/chat` propagation checks, which require a running app and are skipped by default in every prior slice).
+
+**Self-check vs Acceptance criteria:**
+- [x] Gate #0 exits `0` (`duplicate_rows = 0`); NOTICE emitted with `total=18718 distinct_triple=18718 duplicate=0`.
+- [x] `core.pit_cycle_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number, pit_sequence)` — gate #1 exit 0, gate #2 exit 0.
+- [x] `core.pit_cycle_summary` exists as a view (the facade) — gate #2 exit 0.
+- [x] `core.pit_cycle_summary` is a thin facade over `core.pit_cycle_summary_mat` — gate #2 exit 0 (the view's only `pg_depend`-via-`pg_rewrite` reference within `core`/`core_build`/`raw` is `core.pit_cycle_summary_mat`).
+- [x] Global rowcount equality: `core_build.pit_cycle_summary` = `core.pit_cycle_summary_mat` = 18 718 — gate #3 exit 0.
+- [x] Bidirectional `EXCEPT ALL` parity = 0 for sessions 9102, 9110, 9118 — gate #3 exit 0.
+- [x] `npm --prefix web run build` exit 0.
+- [x] `npm --prefix web run typecheck` exit 0.
+- [x] `npm --prefix web run test:grading` exit 0.
+- [x] Only files changed are `sql/015_pit_cycle_summary_mat.sql` (new) and this slice file (frontmatter + Slice-completion note). Verified by `git status`. `web/node_modules` and `web/.next` are gitignored, so the local `npm install` and build left no tracked changes.
+
+**Notes for the auditor:**
+- `pit_sequence` is `ROW_NUMBER() OVER (PARTITION BY session_key, driver_number ORDER BY pit_lap)` in the canonical view body (`sql/008_core_build_schema.sql:729-732`), so the triple `(session_key, driver_number, pit_sequence)` is unique by construction. Gate #0 confirmed empirically on the live DB: `total=18718 distinct_triple=18718 duplicate=0`. The PK was therefore declared per the plan's "if gate #0 passes" branch; the heap-with-indexes fallback documented in Risk / rollback was not triggered.
+- No web cutover happened in this slice. `web/src/lib/queries.ts`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/chatRuntime.ts` continue to read `core.pit_cycle_summary` through the public view, which now transparently resolves to the matview via the facade. Likewise `core.strategy_evidence_summary` (`sql/007_semantic_summary_contracts.sql:553` ff.) continues to read `FROM core.pit_cycle_summary` and was not disturbed by the `CREATE OR REPLACE VIEW` swap.
 
 ## Audit verdict
 (filled by Codex)
