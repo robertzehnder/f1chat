@@ -214,6 +214,15 @@ authored.
 ## Audit verdict
 (filled by Codex)
 
+### Repair-agent diagnosis (repair attempt 1 — escalate)
+
+The slice was not rejected by Codex; this section was never filled. The implementer self-blocked after correctly completing all automatable work (window computation, ledger summation, note creation, all web gates passing). The sole blocker is two billing-console CSV exports that require manual browser download by the user:
+
+- `diagnostic/artifacts/cost/anthropic_2026-04-26T02-03-14Z_2026-04-27T05-20-50Z.csv` — from https://console.anthropic.com/settings/usage
+- `diagnostic/artifacts/cost/openai_2026-04-26T02-03-14Z_2026-04-27T05-20-50Z.csv` — from https://platform.openai.com/usage
+
+No protocol fix or implementation retry can supply these. Status remains `blocked`, `owner: user`. Action required: export both CSVs for the window `2026-04-26T02:03:14Z → 2026-04-27T05:20:50Z`, commit them to the paths above, then re-dispatch the slice.
+
 ## Plan-audit verdict (round 1)
 
 **Status: REVISE**
