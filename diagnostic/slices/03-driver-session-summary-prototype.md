@@ -1,11 +1,11 @@
 ---
 slice_id: 03-driver-session-summary-prototype
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T10:41:20-04:00
+updated: 2026-04-27T10:45:14-04:00
 ---
 
 ## Goal
@@ -208,6 +208,22 @@ npm --prefix web run test:grading
 
 ### Low
 - [x] Rename `sql/driver_session_summary.sql` to fit the existing numbered SQL migration convention, or explicitly state why this slice should use an unnumbered SQL file.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so its timestamp is current for this audit.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- _None._
+
+### Medium
+- [ ] Add an executable primary-key assertion to the database gates, because gate #2 currently verifies only `relkind = 'r'` for `core.driver_session_summary_mat` and does not prove the acceptance criterion that `PRIMARY KEY (session_key, driver_number)` exists.
+
+### Low
+- _None._
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-27, so its timestamp is current for this audit.
