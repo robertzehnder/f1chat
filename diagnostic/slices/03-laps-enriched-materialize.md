@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-materialize
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T16:30:00-04:00
+updated: 2026-04-27T11:51:54-04:00
 ---
 
 ## Goal
@@ -319,3 +319,21 @@ npm --prefix web run test:grading
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-27 and is current for this audit.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the `DROP VIEW IF EXISTS core.laps_enriched; CREATE VIEW ...` facade swap with `CREATE OR REPLACE VIEW core.laps_enriched AS SELECT * FROM core.laps_enriched_mat`, or explicitly add a dependency-safe strategy for preserving/recreating every existing public view that depends on `core.laps_enriched`.
+- [ ] Fix gate #2's `laps_enriched_mat_session_driver_lap_idx` assertion so it counts index relations, not joined `pg_attribute` rows; the current `count(*)` returns `3` for a correct three-column index and will fail at runtime.
+
+### Medium
+- [ ] Extend gate #2 to assert both expected indexes use the btree access method, since the acceptance criteria require non-unique btree indexes but the current gate only verifies name, uniqueness, and column order.
+- [ ] Update the rollback SQL to avoid dropping `core.laps_enriched` while dependent public views still reference it; use the same dependency-safe view replacement strategy as the forward migration.
+
+### Low
+_None._
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27T15:44:11Z, so its timestamp is current for this audit.
