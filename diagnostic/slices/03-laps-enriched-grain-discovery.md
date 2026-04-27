@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T15:16:18Z
+updated: 2026-04-27T15:17:34Z
 ---
 
 ## Goal
@@ -335,6 +335,20 @@ npm --prefix web run test:grading
 
 ### High
 - [x] Fix gate #1's `duplicate_rows` SQL expression so both operands are numeric before subtraction; the current expression subtracts a `text` value from a `bigint` and will fail before the grain note can be produced.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T15:03:18Z`).
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Add a global nullability/non-null probe for every candidate discriminator tuple and require the decision tree to recommend a future PK only when all PK columns are both globally unique and non-null; otherwise recommend a non-PK strategy or an explicitly defined non-null/coalesced discriminator.
 
 ### Medium
 
