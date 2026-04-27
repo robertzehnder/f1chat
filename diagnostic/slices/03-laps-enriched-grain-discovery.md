@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T15:17:34Z
+updated: 2026-04-27T15:20:40Z
 ---
 
 ## Goal
@@ -42,9 +42,11 @@ Discover and document the canonical grain (one-row-per-X) of `core.laps_enriched
 3. For each of the three deterministic sessions, run the per-session grain probe (gate command #2 below): rows, distinct triples, and the column distributions that most plausibly disambiguate duplicates. The candidate discriminator columns are fixed for the duration of this slice and are exactly the columns named in gate #2: `stint_number`, `compound_name`, `compound_raw`, `is_pit_out_lap`, `is_pit_lap`, `is_valid`, `is_personal_best_proxy`. These are all columns projected by `core.laps_enriched` per `sql/006_semantic_lap_layer.sql`. Capture raw counts verbatim.
 4. Run the global candidate-grain probe (gate command #3 below). This computes `count(DISTINCT …)` for every candidate 4-tuple `(session_key, driver_number, lap_number, <discriminator>)` and selected 5-tuples over the entire `core.laps_enriched` relation, so any PK recommendation in the note is justified by every-row evidence rather than three-session sampling.
 5. Inspect the captured numbers and choose the canonical grain. The decision tree (recorded explicitly in the note):
-   - If a 4-tuple `(session_key, driver_number, lap_number, <discriminator>)` from gate #3 is fully unique across all rows (`distinct_4tuple = total_rows`) → canonical grain = that 4-tuple; future `core.laps_enriched_mat` gets a PK on that 4-tuple.
-   - Else if a 5-tuple from gate #3 is fully unique across all rows → canonical grain = that 5-tuple; future `core.laps_enriched_mat` gets a PK on that 5-tuple.
-   - Else (no candidate is fully unique) → canonical grain is non-unique; future `core.laps_enriched_mat` is a heap-with-indexes (no PK) with delete-then-insert refresh per `session_key`, per roadmap §4 Phase 3.
+   - **PK-eligibility rule.** A candidate column tuple is PK-eligible only if (a) gate #3 reports it as fully unique across all rows (`distinct_*tuple = total_rows`) AND (b) every column in the tuple has `null_count_<column> = 0` per gate #3's nullability probes. PostgreSQL forbids NULL in any PK column, so a nullable-but-otherwise-unique tuple cannot be promoted to PK as-is.
+   - If a 4-tuple `(session_key, driver_number, lap_number, <discriminator>)` is PK-eligible → canonical grain = that 4-tuple; future `core.laps_enriched_mat` gets a PK on that 4-tuple.
+   - Else if a 5-tuple is PK-eligible → canonical grain = that 5-tuple; future `core.laps_enriched_mat` gets a PK on that 5-tuple.
+   - Else if a candidate tuple is fully unique but has one or more nullable columns, the note may recommend either (i) a non-PK heap-with-indexes strategy (default), OR (ii) a PK on an explicitly NULL-replaced/coalesced derived column (e.g., `stint_number_pk = COALESCE(stint_number, -1)`). In case (ii), the note must record the coalesce expression and sentinel value verbatim, plus a one-sentence justification that the sentinel cannot collide with any real value, so the materialize slice can implement it without re-deciding.
+   - Else (no candidate tuple is fully unique) → canonical grain is non-unique; future `core.laps_enriched_mat` is a heap-with-indexes (no PK) with delete-then-insert refresh per `session_key`, per roadmap §4 Phase 3.
 6. Write `diagnostic/notes/03-laps-enriched-grain.md` with the four required sections (Decisions §3): raw numbers, chosen grain, reasoning, recommendation for the materialize slice. Quote the SQL probes verbatim so they are reproducible.
 7. Run web regression gates (gate command #4 below). The slice does not touch web code; these are run for regression safety only.
 8. Capture all gate command outputs into the slice-completion note.
@@ -182,12 +184,14 @@ BEGIN
 END $$;
 SQL
 
-# 3. Global candidate-grain probe. Must exit 0. Computes count(*) and
+# 3. Global candidate-grain + nullability probe. Must exit 0. Computes count(*),
 #    count(DISTINCT …) over every candidate 4-tuple
 #    (session_key, driver_number, lap_number, <discriminator>) plus the most
-#    plausible 5-tuple combinations across all rows of core.laps_enriched, so the
-#    PK / non-unique recommendation in the grain note is justified by every-row
-#    evidence and not just the three sampled sessions from gate #2. The
+#    plausible 5-tuple combinations, AND a per-column NULL count for every
+#    column that could appear in a candidate PK tuple, all evaluated across
+#    every row of core.laps_enriched. The NULL counts are required because a
+#    PostgreSQL PK forbids NULL in any of its columns, so the recommendation
+#    in the grain note must consider both uniqueness and non-null. The
 #    discriminator list matches gate #2.
 psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL'
 SELECT 'total_rows' AS metric, count(*)::text AS value FROM core.laps_enriched
@@ -255,7 +259,37 @@ SELECT 'distinct_5tuple_with_stint_and_is_pit_lap',
        count(*)::text FROM (
          SELECT DISTINCT session_key, driver_number, lap_number, stint_number, is_pit_lap
          FROM core.laps_enriched
-       ) d;
+       ) d
+UNION ALL
+SELECT 'null_count_session_key',
+       count(*)::text FROM core.laps_enriched WHERE session_key IS NULL
+UNION ALL
+SELECT 'null_count_driver_number',
+       count(*)::text FROM core.laps_enriched WHERE driver_number IS NULL
+UNION ALL
+SELECT 'null_count_lap_number',
+       count(*)::text FROM core.laps_enriched WHERE lap_number IS NULL
+UNION ALL
+SELECT 'null_count_stint_number',
+       count(*)::text FROM core.laps_enriched WHERE stint_number IS NULL
+UNION ALL
+SELECT 'null_count_compound_name',
+       count(*)::text FROM core.laps_enriched WHERE compound_name IS NULL
+UNION ALL
+SELECT 'null_count_compound_raw',
+       count(*)::text FROM core.laps_enriched WHERE compound_raw IS NULL
+UNION ALL
+SELECT 'null_count_is_pit_out_lap',
+       count(*)::text FROM core.laps_enriched WHERE is_pit_out_lap IS NULL
+UNION ALL
+SELECT 'null_count_is_pit_lap',
+       count(*)::text FROM core.laps_enriched WHERE is_pit_lap IS NULL
+UNION ALL
+SELECT 'null_count_is_valid',
+       count(*)::text FROM core.laps_enriched WHERE is_valid IS NULL
+UNION ALL
+SELECT 'null_count_is_personal_best_proxy',
+       count(*)::text FROM core.laps_enriched WHERE is_personal_best_proxy IS NULL;
 SQL
 
 # 4. Web regression gates. Use --prefix so the three commands chain from a single
@@ -268,7 +302,7 @@ npm --prefix web run test:grading
 ## Acceptance criteria
 - [ ] `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' …` (gate #1 — global probe) exits `0`; captured numbers (`total_rows`, `distinct_triple`, `duplicate_rows`) are quoted verbatim in the grain note.
 - [ ] Gate #2 (per-session probe over three deterministic `analytic_ready` sessions) exits `0`; the DO block does not raise its 3-session-minimum check; per-session `(total, distinct_triple, duplicate_rows)` and discriminator distributions for any session with `duplicate_rows > 0` are quoted verbatim in the grain note.
-- [ ] Gate #3 (global candidate-grain probe) exits `0`; every emitted `distinct_*` row is quoted verbatim in the grain note, and the chosen canonical grain is justified by reference to those numbers (e.g., the chosen 4- or 5-tuple has `distinct_*tuple = total_rows`, or the note explicitly records that no candidate from gate #3 is fully unique and therefore recommends the heap-with-indexes path).
+- [ ] Gate #3 (global candidate-grain + nullability probe) exits `0`; every emitted `distinct_*` and `null_count_*` row is quoted verbatim in the grain note. A PK is recommended only when the chosen tuple has both `distinct_*tuple = total_rows` AND `null_count_<col> = 0` for every column in the tuple. If the unique-but-nullable path is chosen, the note records the coalesce/sentinel expression verbatim plus the no-collision justification per Step 5; if no candidate is fully unique, the note explicitly recommends the heap-with-indexes path.
 - [ ] `diagnostic/notes/03-laps-enriched-grain.md` exists and contains the four required sections (raw numbers, chosen grain, reasoning, recommendation for `03-laps-enriched-materialize`).
 - [ ] `npm --prefix web run build`, `npm --prefix web run typecheck`, and `npm --prefix web run test:grading` all exit `0`.
 - [ ] The only files modified by this slice are `diagnostic/notes/03-laps-enriched-grain.md` (new) and `diagnostic/slices/03-laps-enriched-grain-discovery.md` (this slice file — frontmatter + Slice-completion note only). No SQL files, no TypeScript files, no test files, no application code.
@@ -348,7 +382,7 @@ npm --prefix web run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Add a global nullability/non-null probe for every candidate discriminator tuple and require the decision tree to recommend a future PK only when all PK columns are both globally unique and non-null; otherwise recommend a non-PK strategy or an explicitly defined non-null/coalesced discriminator.
+- [x] Add a global nullability/non-null probe for every candidate discriminator tuple and require the decision tree to recommend a future PK only when all PK columns are both globally unique and non-null; otherwise recommend a non-PK strategy or an explicitly defined non-null/coalesced discriminator.
 
 ### Medium
 
