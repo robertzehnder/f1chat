@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cost-telemetry-validation
 phase: 2
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T05:17:44Z
+updated: 2026-04-27T05:20:25Z
 ---
 
 ## Goal
@@ -31,14 +31,40 @@ Validate the post_dispatch_cost.sh estimator against actual billing console tota
 - **Window-end (UTC):** the `ts` of the most recent ledger row at the time the slice begins (i.e. `tail -1 cost_ledger.jsonl | jq -r .ts`).
 - Record both timestamps verbatim (ISO-8601, second precision) at the top of the validation note. Both billing-console exports MUST be requested for the same `[window-start, window-end]` range; if a console only supports day-granularity, round window-start down and window-end up to whole UTC days and document the rounding in the note.
 
+## Ledger-to-vendor grouping rule
+Each ledger row carries both an `agent` field and a `model` field (see `scripts/loop/post_dispatch_cost.sh:161`). For per-vendor delta computation, group rows by **the `model` field's prefix**, not the `agent` field, because some `agent` values fall back across vendors:
+
+- `model` starts with `claude-` → **Anthropic**
+- `model` starts with `gpt-` or `o` (digit) → **OpenAI**
+- any other `model` value → fail loud (the slice notes the row and stops; this should not happen)
+
+For traceability, the note must also list the count of rows by `agent` value, covering at minimum:
+
+| `agent` value | model resolved by `post_dispatch_cost.sh` | vendor |
+|---|---|---|
+| `claude` | `$LOOP_CLAUDE_IMPL_MODEL` (default `claude-opus-4-7`) | Anthropic |
+| `claude-revise` | `$LOOP_CLAUDE_REVISE_MODEL` (default `claude-opus-4-7`) | Anthropic |
+| `claude-repair` | `$LOOP_CLAUDE_REPAIR_MODEL` (default `claude-opus-4-7`) | Anthropic |
+| `codex` / `codex-native` | `gpt-5` | OpenAI |
+| `codex-claude-fallback` | `$LOOP_CLAUDE_IMPL_MODEL` (default `claude-opus-4-7`) | Anthropic |
+| `codex-slice-audit` | `gpt-5` | OpenAI |
+| `codex-slice-audit-claude-fallback` | `$LOOP_CLAUDE_IMPL_MODEL` (default `claude-opus-4-7`) | Anthropic |
+
+If the ledger contains an `agent` value not in this table, the implementer adds it to the table (with the resolved model and vendor) before computing deltas.
+
 ## Steps
 1. Compute the validation window per the rule above. Record `window-start`, `window-end`, and the slice IDs the window covers in the validation note.
-2. Sum `cost_usd` from the ledger for rows whose `ts` is within `[window-start, window-end]`. Break the sum down by `agent` (claude vs codex) so it can be compared to per-vendor billing totals.
+2. Sum `cost_usd` from the ledger for rows whose `ts` is within `[window-start, window-end]`. Group by vendor using the rule in "Ledger-to-vendor grouping rule" above (i.e. by the row's `model` prefix). Also report a per-`agent`-value count in the note for traceability.
 3. Export the Anthropic billing CSV for the window into `diagnostic/artifacts/cost/anthropic_<window-start>_<window-end>.csv`. Sum the `cost` column.
 4. Export the OpenAI billing CSV for the window into `diagnostic/artifacts/cost/openai_<window-start>_<window-end>.csv`. Sum the `cost` column.
 5. Compute `delta_pct = (ledger_sum - billing_sum) / billing_sum * 100` per vendor and overall. Write `diagnostic/notes/02-cost-telemetry-validation.md` containing: window timestamps, per-vendor ledger sums, per-vendor billing sums, deltas, and pass/fail against the 5% threshold.
-6. If overall delta within ±5%: write a one-time script `scripts/loop/one_time/02_flip_estimated_false.sh` that rewrites `cost_ledger.jsonl` in place, setting `"estimated":false` ONLY on rows whose `ts` is within the window. The script MUST: (a) take `--window-start` and `--window-end` flags, (b) write to a temp file then `mv` atomically, (c) emit a count of rows flipped to stdout. Run it; commit the script (the ledger itself is gitignored — record before/after counts in the note).
-7. If overall delta outside ±5%: identify the parser gap (most likely log-file discovery cutoff, missing usage path in the python parser, or pricing rate mismatch in `scripts/loop/pricing.json`). Patch `scripts/loop/post_dispatch_cost.sh` and/or `scripts/loop/pricing.json`. Document the root cause and the fix in the note. Do NOT flip `estimated:false` until a follow-up slice re-validates.
+6. If overall delta within ±5%: write a one-time script `scripts/loop/one_time/02_flip_estimated_false.sh` that rewrites `cost_ledger.jsonl` in place, setting `"estimated":false` ONLY on rows whose `ts` is within the window. The script MUST:
+   - (a) accept required flags `--window-start <iso8601>` and `--window-end <iso8601>`;
+   - (b) accept optional flag `--dry-run`, which prints what it would do but does NOT mutate the ledger;
+   - (c) on every invocation (dry-run or not) emit EXACTLY one stdout line matching the regex `^rows_in_window=[0-9]+ rows_outside_window_unchanged=[0-9]+$` (this exact format is what the gate greps for);
+   - (d) when not in `--dry-run`, write the rewritten ledger to a temp file in the same directory then `mv` atomically over the original.
+   First run it with `--dry-run` and record the reported counts in the note. Then run it for real, capture the new counts, and record before/after `estimated:true` totals in the note. Commit the script (the ledger itself is gitignored).
+7. If overall delta outside ±5%: identify the parser gap (most likely log-file discovery cutoff, missing usage path in the python parser, or pricing rate mismatch in `scripts/loop/pricing.json`). Patch `scripts/loop/post_dispatch_cost.sh` and/or `scripts/loop/pricing.json`. Then produce a before/after computed-cost comparison artifact at `diagnostic/artifacts/cost/02-parser-fix-before-after.json` containing the keys `ledger_sum_before_usd`, `ledger_sum_after_usd`, `billing_sum_usd`, `delta_pct_before`, `delta_pct_after` (and a free-text `root_cause` string). The fix is accepted iff `|delta_pct_after| < |delta_pct_before|`. Document the root cause and the fix in the note. Do NOT flip `estimated:false` until a follow-up slice re-validates.
 
 ## Changed files expected
 - `diagnostic/notes/02-cost-telemetry-validation.md` (always)
@@ -47,6 +73,7 @@ Validate the post_dispatch_cost.sh estimator against actual billing console tota
 - `scripts/loop/one_time/02_flip_estimated_false.sh` (only on within-5% path)
 - `scripts/loop/post_dispatch_cost.sh` (only on outside-5% path, when parser gap is in the parser)
 - `scripts/loop/pricing.json` (only on outside-5% path, when parser gap is a stale rate)
+- `diagnostic/artifacts/cost/02-parser-fix-before-after.json` (only on outside-5% path)
 
 > Note: `scripts/loop/state/cost_ledger.jsonl` is gitignored and not committed; mutation of it is recorded in the note via row counts, not by checking it in.
 
@@ -58,31 +85,41 @@ Validate the post_dispatch_cost.sh estimator against actual billing console tota
 ## Gate commands
 ```bash
 # Run from repo root. Each line uses `npm --prefix web` so cwd is unchanged.
+# Build runs first because `web/next-env.d.ts` references `.next/types/routes.d.ts`
+# which only exists after a build; running typecheck before build will fail.
+npm --prefix web run build
 npm --prefix web run typecheck
 npm --prefix web run test:grading
-npm --prefix web run build
 
 # Validation-specific gates (run from repo root):
 test -f diagnostic/notes/02-cost-telemetry-validation.md
 ls diagnostic/artifacts/cost/anthropic_*.csv diagnostic/artifacts/cost/openai_*.csv
 
-# Within-5% path only — verify the flip script touched only window rows:
-# (Skip if outside-5% path was taken; the note will say so.)
-bash scripts/loop/one_time/02_flip_estimated_false.sh --window-start "$WINDOW_START" --window-end "$WINDOW_END" --dry-run \
+# Within-5% path only — verify the flip script touched only window rows.
+# Skip this gate if the outside-5% path was taken; the note will state which path applies.
+bash scripts/loop/one_time/02_flip_estimated_false.sh \
+     --window-start "$WINDOW_START" --window-end "$WINDOW_END" --dry-run \
   | grep -E '^rows_in_window=[0-9]+ rows_outside_window_unchanged=[0-9]+$'
 
-# Outside-5% path only — re-run the estimator on a synthetic session log and confirm the
-# computed cost matches the patched expectation documented in the note:
-# (Skip if within-5% path was taken.)
-bash scripts/loop/post_dispatch_cost.sh --self-test 2>&1 | tee /tmp/02-cost-selftest.log
-grep -E 'self-test (PASS|OK)' /tmp/02-cost-selftest.log
+# Outside-5% path only — verify the before/after computed-cost comparison artifact
+# exists and demonstrates the fix moved the result toward the billing total.
+# Skip this gate if the within-5% path was taken.
+test -f diagnostic/artifacts/cost/02-parser-fix-before-after.json
+python3 -c '
+import json, sys
+d = json.load(open("diagnostic/artifacts/cost/02-parser-fix-before-after.json"))
+for k in ("ledger_sum_before_usd","ledger_sum_after_usd","billing_sum_usd","delta_pct_before","delta_pct_after"):
+    assert k in d, f"missing key: {k}"
+assert abs(d["delta_pct_after"]) < abs(d["delta_pct_before"]), "fix did not reduce |delta_pct|"
+print("parser-fix before/after gate: PASS")
+'
 ```
 
 ## Acceptance criteria
 - [ ] Validation note `diagnostic/notes/02-cost-telemetry-validation.md` committed with: window-start, window-end, per-vendor ledger sums, per-vendor billing sums, deltas, decision.
 - [ ] Both billing-console CSVs committed under `diagnostic/artifacts/cost/`.
 - [ ] **Within-5% path:** `scripts/loop/one_time/02_flip_estimated_false.sh` committed; running it with `--dry-run` reports `rows_in_window` > 0 and `rows_outside_window_unchanged` equal to the count of out-of-window ledger rows; note records before/after `estimated:true` counts.
-- [ ] **Outside-5% path:** parser-gap root cause documented in note; fix landed in `scripts/loop/post_dispatch_cost.sh` and/or `scripts/loop/pricing.json`; estimator self-test (or equivalent before/after computed-cost comparison in the note) demonstrates the fix changes the result in the expected direction.
+- [ ] **Outside-5% path:** parser-gap root cause documented in note; fix landed in `scripts/loop/post_dispatch_cost.sh` and/or `scripts/loop/pricing.json`; before/after artifact `diagnostic/artifacts/cost/02-parser-fix-before-after.json` committed with keys `ledger_sum_before_usd`, `ledger_sum_after_usd`, `billing_sum_usd`, `delta_pct_before`, `delta_pct_after`, `root_cause`, and satisfying `|delta_pct_after| < |delta_pct_before|`.
 
 ## Out of scope
 - Backfilling cost rows for runs prior to Item 9 landing — those rows stay 0 with `estimated:true`.
@@ -120,12 +157,12 @@ Rollback: `git revert <commit>`. The flip script edits a gitignored file; if it 
 **Status: REVISE**
 
 ### High
-- [ ] Reorder the web gate commands so `npm --prefix web run build` runs before `npm --prefix web run typecheck`, because `web/next-env.d.ts` references `.next/types/routes.d.ts` generated by the build.
-- [ ] Make the within-5% flip-script requirements match the gate by explicitly requiring `--dry-run` support and the exact `rows_in_window=... rows_outside_window_unchanged=...` stdout format used by the gate.
-- [ ] Fix the outside-5% gate so it is satisfiable for both parser fixes and pricing-only fixes; either require implementing `scripts/loop/post_dispatch_cost.sh --self-test` on every outside-5% path or replace the gate with the accepted before/after computed-cost comparison artifact.
+- [x] Reorder the web gate commands so `npm --prefix web run build` runs before `npm --prefix web run typecheck`, because `web/next-env.d.ts` references `.next/types/routes.d.ts` generated by the build.
+- [x] Make the within-5% flip-script requirements match the gate by explicitly requiring `--dry-run` support and the exact `rows_in_window=... rows_outside_window_unchanged=...` stdout format used by the gate.
+- [x] Fix the outside-5% gate so it is satisfiable for both parser fixes and pricing-only fixes; either require implementing `scripts/loop/post_dispatch_cost.sh --self-test` on every outside-5% path or replace the gate with the accepted before/after computed-cost comparison artifact.
 
 ### Medium
-- [ ] Define the ledger-to-vendor grouping rule for all expected agent values, including `claude-revise`, `claude-repair`, `codex-native`, and `codex-claude-fallback`, so per-vendor deltas cannot be computed inconsistently.
+- [x] Define the ledger-to-vendor grouping rule for all expected agent values, including `claude-revise`, `claude-repair`, `codex-native`, and `codex-claude-fallback`, so per-vendor deltas cannot be computed inconsistently.
 
 ### Low
 
