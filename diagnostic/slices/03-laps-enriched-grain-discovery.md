@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T15:12:49Z
+updated: 2026-04-27T15:14:35Z
 ---
 
 ## Goal
@@ -323,6 +323,20 @@ npm --prefix web run test:grading
 ### Medium
 - [x] Reconcile the step text and gate SQL so they name the same candidate columns; the steps mention `lap_source`, but gate #2 does not query it.
 - [x] Remove or rewrite the instruction that the implementer should update the gate's candidate-column list during implementation, since the changed-files scope only allows the slice file frontmatter and completion note to change after planning.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T15:03:18Z`).
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Fix gate #1's `duplicate_rows` SQL expression so both operands are numeric before subtraction; the current expression subtracts a `text` value from a `bigint` and will fail before the grain note can be produced.
+
+### Medium
 
 ### Low
 
