@@ -1,11 +1,11 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T19:37:12-04:00
+updated: 2026-04-27T19:38:33-04:00
 ---
 
 ## Goal
@@ -326,13 +326,13 @@ npm --prefix web run test:grading
 
 **Branch:** `slice/03-pit-cycle-summary`
 
-**Files changed (only these — confirmed by `git status` / `git diff --name-only integration/perf-roadmap...HEAD`):**
+**Files changed (only these — confirmed by `git status` / `git diff --name-only integration/perf-roadmap..HEAD`):**
 - `sql/015_pit_cycle_summary_mat.sql` (new, single `BEGIN; … COMMIT;`)
-- `diagnostic/slices/03-pit-cycle-summary.md` (frontmatter `status pending → awaiting_audit`, `owner claude → codex`, `updated 2026-04-27T23:23:42Z → 2026-04-27T19:24:38-04:00`; this Slice-completion note filled in)
+- `diagnostic/slices/03-pit-cycle-summary.md` (frontmatter `status pending → awaiting_audit → revising → in_progress → awaiting_audit`, `owner claude → codex → claude → codex`, `updated → 2026-04-27T19:38:33-04:00`; Slice-completion note filled in; gate #3 output corrected per audit round 1 finding #3)
 
 No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-4]_*.sql`, no application code. Scope clean.
 
-**Commit hashes (this slice):** `7c28a34` (`slice 03-pit-cycle-summary: materialize core.pit_cycle_summary`) — the migration + slice-frontmatter + Slice-completion note shipped as one commit tagged `[slice:03-pit-cycle-summary][awaiting-audit]`. A follow-up commit on this same branch records this hash and the push confirmation in this note.
+**Commit hashes (this slice):** `7c28a34` (`slice 03-pit-cycle-summary: materialize core.pit_cycle_summary`), `98ed1bf` (`slice 03-pit-cycle-summary: record commit hash in completion note`), and the follow-up revise commit on this same branch tagged `[slice:03-pit-cycle-summary][awaiting-audit]` that addresses audit round 1 finding #3 (gate #3 output claim).
 
 **Decisions applied (verbatim from plan):**
 - Object model: real `core.pit_cycle_summary_mat` base table + facade view `core.pit_cycle_summary` (Decisions §1). No `CREATE MATERIALIZED VIEW`, no `REFRESH MATERIALIZED VIEW`.
@@ -347,11 +347,7 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 - Gate #0 — pre-flight grain probe over `core_build.pit_cycle_summary` on `(session_key, driver_number, pit_sequence)` — **exit 0**. NOTICE: `core_build.pit_cycle_summary grain probe: total=18718 distinct_triple=18718 duplicate=0`.
 - Gate #1 — `psql -v ON_ERROR_STOP=1 -f sql/015_pit_cycle_summary_mat.sql` — **exit 0**. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 18718 / CREATE VIEW / COMMIT`.
 - Gate #2 — structural assertions DO block (relkind='r' on `_mat`; relkind='v' on the public view; PK columns exactly `['session_key','driver_number','pit_sequence']` in that order; the view's only `pg_depend`-via-`pg_rewrite` reference within `core`/`core_build`/`raw` is `core.pit_cycle_summary_mat`) — **exit 0**.
-- Gate #3 — parity DO block (3-session sentinel; global rowcount equality; bidirectional `EXCEPT ALL` per session) — **exit 0**. Output:
-  - `global rowcount match: core_build=18718 mat=18718`
-  - `parity OK session_key=9102 diff_rows=0`
-  - `parity OK session_key=9110 diff_rows=0`
-  - `parity OK session_key=9118 diff_rows=0`
+- Gate #3 — parity DO block (3-session sentinel; global rowcount equality; bidirectional `EXCEPT ALL` per session) — **exit 0**. Output: `DO`. The DO block uses `RAISE EXCEPTION` for failure paths only, so a clean run emits no per-session NOTICE and no rowcount NOTICE — passing the block is signalled solely by exit `0`. Independent verification (run separately, not part of gate #3): `SELECT count(*) FROM core_build.pit_cycle_summary;` and `SELECT count(*) FROM core.pit_cycle_summary_mat;` both returned `18718`; the deterministic 3-session selector returned `9102`, `9110`, `9118`.
 - `npm --prefix web run build` — **exit 0** (Next.js 15 build successful, all 21 routes compiled).
 - `npm --prefix web run typecheck` — **exit 0** (`tsc --noEmit` clean).
 - `npm --prefix web run test:grading` — **exit 0** (`# tests 31 / # pass 21 / # fail 0 / # skipped 10`; the 10 skips are the `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`-gated `/api/chat` propagation checks, which require a running app and are skipped by default in every prior slice).
