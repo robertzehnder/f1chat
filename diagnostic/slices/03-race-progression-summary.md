@@ -1,11 +1,11 @@
 ---
 slice_id: 03-race-progression-summary
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T17:00:02Z
+updated: 2026-04-27T17:02:44Z
 ---
 
 ## Goal
@@ -61,7 +61,7 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
    2. `TRUNCATE core.race_progression_summary_mat;` then `INSERT INTO core.race_progression_summary_mat SELECT * FROM core_build.race_progression_summary;` for initial population. The `TRUNCATE` before `INSERT` makes re-running the migration idempotent. The bulk `INSERT … SELECT` doubles as a grain assertion: a non-unique grain on `(session_key, driver_number, lap_number)` would abort the transaction with a clean PK-violation error and roll back the migration.
    3. `CREATE OR REPLACE VIEW core.race_progression_summary AS SELECT * FROM core.race_progression_summary_mat;` — replace the public view body in place with the facade. **Do not** use `DROP VIEW … CREATE VIEW`: `core.pit_cycle_summary` (`sql/007_semantic_summary_contracts.sql:401` ff., specifically the `LEFT JOIN core.race_progression_summary rp` at `sql/007_semantic_summary_contracts.sql:431`) depends on `core.race_progression_summary` and would block the drop, even in a single transaction. `CREATE OR REPLACE VIEW` succeeds dependency-free because step 1.1 declares the storage table's columns in exactly the same names, types, and order as the original view's projection.
 2. Apply the SQL to `$DATABASE_URL` (gate command #1).
-3. Verify (a) the storage relation is a base table (`relkind = 'r'`), (b) the public relation is a view (`relkind = 'v'`), and (c) the storage relation carries `PRIMARY KEY (session_key, driver_number, lap_number)` in that exact column order — gate command #2.
+3. Verify (a) the storage relation is a base table (`relkind = 'r'`), (b) the public relation is a view (`relkind = 'v'`), (c) the storage relation carries `PRIMARY KEY (session_key, driver_number, lap_number)` in that exact column order, and (d) the public view is actually a thin facade over the matview (its only relation dependency in schemas `core` / `core_build` / `raw`, sourced from `pg_depend` joined through `pg_rewrite`, is `core.race_progression_summary_mat`) — gate command #2. Without check (d), gate #2 would pass if the migration accidentally left the original aggregating view body in place, since that would still be a view (`relkind = 'v'`).
 4. Run the bidirectional, session-scoped, multiplicity-preserving `EXCEPT ALL` parity check between `core_build.race_progression_summary` (canonical query) and `core.race_progression_summary_mat` (storage) for the **3 deterministic `analytic_ready` sessions** selected by:
    ```sql
    SELECT session_key
@@ -89,16 +89,21 @@ None.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/013_race_progression_summary_mat.sql
 
 # 2. Confirm (a) the storage relation is a base table, (b) the public relation is
-#    a view, and (c) the storage relation carries PRIMARY KEY
-#    (session_key, driver_number, lap_number) in that exact column order. Must
-#    exit 0; the DO block raises (and ON_ERROR_STOP=1 forces non-zero exit)
-#    unless every assertion holds.
+#    a view, (c) the storage relation carries PRIMARY KEY
+#    (session_key, driver_number, lap_number) in that exact column order, and
+#    (d) the public view is actually a thin facade over core.race_progression_summary_mat
+#    (its only relation dependency in core/core_build/raw is the matview).
+#    Must exit 0; the DO block raises (and ON_ERROR_STOP=1 forces non-zero exit)
+#    unless every assertion holds. Without check (d) this gate would pass even
+#    if the migration accidentally left the original aggregating view body in
+#    place, since that would still be a view (relkind = 'v').
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
   table_kind text;
   view_kind text;
   pk_cols text[];
+  facade_refs text[];
 BEGIN
   SELECT c.relkind::text INTO table_kind
   FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -132,6 +137,33 @@ BEGIN
     RAISE EXCEPTION
       'expected core.race_progression_summary_mat PRIMARY KEY (session_key, driver_number, lap_number), got %',
       pk_cols;
+  END IF;
+
+  -- Assert the public view is a thin facade over the matview. Walk pg_depend
+  -- through the view's pg_rewrite rule to enumerate every relation it depends
+  -- on, restricted to schemas core/core_build/raw (so we ignore pg_catalog and
+  -- self-references). The only relation that must appear is
+  -- core.race_progression_summary_mat. If the migration accidentally left the
+  -- original aggregating view body in place, this set would instead include
+  -- core.laps_enriched, core.session_drivers, raw.sessions, raw.meetings, etc.,
+  -- and the assertion would fail with the offending list in the error message.
+  SELECT array_agg(DISTINCT tn.nspname || '.' || t.relname
+                   ORDER BY tn.nspname || '.' || t.relname)
+    INTO facade_refs
+  FROM pg_depend d
+  JOIN pg_rewrite r ON d.objid = r.oid AND d.classid = 'pg_rewrite'::regclass
+  JOIN pg_class v ON r.ev_class = v.oid
+  JOIN pg_namespace vn ON vn.oid = v.relnamespace
+  JOIN pg_class t ON d.refobjid = t.oid AND d.refclassid = 'pg_class'::regclass
+  JOIN pg_namespace tn ON tn.oid = t.relnamespace
+  WHERE vn.nspname = 'core'
+    AND v.relname = 'race_progression_summary'
+    AND tn.nspname IN ('core', 'core_build', 'raw')
+    AND t.oid <> v.oid;
+  IF facade_refs IS DISTINCT FROM ARRAY['core.race_progression_summary_mat']::text[] THEN
+    RAISE EXCEPTION
+      'expected core.race_progression_summary to be a thin facade over core.race_progression_summary_mat, but it references: %',
+      facade_refs;
   END IF;
 END $$;
 SQL
@@ -204,6 +236,7 @@ npm --prefix web run test:grading
 ## Acceptance criteria
 - [ ] `core.race_progression_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number, lap_number)` — gate #1 (`psql -f sql/013_race_progression_summary_mat.sql`) exits `0` and gate #2 exits `0` (its DO block raises unless `relkind = 'r'` AND the table carries a primary-key constraint whose columns are exactly `['session_key','driver_number','lap_number']` in that order, sourced from `pg_constraint` with `contype = 'p'`).
 - [ ] `core.race_progression_summary` exists as a view (the facade) — gate #2 exits `0` (the same DO block raises unless `relkind = 'v'`).
+- [ ] `core.race_progression_summary` is a thin facade over `core.race_progression_summary_mat` — gate #2 exits `0` (the DO block's fourth assertion raises unless `pg_depend`-via-`pg_rewrite` reports `core.race_progression_summary_mat` as the **only** relation the view depends on within schemas `core` / `core_build` / `raw`; this is the check that distinguishes the facade swap from the original aggregating view body, which depended on `core.laps_enriched`, `core.session_drivers`, etc.).
 - [ ] Global rowcount of `core.race_progression_summary_mat` equals the global rowcount of `core_build.race_progression_summary` — gate #3 exits `0` (the DO block's `RAISE EXCEPTION 'global rowcount mismatch …'` branch does not fire).
 - [ ] Bidirectional `EXCEPT ALL` parity returns `0` for each of the 3 deterministic `analytic_ready` sessions selected per Steps §4 — gate #3 exits `0` (the DO block's `RAISE EXCEPTION 'parity drift …'` branch does not fire and the sub-3 session-count guard does not trigger).
 - [ ] `npm --prefix web run build` exits `0`.
@@ -276,7 +309,7 @@ npm --prefix web run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Add a gate assertion that `core.race_progression_summary` is actually a thin facade over `core.race_progression_summary_mat` (for example via `pg_depend` or `pg_get_viewdef`), because the current gate only proves the public relation is some view and would pass if the migration left the original aggregating view in place.
+- [x] Add a gate assertion that `core.race_progression_summary` is actually a thin facade over `core.race_progression_summary_mat` (for example via `pg_depend` or `pg_get_viewdef`), because the current gate only proves the public relation is some view and would pass if the migration left the original aggregating view in place.
 
 ### Medium
 
