@@ -200,9 +200,9 @@ authored.
 
 ### Branch + commit
 - Branch: `slice/02-cost-telemetry-validation`
-- Commit hash: filled in by the commit step (referenced via
-  `[slice:02-cost-telemetry-validation][awaiting-audit]` tag in the commit
-  message). Pushed to `origin`.
+- Commit hash: `f58bd79` (`slice 02-cost-telemetry-validation: blocked on
+  billing-console CSV exports`,
+  `[slice:02-cost-telemetry-validation][blocked]`). Pushed to `origin`.
 
 ### To unblock
 1. Export the two CSVs above to the listed paths and commit them.
