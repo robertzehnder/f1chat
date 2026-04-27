@@ -1,7 +1,7 @@
 ---
 slice_id: 01-perf-trace-fix-spans
 phase: 1
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -210,7 +210,43 @@ grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnos
 - The companion markdown `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.md` includes the per-stage p50/p95/max table sorted by p95 desc and a Notes section that explicitly contrasts the new (separated) `runtime_classify` vs `resolve_db` numbers against the prior baseline's aliased numbers.
 
 ## Audit verdict
-(filled by Codex)
+audit: PASS
+
+[slice:01-perf-trace-fix-spans][pass]
+
+Gate commands re-run locally from repo root with `DATE=2026-04-27` and `OPENF1_CHAT_BASE_URL=http://127.0.0.1:3010`. The dev server was not still running on the recorded port at audit start, so I started it in this worktree before re-running the curl gate.
+- `: "${DATE:?must export DATE=<UTC-date> matching the artifacts written in steps 7e–7f}"` — exit `0`.
+- `: "${OPENF1_CHAT_BASE_URL:?must export OPENF1_CHAT_BASE_URL=http://127.0.0.1:<PORT> matching the running dev server}"` — exit `0`.
+- `curl -fsS "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary" >/dev/null` — exit `0`.
+- `(cd web && npm run build)` — exit `0`.
+- `(cd web && npm run typecheck)` — exit `0`.
+- `(cd web && npm run test:grading)` — exit `0`; TAP `1..28`, `# pass 19`, `# fail 0`, `# skipped 9`.
+- `test -f "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json"` — exit `0`.
+- `test -f "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.md"` — exit `0`.
+- `node -e '...'` window check — exit `0`; `window.requested === 50` and `window.returned === 50`.
+- `node -e '...'` alias-gone check — exit `0`; `runtime_classify.p50_ms = 0.01`, `resolve_db.p50_ms = 6990.80`, ratio `699080x`.
+- `grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnostic/_state.md >/dev/null` — exit `0`.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/_state.md`, `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.json`, `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.md`, `diagnostic/slices/01-perf-trace-fix-spans.md`, `web/scripts/tests/perf-trace-spans.test.mjs`, `web/scripts/tests/route-trace.test.mjs`, `web/src/app/api/chat/route.ts`, and `web/src/lib/chatRuntime.ts`.
+- Scope check passes. All non-slice files are listed under "Changed files expected"; the slice file is implicitly allowed.
+
+Acceptance criteria:
+- PASS: `runtime_classify` and `resolve_db` spans live in `web/src/lib/chatRuntime.ts`, with `classifySpan.end()` before `startSpan("resolve_db")`; `web/scripts/tests/perf-trace-spans.test.mjs` statically verifies the sequential, non-overlapping structure.
+- PASS: both runtime spans use their own `try` / `finally` and call `recordSpan?.(span.end())`, so completed records are appended before thrown exceptions propagate; the error-path behavioral test passes.
+- PASS: `web/src/app/api/chat/route.ts` has no standalone `startSpan("runtime_classify")` or `startSpan("resolve_db")` calls and passes `recordSpan: (record) => { traceRecords.push(record); }` into `buildChatRuntime`; the route's outer `finally` still flushes `traceRecords`.
+- PASS: the behavioral span-pattern test asserts `runtime_classify.elapsedMs < 50` and `resolve_db.elapsedMs >= 5 * runtime_classify.elapsedMs`; it passed under `npm run test:grading`.
+- PASS: `web/scripts/tests/route-trace.test.mjs` scans `route.ts ∪ chatRuntime.ts` for all 10 stage `startSpan(...)` call sites while keeping `flushTrace(` and `finally` assertions scoped to `route.ts`.
+- PASS: both artifacts exist at `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.{json,md}`.
+- PASS: the new JSON has `window.requested === 50` and `window.returned === 50`.
+- PASS: `stages.runtime_classify.p50_ms = 0.01`, which is `< 50`.
+- PASS: `runtime_classify.p50_ms` and `resolve_db.p50_ms` differ by at least `10x` (`6990.80 / 0.01`).
+- PASS: the companion markdown contains a per-stage p50/p95/max table and a Notes section explicitly contrasting the prior aliased `runtime_classify` / `resolve_db` numbers with the new separated numbers.
+- PASS: `diagnostic/_state.md` points its "Latest perf baseline" block at `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.json` and lists the slowest stages by p50 from that file.
+- PASS: the slice-completion note records `DATE=2026-04-27` and quotes the new `runtime_classify` p50, `resolve_db` p50, and overall `total` p50/p95.
+- PASS: all gate commands exit `0`.
+
+Phase 1 merge status: `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
