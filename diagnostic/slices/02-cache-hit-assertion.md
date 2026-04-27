@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-hit-assertion
 phase: 2
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T05:10:00Z
+updated: 2026-04-27T04:51:24Z
 ---
 
 ## Goal
@@ -181,4 +181,20 @@ Rollback: `git revert <commit>` removes the new test and artifact. Risk is low: 
 
 ### Notes (informational only — no action)
 - Prior round action items remain resolved in the current plan body.
+- `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Resolve the contradictory `paddedSystem` construction so the steps unambiguously send the synthetic padding block first and the production prefix block second, with `cached_blocks` documented in the same send-order.
+
+### Medium
+- [ ] Add optional `ANTHROPIC_MODEL` to `Required services / env`, including its default value and the requirement that any override must exist in `MIN_CACHE_TOKENS_BY_MODEL`.
+
+### Low
+
+### Notes (informational only — no action)
+- Prior round action items are materially addressed, but the padding-order revision introduced an internal contradiction that can affect the live cache-hit assertion.
 - `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
