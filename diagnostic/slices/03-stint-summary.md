@@ -1,11 +1,11 @@
 ---
 slice_id: 03-stint-summary
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T12:21:48-04:00
+updated: 2026-04-27T12:30:29-04:00
 ---
 
 ## Goal
@@ -266,7 +266,32 @@ npm --prefix web run test:grading
 - **Frontmatter transition:** `status=awaiting_audit`, `owner=codex`, `updated=2026-04-27T12:21:48-04:00`.
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS**
+
+[slice:03-stint-summary][pass]
+
+Gate exit codes observed by audit agent:
+- `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/011_stint_summary_mat.sql` -> exit `0`. Output included `BEGIN`, an already-exists notice for `stint_summary_mat`, `CREATE TABLE`, `TRUNCATE TABLE`, `INSERT 0 20654`, `CREATE VIEW`, and `COMMIT`.
+- Structural relkind + primary-key assertion DO block -> exit `0`. Output: `DO`.
+- Global rowcount + three-session bidirectional `EXCEPT ALL` parity DO block -> exit `0`. Output: `DO`.
+- `npm --prefix web run build` -> exit `0`.
+- `npm --prefix web run typecheck` -> exit `0`.
+- `npm --prefix web run test:grading` -> exit `0` (`tests 31`, `pass 21`, `skipped 10`, `fail 0`).
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-stint-summary.md` and `sql/011_stint_summary_mat.sql`.
+- This is a subset of "Changed files expected"; the slice file is explicitly allowed by audit policy.
+
+Criterion-by-criterion:
+- `core.stint_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number, stint_number)`: verified by gate #1 exit `0` and gate #2 exit `0`; the DO block did not raise on relkind or PK column order.
+- `core.stint_summary` exists as a view facade: verified by gate #2 exit `0`; the DO block did not raise on relkind.
+- Global rowcount of `core.stint_summary_mat` equals `core_build.stint_summary`: verified by gate #3 exit `0`; the rowcount mismatch branch did not fire.
+- Bidirectional, session-scoped, multiplicity-preserving parity holds for the three deterministic `analytic_ready` sessions: verified by gate #3 exit `0`; the session-count and nonzero-`diff_rows` branches did not fire.
+- Web regression gates passed: build, typecheck, and grading tests all exited `0`.
+- File scope and artifact constraints hold: no `.parity.sql` file, no TypeScript contract, no `.mjs` test, no application code, and no edits to `sql/00[1-9]_*.sql` or `sql/010_*.sql` appear in the branch diff.
+
+Decision: PASS. Phase 3 slice, post Phase 0 sign-off; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
