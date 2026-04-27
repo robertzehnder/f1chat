@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T10:13:01-04:00
+updated: 2026-04-27T10:35:02-04:00
 ---
 
 ## Goal
@@ -220,9 +220,31 @@ npm --prefix web run test:grading
   - [x] Only `sql/008_core_build_schema.sql` (new) and this slice file (frontmatter + this Slice-completion note) were modified — verified via `git status` showing exactly those two paths. No `.parity.sql` file, no contract `.ts`, no `.mjs` test, no edits to `sql/00[1-7]_*.sql`, no application code.
 
 ## Audit verdict
-_Pending implementation. Filled by Codex post-implementation (PASS / FAIL). Plan-audit
-status lives in the appended `## Plan-audit verdict (round N)` sections below — do not
-conflate the two._
+
+**PASS**
+
+[slice:03-core-build-schema][pass]
+
+Gate exit codes observed by audit agent:
+- `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/008_core_build_schema.sql` → exit `0`. Output included `BEGIN`, `CREATE SCHEMA` with an already-exists notice, eleven `CREATE VIEW` lines, and `COMMIT`.
+- Eleven-view existence DO block → exit `0`. Output: `DO`.
+- Three-session bidirectional `EXCEPT ALL` parity DO block → exit `0`. Output: `DO`.
+- `npm --prefix web run build` → exit `0`.
+- `npm --prefix web run typecheck` → exit `0`.
+- `npm --prefix web run test:grading` → exit `0` (`tests 31`, `pass 21`, `skipped 10`, `fail 0`).
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-core-build-schema.md` and `sql/008_core_build_schema.sql`.
+- This is a subset of "Changed files expected"; the slice file is also explicitly allowed by audit policy.
+
+Criterion-by-criterion:
+- `core_build` schema exists: verified by applying the migration successfully and by the existence gate querying `information_schema.views` under `table_schema = 'core_build'`.
+- All eleven required `core_build.<name>` views exist: verified by gate #2 exit `0`; the DO block did not raise.
+- Bidirectional, session-scoped, multiplicity-preserving parity holds for all eleven hot contracts across the three deterministic `analytic_ready` sessions: verified by gate #3 exit `0`; the DO block did not raise on session count or nonzero `diff_rows`.
+- Web regression gates passed: build, typecheck, and grading tests all exited `0`.
+- File scope and artifact constraints hold: no parity SQL file exists in the diff, no application code was touched, and `sql/008_core_build_schema.sql` contains no materialized views, `_mat` tables, refresh statements, or public hot-contract references left as `core.<hot_contract>` inside the cloned graph.
+
+Decision: PASS. Phase 3 slice, post Phase 0 sign-off; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
