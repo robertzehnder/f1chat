@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T16:30:00Z
+updated: 2026-04-27T15:08:57Z
 ---
 
 ## Goal
@@ -214,6 +214,23 @@ If a candidate column referenced by gate #2 (`is_in_lap`, `is_out_lap`, `is_pit_
 
 ### Low
 - [x] Replace the stale `## Audit verdict` placeholder with the appended `## Plan-audit verdict` section as the single audit-status location.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T15:03:18Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the gate #2 candidate discriminator columns with columns that actually exist on `core.laps_enriched` in `sql/006_semantic_lap_layer.sql`, or add an explicit preflight query that derives the candidate list from `information_schema` before referencing it.
+- [ ] Add a global candidate-grain probe that verifies any proposed discriminator tuple over all rows of `core.laps_enriched`, because a future PK recommendation cannot be justified from only three sampled sessions.
+
+### Medium
+- [ ] Reconcile the step text and gate SQL so they name the same candidate columns; the steps mention `lap_source`, but gate #2 does not query it.
+- [ ] Remove or rewrite the instruction that the implementer should update the gate's candidate-column list during implementation, since the changed-files scope only allows the slice file frontmatter and completion note to change after planning.
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T15:03:18Z`).
