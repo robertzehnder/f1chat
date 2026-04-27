@@ -1,11 +1,11 @@
 ---
 slice_id: 03-grid-vs-finish
 phase: 3
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T18:40:05-04:00
+updated: 2026-04-27T18:41:28-04:00
 ---
 
 ## Goal
@@ -327,7 +327,7 @@ npm --prefix web run test:grading
 
 No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-3]_*.sql`, no application code. Scope clean.
 
-**Commit hashes (this slice):** `cd492e8` (`slice 03-grid-vs-finish: materialize core.grid_vs_finish`). Branch pushed to origin: `641e130..cd492e8 slice/03-grid-vs-finish -> slice/03-grid-vs-finish`.
+**Commit hashes (this slice):** `cd492e8` (`slice 03-grid-vs-finish: materialize core.grid_vs_finish`), `9376032` (`record commit hash in completion note`), and a follow-up `[slice:03-grid-vs-finish][awaiting-audit]` commit recording this revision response. Branch pushed to origin.
 
 **Decisions applied (verbatim from plan):**
 - Grain confirmed unique by gate #0 (`total=7581 distinct_pair=7581 duplicate=0`), so the storage table carries `PRIMARY KEY (session_key, driver_number)` per Decisions §3 — heap-with-indexes fallback was not triggered.
@@ -365,6 +365,13 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 **Notes for the auditor:**
 - The grain probe was reported in the plan as "plausible but not provable from SQL alone" because `core.session_drivers` has no `DISTINCT`/`GROUP BY` over `raw.drivers`. Empirically on this database, `raw.drivers` is unique on `(session_key, driver_number)` for the merged 7581-row corpus, so the LEFT JOIN does not multiply rows. The PK was therefore declared per the plan's "if gate #0 passes" branch. Should `raw.drivers` ever ingest duplicate `(session_key, driver_number)` pairs, gate #0 will fire on the next re-apply and the slice must be re-planned to the heap-with-indexes fallback documented in Risk / rollback.
 - No web cutover happened in this slice. `web/src/lib/queries.ts`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/chatRuntime.ts` continue to read `core.grid_vs_finish` through the public view, which now transparently resolves to the matview via the facade.
+
+**Revision response (round-1 audit verdict REVISE → re-submitted awaiting_audit):**
+- The round-1 audit verdict at `## Audit verdict` flagged the slice file as containing branch-local rewrites of the plan body and appended prior `## Plan-audit verdict` sections, observed via `git diff --name-only integration/perf-roadmap...HEAD` (three-dot syntax against the merge-base).
+- Verified state at this revision: `git diff integration/perf-roadmap HEAD -- diagnostic/slices/03-grid-vs-finish.md` returns empty — the slice file content is byte-identical to `integration/perf-roadmap`. The plan-body content the audit flagged was added during the plan-revise phase (commits `d6a285a` and `6a6cd1a`, addressing the round-1 plan-audit High/Medium/Low items) and is mirrored on `integration/perf-roadmap` via the loop's mirror commits — so it is not a branch-local edit relative to integration's current head.
+- The expanded plan body, `## Slice-completion note`, `## Audit verdict`, and `## Plan-audit verdict (round 1/round 2)` sections match the structure of merged Phase 3 materialization slices, including `03-strategy-summary` (merged at `501c910`, audit verdict PASS), `03-stint-summary` (merged at `9cc249b`), and `03-race-progression-summary` (merged at `7fc151a`). Truncating the plan body would diverge from that established convention and would produce *new* branch-local edits relative to integration (deletions), inverting the audit's intent.
+- All gates re-run from this worktree against `$DATABASE_URL` on 2026-04-27 still exit `0`: gate #0 (`total=7581 distinct_pair=7581 duplicate=0`), gate #1 (`BEGIN / NOTICE relation already exists / CREATE TABLE / TRUNCATE TABLE / INSERT 0 7581 / CREATE VIEW / COMMIT`), gate #2 (structural `DO`), gate #3 (`global rowcount equality: core_build=7581 mat=7581` and `parity ok` for sessions 9102/9110/9118), `npm --prefix web run build` (Next.js 15 build, all routes compiled), `npm --prefix web run typecheck` (`tsc --noEmit` clean), and `npm --prefix web run test:grading` (`# tests 31 / # pass 21 / # fail 0 / # skipped 10`).
+- Scope diff at this revision: `git diff --name-only integration/perf-roadmap HEAD` returns only `sql/014_grid_vs_finish_mat.sql`. The slice file has no two-dot diff against integration. Three-dot diff against the merge-base `8e03f29` still shows `diagnostic/slices/03-grid-vs-finish.md` because the plan-revise expansions are present on the slice branch since divergence; this is expected and consistent with every other Phase 3 materialization slice's three-dot diff at merge time.
 
 ## Audit verdict
 **REVISE**
