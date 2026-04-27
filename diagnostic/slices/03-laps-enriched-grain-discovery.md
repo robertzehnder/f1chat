@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T15:14:35Z
+updated: 2026-04-27T15:16:18Z
 ---
 
 ## Goal
@@ -72,8 +72,8 @@ SELECT 'distinct_triple',
   FROM (SELECT DISTINCT session_key, driver_number, lap_number FROM core.laps_enriched) d
 UNION ALL
 SELECT 'duplicate_rows',
-       (SELECT count(*) FROM core.laps_enriched)::text::bigint -
-       (SELECT count(*) FROM (SELECT DISTINCT session_key, driver_number, lap_number FROM core.laps_enriched) d)::text;
+       ((SELECT count(*) FROM core.laps_enriched)
+        - (SELECT count(*) FROM (SELECT DISTINCT session_key, driver_number, lap_number FROM core.laps_enriched) d))::text;
 SQL
 
 # 2. Per-session grain probe over the three deterministic analytic_ready sessions.
@@ -334,7 +334,7 @@ npm --prefix web run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Fix gate #1's `duplicate_rows` SQL expression so both operands are numeric before subtraction; the current expression subtracts a `text` value from a `bigint` and will fail before the grain note can be produced.
+- [x] Fix gate #1's `duplicate_rows` SQL expression so both operands are numeric before subtraction; the current expression subtracts a `text` value from a `bigint` and will fail before the grain note can be produced.
 
 ### Medium
 
