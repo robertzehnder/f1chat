@@ -29,7 +29,7 @@ type SqlGenerationOutput = {
   rawText: string;
 };
 
-type AnswerSynthesisInput = {
+export type AnswerSynthesisInput = {
   question: string;
   sql: string;
   rows: Record<string, unknown>[];
@@ -114,6 +114,36 @@ Rules:
 - Keep "answer" concise (2-6 sentences).
 - "reasoning" should briefly explain how the rows support the answer.
 `.trim();
+}
+
+export function buildSynthesisPromptParts(
+  input: AnswerSynthesisInput
+): { staticPrefix: string; dynamicSuffix: string } {
+  const runtimeText = JSON.stringify(input.runtime ?? {});
+  const rowsForPrompt = input.rows.slice(0, 25);
+  const dynamicSuffix = `
+Question:
+${input.question}
+
+SQL:
+${input.sql}
+
+Row count:
+${input.rowCount}
+
+Rows (sample):
+${JSON.stringify(rowsForPrompt)}
+
+Runtime:
+${runtimeText}
+
+Return JSON only.
+`.trim();
+
+  return {
+    staticPrefix: buildAnswerSynthesisPrompt(),
+    dynamicSuffix
+  };
 }
 
 function stripModelTraceNoise(text: string): string {
@@ -438,26 +468,7 @@ export async function synthesizeAnswerWithAnthropic(
   }
 
   const model = DEFAULT_ANTHROPIC_MODEL;
-  const runtimeText = JSON.stringify(input.runtime ?? {});
-  const rowsForPrompt = input.rows.slice(0, 25);
-  const userPrompt = `
-Question:
-${input.question}
-
-SQL:
-${input.sql}
-
-Row count:
-${input.rowCount}
-
-Rows (sample):
-${JSON.stringify(rowsForPrompt)}
-
-Runtime:
-${runtimeText}
-
-Return JSON only.
-`.trim();
+  const { staticPrefix, dynamicSuffix } = buildSynthesisPromptParts(input);
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -470,11 +481,11 @@ Return JSON only.
       model,
       max_tokens: ANSWER_MAX_TOKENS,
       temperature: 0,
-      system: buildAnswerSynthesisPrompt(),
+      system: staticPrefix,
       messages: [
         {
           role: "user",
-          content: userPrompt
+          content: dynamicSuffix
         }
       ]
     })
