@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-trace-fix-spans
 phase: 1
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T03:46:40Z
+updated: 2026-04-26T23:58:00-04:00
 ---
 
 ## Goal
@@ -178,7 +178,36 @@ grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnos
 - **Risk (error-path span loss)**: a result-only handoff (`runtime.runtimeSpans`) would silently drop runtime-stage records whenever `buildChatRuntime` threw, since the rejected promise has no usable result. The plan therefore uses an inner `try/finally` + caller-supplied `recordSpan` callback that writes into the route's existing `traceRecords` accumulator, so the outer `flushTrace` (which already runs in the route's top-level `finally`) sees every span that managed to end before the throw. The error-path assertion in `perf-trace-spans.test.mjs` locks this in.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch**: `slice/01-perf-trace-fix-spans`
+**Implementation commit**: `bac1d41` — `fix(perf): split runtime_classify and resolve_db spans inside buildChatRuntime`
+**${DATE}** captured at re-baseline start: `2026-04-27` (UTC).
+**Dev server**: started in this worktree on `http://127.0.0.1:3010` for the re-baseline. `OPENF1_CHAT_BASE_URL=http://127.0.0.1:3010` exported in the parent shell. Confirmed up via `curl -fsS ${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary` (HTTP 200).
+
+### Decisions
+- Implemented the round-2 / round-4 design exactly: a `recordSpan?: (record: SpanRecord) => void` callback is added to `buildChatRuntime`'s input type. `runtime_classify` and `resolve_db` are started inside `buildChatRuntime`, each in its own `try { ... } finally { recordSpan?.(span.end()); }` block. The route passes `recordSpan: (record) => { traceRecords.push(record); }` so the existing outer `flushTrace(requestId, traceRecords)` in the route's top-level `} finally { ... }` flushes the new records on both success and error paths. `ChatRuntimeResult` was **not** extended with a `runtimeSpans` field (per the round-2 / round-3 plan-audit guidance).
+- The `resolve_db` span wraps the entire post-classify body of `buildChatRuntime` (entity resolution, ambiguity manager, grain selection, completeness check, query planner, all early returns and the final return). All early-return paths trigger the outer `try/finally` so the resolve_db `SpanRecord` is always recorded. `chatRuntime.ts` contains exactly two `finally` keywords (verified with grep) — both are the new perfTrace `try/finally` blocks; there are no nested `finally` blocks that could confuse the static-analysis test.
+- `route.ts` no longer holds standalone `startSpan("runtime_classify")` / `startSpan("resolve_db")` call sites. The route-trace static-analysis test (`web/scripts/tests/route-trace.test.mjs`) was broadened to scan the union of `route.ts` and `chatRuntime.ts` so all 10 stage names remain asserted; the `flushTrace(` and `} finally {` assertions stay scoped to `route.ts` only (those genuinely live there).
+- The new `web/scripts/tests/perf-trace-spans.test.mjs` follows the round-3 / round-4 strategy: a static-analysis half on `chatRuntime.ts` source text (no transpile, no path-alias resolution) plus a behavioral half that re-uses the `transpileAndImportPerfTrace()` helper pattern from `perf-trace.test.mjs` to load `perfTrace.ts` in isolation and run the span-handoff pattern under deterministic `setTimeout`-based delays (5ms / 80ms). No live DB, no LLM, no chatRuntime import. The error-path scenario asserts that `assert.rejects` sees the simulated DB failure AND that both `runtime_classify` and `resolve_db` records reach the collector before the throw propagates.
+
+### Self-check results
+
+#### Gates (run from repo root)
+- `(cd web && npm run build)` — exit `0` (Next 15.5.15 compiled all routes; `/api/chat` route emitted as expected).
+- `(cd web && npm run typecheck)` — exit `0` (`tsc --noEmit` clean).
+- `(cd web && npm run test:grading)` — exit `0` (28 subtests: 19 pass, 9 skip — the 9 skipped are integration tests gated by `OPENF1_RUN_CHAT_INTEGRATION_TESTS`, unchanged by this slice). The two new test files run under the existing `node --test scripts/tests/*.test.mjs` runner with no new dev-deps.
+- Dev server precondition: `curl -fsS ${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary` — HTTP 200.
+- `test -f diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.json` — exit `0`.
+- `test -f diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.md` — exit `0`.
+- Window check (`node -e ...`): `window.requested === 50 && window.returned === 50` — passed.
+- Alias-gone check (`node -e ...`): `runtime_classify.p50_ms = 0.01` (< 50 ✓), `resolve_db.p50_ms = 6990.80` (`6990.80 / 0.01 = 699080×`, ≫10× ✓) — passed.
+- `grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.json" diagnostic/_state.md` — match present (the "Latest perf baseline" block was rewritten to reference the new artifact and re-list the slowest stages by p50).
+
+#### Re-baseline numbers (n=50, intense rubric, window 50/50)
+- `runtime_classify` — p50 **0.01 ms**, p95 0.02 ms, max 0.14 ms (was p50 7190.91 ms aliased).
+- `resolve_db` — p50 **6990.80 ms**, p95 16343.94 ms, max 18006.07 ms (was p50 7190.91 ms aliased).
+- `total` — p50 **12479.77 ms**, p95 **27861.57 ms**, max 30543.74 ms.
+- The companion markdown `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.md` includes the per-stage p50/p95/max table sorted by p95 desc and a Notes section that explicitly contrasts the new (separated) `runtime_classify` vs `resolve_db` numbers against the prior baseline's aliased numbers.
 
 ## Audit verdict
 (filled by Codex)
