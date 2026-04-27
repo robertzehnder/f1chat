@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-27T04:13:19Z
+# Project state — last updated: 2026-04-27T04:25:41Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -10,7 +10,7 @@ accumulated context the loop carries between slices._
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 1 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 2 | 4 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
+| 2 | 4 | 1 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
 | 3 | 13 | 0 | 0 | 13 | 0 | 0 | 0 | 0 | 0 |
 | 4 | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
@@ -44,6 +44,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `1ca375d` merge: 02-prompt-static-prefix-split [pass] — 2026-04-27
 - `44cde24` merge: 01-perf-trace-fix-spans [pass] — 2026-04-27
 - `eb5a31a` merge: 01-baseline-snapshot [pass] — 2026-04-26
 - `c0993ea` merge: 01-perf-summary-route [pass] — 2026-04-26
@@ -53,7 +54,6 @@ accumulated context the loop carries between slices._
 - `89b0dd7` merge: 00-verify-script [pass] — 2026-04-25
 - `87e1e1b` merge: 00-font-network-doc [pass] — 2026-04-25
 - `38c8704` merge: 00-dep-patches [pass] — 2026-04-25
-- `c2c2442` merge: 00-ci-workflow [pass] — 2026-04-25
 
 ## Open architectural decisions
 
