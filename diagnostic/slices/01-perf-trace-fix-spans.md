@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-trace-fix-spans
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T00:05:00-04:00
+updated: 2026-04-26T23:38:00-04:00
 ---
 
 ## Goal
@@ -196,3 +196,18 @@ grep -F "diagnostic/artifacts/perf/01-perf-trace-fix-spans_${DATE}.json" diagnos
 ### Notes (informational only — no action)
 - `_state.md` was last updated at `2026-04-26T15:24:13Z`, which is less than 24 hours old at audit time.
 - Prior context was read; the previous baseline slice's gate block documents the same repo-root subshell pattern needed here, and its benchmark steps show the trace-isolation/window checks this plan should reuse for the v2 baseline.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Preserve runtime span records when `buildChatRuntime` throws: replace the result-only `runtimeSpans` handoff with an error-safe mechanism, such as passing the request's `SpanRecord[]` accumulator into `buildChatRuntime` or otherwise guaranteeing ended `runtime_classify` / `resolve_db` records are appended before the route's existing error-path `flushTrace`.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T15:24:13Z`, which is less than 24 hours old at audit time.
+- Prior context was read; the prior route-stage-timings slice requires the route to flush trace records on generic error paths, so this split must not make `buildChatRuntime` failures lose the runtime-stage records.
