@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-hit-assertion
 phase: 2
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-27T04:38:10Z
 ---
 
 ## Goal
@@ -57,3 +57,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the "SDK response" assumption with an executable direct-`fetch` strategy or an explicit code change that exposes `payload.usage`, because this repo has no Anthropic SDK dependency and `synthesizeAnswerWithAnthropic` currently discards the raw response usage fields.
+- [ ] Add a gate command that actually runs the live benchmark with `OPENF1_RUN_CACHE_BENCHMARK=1` and `ANTHROPIC_API_KEY` present, because the listed `npm run test:grading` command will skip the gated cache assertion by default.
+
+### Medium
+- [ ] Update `Inputs` to remove the nonexistent `web/scripts/tests/grading.test.mjs` path and include the concrete source file the benchmark will import or modify.
+- [ ] Define the cache-hit benchmark artifact naming with a captured UTC `DATE` token instead of the stale hard-coded `2026-04-26` path, and align `Changed files expected` / `Artifact paths` to that convention.
+- [ ] Specify the exact benchmark payload construction and response fields to record, including model id, `input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, and the before/after token-cost rows needed by the goal.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
