@@ -40,7 +40,7 @@ I observed these during the conversation that built the loop and during the Phas
 
 | # | Issue | Evidence | Impact on full run |
 |---|---|---|---|
-| C-1 | **71 of 85 slice files don't exist** | `loop_status.sh` shows MISSING for Phases 2–12 | Loop idles on "no actionable slice" after `01-baseline-snapshot`. Cannot run end-to-end without these. |
+| C-1 | **72 of 86 slice files don't exist** (was 71/85 in round-1; +1 with `02-cost-telemetry-validation` added in round-4) | `loop_status.sh` shows MISSING for Phases 2–12 | Loop idles on "no actionable slice" after `01-baseline-snapshot`. Cannot run end-to-end without these. |
 | C-2 | **Span-boundary bug in `01-route-stage-timings`** | `runtime_classify` and `resolve_db` show identical p50/p95 (7190.91ms each) in `01-baseline-snapshot_2026-04-26.json`. `runtime_classify` is local-only logic in `chatRuntime.ts:516`; can't take 7s. | Phase 2 (prompt caching) and Phase 3 (matview) measure improvement against a misleading baseline. |
 | C-3 | **Single-worktree race when user operates during runner** | Hit twice — commits landed on slice branch instead of integration when runner had checked out a slice branch under our feet | A multi-day run will have many human interventions for blocked slices. Each one is a race opportunity. |
 | C-4 | **`LOOP_MAX_PLAN_ITERATIONS=4` too low for complex slices** | `01-perf-summary-route` hit cap; auto-repair saved it. Phase 9 (21 refactor splits), Phase 8 (synthesis hardening) likely hit cap too | Expected ≥30% of remaining slices will need cap bump or auto-repair to converge |
@@ -68,7 +68,7 @@ I observed these during the conversation that built the loop and during the Phas
 | N-1 | State machine has two `revising` states (`revising` impl, `revising_plan`) | Cognitive load |
 | N-2 | Slice files accumulate audit verdict rounds | After 5 rounds of plan-audit, slice file gets long |
 | N-3 | Sequential slice queue — can't parallelize | Phase 9's 21 refactor splits could run concurrently |
-| N-4 | 500+ commits expected for 85 slices on integration | Hard to read history |
+| N-4 | 500+ commits expected for 86 slices on integration | Hard to read history |
 | N-5 | No prompt-effectiveness audit | We added "read `_state.md` first" but no test confirms agents actually do it |
 | N-6 | Mixed model selection across roles | Implementer Opus 4.7, plan-reviser Opus 4.7, Codex auditor GPT-5, fallbacks Sonnet 4.6 default. Ad hoc. |
 | N-7 | Env vars for benchmark slices not documented | Newcomer can't run them without copying secrets |
@@ -165,59 +165,110 @@ I want Codex to audit **what** I'm planning to fix, **what** I'm explicitly not 
 
 **Uniform worktree model (per round-2 H-1, with repair carve-out per round-3 H-3):** EVERY agent dispatch that produces *slice work* runs in a slice worktree on a slice branch — including plan-audit and plan-revise (which previously edited integration directly). Every state change mirrors back to integration through `mirror_helper`.
 
-**Repair-agent exception (round-3 H-3, with round-4 H-3 push gate):** the repair agent has two modes:
+**Repair-agent two modes (round-3 H-3 + round-5 H-3 explicit-classification + round-5 H-2 lifecycle):**
 
-- **Slice-state-only repair** — flip parent slice from `blocked` to `revising` / `revising_plan` (no protocol change). Goes through a slice worktree on a slice branch + `mirror_helper`, same as the other agents. Pushes are routine (slice branch only).
-- **Loop-infrastructure repair** — edit `scripts/loop/*` or `scripts/loop/prompts/*` to fix a protocol bug. Runs on the **main worktree under repo lock**, because the changes target integration's loop infrastructure directly. **HUMAN-APPROVAL GATE on push** (round-4 H-3): self-modifying loop code is the most privileged path in this system; auto-pushing protocol changes without a human signoff means a single mis-classified repair can mutate the loop's own behavior unattended.
+The repair agent operates in one of two modes, **classified BEFORE dispatch** (not inferred from the diff after the fact). The dispatcher inspects the parent slice's audit verdict to decide:
 
-**Round-4 H-3 — gating loop-infra repair pushes:**
+- **Slice-state-only repair (`MODE=slice-state`)** — used when the verdict's items are scoped to the slice file itself (gate ordering, scope rules, plan content). Runs in slice worktree on slice branch; mirror via `mirror_helper`. Routine pushes.
+- **Loop-infrastructure repair (`MODE=loop-infra`)** — used when the verdict identifies a protocol bug in `scripts/loop/*`, `scripts/loop/prompts/*`, or `.github/workflows/*`. Runs on main worktree under repo lock. **Push gated by user-approval sentinel.** Self-modifying loop code never auto-pushes.
+
+**How the dispatcher classifies (round-5 H-3 fix):** before invoking the repair agent, the dispatcher reads the parent slice's audit verdict text and looks for protocol-fix keywords (`scripts/loop/`, `prompts/`, `.github/`, `dispatch_*.sh`, `runner.sh`, `mirror_helper`, `repo_lock`). Mode is decided up-front and passed to the agent as `LOOP_REPAIR_MODE=slice-state|loop-infra`. The agent's prompt is conditioned on the mode — no diff inspection after the fact, no ambiguous repairs.
+
+If the agent in `slice-state` mode tries to modify `scripts/loop/*` or `.github/workflows/*` anyway, the dispatcher's post-step REJECTS the diff (force-resets the worktree, sets the slice to blocked with "repair-mode-violation" note). The mode is enforced, not inferred.
+
+**Dispatch flow (round-5 H-2 explicit lifecycle):**
 
 ```bash
-# In dispatch_repair.sh, after agent runs:
-repair_diff=$(git -C "$LOOP_MAIN_WORKTREE" diff --name-only HEAD)
+# In dispatch_repair.sh, BEFORE invoking the agent:
+parent_verdict=$(extract_latest_audit_verdict_text "$slice_id")
+if echo "$parent_verdict" | grep -qE '(scripts/loop/|prompts/|\.github/|dispatch_[a-z_]+\.sh|runner\.sh|mirror_helper|repo_lock)'; then
+  LOOP_REPAIR_MODE="loop-infra"
+else
+  LOOP_REPAIR_MODE="slice-state"
+fi
+export LOOP_REPAIR_MODE
+log "dispatch_repair $slice_id mode=$LOOP_REPAIR_MODE"
 
-if echo "$repair_diff" | grep -qE '^(scripts/loop/|\.github/workflows/)'; then
-  # Loop-infrastructure repair. Commit LOCALLY only.
-  git -C "$LOOP_MAIN_WORKTREE" add -A
-  git -C "$LOOP_MAIN_WORKTREE" commit -m "[loop-infra-repair][slice:${slice_id}] $(short_summary)" >/dev/null
+# Invoke agent with mode-aware prompt
+( cd "$work_dir" && claude --print --model "$LOOP_CLAUDE_REPAIR_MODEL" ... )
 
-  # Check for user approval sentinel BEFORE pushing.
-  approval_sentinel="diagnostic/slices/.approved-loop-infra-repair/${slice_id}"
-  if [[ -f "$LOOP_MAIN_WORKTREE/$approval_sentinel" ]]; then
-    git -C "$LOOP_MAIN_WORKTREE" push >/dev/null 2>&1 \
-      || { log "loop-infra-repair: push failed for $slice_id"; return 1; }
-    rm -f "$LOOP_MAIN_WORKTREE/$approval_sentinel"
-    log "loop-infra-repair pushed for $slice_id (user-approved)"
-    # Slice transitions to revising/revising_plan as the agent intended.
-  else
-    # No approval — commit stays local. Flip slice to blocked with a clear
-    # explanation so the runner surfaces USER ATTENTION.
+# Post-step depends on mode:
+case "$LOOP_REPAIR_MODE" in
+  slice-state)
+    # Verify diff stayed within slice files — if it touched loop infra, reject.
+    diff_files=$(git -C "$work_dir" diff --name-only HEAD~1 HEAD 2>/dev/null || true)
+    if echo "$diff_files" | grep -qE '^(scripts/loop/|\.github/workflows/)'; then
+      log "REPAIR MODE VIOLATION slice=$slice_id mode=slice-state touched=$diff_files"
+      ( cd "$work_dir" && git reset --hard HEAD~1 )   # reverts the agent's commit
+      flip_slice_status "$slice_id" "blocked" "user"
+      append_slice_section "$slice_id" "## Repair mode violation" \
+        "Agent classified as slice-state but modified protocol files. Reset locally."
+      return 1
+    fi
+    mirror_slice_to_integration "$slice_id" "repair"
+    ;;
+
+  loop-infra)
+    # Two commits land locally on integration:
+    #   1. The agent's loop-infra repair commit ([loop-infra-repair])
+    #   2. A blocked-state slice-file flip ([loop-infra-pending])
+    # Neither is pushed without user approval.
+
+    # Agent already committed its loop-infra change. Now flip the slice file
+    # locally to blocked + append explanation. Same lock as the agent's commit.
     flip_slice_status "$slice_id" "blocked" "user"
     append_slice_section "$slice_id" "## Loop-infrastructure repair pending approval" \
-      "The repair agent proposed protocol changes touching:
-$(printf '%s\n' "$repair_diff" | sed 's/^/  - /')
+"The repair agent proposed protocol changes touching:
+$(printf '%s\n' "$diff_files" | sed 's/^/  - /')
 
-Local commit made on integration. Push gated. To approve and unblock:
-  touch $approval_sentinel
-  # Then restart the runner.
+Two local commits on integration (not pushed):
+  HEAD     [loop-infra-repair][slice:$slice_id] — the protocol change
+  HEAD~?   [loop-infra-pending][slice:$slice_id] — this blocked-state flip
 
-To reject and revert:
-  git -C \$LOOP_MAIN_WORKTREE reset --hard HEAD~1"
-    log "loop-infra-repair pending approval for $slice_id"
-    # Returning success here would let the runner advance; better to fail-loud.
-    return 4   # signals the runner: blocked + needs human
-  fi
-else
-  # Slice-state-only repair — mirror via slice worktree as for other agents.
-  mirror_slice_to_integration "$slice_id" "repair"
-fi
+LIFECYCLE — runner has exited cleanly via circuit breaker. To resume:
+
+  Approve (push both commits, slice unblocks):
+    touch diagnostic/slices/.approved-loop-infra-repair/$slice_id
+    # Restart runner. The runner's loop-infra-approval-resume hook detects
+    # the sentinel, pushes both local commits, removes the sentinel, and
+    # flips the slice back to revising_plan or revising as the agent intended.
+
+  Reject (drop both commits, slice unblocks back to its prior state):
+    git -C \$LOOP_MAIN_WORKTREE reset --hard origin/integration/perf-roadmap
+    rm -f diagnostic/slices/.approved-loop-infra-repair/$slice_id  # if you ever touched it
+    # Restart runner. The slice is back at its pre-repair status; auto-repair
+    # will see the existing repair_count and either retry or escalate per the
+    # bounded retry policy."
+    git -C "$LOOP_MAIN_WORKTREE" add diagnostic/slices/${slice_id}.md
+    git -C "$LOOP_MAIN_WORKTREE" commit -m "[loop-infra-pending][slice:${slice_id}] block pending user approval" >/dev/null
+
+    # IMPORTANT: do NOT push. Both local commits stay until the user approves.
+    # Worktree is now CLEAN (both commits made) — preconditions pass on next
+    # tick. Runner will exit via circuit breaker because the slice is blocked.
+    log "loop-infra-repair pending approval for $slice_id (2 local commits, no push)"
+    return 4   # signal: needs human; runner exits cleanly
+    ;;
+esac
 ```
 
-**Why this matters:** without the gate, the repair agent could rewrite `dispatch_codex.sh` (or any other loop infrastructure) and push the change before the user notices. The next slice's behavior would silently differ from prior slices, with no human review. The sentinel gate is cheap (one `touch`) but ensures no unsupervised self-modification.
+**Resume hook (new in `runner.sh`):** at startup, before the main loop, check if `diagnostic/slices/.approved-loop-infra-repair/<id>` exists for any slice that has a local-only `[loop-infra-pending]` commit (`git log origin/integration/perf-roadmap..HEAD --grep '\[loop-infra-pending\]'`). If yes:
+
+1. Acquire repo lock.
+2. Push integration (sends both local commits to origin).
+3. Remove the sentinel file.
+4. Flip the slice from `blocked` back to `revising_plan` or `revising` (whichever the agent intended; recorded in the agent's commit message as a trailer).
+5. Commit the flip; push.
+6. Release lock.
+
+Now the runner sees the slice as actionable on its next tick.
+
+**Why two commits, both local:** if the user rejects, a single `git reset --hard origin/integration/perf-roadmap` undoes everything cleanly (no unpushed history left behind). If the user approves, a single `git push` sends both. The pair is atomic from the user's POV.
+
+**Why this matters:** without explicit mode classification, an agent in slice-state mode could "accidentally" edit `scripts/loop/*` and the dispatcher's after-the-fact diff inspection might misclassify the situation. Pre-dispatch classification + post-step enforcement makes the rules unambiguous: the runner knows what mode it's in BEFORE the agent runs, and the agent's prompt is constrained accordingly.
 
 **Sentinel directory:** `diagnostic/slices/.approved-loop-infra-repair/` is added to `.gitignore` exception rules same as `.approved/` and `.approved-merge/` — track only `.gitkeep`, ignore the touched-by-user sentinels.
 
-No agent ever writes to the main worktree EXCEPT the repair agent (in loop-infra mode, gated on push) and the runner-side mirror/merger steps.
+No agent ever writes to the main worktree EXCEPT the repair agent (in `loop-infra` mode, gated on push) and the runner-side mirror/merger steps.
 
 **Shared runner state stays in absolute paths (per round-2 H-3):** all dispatchers and helpers receive `LOOP_MAIN_WORKTREE` and `LOOP_STATE_DIR` env vars with **absolute** paths to the runner's main worktree and state dir. Relative writes inside slice worktrees would write to the slice worktree's filesystem; we want the runner's view. Pattern below.
 
@@ -255,15 +306,29 @@ _REPO_LOCK_PRIOR_TRAP=""
 # the counter increments; release only happens when it returns to zero.
 _REPO_LOCK_DEPTH=0
 
+# Use BASHPID (the actual current shell PID, including subshells) instead
+# of $$ (parent shell PID, which is identical in subshells under bash).
+# Without this, a subshell that calls with_repo_lock would see the parent's
+# stored PID and incorrectly reenter the lock. Round-5 H-1 fix.
+_lock_owner_pid() {
+  if [[ -n "${BASHPID:-}" ]]; then
+    echo "$BASHPID"
+  else
+    echo "$$"   # fallback for shells without BASHPID
+  fi
+}
+
 acquire_repo_lock() {
   local owner="$1"
-  # Reentrant: if this PID already owns the lock, just bump the depth counter
-  # and return. The lock file's pid is checked to confirm ownership (defends
-  # against a stale lock left by a crashed prior process at this PID).
+  local self_pid
+  self_pid=$(_lock_owner_pid)
+  # Reentrant: if THIS shell PID already owns the lock, just bump the depth
+  # counter. Subshells get their own BASHPID, so they will not falsely
+  # reenter the parent's lock — they will block normally.
   if [[ -d "$LOCK_DIR" ]]; then
     local stored_pid
     stored_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
-    if [[ "$stored_pid" == "$$" ]]; then
+    if [[ "$stored_pid" == "$self_pid" ]]; then
       _REPO_LOCK_DEPTH=$((_REPO_LOCK_DEPTH + 1))
       return 0
     fi
@@ -293,8 +358,8 @@ acquire_repo_lock() {
     fi
     sleep "$LOCK_POLL"
   done
-  echo "$owner" > "$LOCK_DIR/owner"
-  echo "$$"     > "$LOCK_DIR/pid"
+  echo "$owner"    > "$LOCK_DIR/owner"
+  echo "$self_pid" > "$LOCK_DIR/pid"
   _REPO_LOCK_DEPTH=1
 
   # Stack any pre-existing EXIT trap so we don't clobber callers'.
@@ -1002,7 +1067,26 @@ git -C "$LOOP_MAIN_WORKTREE" commit -m "regression: mark $sid blocked after merg
 
 [slice:${sid}][regression-revert]" >/dev/null 2>&1
 
-git -C "$LOOP_MAIN_WORKTREE" push >/dev/null 2>&1 || log "regression: push failed; will retry next tick"
+if ! git -C "$LOOP_MAIN_WORKTREE" push >/dev/null 2>&1; then
+  # Push failed (origin moved between merge and our push, or transient
+  # network failure). The local integration branch now has an unpushed
+  # [regression-revert] commit. We do NOT want preconditions.sh to treat
+  # this as a dirty worktree — the worktree itself is clean, integration
+  # is just ahead of origin.
+  #
+  # Resume strategy (round-5 M-4):
+  #   1. Mark this state with a sentinel: scripts/loop/state/regression_pending_push
+  #      contains the commit hash that needs pushing.
+  #   2. preconditions.sh checks this sentinel BEFORE the worktree-clean
+  #      check. If present, it attempts `git pull --rebase + git push`
+  #      under the lock; on success, deletes the sentinel and continues.
+  #      On repeated failure (3 ticks), trips the circuit breaker.
+  #   3. The runner does NOT dispatch the next slice until this sentinel
+  #      is cleared. This avoids interleaving fresh slice work with an
+  #      unpushed regression commit (which would compound history mess).
+  echo "$(git rev-parse HEAD)" > "$LOOP_STATE_DIR/regression_pending_push"
+  log "regression: push failed; pending sentinel set; runner will retry on next tick"
+fi
 
 # 3. Slice branch also gets the regression note for audit-trail completeness.
 ( cd "$WORKTREE_BASE/$sid" && \
@@ -1188,7 +1272,41 @@ After landing Items 1–12 and stubbing the 71 slice files:
 14. **Regression gate at phase boundary:** synthesize a Phase-2 last-slice merge where `npm run typecheck` would fail. Verify merger logs `REGRESSION` event, sets slice to `blocked`, exits 1.
 15. **Smoke run:** kick off the runner in real mode against a single Phase-2 slice; verify plan-audit → implement → audit → merge → state-update cleanly with all locks acquired and released.
 
-After all 15 verifications pass, the loop is ready for end-to-end kickoff.
+16. **Loop-infra repair — no-sentinel path (round-5 M-6).** Synthesize a slice in `blocked` state with an audit verdict that mentions `scripts/loop/dispatch_codex.sh`. Trigger the repair agent. Verify:
+    - Dispatcher classifies as `loop-infra` BEFORE invoking agent (log entry).
+    - Two local commits land on integration: `[loop-infra-repair]` and `[loop-infra-pending]`.
+    - Neither is pushed to origin.
+    - Worktree is clean (`git status` empty).
+    - Slice file frontmatter shows `status: blocked, owner: user`.
+    - `runner.log` shows `loop-infra-repair pending approval` + `CIRCUIT BREAKER`.
+    - Runner exits cleanly.
+
+17. **Loop-infra repair — approval path.** From state at end of step 16, `touch diagnostic/slices/.approved-loop-infra-repair/<slice_id>`. Restart runner. Verify:
+    - Runner's startup hook detects the sentinel.
+    - Both local commits push to origin.
+    - Sentinel file is removed.
+    - Slice file flips back to `revising_plan` (or `revising`, whichever the agent intended).
+    - Runner proceeds to dispatch the next actionable state.
+
+18. **Loop-infra repair — rejection path.** From a fresh trigger of step 16, instead of touching the sentinel, run `git -C $LOOP_MAIN_WORKTREE reset --hard origin/integration/perf-roadmap`. Restart runner. Verify:
+    - Both local commits are gone.
+    - Slice file is back to its pre-repair status.
+    - `repair_count_<slice_id>` still exists; loop knows it already attempted a repair (per existing `LOOP_MAX_REPAIRS=3` budget).
+    - No leftover `.approved-loop-infra-repair/<slice_id>` sentinel from prior testing.
+
+19. **Repair-mode-violation path.** Synthesize a parent slice whose verdict is purely about plan content (no protocol mention), so dispatcher classifies as `slice-state`. But the agent's prompt is intentionally pre-poisoned to make it edit `scripts/loop/dispatch_codex.sh`. Verify:
+    - Post-step detects the protocol-file edit.
+    - `git reset --hard HEAD~1` reverts the agent's commit.
+    - Slice → `blocked` with "Repair mode violation" note.
+    - No partial state landed.
+
+20. **Regression-pending-push sentinel (round-5 M-4).** Synthesize a regression scenario where the integration push fails (e.g. simulate origin moving forward). Verify:
+    - Sentinel file `scripts/loop/state/regression_pending_push` is created with the local HEAD hash.
+    - Worktree is clean (`git status` empty), local branch is ahead of origin.
+    - Next runner tick: preconditions detects sentinel, pulls --rebase, retries push, removes sentinel on success, continues normal dispatch.
+    - On 3 consecutive tick failures: circuit breaker fires.
+
+After all 20 verifications pass, the loop is ready for end-to-end kickoff.
 
 ---
 
@@ -1282,15 +1400,33 @@ After all 15 verifications pass, the loop is ready for end-to-end kickoff.
 - `02-cost-telemetry-validation` appended to Phase 2 (4 slices, not 3). Total slice count updated to **86 everywhere** (not 85). To be placed AFTER `02-cache-hit-assertion` so Phase-2 dispatches have produced telemetry.
 - Stale appendix cleanup confirmed; only one `End of plan`.
 
-### Remaining open for Codex round 5
+### Resolved by Codex round-5 audit (3 High + 3 Medium + 4 L-answers)
 
-1. **First Phase-3 slice DB/service smoke (round-4 L).** Codex flagged that `02-prompt-static-prefix-split` doesn't exercise DB/service paths; recommends DB/service smoke at first Phase-3 slice. My plan: before mass-stubbing Phase 3, stub ONLY `03-core-build-schema` + `03-driver-session-summary-prototype` (the prototype) and run them through. Confirms matview pattern + DB connectivity end-to-end. Then mass-stub Phase 3's remaining 11 slices. Codex agree?
+| Round-5 finding | How resolved |
+|---|---|
+| H-1: lock should use BASHPID, not $$ | New `_lock_owner_pid` helper uses `BASHPID` (with `$$` fallback). Subshells get their own PID and won't falsely reenter parent's lock. |
+| H-2: loop-infra approval flow leaves runner in unusable state | Lifecycle now explicit: TWO local commits (`[loop-infra-repair]` + `[loop-infra-pending]`), worktree clean. Approve = `touch sentinel` + restart → resume hook in runner.sh pushes both + flips slice. Reject = `git reset --hard origin/integration/perf-roadmap` + restart → drops both, slice back to pre-repair state. |
+| H-3: repair mode auto-classified by diff after the fact | Mode classified BEFORE dispatch by parsing parent slice's audit verdict for protocol-fix keywords. Agent's prompt conditioned on `LOOP_REPAIR_MODE=slice-state\|loop-infra`. Post-step enforces mode (slice-state agent that touches `scripts/loop/*` → forced reset + slice blocked with "repair-mode-violation"). |
+| M-4: regression push failure has no durable retry plan | New sentinel `scripts/loop/state/regression_pending_push` records the local HEAD hash. preconditions.sh checks this BEFORE worktree-clean check; on present, attempts `git pull --rebase + git push`; on 3 tick failures, circuit-break. Runner does NOT dispatch new slice work until sentinel cleared. |
+| M-5: stale 85 references | All three remaining instances (lines 14, 43, 71) updated to 86 with explicit historical context (`72 of 86`, `+1 with 02-cost-telemetry-validation added in round-4`). |
+| M-6: verification missing for repair approval/reject paths | Verification §7 adds steps 16 (no-sentinel path), 17 (approval path), 18 (rejection path), 19 (repair-mode-violation), 20 (regression-pending-push sentinel). 20 verification checks total. |
 
-2. **Loop-infra repair sentinel directory naming.** I picked `.approved-loop-infra-repair/` to mirror `.approved/` and `.approved-merge/`. Three different sentinel dirs may confuse the user. Alternative: single `.approved-special/` with type-prefixed filenames (`loop-infra-repair_<slice_id>`). My read: keep three dirs — explicit is better for a high-stakes path.
+### Round-5 L-answers incorporated
 
-3. **Reentrant lock — depth-counter accuracy under crashes.** If a process holds depth=2 and crashes, the EXIT trap forces depth=0 and rm-rf's the lock dir. Good. But if a child process crashes while parent still holds the lock, we may be in trouble. Verification step needed: kill a dispatcher mid-`with_repo_lock` and confirm the lock is force-released without orphaning depth counter on a still-running process. My read: the depth counter is per-shell, so child crashes can't corrupt parent's counter. Confirming this is right.
+- Phase-3 smoke pair confirmed.
+- `.approved-loop-infra-repair/` directory kept separate from `.approved/`, `.approved-merge/` — explicit-is-better for a dangerous path.
+- No backfill of old estimated ledger rows.
+- `02-cost-telemetry-validation` in Phase 2; all count references updated.
 
-4. **Total slice count change ripples.** `_index.md` total → 86, `_state.md` regenerator's expected count → 86, verification step "all 85 slices show a real status" → "all 86." Will scan for stragglers during implementation. Anything else Codex thinks I'd miss?
+### Remaining open for Codex round 6
+
+1. **`BASHPID` portability.** macOS ships bash 3.2 by default; `BASHPID` was added in bash 4.0. Project uses Homebrew bash (4+) per existing perl-alarm-shim assumption — but this is an implicit dependency. My read: document the bash 4+ requirement in the runner's preconditions check.
+
+2. **Resume-hook lock contention with normal dispatch.** When the runner starts up after sentinel approval, the resume hook runs BEFORE the main dispatch loop. Both share the repo lock. Confirming there's no race between resume-hook startup and any other process that might have acquired the lock (none should — runner starts fresh). My read: this is fine because runner startup acquires the lock before any other work.
+
+3. **Mode-classification edge case.** The dispatcher parses the audit verdict for protocol-fix keywords. What if the verdict mentions `scripts/loop/runner.sh` only as a quote (e.g. "the existing runner.sh circuit breaker is sufficient — no change needed")? Mode would falsely classify as `loop-infra`. Mitigation: only count keywords appearing in unchecked High/Medium items, not in informational Notes. Codex agree?
+
+4. **`flip_slice_status` / `append_slice_section` helpers.** Referenced in §4 Items 6 and 10 but not defined. Should be defined in a new `scripts/loop/slice_helpers.sh` shared by all dispatchers. Confirming this is a reasonable factor-out.
 
 ### Resolved by Codex round-1 audit
 1. ~~Worktree disk usage~~ — **Acceptable** if cleanup/prune verified. Verification step 11 added.
@@ -1337,29 +1473,29 @@ Webhook events fire on every blocked / repaired / phase-boundary state for visib
 
 ---
 
-## 11. Codex round-5 audit ask
+## 11. Codex round-6 audit ask
 
-This is round-5 (round-4 returned 3 High + 3 Medium + 4 L-answers; all addressed):
+This is round-6 (round-5 returned 3 High + 3 Medium + 4 L-answers; all addressed):
 
-| Round-4 finding | How resolved |
+| Round-5 finding | How resolved |
 |---|---|
-| H-1: lock not reentrant; merger calls update_state.sh which also locks | Lock is now PID-reentrant via `_REPO_LOCK_DEPTH` counter; same-PID re-acquire bumps depth, release decrements. EXIT trap force-releases regardless of depth. |
-| H-2: regression handler manually releases lock owned by with_repo_lock | Removed manual `release_repo_lock`; handler returns rc=1 and the wrapper's normal release path handles cleanup. Avoided double-release. |
-| H-3: loop-infra repair shouldn't auto-push | New `diagnostic/slices/.approved-loop-infra-repair/<slice_id>` sentinel gate. Without sentinel: commit local, slice → blocked + USER ATTENTION with explicit approve/reject instructions. |
-| M-4: LOCK_DIR may still be relative | Uses `--path-format=absolute --git-common-dir`. Always absolute regardless of caller's cwd. |
-| M-5: conflict parser missing slice-file arg | `resolve_conflict` now passes `"$slice_file"` to `path_in_changed_files_expected`. |
-| M-6: regression transition not in merger allow-list | Merger allow-list extended: `ready_to_merge → done OR blocked`. |
+| H-1: lock should use BASHPID, not $$ | New `_lock_owner_pid` helper uses `BASHPID` with `$$` fallback. Subshells get their own PID; cannot falsely reenter parent's lock. |
+| H-2: loop-infra approval flow leaves runner in unusable state | Explicit lifecycle: TWO local commits, clean worktree. Approve via `touch sentinel + restart` → resume hook pushes both + unblocks. Reject via `git reset --hard origin/integration` → drops both. |
+| H-3: loop-infra mode auto-classified by diff after the fact | Mode classified BEFORE dispatch by parsing parent slice's audit verdict for protocol-fix keywords. Agent's prompt conditioned on `LOOP_REPAIR_MODE`. Post-step enforces mode; violations forcibly reset. |
+| M-4: regression push failure has no durable retry plan | Sentinel `regression_pending_push` records local HEAD hash. preconditions.sh checks before worktree-clean; pulls/rebases/retries; circuit-break on 3 tick failures. Runner does NOT dispatch new work until cleared. |
+| M-5: stale 85 references | All three (lines 14, 43, 71) updated to 86 with explicit historical context. |
+| M-6: verification missing for repair approval/reject lifecycle | §7 verification expanded from 15 to 20 steps adding: no-sentinel path, approval path, rejection path, mode-violation, regression-pending-push sentinel. |
 
 L-answers applied:
-- DB/service smoke at first Phase-3 slice (`03-core-build-schema` + `03-driver-session-summary-prototype` pair) added to §5 Day 4 sequencing
-- Regression push race closed by lock; external race documented as known limit
-- `02-cost-telemetry-validation` total raised from 85 → **86 slices everywhere**
-- Stale appendix cleanup confirmed (only one End-of-plan marker)
+- Phase-3 smoke pair confirmed
+- `.approved-loop-infra-repair/` kept separate from `.approved/`, `.approved-merge/` — explicit-is-better
+- No backfill of old estimated ledger rows
+- All 85→86 count references updated
 
-Round-5 review please:
-- Round-4 fixes in §4 (reentrant lock, removed manual release in regression handler, loop-infra approval sentinel, absolute lock dir, parser arg fix, merger allow-list)
-- Day 4 two-stage smoke in §5 (`02-prompt-static-prefix-split` for protocol, then Phase-3 pair for DB/service)
-- Round-5 open questions in §9 (Phase-3 prototype smoke pair, sentinel dir naming, depth counter under child crashes, total-count ripples)
+Round-6 review please:
+- Round-5 fixes in §4 (BASHPID, two-commit lifecycle, pre-dispatch mode classification, push-pending sentinel, parser arg)
+- Verification steps 16–20 in §7 (lifecycle scenarios)
+- Round-6 open questions in §9 (BASHPID portability, resume-hook contention, mode-classification edge case, slice helpers factor-out)
 
 Triage as `High` / `Medium` / `Low`. Approving this round means implementation kicks off.
 
