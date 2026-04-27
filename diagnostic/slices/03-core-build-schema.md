@@ -1,7 +1,7 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: ready_to_merge
+status: done
 owner: codex
 user_approval_required: no
 created: 2026-04-26
