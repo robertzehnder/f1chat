@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cache-hit-assertion
 phase: 2
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T05:10:00Z
+updated: 2026-04-27T05:11:00Z
 ---
 
 ## Goal
@@ -132,4 +132,19 @@ Rollback: `git revert <commit>` removes the new test and artifact. Risk is low: 
 ### Low
 
 ### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Specify that the default `diagnostic/artifacts/perf/02-cache-hit_<DATE>.json` path is resolved from the repository root, or change the live gate command to run from the repository root, because the current live gate runs from `web/` and an unqualified relative path would write under `web/diagnostic/...`.
+
+### Low
+
+### Notes (informational only — no action)
+- Prior round action items are resolved in the current plan body.
 - `diagnostic/_state.md` was last updated on 2026-04-27, so no stale-state note is needed.
