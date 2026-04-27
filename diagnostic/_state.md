@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-26T15:24:13Z
+# Project state — last updated: 2026-04-27T03:55:00Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -23,14 +23,15 @@ accumulated context the loop carries between slices._
 
 ## Latest perf baseline
 
-- File: `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json`
+- File: `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.json`
 - Slowest stages by p50:
-  - `total` p50=12603.28ms p95=26310.01ms n=50
-  - `runtime_classify` p50=7190.91ms p95=16718.68ms n=50
-  - `resolve_db` p50=7190.91ms p95=16718.68ms n=50
-  - `synthesize_llm` p50=4719.58ms p95=7085.43ms n=46
-  - `repair_llm` p50=4456.08ms p95=6129.08ms n=2
-- Overall p50=12603.28ms p95=26310.01ms
+  - `total` p50=12479.77ms p95=27861.57ms n=50
+  - `resolve_db` p50=6990.80ms p95=16343.94ms n=50
+  - `synthesize_llm` p50=4589.59ms p95=7429.50ms n=46
+  - `sqlgen_llm` p50=3280.96ms p95=13902.69ms n=12
+  - `repair_llm` p50=2345.44ms p95=5434.11ms n=2
+- Overall p50=12479.77ms p95=27861.57ms
+- `runtime_classify` and `resolve_db` are now sequential and de-aliased (`runtime_classify` p50=0.01ms, `resolve_db` p50=6990.80ms).
 
 ## Recent slice merges (last 10)
 
