@@ -11,10 +11,10 @@
 
 ## 1. Context — what I'm trying to achieve
 
-I'm running an autonomous Claude-implements / Codex-audits loop against a 13-phase performance + quality roadmap (`diagnostic/roadmap_2026-04_performance_and_upgrade.md`). The loop architecture is described in `diagnostic/automation_2026-04_loop_runner.md` and the slice queue in `diagnostic/slices/_index.md` (85 slices total).
+I'm running an autonomous Claude-implements / Codex-audits loop against a 13-phase performance + quality roadmap (`diagnostic/roadmap_2026-04_performance_and_upgrade.md`). The loop architecture is described in `diagnostic/automation_2026-04_loop_runner.md` and the slice queue in `diagnostic/slices/_index.md` (86 slices total — 85 from the original roadmap + `02-cost-telemetry-validation` added in round-4).
 
 **Current state:**
-- Phase 0 (10 slices) and Phase 1 (4 slices) are **done** — 14/85.
+- Phase 0 (10 slices) and Phase 1 (4 slices) are **done** — 14/86.
 - 71 slice files remain unstubbed.
 - The loop produced its first real perf baseline at `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json` showing overall p50=12.6s, p95=26.3s.
 - `_state.md` carries-forward project context across slices.
@@ -165,33 +165,59 @@ I want Codex to audit **what** I'm planning to fix, **what** I'm explicitly not 
 
 **Uniform worktree model (per round-2 H-1, with repair carve-out per round-3 H-3):** EVERY agent dispatch that produces *slice work* runs in a slice worktree on a slice branch — including plan-audit and plan-revise (which previously edited integration directly). Every state change mirrors back to integration through `mirror_helper`.
 
-**Repair-agent exception (round-3 H-3):** the repair agent has two modes:
+**Repair-agent exception (round-3 H-3, with round-4 H-3 push gate):** the repair agent has two modes:
 
-- **Slice-state-only repair** — flip parent slice from `blocked` to `revising` / `revising_plan` (no protocol change). This goes through a slice worktree on a slice branch + `mirror_helper`, same as the other agents.
-- **Loop-infrastructure repair** — edit `scripts/loop/*` or `scripts/loop/prompts/*` to fix a protocol bug. This runs on the **main worktree under repo lock**, because the changes target integration's loop infrastructure directly, not slice work. There is no slice branch for these changes.
+- **Slice-state-only repair** — flip parent slice from `blocked` to `revising` / `revising_plan` (no protocol change). Goes through a slice worktree on a slice branch + `mirror_helper`, same as the other agents. Pushes are routine (slice branch only).
+- **Loop-infrastructure repair** — edit `scripts/loop/*` or `scripts/loop/prompts/*` to fix a protocol bug. Runs on the **main worktree under repo lock**, because the changes target integration's loop infrastructure directly. **HUMAN-APPROVAL GATE on push** (round-4 H-3): self-modifying loop code is the most privileged path in this system; auto-pushing protocol changes without a human signoff means a single mis-classified repair can mutate the loop's own behavior unattended.
 
-The repair agent's prompt (`prompts/claude_repair.md`) already has this two-mode structure — round-3 makes the dispatcher honor the distinction:
+**Round-4 H-3 — gating loop-infra repair pushes:**
 
 ```bash
 # In dispatch_repair.sh, after agent runs:
-# Inspect the agent's diff. If only diagnostic/slices/<sid>.md changed,
-# this was slice-state-only repair → mirror as normal.
-# If scripts/loop/* or prompts/* changed, this was loop-infra repair →
-# the changes are already on main (the agent ran there); just commit + push.
-
 repair_diff=$(git -C "$LOOP_MAIN_WORKTREE" diff --name-only HEAD)
-if echo "$repair_diff" | grep -qE '^scripts/loop/'; then
-  # Loop-infrastructure repair — already on main. Commit + push under existing lock.
-  ...
+
+if echo "$repair_diff" | grep -qE '^(scripts/loop/|\.github/workflows/)'; then
+  # Loop-infrastructure repair. Commit LOCALLY only.
+  git -C "$LOOP_MAIN_WORKTREE" add -A
+  git -C "$LOOP_MAIN_WORKTREE" commit -m "[loop-infra-repair][slice:${slice_id}] $(short_summary)" >/dev/null
+
+  # Check for user approval sentinel BEFORE pushing.
+  approval_sentinel="diagnostic/slices/.approved-loop-infra-repair/${slice_id}"
+  if [[ -f "$LOOP_MAIN_WORKTREE/$approval_sentinel" ]]; then
+    git -C "$LOOP_MAIN_WORKTREE" push >/dev/null 2>&1 \
+      || { log "loop-infra-repair: push failed for $slice_id"; return 1; }
+    rm -f "$LOOP_MAIN_WORKTREE/$approval_sentinel"
+    log "loop-infra-repair pushed for $slice_id (user-approved)"
+    # Slice transitions to revising/revising_plan as the agent intended.
+  else
+    # No approval — commit stays local. Flip slice to blocked with a clear
+    # explanation so the runner surfaces USER ATTENTION.
+    flip_slice_status "$slice_id" "blocked" "user"
+    append_slice_section "$slice_id" "## Loop-infrastructure repair pending approval" \
+      "The repair agent proposed protocol changes touching:
+$(printf '%s\n' "$repair_diff" | sed 's/^/  - /')
+
+Local commit made on integration. Push gated. To approve and unblock:
+  touch $approval_sentinel
+  # Then restart the runner.
+
+To reject and revert:
+  git -C \$LOOP_MAIN_WORKTREE reset --hard HEAD~1"
+    log "loop-infra-repair pending approval for $slice_id"
+    # Returning success here would let the runner advance; better to fail-loud.
+    return 4   # signals the runner: blocked + needs human
+  fi
 else
   # Slice-state-only repair — mirror via slice worktree as for other agents.
   mirror_slice_to_integration "$slice_id" "repair"
 fi
 ```
 
-This is consistent with the way `dispatch_repair.sh` already runs — it never creates a slice branch; the agent works directly on integration. With the uniform-worktree model, slice-state repair could *also* go through a worktree, but for protocol-fix work the main-worktree-under-lock path is what we already have and what's safe.
+**Why this matters:** without the gate, the repair agent could rewrite `dispatch_codex.sh` (or any other loop infrastructure) and push the change before the user notices. The next slice's behavior would silently differ from prior slices, with no human review. The sentinel gate is cheap (one `touch`) but ensures no unsupervised self-modification.
 
-No agent ever writes to the main worktree EXCEPT the repair agent (in loop-infra mode) and the runner-side mirror/merger steps.
+**Sentinel directory:** `diagnostic/slices/.approved-loop-infra-repair/` is added to `.gitignore` exception rules same as `.approved/` and `.approved-merge/` — track only `.gitkeep`, ignore the touched-by-user sentinels.
+
+No agent ever writes to the main worktree EXCEPT the repair agent (in loop-infra mode, gated on push) and the runner-side mirror/merger steps.
 
 **Shared runner state stays in absolute paths (per round-2 H-3):** all dispatchers and helpers receive `LOOP_MAIN_WORKTREE` and `LOOP_STATE_DIR` env vars with **absolute** paths to the runner's main worktree and state dir. Relative writes inside slice worktrees would write to the slice worktree's filesystem; we want the runner's view. Pattern below.
 
@@ -214,18 +240,35 @@ No agent ever writes to the main worktree EXCEPT the repair agent (in loop-infra
 # worktree's shell is calling us. This means every dispatcher (running in
 # a slice worktree) coordinates through one shared lock.
 : "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE must be set (absolute path)}"
-# Use Git's common-dir, not assume "$main/.git" is a directory (round-3 M-4).
-# In a normal clone .git is a dir, but in worktrees / submodules / git-dir-relocated
-# setups it can be a file pointing at the real common dir. rev-parse handles all of these.
-LOCK_DIR="$(git -C "$LOOP_MAIN_WORKTREE" rev-parse --git-common-dir)/openf1-loop.lock"
+# Use Git's common-dir with --path-format=absolute so the result is always an
+# absolute path regardless of the caller's cwd (round-4 M-4 fix).
+# Without --path-format=absolute, rev-parse can return ".git" (relative) which
+# resolves against whatever worktree's shell happened to be calling us.
+LOCK_DIR="$(git -C "$LOOP_MAIN_WORKTREE" rev-parse --path-format=absolute --git-common-dir)/openf1-loop.lock"
 LOCK_TIMEOUT="${LOOP_LOCK_TIMEOUT:-300}"
 LOCK_POLL="${LOOP_LOCK_POLL:-1}"
 
 # Stack EXIT traps instead of clobbering pre-existing ones (round-2 M-5).
 _REPO_LOCK_PRIOR_TRAP=""
+# Reentrant-lock counter for the current PID (round-4 H-1).
+# When a helper invoked from an already-locked merger calls with_repo_lock,
+# the counter increments; release only happens when it returns to zero.
+_REPO_LOCK_DEPTH=0
 
 acquire_repo_lock() {
   local owner="$1"
+  # Reentrant: if this PID already owns the lock, just bump the depth counter
+  # and return. The lock file's pid is checked to confirm ownership (defends
+  # against a stale lock left by a crashed prior process at this PID).
+  if [[ -d "$LOCK_DIR" ]]; then
+    local stored_pid
+    stored_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
+    if [[ "$stored_pid" == "$$" ]]; then
+      _REPO_LOCK_DEPTH=$((_REPO_LOCK_DEPTH + 1))
+      return 0
+    fi
+  fi
+
   local started elapsed
   started=$(date +%s)
   while ! mkdir "$LOCK_DIR" 2>/dev/null; do
@@ -252,6 +295,7 @@ acquire_repo_lock() {
   done
   echo "$owner" > "$LOCK_DIR/owner"
   echo "$$"     > "$LOCK_DIR/pid"
+  _REPO_LOCK_DEPTH=1
 
   # Stack any pre-existing EXIT trap so we don't clobber callers'.
   _REPO_LOCK_PRIOR_TRAP=$(trap -p EXIT | sed -E "s/^trap -- '(.*)' EXIT$/\1/" || true)
@@ -260,14 +304,22 @@ acquire_repo_lock() {
 }
 
 _repo_lock_on_exit() {
-  release_repo_lock
+  # On EXIT, force-release regardless of depth (process is dying anyway).
+  _REPO_LOCK_DEPTH=0
+  rm -rf "$LOCK_DIR" 2>/dev/null || true
   if [[ -n "$_REPO_LOCK_PRIOR_TRAP" ]]; then
     eval "$_REPO_LOCK_PRIOR_TRAP"
   fi
 }
 
 release_repo_lock() {
+  # Reentrant: only actually release when depth returns to 0.
+  if [[ $_REPO_LOCK_DEPTH -gt 1 ]]; then
+    _REPO_LOCK_DEPTH=$((_REPO_LOCK_DEPTH - 1))
+    return 0
+  fi
   rm -rf "$LOCK_DIR" 2>/dev/null || true
+  _REPO_LOCK_DEPTH=0
   if [[ -n "$_REPO_LOCK_PRIOR_TRAP" ]]; then
     trap "$_REPO_LOCK_PRIOR_TRAP" EXIT
   else
@@ -278,6 +330,8 @@ release_repo_lock() {
 
 # Run a command under the lock with set -e safety:
 # Disable errexit around the call, capture rc, restore.
+# Reentrant: if the caller already holds the lock, this is a no-op acquire;
+# the matching release decrements the depth counter, doesn't actually unlock.
 with_repo_lock() {
   local owner="$1"; shift
   acquire_repo_lock "$owner" || return 1
@@ -460,7 +514,9 @@ is_valid_terminal_transition() {
       case "$after" in ready_to_merge|revising|blocked) return 0 ;; *) return 1 ;; esac ;;
     merger)
       [[ "$before" == "ready_to_merge" ]] || return 1
-      [[ "$after" == "done" ]] ;;
+      # round-4 M-6: merger may transition ready_to_merge → blocked when
+      # the regression gate detects a failure between merge and push.
+      case "$after" in done|blocked) return 0 ;; *) return 1 ;; esac ;;
     repair)
       [[ "$before" == "blocked" ]] || return 1
       case "$after" in revising|revising_plan|blocked) return 0 ;; *) return 1 ;; esac ;;
@@ -674,8 +730,8 @@ SLICE_PLAUSIBLE_PATHS=(
 )
 
 resolve_conflict() {
-  local p="$1"
-  if path_in_changed_files_expected "$p"; then
+  local p="$1" slice_file="$2"   # round-4 M-5: pass slice file explicitly
+  if path_in_changed_files_expected "$p" "$slice_file"; then
     git checkout --theirs -- "$p"; git add "$p"
     return 0
   fi
@@ -959,8 +1015,12 @@ git -C "$LOOP_MAIN_WORKTREE" push >/dev/null 2>&1 || log "regression: push faile
 
 # 4. Log REGRESSION event (webhook fires).
 log "REGRESSION slice=$sid gate=${failed_gate_name}"
-release_repo_lock
-return 1   # caller (runner) sees this and increments fail counter
+# DO NOT call release_repo_lock here — this handler is invoked from the
+# merger's existing with_repo_lock wrapper, which owns the release. Returning
+# rc=1 propagates up; with_repo_lock's wrapper releases the lock per its
+# normal exit path. (Round-4 H-2 fix: prior version called release_repo_lock
+# manually, double-releasing.)
+return 1   # caller's with_repo_lock wrapper sees this rc and releases the lock
 ```
 
 The runner's next tick sees `blocked` on integration and routes to auto-repair or USER ATTENTION per existing flow. **Without the integration-side commit, the runner would re-attempt the merge and re-fail in a loop.**
@@ -1046,13 +1106,17 @@ Pure read-only over `cost_ledger.jsonl` + `git log` + slice frontmatter. No stat
 9. Item 1 (span fix) — kicked off as a slice through the now-hardened loop. This is the first production slice through the hardened mechanics; it shakes out worktree/lock/mirror behavior on a small change.
 10. Stub ONE smoke slice (`02-prompt-static-prefix-split`) and run it through the loop end-to-end. Confirm it goes plan-audit → revising_plan → pending → impl → awaiting_audit → ready_to_merge → merged → state-update without manual intervention.
 
-**Day 4 — mass-stub + kickoff:**
-11. After Day 3 smoke run is clean, stub the remaining 70 slices (Item 8). This mass-stub happens AFTER smoke validation so any slice-file format issue surfaced by `02-prompt-static-prefix-split` doesn't force a 71-file rewrite.
-12. Kick off the unattended end-to-end run.
+**Day 4 — DB/service smoke + Phase-3 prototype (round-4 L):**
+11. Stub `03-core-build-schema` and `03-driver-session-summary-prototype` (Phase 3's first two slices — schema setup + first matview prototype). Run them through the loop. This is a DB/service smoke — confirms Postgres connectivity, matview write, parity check, refresh hook all work end-to-end.
+12. After Day 4 smoke is clean, mass-stub the remaining 69 slices (Item 8). Total grows to 86 with the new `02-cost-telemetry-validation` slice.
+13. Stub `02-cost-telemetry-validation` and place it after `02-cache-hit-assertion` in `_index.md`.
 
-**Realistic wall-clock for full prep:** 3.5 days if focused.
+**Day 5 — kickoff:**
+14. Kick off the unattended end-to-end run for Phases 2–12 remaining slices.
 
-**Why stub-after-smoke (round-3 M-7 fix):** prior plan said "Day 3: Item 1 + Item 8 (stub 71 slices)" which couldn't smoke-run against `02-prompt-static-prefix-split` because that slice didn't exist until stubbing. Round-3 separates: Day 3 stubs ONE smoke slice for validation, Day 4 mass-stubs the rest. This catches format bugs on a single slice instead of all 71.
+**Realistic wall-clock for full prep:** 4–4.5 days if focused.
+
+**Why two-stage smoke (round-4 L):** `02-prompt-static-prefix-split` is code-only — exercises plan-audit, plan-revise, mirror, merger, regression-gate-cheap-path. But it doesn't exercise DB connectivity or matview parity. The Phase-3 prototype is the first slice that actually writes to Postgres and runs parity SQL. Smoking that pair before mass-stubbing catches DB/service issues before 80+ slices commit to a faulty pattern.
 
 ---
 
@@ -1116,8 +1180,8 @@ After landing Items 1–12 and stubbing the 71 slice files:
 6. **Plan-iter cap + graceful-stop:** synthetically set `plan_iter_count_<slice>` to 5; trigger an audit dispatch; verify Codex's prompt now allows APPROVE-with-deferred-Mediums-only (no Highs deferable).
 7. **Merger conflict policy:** synthesize a slice branch that modifies `web/foo.ts` AND `scripts/loop/dispatch_codex.sh`. Verify merger auto-takes slice version of `web/foo.ts`, integration version of `scripts/loop/dispatch_codex.sh`, logs the integration-owned conflict loudly, and merges successfully. Then: synthesize a slice that modifies an unlisted path (e.g. `node_modules/foo.js`) — verify merger blocks the slice with "Merger escalation" note.
 8. **CI verification:** run Item 7's procedure (one-push trigger). Verify `gh run list` shows a workflow registered for that commit.
-9. **Slice file count:** `find diagnostic/slices -name '*.md' -not -name '_*' | wc -l` should be 85.
-10. **`loop_status.sh`:** zero `MISSING` rows; all 85 slices show a real status.
+9. **Slice file count:** `find diagnostic/slices -name '*.md' -not -name '_*' | wc -l` should be 86.
+10. **`loop_status.sh`:** zero `MISSING` rows; all 86 slices show a real status.
 11. **Repo lock under merger:** trigger a manual merge while the runner is mid-dispatch. Verify the merger waits, neither corrupts state.
 12. **Cost telemetry shape:** dispatch one slice, verify `cost_ledger.jsonl` has a row with `model`, `source: "session-log-parse"`, real (or 0) `cost_usd`, and `estimated: true`.
 13. **Webhook:** trigger a `CIRCUIT BREAKER` synthetically with `LOOP_NOTIFY_WEBHOOK=https://webhook.site/...` set; verify a JSON payload arrives with `event`, `slice_id`, `commit`, `message`.
@@ -1200,15 +1264,33 @@ After all 15 verifications pass, the loop is ready for end-to-end kickoff.
 - `ensure_slice_worktree` race resolved by H-1's single-locked-call fix.
 - Stale round-2 appendix removed.
 
-### Remaining open for Codex round 4
+### Resolved by Codex round-4 audit (3 High + 3 Medium + L-answers)
 
-1. **Smoke-run slice choice — `02-prompt-static-prefix-split` confirmed.** Day 3 stubs only this slice; Day 4 mass-stubs after smoke validates. Any concern about this slice specifically being non-representative (it's a code-only slice, no DB / no service)?
+| Round-4 finding | How resolved |
+|---|---|
+| H-1: lock not reentrant, but merger calls update_state.sh which also locks | Lock is now PID-reentrant. `acquire_repo_lock` checks if current PID already owns the lock; if so, just bumps `_REPO_LOCK_DEPTH`. `release_repo_lock` only actually unlocks when depth returns to 0. EXIT trap force-releases regardless. |
+| H-2: regression handler manually releases lock owned by with_repo_lock | Removed the manual `release_repo_lock` call; handler returns rc=1 and the wrapper's existing release path handles cleanup. |
+| H-3: loop-infra repair shouldn't auto-push without human gate | New approval-sentinel gate: loop-infra repairs commit LOCALLY only; push requires `diagnostic/slices/.approved-loop-infra-repair/<slice_id>` sentinel. Without sentinel, slice → blocked + USER ATTENTION with clear "to approve, touch X / to reject, reset" instructions. |
+| M-4: LOCK_DIR may still be relative | Switched to `git -C ... rev-parse --path-format=absolute --git-common-dir`. Always returns absolute path regardless of caller's cwd. |
+| M-5: conflict parser arg missing | `resolve_conflict` now passes `"$slice_file"` to `path_in_changed_files_expected`. Both callers updated. |
+| M-6: regression transition not in merger allow-list | Merger's terminal-transition allow-list extended: `ready_to_merge → done OR blocked`. Regression's intentional `→ blocked` flip now passes the terminal-state success detector. |
 
-2. **Regression rollback push race.** Round-3 fix to H-2 commits a `[regression-revert]` flip locally then pushes. But if another dispatcher pushed integration meanwhile (unlikely under repo lock but possible right after release), the push could fail. Mitigation: regression handler runs entirely within the merger's existing `with_repo_lock` block — push happens before the lock releases — so the race window is closed. Confirming this is correct.
+### Round-4 L-answers incorporated
 
-3. **Loop-infrastructure repair gating.** When the repair agent edits `scripts/loop/*` (loop-infrastructure mode), should it require user approval before pushing? Right now it auto-commits + pushes under lock. The agent's own prompt limits scope, and the change would surface in the next slice's audit. My read: leave as-is; the prompt is the gate.
+- `02-prompt-static-prefix-split` is fine for protocol smoke; **add a later DB/service smoke at the first Phase-3 slice** before its full execution. Captured in §5 sequencing.
+- Regression push race closed for loop-owned pushes while lock held; external pushes may still race. Push retry/failure behavior in `mirror_helper` and merger explicit; documented.
+- `02-cost-telemetry-validation` appended to Phase 2 (4 slices, not 3). Total slice count updated to **86 everywhere** (not 85). To be placed AFTER `02-cache-hit-assertion` so Phase-2 dispatches have produced telemetry.
+- Stale appendix cleanup confirmed; only one `End of plan`.
 
-4. **Cost-validation slice id.** `02-cost-telemetry-validation` placed where in `_index.md`? After the three existing Phase-2 slices, before Phase 3. Slot ID would shift Phase 3+ counts. My read: append to Phase 2 (4 slices instead of 3); update `_index.md` total to 86. Codex agree?
+### Remaining open for Codex round 5
+
+1. **First Phase-3 slice DB/service smoke (round-4 L).** Codex flagged that `02-prompt-static-prefix-split` doesn't exercise DB/service paths; recommends DB/service smoke at first Phase-3 slice. My plan: before mass-stubbing Phase 3, stub ONLY `03-core-build-schema` + `03-driver-session-summary-prototype` (the prototype) and run them through. Confirms matview pattern + DB connectivity end-to-end. Then mass-stub Phase 3's remaining 11 slices. Codex agree?
+
+2. **Loop-infra repair sentinel directory naming.** I picked `.approved-loop-infra-repair/` to mirror `.approved/` and `.approved-merge/`. Three different sentinel dirs may confuse the user. Alternative: single `.approved-special/` with type-prefixed filenames (`loop-infra-repair_<slice_id>`). My read: keep three dirs — explicit is better for a high-stakes path.
+
+3. **Reentrant lock — depth-counter accuracy under crashes.** If a process holds depth=2 and crashes, the EXIT trap forces depth=0 and rm-rf's the lock dir. Good. But if a child process crashes while parent still holds the lock, we may be in trouble. Verification step needed: kill a dispatcher mid-`with_repo_lock` and confirm the lock is force-released without orphaning depth counter on a still-running process. My read: the depth counter is per-shell, so child crashes can't corrupt parent's counter. Confirming this is right.
+
+4. **Total slice count change ripples.** `_index.md` total → 86, `_state.md` regenerator's expected count → 86, verification step "all 85 slices show a real status" → "all 86." Will scan for stragglers during implementation. Anything else Codex thinks I'd miss?
 
 ### Resolved by Codex round-1 audit
 1. ~~Worktree disk usage~~ — **Acceptable** if cleanup/prune verified. Verification step 11 added.
@@ -1244,7 +1326,7 @@ After all 15 verifications pass, the loop is ready for end-to-end kickoff.
 
 A single command runs unattended for 2–4 days, processes Phases 2–12 (71 slices), and produces:
 
-- `diagnostic/_state.md` showing all 85 slices done.
+- `diagnostic/_state.md` showing all 86 slices done.
 - A series of `[state-update]` commits on integration after each merge.
 - Phase-by-phase perf baselines under `diagnostic/artifacts/perf/`.
 - Phase 11 quality cleanup baseline under `diagnostic/artifacts/healthcheck/` showing semantic-conformance ≥ 40 A/B out of 50.
@@ -1255,33 +1337,29 @@ Webhook events fire on every blocked / repaired / phase-boundary state for visib
 
 ---
 
-## 11. Codex round-4 audit ask
+## 11. Codex round-5 audit ask
 
-This is round-4 (round-3 returned 3 High + 4 Medium + 6 L-answers; all addressed):
+This is round-5 (round-4 returned 3 High + 3 Medium + 4 L-answers; all addressed):
 
-| Round-3 finding | How resolved |
+| Round-4 finding | How resolved |
 |---|---|
-| H-1: worktree creation outside lock | `ensure_slice_worktree` called only once, under `with_repo_lock`, via `_ensure_slice_worktree_to_file` helper writing path to temp file (§4 Item 2 dispatcher pattern) |
-| H-2: regression rollback won't make runner see blocked | After local reset, merger commits + pushes integration-side `[regression-revert]` flipping slice to `status: blocked` (§4 Item 10) |
-| H-3: repair-agent semantics contradictory | Two-mode dispatcher: slice-state repair → worktree + mirror; loop-infra repair → main worktree under lock (§4 Item 2 worktree section) |
-| M-4: lock dir should use git common-dir | `LOCK_DIR=$(git rev-parse --git-common-dir)/openf1-loop.lock` (§4 Item 2) |
-| M-5: conflict allow-list parsing fragile | Strict backticked-path format with `path_in_changed_files_expected` parser (§4 Item 6) |
-| M-6: CI verification accepts in-progress | Polls until `status == completed`, requires `conclusion == success`, 30-min budget (§4 Item 7) |
-| M-7: smoke-run ordering muddy | Day 3 stubs one smoke slice; Day 4 mass-stubs after smoke validates (§5 sequencing) |
+| H-1: lock not reentrant; merger calls update_state.sh which also locks | Lock is now PID-reentrant via `_REPO_LOCK_DEPTH` counter; same-PID re-acquire bumps depth, release decrements. EXIT trap force-releases regardless of depth. |
+| H-2: regression handler manually releases lock owned by with_repo_lock | Removed manual `release_repo_lock`; handler returns rc=1 and the wrapper's normal release path handles cleanup. Avoided double-release. |
+| H-3: loop-infra repair shouldn't auto-push | New `diagnostic/slices/.approved-loop-infra-repair/<slice_id>` sentinel gate. Without sentinel: commit local, slice → blocked + USER ATTENTION with explicit approve/reject instructions. |
+| M-4: LOCK_DIR may still be relative | Uses `--path-format=absolute --git-common-dir`. Always absolute regardless of caller's cwd. |
+| M-5: conflict parser missing slice-file arg | `resolve_conflict` now passes `"$slice_file"` to `path_in_changed_files_expected`. |
+| M-6: regression transition not in merger allow-list | Merger allow-list extended: `ready_to_merge → done OR blocked`. |
 
-L-answers also applied:
-- Cost validation as explicit slice (`02-cost-telemetry-validation`), placed after Phase 2 dispatches accumulate
-- Lock at git common-dir confirmed
-- `02-prompt-static-prefix-split` confirmed as smoke slice
-- No ledger backfill on `estimated:true→false` flip; document flip date
-- Lock alone sufficient for `ensure_slice_worktree` race (H-1 fix removes the unguarded call)
-- Stale round-2 appendix removed (was at end of doc)
+L-answers applied:
+- DB/service smoke at first Phase-3 slice (`03-core-build-schema` + `03-driver-session-summary-prototype` pair) added to §5 Day 4 sequencing
+- Regression push race closed by lock; external race documented as known limit
+- `02-cost-telemetry-validation` total raised from 85 → **86 slices everywhere**
+- Stale appendix cleanup confirmed (only one End-of-plan marker)
 
-Round-4 review please:
-- Round-3 fixes in §4 (Item 2 single-locked-call dispatcher pattern, Item 10 regression-revert mirror, Item 6 strict path parser, Item 7 wait-for-completion)
-- Round-3 L-answers' codification in §9 (cost-validation slice, smoke ordering, no-backfill, common-dir lock)
-- Day 3 / Day 4 split in §5 — does it match Codex's expectation for smoke-run-then-mass-stub?
-- Round-4 open questions in §9 (smoke slice representativeness, push-race window during regression, loop-infra repair gating, cost-validation slice slot)
+Round-5 review please:
+- Round-4 fixes in §4 (reentrant lock, removed manual release in regression handler, loop-infra approval sentinel, absolute lock dir, parser arg fix, merger allow-list)
+- Day 4 two-stage smoke in §5 (`02-prompt-static-prefix-split` for protocol, then Phase-3 pair for DB/service)
+- Round-5 open questions in §9 (Phase-3 prototype smoke pair, sentinel dir naming, depth counter under child crashes, total-count ripples)
 
 Triage as `High` / `Medium` / `Low`. Approving this round means implementation kicks off.
 
