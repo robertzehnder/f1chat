@@ -21,6 +21,24 @@ slice_id="${1:?slice_id required}"
 agent="${2:?agent required}"
 model="${3:-}"
 
+# Billing source classification (round-12 follow-up):
+#   plan = subscription quota (Claude Code CLI on Max plan, Codex CLI on
+#          ChatGPT plan). NOT counted against LOOP_DAILY_USD_CAP because
+#          subscription throttles itself.
+#   api  = metered API key (any dispatch using ANTHROPIC_API_KEY directly
+#          via SDK). Counted against the daily cap.
+# CLI-based dispatchers default to "plan"; an env override lets a future
+# direct-SDK dispatcher self-declare as "api".
+billing_source="${LOOP_BILLING_SOURCE:-}"
+if [[ -z "$billing_source" ]]; then
+  case "$agent" in
+    claude|claude-revise|claude-repair|codex|codex-native|codex-claude-fallback|codex-slice-audit|codex-slice-audit-claude-fallback)
+      billing_source="plan" ;;
+    *)
+      billing_source="plan" ;;  # conservative default
+  esac
+fi
+
 LEDGER="$LOOP_STATE_DIR/cost_ledger.jsonl"
 PRICING_FILE="${LOOP_PRICING_FILE:-$LOOP_MAIN_WORKTREE/scripts/loop/pricing.json}"
 LOG="$LOOP_STATE_DIR/runner.log"
@@ -158,8 +176,8 @@ PY
 
 # ---------------- Ledger write ----------------
 ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-printf '{"ts":"%s","slice":"%s","agent":"%s","model":"%s","input_tokens":%s,"output_tokens":%s,"cache_read_tokens":%s,"cache_write_tokens":%s,"cost_usd":%s,"source":"%s","estimated":true}\n' \
-  "$ts" "$slice_id" "$agent" "$model" "$input_tokens" "$output_tokens" "$cache_read_tokens" "$cache_write_tokens" "$cost_usd" "$token_source" \
+printf '{"ts":"%s","slice":"%s","agent":"%s","billing_source":"%s","model":"%s","input_tokens":%s,"output_tokens":%s,"cache_read_tokens":%s,"cache_write_tokens":%s,"cost_usd":%s,"source":"%s","estimated":true}\n' \
+  "$ts" "$slice_id" "$agent" "$billing_source" "$model" "$input_tokens" "$output_tokens" "$cache_read_tokens" "$cache_write_tokens" "$cost_usd" "$token_source" \
   >> "$LEDGER"
 
-logmsg "agent=$agent model=$model in=$input_tokens out=$output_tokens cache_r=$cache_read_tokens cost=\$$cost_usd source=$token_source"
+logmsg "agent=$agent billing=$billing_source model=$model in=$input_tokens out=$output_tokens cache_r=$cache_read_tokens cost=\$$cost_usd source=$token_source"

@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 # scripts/loop/check_budget.sh
-# Sums today's cost ledger entries and exits non-zero if over the daily cap.
+# Sums today's cost ledger entries from API-keyed agents only and exits
+# non-zero if over the daily cap.
 #
-# Cost telemetry is now wired (round-12 Item 9): post_dispatch_cost.sh parses
-# the most recently modified Claude/Codex session log and writes real
-# cost_usd rows per dispatch. Until the validation slice runs, all rows are
-# tagged `estimated: true` and the daily cap remains advisory in spirit.
+# IMPORTANT: this cap targets billing_source="api" rows ONLY (i.e. dispatches
+# that consumed Anthropic/OpenAI API credits via a key in .env). It IGNORES
+# rows where billing_source="plan" (Claude Code CLI under your Max plan
+# session, Codex CLI under your ChatGPT plan session) — those flow through
+# subscription quotas, not metered billing, so a parser overcount can't
+# translate into a surprise charge there.
 #
-# Default cap raised to $100/day (round-12) for the multi-day autonomous run.
-# 86 slices × ~25 dispatches × ~$0.50 = ~$1,000 total; cap enforces a sane
-# per-day rate without blocking long sessions.
+# Older rows without billing_source default to "plan" (the historical
+# dispatcher behavior), so this cap is conservative-by-default: it ONLY
+# counts rows the loop has explicitly tagged as API-billed.
+#
+# Default cap: $100/day. Override via LOOP_DAILY_USD_CAP=N.
 #
 # Ledger format (one JSON object per line, no spaces around colons):
-#   {"ts":"2026-04-25T13:16:42Z","slice":"00-foo","agent":"claude",
-#    "model":"claude-opus-4-7","input_tokens":42000,"output_tokens":3100,
-#    "cache_read_tokens":18000,"cost_usd":0.847,"source":"session-log",
-#    "estimated":true}
+#   {"ts":"2026-04-27T13:16:42Z","slice":"00-foo","agent":"claude-cli",
+#    "billing_source":"plan","model":"claude-opus-4-7",
+#    "input_tokens":42000,"output_tokens":3100,"cost_usd":0.847,
+#    "source":"session-log","estimated":true}
 
 set -e
 cd "$(git rev-parse --show-toplevel)"
@@ -27,9 +32,9 @@ CAP="${LOOP_DAILY_USD_CAP:-100}"
 
 today=$(date -u +%Y-%m-%d)
 
-# Sum cost_usd for today's entries. Uses POSIX-awk-compatible string ops
-# (no gawk-only match() with array capture). Tolerates ledger rows with or
-# without spaces around the JSON colons.
+# Sum cost_usd for today's API-billed entries only. Uses POSIX-awk-
+# compatible string ops (no gawk-only match() with array capture).
+# Tolerates ledger rows with or without spaces around the JSON colons.
 total=$(awk -v today="$today" '
   function get_field(line, key,    s, e, val) {
     s = index(line, "\"" key "\"")
@@ -49,10 +54,16 @@ total=$(awk -v today="$today" '
   }
   {
     ts = get_field($0, "ts")
-    if (substr(ts, 1, length(today)) == today) {
-      cost = get_field($0, "cost_usd")
-      if (cost ~ /^[0-9.+-eE]+$/) sum += cost + 0
-    }
+    if (substr(ts, 1, length(today)) != today) next
+
+    # Only count API-billed rows. Missing field defaults to "plan" so a
+    # bare ledger from an older dispatcher build is not counted.
+    billing = get_field($0, "billing_source")
+    if (billing == "") billing = "plan"
+    if (billing != "api") next
+
+    cost = get_field($0, "cost_usd")
+    if (cost ~ /^[0-9.+-eE]+$/) sum += cost + 0
   }
   END { printf "%.4f", sum + 0 }
 ' "$LEDGER")
