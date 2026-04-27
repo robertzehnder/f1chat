@@ -1,11 +1,11 @@
 ---
 slice_id: 03-laps-enriched-grain-discovery
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T15:08:57Z
+updated: 2026-04-27T15:12:49Z
 ---
 
 ## Goal
@@ -39,13 +39,15 @@ Discover and document the canonical grain (one-row-per-X) of `core.laps_enriched
    LIMIT 3;
    ```
 2. Run the global grain-discovery probe (gate command #1 below): total rows of `core.laps_enriched` and distinct `(session_key, driver_number, lap_number)` count. The *expected* result per the roadmap is `total_rows > distinct_triple` (multiplicity drift exists). The gate captures both numbers and the delta but does not fail on `total_rows != distinct_triple` — that inequality *is* the finding the slice exists to record.
-3. For each of the three deterministic sessions, run the per-session grain probe (gate command #2 below): rows, distinct triples, and the column distributions that most plausibly disambiguate duplicates (`is_in_lap`, `is_out_lap`, `is_pit_in_lap`, `is_pit_out_lap`, `lap_source`, `compound`). Capture raw counts.
-4. Inspect the captured numbers and choose the canonical grain. The decision tree (recorded explicitly in the note):
-   - If `(session_key, driver_number, lap_number, <one discriminator column>)` is unique across all probes → canonical grain = that 4-tuple; future `core.laps_enriched_mat` gets a PK on that 4-tuple.
-   - Else if no single-column discriminator works → canonical grain is non-unique; future `core.laps_enriched_mat` is a heap-with-indexes (no PK) with delete-then-insert refresh per `session_key`, per roadmap §4 Phase 3.
-5. Write `diagnostic/notes/03-laps-enriched-grain.md` with the four required sections (Decisions §3): raw numbers, chosen grain, reasoning, recommendation for the materialize slice. Quote the SQL probes verbatim so they are reproducible.
-6. Run web regression gates (gate command #3 below). The slice does not touch web code; these are run for regression safety only.
-7. Capture all gate command outputs into the slice-completion note.
+3. For each of the three deterministic sessions, run the per-session grain probe (gate command #2 below): rows, distinct triples, and the column distributions that most plausibly disambiguate duplicates. The candidate discriminator columns are fixed for the duration of this slice and are exactly the columns named in gate #2: `stint_number`, `compound_name`, `compound_raw`, `is_pit_out_lap`, `is_pit_lap`, `is_valid`, `is_personal_best_proxy`. These are all columns projected by `core.laps_enriched` per `sql/006_semantic_lap_layer.sql`. Capture raw counts verbatim.
+4. Run the global candidate-grain probe (gate command #3 below). This computes `count(DISTINCT …)` for every candidate 4-tuple `(session_key, driver_number, lap_number, <discriminator>)` and selected 5-tuples over the entire `core.laps_enriched` relation, so any PK recommendation in the note is justified by every-row evidence rather than three-session sampling.
+5. Inspect the captured numbers and choose the canonical grain. The decision tree (recorded explicitly in the note):
+   - If a 4-tuple `(session_key, driver_number, lap_number, <discriminator>)` from gate #3 is fully unique across all rows (`distinct_4tuple = total_rows`) → canonical grain = that 4-tuple; future `core.laps_enriched_mat` gets a PK on that 4-tuple.
+   - Else if a 5-tuple from gate #3 is fully unique across all rows → canonical grain = that 5-tuple; future `core.laps_enriched_mat` gets a PK on that 5-tuple.
+   - Else (no candidate is fully unique) → canonical grain is non-unique; future `core.laps_enriched_mat` is a heap-with-indexes (no PK) with delete-then-insert refresh per `session_key`, per roadmap §4 Phase 3.
+6. Write `diagnostic/notes/03-laps-enriched-grain.md` with the four required sections (Decisions §3): raw numbers, chosen grain, reasoning, recommendation for the materialize slice. Quote the SQL probes verbatim so they are reproducible.
+7. Run web regression gates (gate command #4 below). The slice does not touch web code; these are run for regression safety only.
+8. Capture all gate command outputs into the slice-completion note.
 
 ## Changed files expected
 - `diagnostic/notes/03-laps-enriched-grain.md` (new — grain note, four sections)
@@ -79,7 +81,9 @@ SQL
 #    available (same gating rule as 03-core-build-schema gate #3). For each session
 #    it prints (session_key, total_rows, distinct_triple, duplicate_rows) plus, when
 #    duplicates exist, the row counts grouped by candidate discriminator columns so
-#    the implementer can pick the canonical grain.
+#    the implementer can pick the canonical grain. The candidate column list is
+#    fixed (matches the columns projected by core.laps_enriched in
+#    sql/006_semantic_lap_layer.sql); it must not be edited during implementation.
 psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
@@ -119,30 +123,31 @@ BEGIN
 
     IF dups > 0 THEN
       -- Print per-discriminator row counts for the duplicate-bearing rows so the
-      -- note can record which column(s) disambiguate.
+      -- note can record which column(s) disambiguate. Columns are taken from
+      -- core.laps_enriched as defined in sql/006_semantic_lap_layer.sql.
       RAISE NOTICE
         'session_key=% candidate-discriminator distribution (column, distinct_with_column, dup_after_column):',
         sess.session_key;
-      RAISE NOTICE '  is_in_lap → distinct=%, dup_after=%',
+      RAISE NOTICE '  stint_number → distinct=%, dup_after=%',
         (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, is_in_lap
+           SELECT DISTINCT session_key, driver_number, lap_number, stint_number
            FROM core.laps_enriched WHERE session_key = sess.session_key) d),
         total - (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, is_in_lap
+           SELECT DISTINCT session_key, driver_number, lap_number, stint_number
            FROM core.laps_enriched WHERE session_key = sess.session_key) d);
-      RAISE NOTICE '  is_out_lap → distinct=%, dup_after=%',
+      RAISE NOTICE '  compound_name → distinct=%, dup_after=%',
         (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, is_out_lap
+           SELECT DISTINCT session_key, driver_number, lap_number, compound_name
            FROM core.laps_enriched WHERE session_key = sess.session_key) d),
         total - (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, is_out_lap
+           SELECT DISTINCT session_key, driver_number, lap_number, compound_name
            FROM core.laps_enriched WHERE session_key = sess.session_key) d);
-      RAISE NOTICE '  is_pit_in_lap → distinct=%, dup_after=%',
+      RAISE NOTICE '  compound_raw → distinct=%, dup_after=%',
         (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, is_pit_in_lap
+           SELECT DISTINCT session_key, driver_number, lap_number, compound_raw
            FROM core.laps_enriched WHERE session_key = sess.session_key) d),
         total - (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, is_pit_in_lap
+           SELECT DISTINCT session_key, driver_number, lap_number, compound_raw
            FROM core.laps_enriched WHERE session_key = sess.session_key) d);
       RAISE NOTICE '  is_pit_out_lap → distinct=%, dup_after=%',
         (SELECT count(*) FROM (
@@ -151,30 +156,119 @@ BEGIN
         total - (SELECT count(*) FROM (
            SELECT DISTINCT session_key, driver_number, lap_number, is_pit_out_lap
            FROM core.laps_enriched WHERE session_key = sess.session_key) d);
-      RAISE NOTICE '  compound → distinct=%, dup_after=%',
+      RAISE NOTICE '  is_pit_lap → distinct=%, dup_after=%',
         (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, compound
+           SELECT DISTINCT session_key, driver_number, lap_number, is_pit_lap
            FROM core.laps_enriched WHERE session_key = sess.session_key) d),
         total - (SELECT count(*) FROM (
-           SELECT DISTINCT session_key, driver_number, lap_number, compound
+           SELECT DISTINCT session_key, driver_number, lap_number, is_pit_lap
+           FROM core.laps_enriched WHERE session_key = sess.session_key) d);
+      RAISE NOTICE '  is_valid → distinct=%, dup_after=%',
+        (SELECT count(*) FROM (
+           SELECT DISTINCT session_key, driver_number, lap_number, is_valid
+           FROM core.laps_enriched WHERE session_key = sess.session_key) d),
+        total - (SELECT count(*) FROM (
+           SELECT DISTINCT session_key, driver_number, lap_number, is_valid
+           FROM core.laps_enriched WHERE session_key = sess.session_key) d);
+      RAISE NOTICE '  is_personal_best_proxy → distinct=%, dup_after=%',
+        (SELECT count(*) FROM (
+           SELECT DISTINCT session_key, driver_number, lap_number, is_personal_best_proxy
+           FROM core.laps_enriched WHERE session_key = sess.session_key) d),
+        total - (SELECT count(*) FROM (
+           SELECT DISTINCT session_key, driver_number, lap_number, is_personal_best_proxy
            FROM core.laps_enriched WHERE session_key = sess.session_key) d);
     END IF;
   END LOOP;
 END $$;
 SQL
 
-# 3. Web regression gates. Use --prefix so the three commands chain from a single
+# 3. Global candidate-grain probe. Must exit 0. Computes count(*) and
+#    count(DISTINCT …) over every candidate 4-tuple
+#    (session_key, driver_number, lap_number, <discriminator>) plus the most
+#    plausible 5-tuple combinations across all rows of core.laps_enriched, so the
+#    PK / non-unique recommendation in the grain note is justified by every-row
+#    evidence and not just the three sampled sessions from gate #2. The
+#    discriminator list matches gate #2.
+psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL'
+SELECT 'total_rows' AS metric, count(*)::text AS value FROM core.laps_enriched
+UNION ALL
+SELECT 'distinct_triple',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_4tuple_with_stint_number',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, stint_number
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_4tuple_with_compound_name',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, compound_name
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_4tuple_with_compound_raw',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, compound_raw
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_4tuple_with_is_pit_out_lap',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, is_pit_out_lap
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_4tuple_with_is_pit_lap',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, is_pit_lap
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_4tuple_with_is_valid',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, is_valid
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_4tuple_with_is_personal_best_proxy',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, is_personal_best_proxy
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_5tuple_with_stint_and_compound_name',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, stint_number, compound_name
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_5tuple_with_stint_and_is_pit_out_lap',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, stint_number, is_pit_out_lap
+         FROM core.laps_enriched
+       ) d
+UNION ALL
+SELECT 'distinct_5tuple_with_stint_and_is_pit_lap',
+       count(*)::text FROM (
+         SELECT DISTINCT session_key, driver_number, lap_number, stint_number, is_pit_lap
+         FROM core.laps_enriched
+       ) d;
+SQL
+
+# 4. Web regression gates. Use --prefix so the three commands chain from a single
 #    shell without nested cds (matches 03-core-build-schema gate #4).
 npm --prefix web run build
 npm --prefix web run typecheck
 npm --prefix web run test:grading
 ```
 
-If a candidate column referenced by gate #2 (`is_in_lap`, `is_out_lap`, `is_pit_in_lap`, `is_pit_out_lap`, `compound`) is missing from `core.laps_enriched`, the gate raises a Postgres error (`column "<x>" does not exist`) and `ON_ERROR_STOP=1` propagates non-zero. The implementer should then update the gate's candidate-column list to match the actual `core.laps_enriched` columns, re-run, and record the substitution in the slice-completion note.
-
 ## Acceptance criteria
 - [ ] `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' …` (gate #1 — global probe) exits `0`; captured numbers (`total_rows`, `distinct_triple`, `duplicate_rows`) are quoted verbatim in the grain note.
 - [ ] Gate #2 (per-session probe over three deterministic `analytic_ready` sessions) exits `0`; the DO block does not raise its 3-session-minimum check; per-session `(total, distinct_triple, duplicate_rows)` and discriminator distributions for any session with `duplicate_rows > 0` are quoted verbatim in the grain note.
+- [ ] Gate #3 (global candidate-grain probe) exits `0`; every emitted `distinct_*` row is quoted verbatim in the grain note, and the chosen canonical grain is justified by reference to those numbers (e.g., the chosen 4- or 5-tuple has `distinct_*tuple = total_rows`, or the note explicitly records that no candidate from gate #3 is fully unique and therefore recommends the heap-with-indexes path).
 - [ ] `diagnostic/notes/03-laps-enriched-grain.md` exists and contains the four required sections (raw numbers, chosen grain, reasoning, recommendation for `03-laps-enriched-materialize`).
 - [ ] `npm --prefix web run build`, `npm --prefix web run typecheck`, and `npm --prefix web run test:grading` all exit `0`.
 - [ ] The only files modified by this slice are `diagnostic/notes/03-laps-enriched-grain.md` (new) and `diagnostic/slices/03-laps-enriched-grain-discovery.md` (this slice file — frontmatter + Slice-completion note only). No SQL files, no TypeScript files, no test files, no application code.
@@ -223,12 +317,12 @@ If a candidate column referenced by gate #2 (`is_in_lap`, `is_out_lap`, `is_pit_
 **Status: REVISE**
 
 ### High
-- [ ] Replace the gate #2 candidate discriminator columns with columns that actually exist on `core.laps_enriched` in `sql/006_semantic_lap_layer.sql`, or add an explicit preflight query that derives the candidate list from `information_schema` before referencing it.
-- [ ] Add a global candidate-grain probe that verifies any proposed discriminator tuple over all rows of `core.laps_enriched`, because a future PK recommendation cannot be justified from only three sampled sessions.
+- [x] Replace the gate #2 candidate discriminator columns with columns that actually exist on `core.laps_enriched` in `sql/006_semantic_lap_layer.sql`, or add an explicit preflight query that derives the candidate list from `information_schema` before referencing it.
+- [x] Add a global candidate-grain probe that verifies any proposed discriminator tuple over all rows of `core.laps_enriched`, because a future PK recommendation cannot be justified from only three sampled sessions.
 
 ### Medium
-- [ ] Reconcile the step text and gate SQL so they name the same candidate columns; the steps mention `lap_source`, but gate #2 does not query it.
-- [ ] Remove or rewrite the instruction that the implementer should update the gate's candidate-column list during implementation, since the changed-files scope only allows the slice file frontmatter and completion note to change after planning.
+- [x] Reconcile the step text and gate SQL so they name the same candidate columns; the steps mention `lap_source`, but gate #2 does not query it.
+- [x] Remove or rewrite the instruction that the implementer should update the gate's candidate-column list during implementation, since the changed-files scope only allows the slice file frontmatter and completion note to change after planning.
 
 ### Low
 
