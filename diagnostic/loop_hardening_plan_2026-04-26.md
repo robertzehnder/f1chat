@@ -95,7 +95,7 @@ I want Codex to audit **what** I'm planning to fix, **what** I'm explicitly not 
 
 2. **C-3 + repo-level mutation lock: Git worktree isolation with serialized repo mutations.** Migrate dispatchers to `git worktree add` per dispatch. Add a portable `with_repo_lock` helper (mkdir-based, NOT `flock` — macOS lacks it) wrapping ALL repo-mutating operations: `git worktree add`/`remove`, mirror commits, merge, push, state-update commits. The lock prevents two dispatchers (or a dispatcher + the merger) from racing on `.git/index.lock` or simultaneous pushes. See §4 Item 2 for the full pattern. **~1.5 days.**
 
-3. **C-4: Bump `LOOP_MAX_PLAN_ITERATIONS` to 6 + tightened approve-with-deferred policy.** After iteration 5 (not before), the auditor gets explicit permission to APPROVE with deferred Mediums and Lows ONLY. Items in the High bucket can never be deferred — High at iteration 6 → REJECT. **~30 min.**
+3. **C-4: Bump `LOOP_MAX_PLAN_ITERATIONS` to 10 + tightened approve-with-deferred policy.** After iteration 9 (not before), the auditor gets explicit permission to APPROVE with deferred Mediums and Lows ONLY. Items in the High bucket can never be deferred — High at iteration 10 → REJECT. (User context: this hardening plan itself took 12 rounds; 10 is the realistic floor for genuinely complex slices.) **~30 min.**
 
 4. **C-5: Tightened verdict-landed-by-status detection.** In `runner.sh`'s `dispatch_with_guards`, treat the dispatch as successful only if the slice's frontmatter `status` transitioned from the dispatch's expected entry state to a known terminal state for that dispatch type AND the new state is observable on the branch the runner reads (integration). Specifically:
    - Plan-audit dispatch: `pending_plan_audit` → {`pending`, `revising_plan`, `blocked`}
@@ -563,7 +563,7 @@ _do_resume_loop_infra() {
 
 **The resume hook explicitly tolerates:**
 - Integration ahead of origin (two local commits awaiting approval)
-- Existence of `diagnostic/slices/.approved-loop-infra-repair/<id>` sentinel file
+- Existence of `diagnostic/slices/.approved-loop-infra-repair/<slice_id>__attempt-<N>` sentinel file
 - Worktree being on `integration/perf-roadmap` (it should be — runner always returns there)
 
 **`preconditions.sh` runs AFTER the resume hook** and uses normal rules. By then, either the resume succeeded (clean state) or the sentinel hasn't been touched yet (still pending; runner exits via circuit breaker per existing flow).
@@ -752,6 +752,14 @@ No agent ever writes to the main worktree EXCEPT the repair agent (in `loop-infr
 LOCK_DIR="$(git -C "$LOOP_MAIN_WORKTREE" rev-parse --path-format=absolute --git-common-dir)/openf1-loop.lock"
 LOCK_TIMEOUT="${LOOP_LOCK_TIMEOUT:-300}"
 LOCK_POLL="${LOOP_LOCK_POLL:-1}"
+
+# Per-dispatch wall-clock timeout (round-12 user-requested bump to 24h).
+# This is the budget for ONE agent run — plan-audit, plan-revise, impl,
+# impl-audit, repair, or merger. Longer than lock timeout because individual
+# dispatches (especially Phase 8 synthesis hardening + Phase 9 refactor batches)
+# can legitimately run for hours; a 24h cap is the catchall for hung agents
+# that didn't trip the lock contention check. Used by run_with_timeout().
+DISPATCH_TIMEOUT="${LOOP_DISPATCH_TIMEOUT:-86400}"
 
 # Stack EXIT traps instead of clobbering pre-existing ones (round-2 M-5).
 _REPO_LOCK_PRIOR_TRAP=""
@@ -1026,10 +1034,10 @@ These two vars are what every dispatcher and helper reads to find the runner's s
 ### Item 3 — C-4 (raise plan-iteration cap)
 
 **Files to modify:**
-- `scripts/loop/dispatch_plan_revise.sh` — change default `MAX_ITERATIONS` from 4 to 6
-- `scripts/loop/prompts/codex_slice_auditor.md` — add: "After round 5, if items remain, you have two choices: (a) APPROVED with explicit list of deferred Mediums and Lows that the implementer judgment-calls; (b) REJECT for genuine architectural ambiguity. Do NOT continue to round 6+ generating new triage."
+- `scripts/loop/dispatch_plan_revise.sh` — change default `MAX_ITERATIONS` from 4 to 10
+- `scripts/loop/prompts/codex_slice_auditor.md` — add: "After round 9, if items remain, you have two choices: (a) APPROVED with explicit list of deferred Mediums and Lows that the implementer judgment-calls; (b) REJECT for genuine architectural ambiguity. Do NOT continue to round 10+ generating new triage."
 
-**Rationale:** the loop currently keeps tightening spec until cap. For complex slices, "good enough now" beats "perfectly specified eventually." The auditor needs explicit permission to stop.
+**Rationale:** the loop currently keeps tightening spec until cap. For complex slices, "good enough now" beats "perfectly specified eventually." The auditor needs explicit permission to stop. The cap of 10 reflects empirical data — this hardening plan itself took 12 rounds, so a cap below 10 would have circuit-broken on a plan that ultimately landed cleanly.
 
 ### Item 4 — C-5 (tightened terminal-state success detection)
 
@@ -1690,7 +1698,7 @@ Pure read-only over `cost_ledger.jsonl` + `git log` + slice frontmatter. No stat
 - `scripts/loop/dispatch_claude.sh` — worktree, lock, post-dispatch mirror call
 - `scripts/loop/dispatch_codex.sh` — same + remove mirror agent prompt fragment
 - `scripts/loop/dispatch_repair.sh` — worktree, lock
-- `scripts/loop/dispatch_plan_revise.sh` — worktree, lock, post-dispatch mirror, raise iter cap to 6
+- `scripts/loop/dispatch_plan_revise.sh` — worktree, lock, post-dispatch mirror, raise iter cap to 10
 - `scripts/loop/dispatch_slice_audit.sh` — post-dispatch mirror call
 - `scripts/loop/dispatch_merger.sh` — lock, hardened conflict policy, regression gate hook, worktree cleanup
 - `scripts/loop/runner.sh` — `dispatch_with_guards` uses terminal-state allow-list, webhook in `log()`
@@ -1763,7 +1771,7 @@ After landing Items 1–12 and stubbing the 71 slice files:
     - `runner.log` shows `loop-infra-repair pending approval` + `CIRCUIT BREAKER`.
     - Runner exits cleanly.
 
-17. **Loop-infra repair — approval path.** From state at end of step 16, `touch diagnostic/slices/.approved-loop-infra-repair/<slice_id>`. Restart runner. Verify:
+17. **Loop-infra repair — approval path.** From state at end of step 16, read `<N>` from the slice's `repair_count_<slice_id>` state file (the dispatcher's attempt counter), then `touch diagnostic/slices/.approved-loop-infra-repair/<slice_id>__attempt-<N>`. Restart runner. Verify:
     - Runner's startup hook detects the sentinel.
     - Both local commits push to origin.
     - Sentinel file is removed.
@@ -1862,9 +1870,9 @@ After all 28 verifications pass, the loop is ready for end-to-end kickoff.
 ## 8. Risks (revised post-audit)
 
 1. **Worktree + lock migration introduces new bugs.** Most-load-bearing change. Mitigation: keep the old shared-worktree code path under `LOOP_WORKTREE_MODE=shared` for one stable run, then remove (per Codex Q6 final). Plus verification step 3 (lock contention test) catches the worst race scenarios pre-kickoff.
-2. **Lock contention stalls the loop.** If a stuck process holds the lock past `LOCK_TIMEOUT=300s`, dispatchers fail. Mitigation: stale-PID detection in `acquire_repo_lock` force-releases when owner PID is dead. Real wedges (PID alive but blocked) trip the per-slice timeout in `run_with_timeout` and propagate as fail-counter increments.
+2. **Lock contention stalls the loop.** If a stuck process holds the lock past `LOCK_TIMEOUT=300s`, dispatchers fail. Mitigation: stale-PID detection in `acquire_repo_lock` force-releases when owner PID is dead. Real wedges (PID alive but blocked) trip the per-dispatch timeout `DISPATCH_TIMEOUT=86400s` (24h, round-12 user-set) in `run_with_timeout` and propagate as fail-counter increments. Note: lock vs dispatch timeouts are intentionally asymmetric — locks are short (300s) because lock-held operations are fast (<30s normal); dispatch is long (24h) because agent runs can legitimately take hours.
 3. **Stubbing 71 slices commits to the roadmap structure.** Mitigation: Phase 9 uses explicit per-file mappings (per Codex Q3); other phases use thin stubs and lean on iterative plan-audit. Stub authoring happens AFTER hardening so format changes from validation can be applied.
-4. **Plan-iter cap of 6 may still be too low.** Mitigation: cap is env var; auto-repair has its own 3-attempt budget; circuit breaker exits cleanly if both exhaust.
+4. **Plan-iter cap of 10 may still be too low.** Mitigation: cap is env var (`LOOP_MAX_PLAN_ITERATIONS`); auto-repair has its own 3-attempt budget; circuit breaker exits cleanly if both exhaust. Per-slice user-facing override via the dispatch wrapper if a specific slice needs more.
 5. **Cost telemetry parser may not handle all session JSONL shapes.** Mitigation: `estimated: true` flag on every row; daily cap stays advisory until validated.
 6. **Webhook leaks repo info.** Mitigation: payload is event + slice id + short commit hash + log message — no code, no audit content.
 7. **Hardened merger policy auto-resolves a conflict that should have been caught.** E.g. slice modifies `web/package.json` in a way that breaks integration's expected dependencies. Mitigation: regression gate (Item 10) catches this on the next merge; webhook fires `REGRESSION` event.
