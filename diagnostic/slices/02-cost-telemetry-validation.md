@@ -1,11 +1,11 @@
 ---
 slice_id: 02-cost-telemetry-validation
 phase: 2
-status: pending
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T05:21:49Z
+updated: 2026-04-27T01:23:01-04:00
 ---
 
 ## Goal
@@ -129,7 +129,87 @@ print("parser-fix before/after gate: PASS")
 Rollback: `git revert <commit>`. The flip script edits a gitignored file; if it mis-flips rows, restore `cost_ledger.jsonl` from the most recent runner backup or hand-edit (acceptable because the ledger is append-only telemetry, not load-bearing data).
 
 ## Slice-completion note
-(filled by Claude)
+
+**Status: BLOCKED — owner=user.** Branch `slice/02-cost-telemetry-validation`.
+
+This dispatch could not complete the validation comparison because two
+required artifacts can only be produced by the user (Required services /
+env section already calls them out as prerequisites):
+
+- `diagnostic/artifacts/cost/anthropic_2026-04-26T02-03-14Z_2026-04-27T05-20-50Z.csv`
+  (export from https://console.anthropic.com/settings/usage)
+- `diagnostic/artifacts/cost/openai_2026-04-26T02-03-14Z_2026-04-27T05-20-50Z.csv`
+  (export from https://platform.openai.com/usage)
+
+Without these, no billing total exists to compute the per-vendor or overall
+delta, so neither the within-5% path (Step 6) nor the outside-5% path
+(Step 7) can be entered and the corresponding conditional gates are
+unreachable. Producing a fabricated comparison would be worse than blocking,
+so neither the flip script nor the parser-fix before/after artifact was
+authored.
+
+### What was done in scope
+- Computed the validation window per the slice rule:
+  `window-start=2026-04-26T02:03:14Z`, `window-end=2026-04-27T05:20:50Z`
+  (covered slices = the ten most recent merges in `_state.md` plus the
+  in-progress `02-cost-telemetry-validation` rows).
+- Sumed `cost_usd` for in-window rows of
+  `$LOOP_STATE_DIR/cost_ledger.jsonl`: **41 in-window rows, total
+  $0.000000.** Per-(`agent`,`model`) and per-vendor breakdowns are recorded
+  in `diagnostic/notes/02-cost-telemetry-validation.md`.
+- Captured ledger health observations that point at `discover_log` in
+  `scripts/loop/post_dispatch_cost.sh` as the most likely root cause to
+  investigate when the slice is unblocked (the embedded python parser
+  correctly extracts `usage` blocks when handed a known-good session log;
+  the failure is upstream of the parser).
+
+### Decisions
+- **Path:** undetermined; strong a-priori expectation: outside-5% (ledger
+  is $0.00 over a ~27-hour, 41-row window; any nonzero billing total puts
+  delta at -100%).
+- **Within-5% flip script** (`scripts/loop/one_time/02_flip_estimated_false.sh`):
+  **NOT** authored — slice spec restricts it to the within-5% path and the
+  "Changed files expected" list scopes it conditionally.
+- **Parser fix** (`scripts/loop/post_dispatch_cost.sh`,
+  `scripts/loop/pricing.json`,
+  `diagnostic/artifacts/cost/02-parser-fix-before-after.json`): **NOT**
+  attempted — the outside-5% gate requires a real `billing_sum_usd` that
+  the loop cannot obtain. Deferred to the unblocking pass.
+
+### Self-check vs. acceptance criteria
+- [x] Validation note committed with window timestamps, per-vendor ledger
+      sums, deltas placeholder explaining unavailability, decision.
+- [ ] Both billing-console CSVs committed — **blocker**.
+- [n/a] Within-5% path artifacts — path not selected.
+- [n/a] Outside-5% path artifacts — path not selected.
+
+### Gate-command exit codes (this dispatch)
+- `npm --prefix web run build`           — exit 0
+- `npm --prefix web run typecheck`       — exit 0
+- `npm --prefix web run test:grading`    — exit 0 (21 pass / 10 skip / 0 fail)
+- `test -f diagnostic/notes/02-cost-telemetry-validation.md` — exit 0
+- `ls diagnostic/artifacts/cost/anthropic_*.csv diagnostic/artifacts/cost/openai_*.csv`
+  — exit 1 (`no matches found`) — **the blocker**
+- within-5% conditional gate — n/a (path not selected)
+- outside-5% conditional gate — n/a (path not selected)
+
+### Files changed in this dispatch
+- `diagnostic/notes/02-cost-telemetry-validation.md` — created.
+- `diagnostic/slices/02-cost-telemetry-validation.md` — frontmatter
+  (`status`, `owner`, `updated`) and this Slice-completion note section.
+
+### Branch + commit
+- Branch: `slice/02-cost-telemetry-validation`
+- Commit hash: `f58bd79` (`slice 02-cost-telemetry-validation: blocked on
+  billing-console CSV exports`,
+  `[slice:02-cost-telemetry-validation][blocked]`). Pushed to `origin`.
+
+### To unblock
+1. Export the two CSVs above to the listed paths and commit them.
+2. Re-dispatch this slice. The unblocking pass will: re-run the always-on
+   web gates and the existence checks, compute deltas (Step 5), select the
+   within-5% or outside-5% path, produce the conditional artifacts, run the
+   conditional gate, and flip frontmatter to `status=awaiting_audit`.
 
 ## Audit verdict
 (filled by Codex)
