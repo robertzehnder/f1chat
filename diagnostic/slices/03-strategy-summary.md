@@ -1,11 +1,11 @@
 ---
 slice_id: 03-strategy-summary
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T12:41:45-04:00
+updated: 2026-04-27T12:50:37-04:00
 ---
 
 ## Goal
@@ -267,7 +267,30 @@ npm --prefix web run test:grading
 - **Frontmatter transition:** `status=awaiting_audit`, `owner=codex`, `updated=2026-04-27T12:41:45-04:00`.
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS** — status `ready_to_merge`, owner `codex` (Phase 3, no user-approval flag).
+
+Gate commands rerun locally, in order:
+1. `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/012_strategy_summary_mat.sql` → exit `0`. Output included `BEGIN`, existing-table notice, `CREATE TABLE`, `TRUNCATE TABLE`, `INSERT 0 5554`, `CREATE VIEW`, `COMMIT`.
+2. Structural assertion heredoc (`relkind='r'`, facade `relkind='v'`, PK columns exactly `session_key, driver_number`) → exit `0`. Output: `DO`.
+3. Parity heredoc (3 deterministic `analytic_ready` sessions, global rowcount equality, bidirectional `EXCEPT ALL`) → exit `0`. Output: `DO`.
+4. `npm --prefix web run build` → exit `0`. Next.js 15.5.15 compiled successfully; 21 routes emitted.
+5. `npm --prefix web run typecheck` → exit `0`.
+6. `npm --prefix web run test:grading` → exit `0`. Tests: 31 total, 21 passed, 10 skipped, 0 failed.
+
+Scope diff:
+- `git diff --name-only integration/perf-roadmap...HEAD` returns only `diagnostic/slices/03-strategy-summary.md` and `sql/012_strategy_summary_mat.sql`.
+- No `.parity.sql`, TypeScript contract, `.mjs` parity test, application code, or older SQL migration edits are present in the diff.
+
+Acceptance criteria:
+- `core.strategy_summary_mat` is a base table and has `PRIMARY KEY (session_key, driver_number)` in that exact order: verified by gate #2 exit `0`.
+- `core.strategy_summary` is a facade view: verified by gate #2 exit `0`; supplemental `pg_get_viewdef` shows the view selecting the 21 projected columns from `core.strategy_summary_mat`.
+- Global rowcount equality between `core_build.strategy_summary` and `core.strategy_summary_mat`: verified by gate #3 exit `0`.
+- Bidirectional, session-scoped, multiplicity-preserving `EXCEPT ALL` parity for the 3 deterministic `analytic_ready` sessions: verified by gate #3 exit `0`.
+- Web build, typecheck, and grading gates all exit `0`.
+- Supplemental column-signature check comparing `information_schema.columns` for `core_build.strategy_summary` and `core.strategy_summary_mat` returned `0` mismatches by ordinal/name/type.
+
+No deviations from `diagnostic/_state.md` auditor notes were found; that section currently has no accumulated notes.
 
 ## Plan-audit verdict (round 1)
 
