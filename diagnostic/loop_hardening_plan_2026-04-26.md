@@ -257,6 +257,13 @@ case "$LOOP_REPAIR_MODE" in
     #   2. A blocked-state slice-file flip ([loop-infra-pending])
     # Neither is pushed without user approval.
 
+    # Round-8 H-2: compute diff_files HERE, since this case branch doesn't
+    # share scope with the slice-state branch. Under set -u, referencing an
+    # unset $diff_files would abort. We diff the [loop-infra-repair] commit
+    # the agent just made (HEAD vs HEAD~1).
+    local diff_files
+    diff_files=$(git -C "$LOOP_MAIN_WORKTREE" diff --name-only HEAD~1 HEAD 2>/dev/null || echo "(could not compute diff)")
+
     # Agent already committed its loop-infra change. Now flip the slice file
     # locally to blocked + append explanation. Same lock as the agent's commit.
     flip_slice_status "$slice_id" "blocked" "user"
@@ -273,7 +280,9 @@ LIFECYCLE — runner has exited cleanly via circuit breaker. To resume:
   Approve (push both commits, slice unblocks):
     touch diagnostic/slices/.approved-loop-infra-repair/$slice_id
     # Restart runner. The runner's loop-infra-approval-resume hook detects
-    # the sentinel, pushes both local commits, removes the sentinel, and
+    # the sentinel, pushes both original commits, flips the slice status,
+    # commits the flip, pushes the [loop-infra-resumed] commit, then ONLY
+    # removes the sentinel after the final push succeeds (round-8 H-1+L-5), and
     # flips the slice back to revising_plan or revising as the agent intended.
 
   Reject (drop both commits, slice unblocks back to its prior state):
@@ -303,22 +312,39 @@ Pseudocode of `runner.sh` startup order:
 # 2. Resume hook — runs BEFORE preconditions.sh
 resume_pending_loop_infra_repair() {
   cd "$LOOP_MAIN_WORKTREE"
-  # Find any local-only [loop-infra-pending] commits.
-  local pending_commits
-  pending_commits=$(git log origin/integration/perf-roadmap..HEAD --grep='\[loop-infra-pending\]' --pretty=format:%H)
-  [[ -z "$pending_commits" ]] && return 0   # nothing to resume
+  # Round-8 H-1: scan for resumable work via approval sentinels, NOT local
+  # commits. The previous version only scanned local-only [loop-infra-pending]
+  # commits — but if the FIRST push succeeded and the SECOND (post-flip) push
+  # failed, the [loop-infra-pending] commit is now on origin (not local-only)
+  # and the resume hook would never re-fire. Sentinels are the durable marker;
+  # local commit state is just an idempotency hint inside _do_resume_loop_infra.
+  local sentinel_dir="diagnostic/slices/.approved-loop-infra-repair"
+  [[ -d "$sentinel_dir" ]] || return 0
 
-  # For each pending commit, extract the slice id and check for sentinel.
-  while IFS= read -r commit_sha; do
-    local slice_id
-    slice_id=$(git log -1 --pretty=%B "$commit_sha" | sed -nE 's/.*\[slice:([^]]+)\].*/\1/p' | head -1)
-    [[ -z "$slice_id" ]] && continue
+  # Iterate every sentinel file (slice IDs); ignore .gitkeep.
+  for sentinel in "$sentinel_dir"/*; do
+    [[ -f "$sentinel" ]] || continue
+    local fname
+    fname=$(basename "$sentinel")
+    [[ "$fname" == ".gitkeep" ]] && continue
+    local slice_id="$fname"
 
-    local sentinel="diagnostic/slices/.approved-loop-infra-repair/${slice_id}"
-    if [[ -f "$sentinel" ]]; then
-      with_repo_lock "resume:loop-infra:$slice_id" _do_resume_loop_infra "$slice_id" "$sentinel"
+    # Defensive: confirm there's actually work to do (either a local-only
+    # pending commit OR a local-only resumed commit). If neither, the run
+    # is fully resolved — the sentinel is stale; remove it.
+    git fetch origin integration/perf-roadmap >/dev/null 2>&1 || true
+    local has_pending has_resumed
+    has_pending=$(git log "origin/integration/perf-roadmap..HEAD" --grep="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | head -c1)
+    has_resumed=$(git log "origin/integration/perf-roadmap..HEAD" --grep="\\[loop-infra-resumed\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | head -c1)
+    if [[ -z "$has_pending" && -z "$has_resumed" ]]; then
+      # Fully resolved (both pushes landed); sentinel is stale leftover.
+      rm -f "$sentinel"
+      log "resume: stale sentinel removed for $slice_id (no local-only commits)"
+      continue
     fi
-  done <<<"$pending_commits"
+
+    with_repo_lock "resume:loop-infra:$slice_id" _do_resume_loop_infra "$slice_id" "$sentinel"
+  done
 }
 
 _do_resume_loop_infra() {
@@ -404,11 +430,40 @@ if [[ "$current" != "integration/perf-roadmap" ]]; then
   exit 1
 fi
 
-# 1b. Round-7 L-answer: refuse if the bad commits are already on origin.
-#     If they're pushed, a destructive local reset doesn't undo origin —
-#     and it would silently re-push as a no-op when integration syncs.
-#     Direct user to git revert flow instead.
-git fetch origin integration/perf-roadmap >/dev/null 2>&1 || true
+# 1b. Round-7 L-answer + round-8 M-3: refuse if the bad commits are already
+#     on origin. If they're pushed, a destructive local reset doesn't undo
+#     origin — and it would silently re-push as a no-op when integration syncs.
+#     This check requires a fresh view of origin; fail closed if `git fetch`
+#     fails. The whole point of this script is to be a safety rail, and
+#     stale origin state defeats that. Override only via explicit
+#     --offline-local-only flag.
+OFFLINE_OVERRIDE=0
+if [[ "${2:-}" == "--offline-local-only" ]]; then
+  OFFLINE_OVERRIDE=1
+  echo "WARNING: --offline-local-only set; skipping origin fetch. Reset will" >&2
+  echo "         be local-only; bad commits already pushed will REMAIN on origin." >&2
+fi
+
+if [[ $OFFLINE_OVERRIDE -eq 0 ]]; then
+  if ! git fetch origin integration/perf-roadmap >/dev/null 2>&1; then
+    cat <<EOF >&2
+FAIL: git fetch origin integration/perf-roadmap failed.
+
+This script's safety check requires a fresh origin view to confirm the
+[loop-infra-pending][slice:${slice_id}] commits have NOT already been
+pushed. Stale origin state could mask a push that already happened.
+
+Resolve the network issue and re-run. If you absolutely cannot reach
+origin and have verified locally that nothing was pushed, override with:
+
+  $0 ${slice_id} --offline-local-only
+
+(Only safe when you are certain no push has occurred since the local
+commits were made.)
+EOF
+    exit 2
+  fi
+fi
 if git log "origin/integration/perf-roadmap" --grep="\\[loop-infra-pending\\]\\[slice:${slice_id}\\]" --pretty=format:%H 2>/dev/null | grep -q .; then
   cat <<EOF
 FAIL: the [loop-infra-pending][slice:${slice_id}] commit is already on origin.
@@ -1532,7 +1587,7 @@ After landing Items 1–12 and stubbing the 71 slice files:
 
 21. **Resume hook ordering (round-6 H-1).** Synthesize a state where two local `[loop-infra-pending]` + `[loop-infra-repair]` commits exist on integration (ahead of origin) and the approval sentinel is touched. Start the runner. Verify:
     - Resume hook runs BEFORE `preconditions.sh`.
-    - Resume hook acquires lock, pushes both commits, deletes sentinel, commits + pushes the slice-status flip.
+    - Resume hook acquires lock, pushes both original commits, commits + pushes the slice-status flip ([loop-infra-resumed]), THEN removes the sentinel (sentinel is the last step, only after final push succeeds — round-8 L-5).
     - `preconditions.sh` then sees a clean worktree synced with origin and proceeds normally.
 
 22. **Reject script (round-6 H-2).** With two local pending commits, run `scripts/loop/reject_loop_infra_repair.sh <slice_id>`. Verify:
@@ -1547,7 +1602,27 @@ After landing Items 1–12 and stubbing the 71 slice files:
 
 25. **Mode-classification quote-vs-action (round-6 M-3).** Synthesize a slice file whose latest audit verdict has the word `runner.sh` in a Note ("the existing runner.sh circuit breaker is sufficient") but no protocol-fix items in High/Medium. Verify `classify_repair_mode` returns `slice-state`, NOT `loop-infra`.
 
-After all 25 verifications pass, the loop is ready for end-to-end kickoff.
+26. **Partial-resume-failure recovery (round-8 H-1 + M-4).** Synthesize a state where:
+    - Both `[loop-infra-repair]` and `[loop-infra-pending]` commits are local-only.
+    - Approval sentinel is touched.
+    - Runner is started; resume hook runs; FIRST push succeeds (both commits land on origin).
+    - Mock the SECOND push (`[loop-infra-resumed]`) to fail (e.g. simulate network error).
+    Verify mid-state:
+    - `[loop-infra-resumed]` commit exists locally on integration.
+    - Origin already has `[loop-infra-repair]` + `[loop-infra-pending]` (first push succeeded).
+    - Sentinel STILL exists (was not removed because final push failed).
+    - Runner exits with logged warning.
+    Then restart the runner with the network restored. Verify:
+    - Resume hook is entered via the SENTINEL scan (NOT via local-only `[loop-infra-pending]` scan, since that commit is now on origin).
+    - Idempotency check detects the existing local `[loop-infra-resumed]` commit and skips recreation.
+    - Final push succeeds; sentinel removed; loop continues.
+
+27. **Reject script offline behavior (round-8 M-3).** Run `reject_loop_infra_repair.sh <slice_id>` with `git fetch origin` mocked to fail. Verify:
+    - Script refuses by default (exit 2 with clear network-failure message).
+    - Override `reject_loop_infra_repair.sh <slice_id> --offline-local-only` proceeds with a loud warning.
+    - Without the override, no destructive operation is performed.
+
+After all 27 verifications pass, the loop is ready for end-to-end kickoff.
 
 ---
 
@@ -1692,13 +1767,29 @@ After all 25 verifications pass, the loop is ready for end-to-end kickoff.
 - Mode classification false negatives: confirmed over-blocking is acceptable; post-step violation path is the right backstop.
 - Reject-after-push: implemented. `reject_loop_infra_repair.sh` now `git fetch`es and refuses if `origin/integration/perf-roadmap` already contains the `[loop-infra-pending]` commit for this slice. Prints a `git revert`-based recovery flow instead.
 
-### Remaining open for Codex round 8
+### Resolved by Codex round-8 audit (2 High + 2 Medium + 1 Low + 3 L-answers)
 
-1. **`git fetch` in `reject_loop_infra_repair.sh`.** Adds a network call to a script the user runs interactively. Network failure → `git fetch` errors but is `|| true`-ed, so script proceeds with stale view. This means a recently-pushed bad commit could slip past the check if origin became unreachable. Mitigation: explicit "stale-fetch" warning if the fetch fails. My read: warn but proceed; user is in the loop and can re-run with network. Codex agree?
+| Round-8 finding | How resolved |
+|---|---|
+| H-1: resume scan only finds local-only pending commits | Resume hook now scans `diagnostic/slices/.approved-loop-infra-repair/*` sentinels DIRECTLY, not local commits. Sentinels are the durable retry marker. Local commit state (pending vs resumed) is just an idempotency hint INSIDE `_do_resume_loop_infra`. Stale sentinels (no local-only commits, all pushes landed) are auto-removed. |
+| H-2: `diff_files` undefined in loop-infra branch under set -u | Added explicit local computation inside the `loop-infra)` case branch via `git diff --name-only HEAD~1 HEAD`. Variable now has a value before `append_slice_section` references it. |
+| M-3: reject script `git fetch` failure not fail-closed | Reject script now exits 2 by default if `git fetch` fails. Override via `--offline-local-only` flag with explicit warning. Stale origin view no longer silently proceeds. |
+| M-4: verification missing partial-resume-failure scenario | Added verification step 26: first push succeeds, second push fails, sentinel retained, restart finds work via sentinel scan, idempotency detects existing `[loop-infra-resumed]` commit, finishes the resume cleanly. Step 27 covers reject script offline behavior. |
+| L-5: prose ordering wrong | Updated `runner.sh` startup pseudocode comment AND verification step 17 to reflect: push original commits → commit slice-status flip → push resumed commit → THEN remove sentinel (sentinel removal is last). |
 
-2. **Resume-hook idempotency under simultaneous runner starts.** The new idempotency check (existing `[loop-infra-resumed]` commit detected → skip recreation) reads from origin's diff. If two runners start at exactly the same time after a partial-failure state, only one acquires the lock; the second waits, then sees the now-pushed state and exits early with "nothing to do." Confirming this is correct.
+### Round-8 L-answers / open-question resolutions
 
-3. **`flip_slice_status` semantics for the resume hook.** The hook calls `flip_slice_status "$slice_id" "$resume_status" "claude"` to set status back to `revising_plan`/`revising`. But the slice file at this moment has `status: blocked, owner: user` from the `[loop-infra-pending]` commit. Confirming `flip_slice_status` overwrites both fields atomically (single sed, single commit).
+- Simultaneous runner starts: confirmed safe once H-1 sentinel-driven scan is in place.
+- `flip_slice_status` atomicity: confirmed — single sed call updates both `status:` and `owner:` lines, followed by one git commit. No intermediate state visible.
+- `git fetch` failure: confirmed fail-closed with explicit override (M-3 fix).
+
+### Remaining open for Codex round 9
+
+1. **Stale-sentinel cleanup race.** The resume hook removes a sentinel if it sees no local-only `[loop-infra-pending]` or `[loop-infra-resumed]` commits. But what if the user just touched the sentinel for an as-yet-uncreated repair? (User is preemptively approving a repair that hasn't been agent-dispatched yet.) The cleanup would treat the sentinel as stale and remove it, defeating the user's intent. Mitigation: only remove a sentinel if BOTH (a) no local-only repair commits exist AND (b) the slice's frontmatter is NOT in `blocked` state. If `blocked`, the user's preemptive approval is awaiting a future repair attempt; preserve. Codex agree on this guard?
+
+2. **Reject script `--offline-local-only` interaction with sentinel.** If the user uses the offline override and resets locally, but the sentinel was created by the runner (which pushed the bad commits), the next runner restart with network will see the sentinel + the bad commits ON ORIGIN, and the resume hook's idempotency check will detect they're not local-only. New behavior: should the resume hook in that case (sentinel exists, no local-only commits, but commits are on origin) auto-remove the sentinel as stale? That's what the H-1 fix does. Confirming this composes correctly with the offline reject path.
+
+3. **What's the smallest possible smoke test that exercises round-8 fixes specifically?** I can synthesize the partial-failure state via shell scripting (manually create the local commits, mock `git push` to fail). Or I can rely on the natural verification in step 26. Verification step 26 is more realistic but takes longer to set up. My read: step 26 is enough. Codex agree?
 
 ### Resolved by Codex round-1 audit
 1. ~~Worktree disk usage~~ — **Acceptable** if cleanup/prune verified. Verification step 11 added.
@@ -1745,28 +1836,27 @@ Webhook events fire on every blocked / repaired / phase-boundary state for visib
 
 ---
 
-## 11. Codex round-8 audit ask
+## 11. Codex round-9 audit ask
 
-This is round-8 (round-7 returned 2 High + 3 Medium + 3 L-answers; all addressed):
+This is round-9 (round-8 returned 2 High + 2 Medium + 1 Low + 3 L-answers; all addressed):
 
-| Round-7 finding | How resolved |
+| Round-8 finding | How resolved |
 |---|---|
-| H-1: dispatch flow re-introduces broad keyword grep | Removed. Dispatch calls `classify_repair_mode` directly; old `parent_verdict | grep` logic deleted from §4 Item 2. |
-| H-2: post-flip push failure has no durable retry | Sentinel retained until BOTH pushes succeed. Resume hook is now idempotent: detects existing `[loop-infra-resumed]` commit and skips recreation. Sentinel removed only after final-push success. |
-| M-3: `unchecked=$(grep ...)` aborts under set -e | Added `|| true` + explicit `[[ -n "$unchecked" ]]` guard. Empty result returns `slice-state` cleanly. |
-| M-4: verification 18 used raw git reset | Now uses `scripts/loop/reject_loop_infra_repair.sh` plus 3 negative-test invocations. |
-| M-5: verification 16 "mentions" was ambiguous | Specifies an UNCHECKED High/Medium action item explicitly naming the file; Notes section may also mention but doesn't drive classification. |
+| H-1: resume scan only finds local-only pending commits | Resume hook scans approval **sentinels** directly, not local commits. Sentinels are the durable retry marker; local commit state (pending/resumed) is an idempotency hint inside `_do_resume_loop_infra`. Stale sentinels (no local-only commits) auto-removed. |
+| H-2: `diff_files` undefined in loop-infra branch under set -u | Added explicit local `diff_files=$(git diff --name-only HEAD~1 HEAD ...)` inside the `loop-infra)` case branch BEFORE `append_slice_section` references it. |
+| M-3: reject script `git fetch` failure not fail-closed | Reject script exits 2 by default on fetch failure with clear error message. Override via `--offline-local-only` with loud warning. |
+| M-4: verification missing partial-resume-failure scenario | Added verification step 26 (partial-resume-failure full scenario) and step 27 (reject script offline behavior). |
+| L-5: prose ordering described old sequence | Updated runner.sh startup comment AND verification step 17 to: push original commits → flip+commit status → push resumed commit → THEN remove sentinel. |
 
 L-answers applied:
-- Concurrent runner instances: lock fail-safe sufficient
-- Mode classification false negatives: over-blocking acceptable; post-step violation is backstop
-- Reject-after-push: implemented in script with `git fetch` + grep on origin; refuses with `git revert`-based recovery instructions if commits already on origin
+- Simultaneous runner starts: confirmed safe with H-1 sentinel-driven scan
+- `flip_slice_status` atomicity: single sed → single commit (status + owner together)
+- `git fetch` failure in reject script: fail-closed (M-3 fix)
 
-Round-8 review please:
-- Round-7 fixes in §4 (single classifier call, idempotent resume hook with two-push retention, set-e-safe grep)
-- Round-7 fixes in §7 verification 16 (action-item explicit) and 18 (reject script + negative tests)
-- Round-7 reject-script extension for already-pushed case
-- Round-8 open questions in §9 (git fetch network failure, simultaneous runner-start idempotency, flip_slice_status atomicity)
+Round-9 review please:
+- Round-8 fixes in §4 (sentinel-scan-not-commit-scan, diff_files locality, reject script fail-closed)
+- Verification steps 26 + 27 in §7 (partial resume + offline reject)
+- Round-9 open questions in §9 (preemptive sentinel preservation guard, offline-reject + sentinel composition, smoke-test scope)
 
 Triage as `High` / `Medium` / `Low`. Approving this round means implementation kicks off.
 
