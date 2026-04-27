@@ -1,11 +1,11 @@
 ---
 slice_id: 03-stint-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T16:16:16Z
+updated: 2026-04-27T16:20:40Z
 ---
 
 ## Goal
@@ -261,3 +261,16 @@ npm --prefix web run test:grading
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-27, so it is current for this audit.
+
+## Plan-audit verdict (round 2)
+
+**Status: APPROVED**
+
+### High
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- Verified the round-1 items are resolved in the revised plan: real `_mat` table plus facade view, numbered SQL migration, inline `psql` parity gates, deterministic session selector, and dependency-safe `CREATE OR REPLACE VIEW` for the `core.strategy_summary` dependency.
