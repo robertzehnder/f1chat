@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-27T21:56:32Z
+# Project state — last updated: 2026-04-27T23:09:08Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -11,7 +11,7 @@ accumulated context the loop carries between slices._
 | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 1 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 2 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 3 | 13 | 7 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
+| 3 | 13 | 8 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 4 | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
 | 6 | 5 | 1 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `f452f90` merge: 03-grid-vs-finish [pass] — 2026-04-27
 - `7fc151a` merge: 03-race-progression-summary [pass] — 2026-04-27
 - `501c910` merge: 03-strategy-summary [pass] — 2026-04-27
 - `9cc249b` merge: 03-stint-summary [pass] — 2026-04-27
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `67bdeff` merge: 03-core-build-schema [pass] — 2026-04-27
 - `6fb3c6a` merge: 02-cache-hit-assertion [pass] — 2026-04-27
 - `bd29178` merge: 02-cache-control-markers [pass] — 2026-04-27
-- `1ca375d` merge: 02-prompt-static-prefix-split [pass] — 2026-04-27
 
 ## Open architectural decisions
 
