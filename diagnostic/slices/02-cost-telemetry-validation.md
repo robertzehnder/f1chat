@@ -223,6 +223,10 @@ The slice was not rejected by Codex; this section was never filled. The implemen
 
 No protocol fix or implementation retry can supply these. Status remains `blocked`, `owner: user`. Action required: export both CSVs for the window `2026-04-26T02:03:14Z → 2026-04-27T05:20:50Z`, commit them to the paths above, then re-dispatch the slice.
 
+### Repair-agent diagnosis (repair attempt 2 — escalate)
+
+Same conclusion as repair attempt 1. The blocker is unchanged: two billing-console CSV exports that require manual browser download cannot be produced by any automated agent. No implementation retry will help (the implementation is complete and correct). No protocol change applies. Status remains `blocked`, `owner: user`.
+
 ## Plan-audit verdict (round 1)
 
 **Status: REVISE**
