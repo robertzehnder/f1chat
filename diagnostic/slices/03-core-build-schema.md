@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T14:07:27Z
+updated: 2026-04-27T14:10:05Z
 ---
 
 ## Goal
@@ -36,6 +36,18 @@ Bootstrap the `core_build` schema and clone the *current* aggregating SELECT of 
      1. The schema-qualified name on the `CREATE` line (`core.<name>` → `core_build.<name>`).
      2. Any reference inside the SELECT body to another hot contract in **Decisions** (e.g. `core.laps_enriched`, `core.stint_summary`) is rewritten to its `core_build.*` counterpart. References to non-hot relations (`raw.*`, helper/internal views not in the hot list, lookup tables) remain unchanged.
      The intent of rewrite #2 is that the `core_build.*` source-definition graph is closed under itself for hot contracts, so when later materialization slices replace public `core.<name>` with a facade over `core.<name>_mat`, refreshing `core.<name>_mat` via `INSERT … SELECT * FROM core_build.<name>` does not read its own (potentially stale) materialized output. The parity check in gate command #3 still holds at this slice because `core_build.<x>` and `core.<x>` are set-wise identical at the moment of this slice. A future audit can confirm semantic non-drift by diffing each `core_build.<name>` SELECT against the original `core.<name>` SELECT after applying the same two rewrites.
+   - Emit the eleven `CREATE OR REPLACE VIEW` statements in this **dependency-safe order** (topological sort over the hot-contract `core_build.*` references introduced by rewrite #2). Postgres does not allow forward references between non-temporary views, so any other order will fail with `relation "core_build.<x>" does not exist` during apply:
+     1. `core_build.laps_enriched` — no hot-contract deps (depends only on `core.lap_semantic_bridge`, `core.valid_lap_policy`, which are non-hot and stay `core.*`).
+     2. `core_build.grid_vs_finish` — no hot-contract deps (only `core.sessions`, `core.session_drivers`, `raw.*`).
+     3. `core_build.stint_summary` — depends on `core_build.laps_enriched` (1).
+     4. `core_build.strategy_summary` — depends on `core_build.stint_summary` (3).
+     5. `core_build.race_progression_summary` — depends on `core_build.laps_enriched` (1).
+     6. `core_build.lap_phase_summary` — depends on `core_build.laps_enriched` (1).
+     7. `core_build.lap_context_summary` — depends on `core_build.laps_enriched` (1).
+     8. `core_build.telemetry_lap_bridge` — depends on `core_build.laps_enriched` (1).
+     9. `core_build.driver_session_summary` — depends on `core_build.laps_enriched` (1), `core_build.strategy_summary` (4), `core_build.grid_vs_finish` (2).
+     10. `core_build.pit_cycle_summary` — depends on `core_build.strategy_summary` (4), `core_build.race_progression_summary` (5), `core_build.laps_enriched` (1).
+     11. `core_build.strategy_evidence_summary` — depends on `core_build.pit_cycle_summary` (10).
    - Wrap the file in a single `BEGIN; … COMMIT;` so partial application cannot leave the schema half-built.
 2. Apply the SQL to the database referenced by `DATABASE_URL` (gate command #1 below).
 3. Verify schema and view existence (gate command #2).
@@ -163,7 +175,7 @@ npm --prefix web run test:grading
 
 ## Acceptance criteria
 - [ ] `core_build` schema exists.
-- [ ] All eleven `core_build.<name>` views in **Decisions** exist (gate command #2 returns `11`).
+- [ ] All eleven `core_build.<name>` views in **Decisions** exist — gate command #2 exits `0` (its DO block raises `RAISE EXCEPTION` and ON_ERROR_STOP=1 forces a non-zero exit unless the count of matching `information_schema.views` rows is exactly `11`; the block does not return the integer `11` itself).
 - [ ] For each hot contract in **Decisions**, the bidirectional `EXCEPT ALL` parity check returns `0` for **each** of the 3 deterministic `analytic_ready` sessions selected by the query in step 4.
 - [ ] `npm --prefix web run build`, `npm --prefix web run typecheck`, and `npm --prefix web run test:grading` all exit 0.
 - [ ] The only files modified by this slice are `sql/008_core_build_schema.sql` (new) and `diagnostic/slices/03-core-build-schema.md` (this slice file — frontmatter + Slice-completion note only; no body edits beyond filling that section). The parity check is an inline heredoc in gate command #3 — no `.parity.sql` file is permitted.
@@ -249,10 +261,10 @@ conflate the two._
 **Status: REVISE**
 
 ### High
-- [ ] Specify a dependency-safe `CREATE OR REPLACE VIEW` order for `sql/008_core_build_schema.sql` after hot-contract references are rewritten to `core_build.*`, so no view is created before another `core_build` view it references.
+- [x] Specify a dependency-safe `CREATE OR REPLACE VIEW` order for `sql/008_core_build_schema.sql` after hot-contract references are rewritten to `core_build.*`, so no view is created before another `core_build` view it references.
 
 ### Medium
-- [ ] Reword the Acceptance criteria for gate command #2 to say the command exits 0 after verifying exactly eleven views exist, because the current DO block does not return the value `11`.
+- [x] Reword the Acceptance criteria for gate command #2 to say the command exits 0 after verifying exactly eleven views exist, because the current DO block does not return the value `11`.
 
 ### Low
 
