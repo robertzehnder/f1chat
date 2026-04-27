@@ -1,11 +1,11 @@
 ---
 slice_id: 03-driver-session-summary-prototype
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-27T10:37:37-04:00
 ---
 
 ## Goal
@@ -58,3 +58,23 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the `CREATE MATERIALIZED VIEW` / `core_build` wording with the Phase 3 pattern established by `03-core-build-schema`: read from `core_build.driver_session_summary` and materialize into an explicitly named storage relation such as `core.driver_session_summary_mat`, or explicitly justify any different object model in the plan.
+- [ ] Add executable database gate commands that apply the SQL and verify the acceptance criteria, including rowcount parity and bidirectional session-scoped `EXCEPT ALL` parity for at least three sessions; the current gates only run web commands and cannot prove the materialized relation exists or matches the live query.
+
+### Medium
+- [ ] Specify a deterministic selector for the parity-test sessions, preferably `core.session_completeness` rows with `completeness_status = 'analytic_ready'` ordered by `session_key`, so implementers and auditors test the same sessions.
+- [ ] Clarify how the parity test file is executed by the gate commands, either by adding a direct `node web/scripts/tests/parity-driver-session-summary.test.mjs` gate or by stating the existing npm script that includes it.
+- [ ] Expand `Required services / env` to include `psql` on PATH and the exact database privileges needed for the final object model, not only statement-level `CREATE MATERIALIZED VIEW`.
+- [ ] Expand `Changed files expected` to include the slice file itself for the Slice-completion note/frontmatter updates, or state why this loop's required slice-file edit is excluded from scope accounting.
+
+### Low
+- [ ] Rename `sql/driver_session_summary.sql` to fit the existing numbered SQL migration convention, or explicitly state why this slice should use an unnumbered SQL file.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-27, so its timestamp is current for this audit.
