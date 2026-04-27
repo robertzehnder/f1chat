@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T13:58:48Z
+updated: 2026-04-27T14:01:38Z
 ---
 
 ## Goal
@@ -61,17 +61,17 @@ Bootstrap the `core_build` schema and clone the *current* aggregating SELECT of 
 6. Capture command outputs into the slice-completion note.
 
 ## Changed files expected
-- `sql/008_core_build_schema.sql` (new — schema + ten source-definition views)
+- `sql/008_core_build_schema.sql` (new — schema + eleven source-definition views)
 - `diagnostic/slices/03-core-build-schema.md` (this file — frontmatter + slice-completion note)
 
-No TypeScript contract files, no parity test `.mjs` files, no application code, and no edits to existing `sql/00[1-7]_*.sql` are expected. If implementation finds it must touch any of these, that is a scope alarm and should be flagged in the slice-completion note before submission.
+No separate parity SQL file, no TypeScript contract files, no parity test `.mjs` files, no application code, and no edits to existing `sql/00[1-7]_*.sql` are expected. The parity check is run as an inline heredoc in gate command #3 (see below). If implementation finds it must touch any other path, that is a scope alarm and should be flagged in the slice-completion note before submission.
 
 ## Gate commands
 ```bash
 # 1. Apply the schema migration. Must exit 0.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/008_core_build_schema.sql
 
-# 2. Confirm the schema and all ten views exist. Expect rowcount = 10.
+# 2. Confirm the schema and all eleven views exist. Expect rowcount = 11.
 psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
   SELECT count(*) FROM information_schema.views
   WHERE table_schema = 'core_build'
@@ -83,25 +83,64 @@ psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
     );
 "
 
-# 3. Pick 3 analytic-ready sessions and run parity for every (contract, session_key) pair.
-#    Implementation will script this loop; the planner-level invariant is:
-#    every diff_rows result must be 0.
-psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -f sql/008_core_build_schema.parity.sql
-# (Implementation may inline this as a heredoc instead of a separate file; either form
-#  is acceptable as long as the script exits non-zero if any diff_rows > 0.)
+# 3. Pick 3 analytic-ready sessions and run bidirectional EXCEPT ALL parity for every
+#    (contract, session_key) pair as an inline heredoc. Must exit 0; no row may report
+#    diff_rows > 0. Implementation MUST keep this inline — no separate parity SQL file.
+psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL'
+\set ON_ERROR_STOP on
+DO $$
+DECLARE
+  contracts text[] := ARRAY[
+    'driver_session_summary','laps_enriched','stint_summary','strategy_summary',
+    'race_progression_summary','grid_vs_finish','pit_cycle_summary',
+    'strategy_evidence_summary','lap_phase_summary','lap_context_summary',
+    'telemetry_lap_bridge'
+  ];
+  sess record;
+  c text;
+  diff bigint;
+BEGIN
+  FOR sess IN
+    SELECT session_key
+    FROM core.session_completeness
+    WHERE completeness_status = 'analytic_ready'
+    ORDER BY session_key ASC
+    LIMIT 3
+  LOOP
+    FOREACH c IN ARRAY contracts LOOP
+      EXECUTE format($f$
+        SELECT count(*) FROM (
+          (SELECT * FROM core_build.%1$I WHERE session_key = $1
+           EXCEPT ALL
+           SELECT * FROM core.%1$I        WHERE session_key = $1)
+          UNION ALL
+          (SELECT * FROM core.%1$I        WHERE session_key = $1
+           EXCEPT ALL
+           SELECT * FROM core_build.%1$I WHERE session_key = $1)
+        ) d
+      $f$, c) INTO diff USING sess.session_key;
+      IF diff <> 0 THEN
+        RAISE EXCEPTION 'parity drift: contract=% session_key=% diff_rows=%',
+          c, sess.session_key, diff;
+      END IF;
+    END LOOP;
+  END LOOP;
+END $$;
+SQL
 
-# 4. Web side (no code change expected, but run for regression safety).
-cd web && npm run build
-cd web && npm run typecheck
-cd web && npm run test:grading
+# 4. Web side (no code change expected, but run for regression safety). Use
+#    --prefix so the three commands chain from a single shell without nested cds.
+npm --prefix web run build
+npm --prefix web run typecheck
+npm --prefix web run test:grading
 ```
 
 ## Acceptance criteria
 - [ ] `core_build` schema exists.
 - [ ] All eleven `core_build.<name>` views in **Decisions** exist (gate command #2 returns `11`).
 - [ ] For each hot contract in **Decisions**, the bidirectional `EXCEPT ALL` parity check returns `0` for **each** of the 3 deterministic `analytic_ready` sessions selected by the query in step 4.
-- [ ] `cd web && npm run build`, `npm run typecheck`, and `npm run test:grading` all exit 0.
-- [ ] No file outside `sql/008_core_build_schema.sql` (and optional `sql/008_core_build_schema.parity.sql`) is modified.
+- [ ] `npm --prefix web run build`, `npm --prefix web run typecheck`, and `npm --prefix web run test:grading` all exit 0.
+- [ ] No file outside `sql/008_core_build_schema.sql` is modified (the parity check is an inline heredoc in gate command #3 — no `.parity.sql` file is permitted).
 
 ## Out of scope
 - `core.<name>_mat` storage tables (each contract's own slice).
@@ -120,7 +159,9 @@ cd web && npm run test:grading
 (filled by Claude)
 
 ## Audit verdict
-(filled by Codex)
+_Pending implementation. Filled by Codex post-implementation (PASS / FAIL). Plan-audit
+status lives in the appended `## Plan-audit verdict (round N)` sections below — do not
+conflate the two._
 
 ## Plan-audit verdict (round 1)
 
@@ -146,14 +187,14 @@ cd web && npm run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Reconcile the hot-contract count everywhere: the Decisions list and SQL definitions contain eleven views, but Steps/Changed files/Gate command #2 say ten and gate #2 expects rowcount `10`; make the list, prose, SQL existence query, and expected rowcount all agree.
-- [ ] Rewrite the web gate commands so they can be executed in the listed order from one shell without failing on `cd web` after the first command, for example by using `npm --prefix web ...` or a single subshell.
+- [x] Reconcile the hot-contract count everywhere: the Decisions list and SQL definitions contain eleven views, but Steps/Changed files/Gate command #2 say ten and gate #2 expects rowcount `10`; make the list, prose, SQL existence query, and expected rowcount all agree.
+- [x] Rewrite the web gate commands so they can be executed in the listed order from one shell without failing on `cd web` after the first command, for example by using `npm --prefix web ...` or a single subshell.
 
 ### Medium
-- [ ] Add `sql/008_core_build_schema.parity.sql` to `Changed files expected` when the gate references it as the default parity command, or make the gate explicitly require an inline heredoc and remove the optional file allowance from Acceptance criteria.
+- [x] Add `sql/008_core_build_schema.parity.sql` to `Changed files expected` when the gate references it as the default parity command, or make the gate explicitly require an inline heredoc and remove the optional file allowance from Acceptance criteria.
 
 ### Low
-- [ ] Remove or fill the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict` sections remain the single source of audit status.
+- [x] Remove or fill the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict` sections remain the single source of audit status.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
