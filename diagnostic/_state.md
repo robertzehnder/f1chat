@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-27T04:36:54Z
+# Project state — last updated: 2026-04-27T05:12:12Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -10,7 +10,7 @@ accumulated context the loop carries between slices._
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 0 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 1 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 2 | 4 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
+| 2 | 4 | 3 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | 3 | 13 | 0 | 0 | 13 | 0 | 0 | 0 | 0 | 0 |
 | 4 | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
@@ -33,17 +33,12 @@ accumulated context the loop carries between slices._
 
 ## Latest perf baseline
 
-- File: `diagnostic/artifacts/perf/01-perf-trace-fix-spans_2026-04-27.json`
-- Slowest stages by p50:
-  - `total` p50=12479.77ms p95=27861.57ms n=50
-  - `resolve_db` p50=6990.8ms p95=16343.94ms n=50
-  - `synthesize_llm` p50=4589.59ms p95=7429.5ms n=46
-  - `sqlgen_llm` p50=3280.96ms p95=13902.69ms n=12
-  - `repair_llm` p50=2345.44ms p95=5434.11ms n=2
-- Overall p50=12479.77ms p95=27861.57ms
+- File: `diagnostic/artifacts/perf/02-cache-hit_2026-04-27.json`
+- (could not parse stages from diagnostic/artifacts/perf/02-cache-hit_2026-04-27.json)
 
 ## Recent slice merges (last 10)
 
+- `6fb3c6a` merge: 02-cache-hit-assertion [pass] — 2026-04-27
 - `bd29178` merge: 02-cache-control-markers [pass] — 2026-04-27
 - `1ca375d` merge: 02-prompt-static-prefix-split [pass] — 2026-04-27
 - `44cde24` merge: 01-perf-trace-fix-spans [pass] — 2026-04-27
@@ -53,7 +48,6 @@ accumulated context the loop carries between slices._
 - `4621b9f` merge: 01-perf-trace-helpers [pass] — 2026-04-25
 - `2eee714` merge: 00-fresh-benchmark [pass] — 2026-04-25
 - `89b0dd7` merge: 00-verify-script [pass] — 2026-04-25
-- `87e1e1b` merge: 00-font-network-doc [pass] — 2026-04-25
 
 ## Open architectural decisions
 
