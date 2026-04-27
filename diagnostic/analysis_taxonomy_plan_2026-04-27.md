@@ -29,12 +29,14 @@ Comparing the current contract list against the universe of broadcast-style anal
 
 ### 1.3 What this plan delivers
 
-A **20–30 slice extension** to the perf roadmap that, when complete, lets the chat (and the new product surfaces from Phase 10) answer roughly **80% of the analyses in the broadcast taxonomy** using public FastF1 data, with explicit "no data available" responses for the proprietary 20% (battery state, internal telemetry, etc.).
+A **~28-slice extension** to the perf roadmap that, when complete, lets the chat (and the new product surfaces from Phase 10) answer roughly **70–80% of the analyses in the broadcast taxonomy** using the OpenF1 data already ingested into `raw.*`, with explicit "no data available" responses for the proprietary 20–30% (battery state, brake temps, fuel state, steering angle, slip angles, etc.).
 
 The three deliverables are:
-1. **Data layer** — FastF1 ingest extension to capture the telemetry channels we don't store today (throttle, brake, GPS coords, gear, RPM, DRS), plus a `track_segments` static table per-circuit.
-2. **Computation layer** — `analytics_build.*` schema (parallel to `core_build.*`) with matviews for the named insights.
+1. **Data layer (minimal)** — the OpenF1 ingest is already in place via `src/ingest.py` and the `raw.*` schema. The only new data work is per-circuit track segmentation (corner zones + mini-sector reference) in a static `f1.track_segments` table. Optional: team-radio transcription (deferred slice).
+2. **Computation layer** — `analytics_build.*` → `analytics.*` matviews (parallel to Phase 3's `core_build.*` → `core.*` pattern), reading from `raw.car_data`, `raw.location`, `raw.intervals`, `raw.overtakes`, `raw.laps`, etc.
 3. **Surface layer** — chat contracts for each named insight + a dashboard UI that visualizes the most common ones (Track Dominance map, corner-analysis breakdown, stint-degradation chart).
+
+**Critical correction from earlier draft:** the production data source is **OpenF1** (the openf1.org REST API), NOT FastF1. The schema gives it away — `meeting_key`, `session_key`, `driver_number`, plus endpoint-named tables: `meetings`, `sessions`, `drivers`, `laps`, `car_data`, `location`, `intervals`, `pit`, `stints`, `team_radio`, `race_control`, `weather`, `overtakes`, `position_history`, `session_result`, `starting_grid`. The `fastf1_audit/` and `fastf1_openf1_audit_toolkit/` directories are side-by-side comparison toolkits from a prior diligence pass — not the production ingest path. This plan was originally drafted assuming FastF1 ingest; that section has been corrected. **What was 6 ingest slices in §3 is now 1.**
 
 ### 1.4 Why this works as an extension, not a rewrite
 
@@ -81,54 +83,71 @@ For these, the chat must respond with `INSUFFICIENT_DATA` rather than hallucinat
 
 ---
 
-## 3. Data layer — extending FastF1 ingest
+## 3. Data layer — what's already in `raw.*`, what's missing
 
-### 3.1 What we have today
+### 3.1 OpenF1 raw tables already populated
 
-The existing OpenF1 Postgres schema (`f1.*`) holds:
-- `f1.sessions` — schedule, weekend identifiers
-- `f1.laps` — per-driver per-lap timing (lap time, sector times, compound, tyre life)
-- `f1.pit_stops` — pit timing
-- `f1.results` — final classification
-- `f1.weather` — track/air temp, wind, rainfall flags
+The production ingest (`src/ingest.py` → CSV from `data/{year}/{circuit}/`) already populates these:
 
-It does NOT hold per-sample telemetry (throttle, brake, GPS, gear, RPM, DRS) at scale — only what FastF1 ingestion captures during contract builds. The matviews don't depend on telemetry today.
-
-### 3.2 What we need to add
-
-| New table | Grain | Volume estimate | Source |
+| Table | Grain | Notable columns | Useful for |
 |---|---|---|---|
-| `f1.telemetry_samples` | one row per (session, driver, sample_ts), 5-50 Hz | ~100k samples/driver/race × 20 drivers × 24 races/yr ≈ 50M rows/yr | FastF1 `lap.get_car_data()` |
-| `f1.position_samples` | one row per (session, driver, sample_ts) with X,Y,Z coords | similar volume to telemetry | FastF1 `lap.get_pos_data()` |
-| `f1.race_control_messages` | one row per (session, message_ts, message) | ~50-200 rows/race | FastF1 `session.race_control_messages` |
-| `f1.track_segments` | static lookup: per-circuit, per-segment polygon/range | ~200-400 segments/circuit × 25 circuits | hand-curated + auto-derived from GPS |
-| `f1.driver_radio` *(deferred)* | radio transcripts | only if we add transcription | external |
+| `raw.meetings` | one row per race weekend | meeting_key, year, circuit | dimension |
+| `raw.sessions` | one row per session (FP1/FP2/FP3/Q/Sprint/R) | session_key, date_start/end, session_type | dimension |
+| `raw.drivers` | one row per driver per session | driver_number, broadcast_name, team_name | dimension |
+| `raw.laps` | one row per (session, driver, lap) | lap_duration, sector durations, **i1_speed**, **i2_speed**, **st_speed**, **segments_sector_1/2/3** (mini-sector arrays!), is_pit_out_lap | timing, sector dominance, mini-sector dominance |
+| `raw.pit` | one row per pit event | pit_duration (stationary time), date, lap_number | pit-stop analysis, undercut/overcut |
+| `raw.stints` | one row per (session, driver, stint) | compound, tyre_age_at_start, fresh_tyre, lap_start, lap_end | tyre strategy, deg curves |
+| `raw.intervals` | one row per (session, driver, sample) | interval (gap to ahead, text-encoded), gap_to_leader (text-encoded) | battle forecast, catch-rate |
+| `raw.position_history` | one row per (session, driver, sample) | position (live order) | running order over time |
+| `raw.car_data` | one row per (session, driver, sample) at **~3.7 Hz** | rpm, **speed**, n_gear, **throttle (0-100)**, **brake (0-100)**, **drs** (0/8/10/12/14 flag values) | corner analysis, braking, traction, DRS |
+| `raw.location` | one row per (session, driver, sample) at **~4 s** cadence | x, y, z (GPS coords) | track maps, track dominance, corner zones |
+| `raw.race_control` | one row per race-control message | category, flag, scope, sector, lap_number, driver_number, message | flags, SC/VSC, penalties, incident timeline |
+| `raw.weather` | one row per weather sample | air_temperature, track_temperature, humidity, pressure, **rainfall (BOOL)**, wind_direction, wind_speed | weather impact |
+| `raw.session_result` | one row per (session, driver) | position, points, status, classified | classification |
+| `raw.starting_grid` | one row per (session, driver) | grid_position | Lap-1 gain/loss |
+| `raw.overtakes` | one row per (session, lap, overtaker, overtaken) | **pre-detected by OpenF1** | overtake events, battle-forecast labels |
+| `raw.team_radio` | one row per radio event | recording_url (audio, no transcript) | broadcast storytelling (with transcription) |
+| `raw.championship_drivers` / `raw.championship_teams` | per-session standings snapshots | position, points, wins | points-as-they-run |
 
-**Data volume sanity check:** ~50M telemetry rows/year × ~80 bytes/row ≈ 4 GB/year. Fits Neon free tier with room to spare.
+**Key observations from the actual schema:**
+- **`raw.laps.segments_sector_*`** already contains OpenF1's text-encoded mini-sector breakdown. Track Dominance can use this directly without GPS reconstruction for a v1.
+- **`raw.overtakes` is pre-detected** by OpenF1 — overtaker/overtaken pairs by lap. Free ground-truth labels for any overtake-prediction model.
+- **Three free per-lap speeds**: `i1_speed`, `i2_speed` at fixed measuring loops + `st_speed` at the speed trap. Straight-line dominance is one query away.
+- **`raw.intervals.interval` and `gap_to_leader` are TEXT** (parsed from `+1.234` / `L+1` notation) — needs a parsing helper but not new ingest.
+- **`raw.weather.rainfall` is BOOLEAN** (not mm/hr). Coarse but workable for wet/dry/crossover detection.
+- **`raw.car_data.brake` is 0-100 percentage** (not binary as some sources document). Confirmed from schema.
 
-**Ingest cadence:** post-session, batch. Live ingest is not in scope (broadcast-time real-time is a separate problem; this plan targets post-session analysis).
+### 3.2 Sample-rate ceiling and what it caps
 
-### 3.3 Per-circuit track segmentation
+OpenF1's public sampling rates put a practical ceiling on precision:
 
-Track Dominance, Corner Analysis, and braking-zone analysis all require partitioning the lap into named segments:
-- **Mini-sectors** — 25-50 equal-distance bins (auto-derived from a reference fastest lap).
-- **Corners** — manually defined: corner number, brake_zone_start, turn_in_point, apex, exit_point.
-- **Straights** — derived: regions between consecutive corner exits and corner brake-zones.
+- **`car_data` ≈ 3.7 Hz** → ~270ms between samples → braking-zone resolution is ~10-15m at typical 50m/s entry speeds. Adequate for "who brakes later than whom" but not for sub-meter braking-point analysis.
+- **`location` ≈ 4 s cadence** → spatial resolution is poor for instantaneous position; OK for "where on the track" but `car_data` distance integration is preferable for fine-grained dominance segmentation.
 
-Recommended approach: **hybrid**. Auto-derive 25-50 mini-sectors per circuit from a reference fastest lap's GPS distance markers. For corners, hand-curate the 5-30 named corners per circuit (FIA publishes these). Store both in `f1.track_segments` with a `segment_kind` column (`minisector` | `corner` | `straight`).
+Mitigation: where the matview needs fine-grained zones (corner-by-corner braking analysis), aggregate over multiple laps per driver to average down sample noise, and report confidence intervals rather than point estimates.
 
-Curation cost: ~30 min per circuit × 25 circuits = ~12 hours one-time. Slice for this is below.
+### 3.3 What we still need to add
 
-### 3.4 Slice list — Phase 13 (Data layer)
+| New table | Grain | Volume | Source |
+|---|---|---|---|
+| `f1.track_segments` | static per-circuit, per-segment polygon/range | ~200-400 segments × 25 circuits ≈ 5-10k rows | hybrid: auto-derived mini-sectors from `raw.location` + hand-curated corners (FIA-published) |
+
+**Optional / deferred:**
+| Optional | Why deferred |
+|---|---|
+| Team-radio transcripts | `raw.team_radio.recording_url` exists; transcription via Whisper costs ~$0.006/min. Not blocking; one slice if/when we want radio storyline detection. |
+
+**Dropped from earlier draft:** `f1.telemetry_samples`, `f1.position_samples`, `f1.race_control_messages` — all already exist as `raw.car_data`, `raw.location`, `raw.race_control`. **No FastF1 ingest needed.**
+
+### 3.4 Slice list — Phase 13 (Data layer, collapsed)
 
 | Slice ID | Goal | Deps |
 |---|---|---|
-| `13-fastf1-telemetry-ingest` | Add ingest job that pulls telemetry + position samples from FastF1 for any session in `f1.sessions`. Idempotent; partitioned by session_id. | none |
-| `13-telemetry-storage-schema` | Create `f1.telemetry_samples` and `f1.position_samples` with appropriate indexes (session_id + driver + ts). | `13-fastf1-telemetry-ingest` |
-| `13-race-control-ingest` | Pull race_control_messages into `f1.race_control_messages`. | none |
-| `13-track-segments-static` | Create `f1.track_segments` table; ingest auto-derived mini-sectors for all circuits in current dataset. | `13-telemetry-storage-schema` |
-| `13-track-segments-corners` | Hand-curate corner definitions for top 10 circuits (Bahrain, Saudi, Australia, Japan, China, Miami, Monaco, Spain, Canada, Austria). Document the curation procedure. | `13-track-segments-static` |
-| `13-backfill-historical` | Backfill telemetry + race-control for the 2024 season (24 races) so we have data to build matviews against. | all above |
+| `13-track-segments-auto` | Create `f1.track_segments` schema. Auto-derive 25-50 equal-distance mini-sectors per circuit from `raw.location` reference fastest laps. Insert one row per (circuit, segment_index, segment_kind=minisector). | none |
+| `13-track-segments-corners` | Hand-curate FIA-numbered corner definitions for top 10 circuits (Bahrain, Saudi, Australia, Japan, China, Miami, Monaco, Spain, Canada, Austria). Add `segment_kind=corner` rows with brake_zone_start, turn_in, apex, exit boundaries. ~30 min/circuit × 10 = ~5h. | `13-track-segments-auto` |
+| `13-intervals-parsing-helper` | Add a SQL/TS helper that parses `raw.intervals.interval` and `gap_to_leader` text fields into seconds (NULL for "L+N" lapped notation). Used by every battle/forecast matview. | none |
+
+That's **3 slices** in Phase 13 (down from 6). The optional team-radio transcription stays deferred.
 
 ---
 
@@ -146,30 +165,30 @@ The chat synthesis path can read from BOTH schemas; the FactContract layer (Phas
 
 ### 4.2 Slice list — Phase 14 (Compute layer)
 
-Each slice produces one `analytics.*` matview + a parity test + a TS contract type. Same pattern as Phase 3.
+Each slice produces one `analytics.*` matview + a parity test + a TS contract type. Same pattern as Phase 3. Inputs reference real `raw.*` tables (corrected from earlier draft).
 
 | Slice ID | Matview | Inputs | Roughly equivalent broadcast graphic |
 |---|---|---|---|
-| `14-track-dominance` | `analytics.track_dominance` | telemetry_samples, position_samples, track_segments | Track Dominance |
-| `14-mini-sector-dominance` | `analytics.minisector_dominance` | telemetry_samples, track_segments | Mini-sector dominance map |
-| `14-sector-dominance` | `analytics.sector_dominance` | laps | Sector dominance |
-| `14-corner-analysis` | `analytics.corner_analysis` | telemetry_samples, position_samples, track_segments | Corner Analysis (entry/turn-in/mid/exit) |
-| `14-braking-performance` | `analytics.braking_performance` | telemetry_samples, track_segments | Braking Performance |
-| `14-traction-analysis` | `analytics.traction_analysis` | telemetry_samples, track_segments | Throttle/exit traction |
-| `14-straight-line-dominance` | `analytics.straight_line_dominance` | telemetry_samples, track_segments | Straight-line dominance |
-| `14-stint-degradation-curve` | `analytics.stint_degradation_curve` | laps, stint_summary | Stint degradation slope |
-| `14-tyre-warmup-curves` | `analytics.tyre_warmup` | laps, telemetry_samples | Out-lap warm-up |
-| `14-fuel-corrected-pace` | `analytics.fuel_corrected_pace` | laps | Fuel-corrected pace |
-| `14-traffic-adjusted-pace` | `analytics.traffic_adjusted_pace` | laps, gap analysis | Pace in clean vs dirty air |
-| `14-overtake-events` | `analytics.overtake_events` | laps (position changes), race_control_messages | Overtake detection |
-| `14-battle-segments` | `analytics.battle_segments` | laps, gap analysis | Battle map (stretches of race where two cars are within ~1.5s) |
-| `14-drs-effectiveness` | `analytics.drs_effectiveness` | telemetry_samples, track_segments | DRS speed gain per zone |
-| `14-undercut-overcut-history` | `analytics.undercut_overcut_history` | pit_stops, laps | Past UC/OC outcomes per circuit |
-| `14-pit-loss-per-circuit` | `analytics.pit_loss` | pit_stops | Pit-lane time cost per circuit |
-| `14-driver-performance-7axis` | `analytics.driver_performance_score` | aggregates of above | AWS-style 7-axis driver score |
-| `14-restart-performance` | `analytics.restart_performance` | laps after SC/VSC | Restart launch / Lap 1 |
-| `14-weather-impact` | `analytics.weather_impact` | laps, weather | Weather effect on pace |
-| `14-race-control-incident-index` | `analytics.race_control_incidents` | race_control_messages | Penalty/incident timeline |
+| `14-minisector-dominance` | `analytics.minisector_dominance` | `raw.laps.segments_sector_*` (OpenF1 ships these), `f1.track_segments` | Mini-sector dominance map (uses native OpenF1 mini-sectors, no GPS reconstruction) |
+| `14-sector-dominance` | `analytics.sector_dominance` | `raw.laps` | Sector dominance |
+| `14-track-dominance-gps` | `analytics.track_dominance_gps` | `raw.car_data` + `raw.location` + `f1.track_segments` | Track Dominance (GPS-driven, finer than mini-sector) |
+| `14-corner-analysis` | `analytics.corner_analysis` | `raw.car_data` + `raw.location` + `f1.track_segments` (corner zones) | Corner Analysis (entry/turn-in/mid/exit) |
+| `14-braking-performance` | `analytics.braking_performance` | `raw.car_data` (brake/speed traces) + `f1.track_segments` (corner brake-zone bounds) | Braking Performance |
+| `14-traction-analysis` | `analytics.traction_analysis` | `raw.car_data` (throttle/speed) + `f1.track_segments` | Throttle/exit traction |
+| `14-straight-line-dominance` | `analytics.straight_line_dominance` | `raw.laps` (i1/i2/st_speed) + `raw.car_data` + `f1.track_segments` (straight zones) | Straight-line dominance |
+| `14-stint-degradation-curve` | `analytics.stint_degradation_curve` | `raw.laps` × `raw.stints` (compound + tyre_age_at_start + lap range) | Stint degradation slope |
+| `14-tyre-warmup-curves` | `analytics.tyre_warmup` | `raw.laps.is_pit_out_lap` + `raw.car_data` + `raw.stints` | Out-lap warm-up |
+| `14-fuel-corrected-pace` | `analytics.fuel_corrected_pace` | `raw.laps` (lap_duration regression on lap_number) | Fuel-corrected pace (proxy) |
+| `14-traffic-adjusted-pace` | `analytics.traffic_adjusted_pace` | `raw.laps` × `raw.intervals` (clean-air defined as gap-to-ahead > 2s) | Pace in clean vs dirty air |
+| `14-overtake-events` | `analytics.overtake_events` | `raw.overtakes` (already pre-detected!) + `raw.intervals` for context (pre-pass gap, lap) + `raw.race_control` to filter pit/DNF-driven changes | Overtake detection (mostly free; just needs filtering + context) |
+| `14-battle-segments` | `analytics.battle_segments` | `raw.intervals` (parsed gap-to-ahead < 1.5s sustained) + `raw.car_data` (DRS) | Battle map |
+| `14-drs-effectiveness` | `analytics.drs_effectiveness` | `raw.car_data` (drs flag + speed) + `f1.track_segments` (DRS zones) | DRS speed gain per zone |
+| `14-undercut-overcut-history` | `analytics.undercut_overcut_history` | `raw.pit` + `raw.laps` + `raw.position_history` (pre/post-pit position deltas) | Past UC/OC outcomes per circuit |
+| `14-pit-loss-per-circuit` | `analytics.pit_loss_per_circuit` | `raw.pit.pit_duration` + lap-time delta of pitting driver vs non-pitting reference | Pit-lane time cost per circuit |
+| `14-driver-performance-7axis` | `analytics.driver_performance_score` | aggregates of above + qualifying lap times from `raw.laps` (Q sessions) | AWS-style 7-axis driver score (our-methodology version) |
+| `14-restart-performance` | `analytics.restart_performance` | `raw.race_control` (SC/VSC start/end) + `raw.position_history` + `raw.laps` | Restart launch / Lap 1 |
+| `14-weather-impact` | `analytics.weather_impact` | `raw.weather` (rainfall, track_temp) + `raw.laps` + `raw.stints` (compound choices around weather changes) | Weather effect on pace |
+| `14-race-control-incident-index` | `analytics.race_control_incidents` | `raw.race_control` (category, flag, scope) | Penalty/incident timeline |
 
 Twenty matviews. Each ~½ day of work given the established Phase 3 pattern (one full slice per matview through the autonomous loop).
 
@@ -200,7 +219,7 @@ These are research-grade slices and may take longer (≥1 day each through the l
 
 Phase-3 matviews are materialized once per session ingest. The analytics layer follows the same model — the data is post-session, so a one-time refresh per new race is correct. No streaming, no incremental refresh complexity.
 
-Refresh trigger: a new slice `13-post-ingest-refresh-hook` runs `REFRESH MATERIALIZED VIEW CONCURRENTLY analytics.*` after `13-fastf1-telemetry-ingest` completes for a session.
+Refresh trigger: piggyback on the existing `src/ingest.py` post-run hook — refresh `analytics.*` after each `raw.*` ingest completes. No new ingest infrastructure needed.
 
 ---
 
@@ -241,28 +260,28 @@ Chat questions like "Who was strongest in sector 2 of Monaco?" or "How aggressiv
 ```
 [existing Phases 0-12 — perf roadmap]
         ↓
-[Phase 13: Data layer extension]      ← FastF1 telemetry + position + race_control + track_segments
+[Phase 13: Track segments (3 slices)]  ← f1.track_segments + intervals parser
         ↓
-[Phase 14: Compute matviews]          ← analytics.* matviews
+[Phase 14: Compute matviews (20 slices)]  ← analytics.* matviews from raw.*
         ↓
-[Phase 15: Modeling layer]            ← tyre-deg, battle-forecast, alt-strategy
+[Phase 15: Modeling layer (6 slices)]    ← tyre-deg, battle-forecast, alt-strategy
         ↓
-[Phase 16: Product surfaces]          ← dashboard pages
+[Phase 16: Product surfaces (6 slices)]  ← dashboard pages
 ```
 
-The data layer (Phase 13) blocks everything. The compute layer (Phase 14) blocks the modeling layer (Phase 15) and the surfaces (Phase 16). Modeling and surfaces can run in parallel after Phase 14 lands.
+Phase 13 is small (3 slices) but blocks Phase 14 — every track-zone-aware matview needs `f1.track_segments`. Phase 14 blocks Phase 15 + Phase 16; the latter two can run in parallel after Phase 14 lands.
 
-### 6.2 Slice budget
+### 6.2 Slice budget (revised after data-source correction)
 
 | Phase | Slice count | Approx. duration through autonomous loop (1 slice ≈ 6-12h with audit) |
 |---|---|---|
-| Phase 13 (Data) | 6 | 2-4 days |
+| Phase 13 (Track segments + helpers) | **3** | ~1 day |
 | Phase 14 (Compute) | 20 | 5-10 days |
 | Phase 15 (Modeling) | 6 | 2-4 days (longer slices) |
 | Phase 16 (Surfaces) | 6 | 2-3 days |
-| **Total** | **38 slices** | **11-21 days** through the loop |
+| **Total** | **35 slices** | **9-18 days** through the loop |
 
-Compared to the perf roadmap (13 phases, 87 slices), this is ~40% additional work.
+Compared to the perf roadmap (13 phases, 87 slices), this is ~40% additional work — but with much lower data-layer risk now that we know ingest is a solved problem.
 
 ### 6.3 Approval-required flagging
 
@@ -307,49 +326,49 @@ These are decisions worth flagging but not pre-committing in this plan:
 
 ## 8. Risks
 
-1. **FastF1 data freshness.** FastF1 caches and ingests from F1's live timing service post-session. There can be a 24-72h lag for full data on a fresh race weekend. **Mitigation:** the analytics layer is post-session, so this lag is acceptable.
+1. **OpenF1 sample-rate ceiling.** `car_data` is published at ~3.7 Hz (~270ms between samples) and `location` at ~4-second cadence. This is finer than mini-sector data but coarser than team-grade telemetry (50 Hz internal). **Impact:** Corner-Analysis braking-zone resolution is ~10-15m at typical entry speeds — adequate for "who brakes later than whom" but not sub-meter brake-point analysis. Per-corner traction analysis works but min-speed estimation has ±5km/h noise. **Mitigation:** matviews aggregate over multiple laps per driver to reduce sample noise; surfaces report confidence intervals rather than point values.
 
-2. **Telemetry data volume.** ~4GB/year is fine for Neon, but if we ingest historical seasons (2018-2025) the volume balloons to ~30GB. **Mitigation:** start with 2024+ only; archive older seasons to S3 if needed later.
+2. **Per-circuit corner curation drift.** F1 occasionally renumbers corners (Suzuka turn-count variants exist across sources). **Mitigation:** track curation source-of-truth in the slice's note; allow corrections via a single-row update; pin to FIA-published numbers as canonical.
 
-3. **Per-circuit corner curation drift.** F1 occasionally renumbers corners (Suzuka turn count differences in older sources). **Mitigation:** track curation source-of-truth in the slice's note; allow corrections via a single-row update.
+3. **Track Dominance interpretation pitfalls.** Naïve "fastest in this segment" can be misleading if drivers were on different tyre compounds, fuel loads, or in/out of traffic. **Mitigation:** the matview includes contextual columns (compound, tyre_age, in_traffic_flag); the synthesis prompt MUST attach those when answering. Default v1 metric: "lowest estimated segment time," not "highest average speed" (per ChatGPT's recommendation, agrees with my read).
 
-4. **Track Dominance interpretation pitfalls.** Naïve "fastest in this segment" can be misleading if drivers were on different tyre compounds, fuel loads, or traffic. **Mitigation:** the matview includes contextual columns (compound, tyre_age, traffic_flag); the synthesis prompt MUST attach those when answering.
+4. **Modeling slice (Phase 15) may not converge.** Bayesian tyre-deg or Monte Carlo strategy simulation can take several plan-revise rounds. **Mitigation:** the round-12 plan-iter cap is 10 — enough headroom. If a model slice circuit-breaks at iter 10, fall back to a simpler heuristic (linear regression for tyre deg, deterministic "swap-pit-lap" simulation for strategy).
 
-5. **Modeling slice (Phase 15) may not converge.** Bayesian tyre-deg or Monte Carlo strategy simulation can take several plan-revise rounds. **Mitigation:** the round-12 plan-iter cap is 10 — enough headroom. If a model slice circuit-breaks at iter 10, fall back to a simpler heuristic (linear regression for tyre deg, deterministic "swap-pit-lap" simulation for strategy).
+5. **Phase-8 FactContract shape may not fit analytics.** The shape was designed for `core.*` contracts (driver-session-summary, etc.). Analytics contracts may have time-series data (telemetry traces, deg curves) that don't fit a single record. **Mitigation:** Phase-8 plan-audit allows the contract shape to be a `tagged union` of "scalar fact" and "time-series fact"; analytics surfaces that need traces use the latter.
 
-6. **Phase-8 FactContract shape may not fit analytics.** The shape was designed for `core.*` contracts (driver-session-summary, etc.). Analytics contracts may have time-series data (telemetry traces, deg curves) that don't fit a single record. **Mitigation:** Phase-8 plan-audit allows the contract shape to be a `tagged union` of "scalar fact" and "time-series fact"; analytics surfaces that need traces use the latter.
+6. **Hallucination risk on analyses we don't have data for.** User asks "what was the brake temperature at Turn 8?" — we have no data. The chat must answer `INSUFFICIENT_DATA`. **Mitigation:** Phase-8 validators are the gate. A validator for each analytics contract asserts "if no contract is attached, the synthesis cannot make claims of this kind."
 
-7. **Hallucination risk on analyses we didn't model.** User asks "what was the brake temperature at Turn 8?" — we have no data. The chat must answer `INSUFFICIENT_DATA`. **Mitigation:** Phase-8 validators are the gate. A validator for each analytics contract asserts "if no contract is attached, the synthesis cannot make claims of this kind."
+7. **Modeling slice scope creep.** "Battle Forecast" is one slice but easily expands into 5 sub-models. **Mitigation:** the slice's acceptance criteria pin a v1 success bar (held-out AUC ≥ 0.65 on overtake events from `raw.overtakes`); v2 improvements are separate slices.
 
-8. **Modeling slice scope creep.** "Battle Forecast" is one slice but easily expands into 5 sub-models. **Mitigation:** the slice's acceptance criteria pin a v1 success bar (held-out AUC ≥ 0.65 on overtake events); v2 improvements are separate slices.
+8. **Refresh-strategy mismatch.** Phase-3 matviews have no refresh policy yet (D-3 deferred). The analytics layer compounds the issue. **Mitigation:** piggyback on the existing `src/ingest.py` post-run flow — refresh `analytics.*` after each `raw.*` ingest completes. Resolves D-3 as a side effect.
 
-9. **Refresh-strategy mismatch.** Phase-3 matviews have no refresh policy yet (D-3 deferred). The analytics layer compounds the issue. **Mitigation:** this plan adds `13-post-ingest-refresh-hook` which establishes a single refresh policy (post-session, full refresh) for both `core.*` and `analytics.*`. D-3 gets resolved as a side effect.
+9. **Storage growth.** `raw.car_data` + `raw.location` are the bulk tables. If backfill expands beyond 2024-2025, `raw.car_data` could grow to ~10-20 GB. **Mitigation:** keep ingest scope at 2024+ for now; add S3 archival policy only if growth becomes a Neon-cost issue.
 
-10. **Live-broadcast scope drift.** Users may eventually ask for live (in-session) analyses. **Mitigation:** explicitly out of scope for this plan; if requested, a Phase-17 plan would add streaming ingest. Don't preemptively design for it.
+10. **`raw.intervals` text parsing edge cases.** The `interval` field uses `+1.234` for normal gaps but `L+1` (or similar) for lapped cars. Parser must return NULL gracefully for lapped notation, not crash. **Mitigation:** `13-intervals-parsing-helper` slice's acceptance criteria explicitly require lapped-notation handling.
 
 ---
 
 ## 9. Open questions for Codex
 
-1. **Phase ordering.** I propose running Phase 13 in parallel with Phase 4. Phase 14 starts after Phase 13 + Phase 3 both finish. Phase 15 + Phase 16 in parallel after Phase 14. Is the parallelization safe (no shared file conflicts in the loop's auto-merger)? The loop merges sequentially per `_index.md`, so parallelization here means "queue Phase 13 slices interleaved with Phase 4 slices in the index." Worth it?
+1. **Phase ordering.** I propose running Phase 13 in parallel with Phase 4. Phase 14 starts after Phase 13 + Phase 3 both finish. Phase 15 + Phase 16 in parallel after Phase 14. The loop merges sequentially per `_index.md`, so parallelization here means "queue Phase 13 slices interleaved with Phase 4 slices in the index." Worth it?
 
-2. **Data-volume cliff.** If we backfill seasons 2018-2025 instead of 2024-only, telemetry storage grows to ~30GB. Does that change the deferred D-2 (storage tier) decision in the perf roadmap? My read: 2024-only for now; expand later only if user demand justifies.
+2. **Track-segments seeding.** Some open-source projects publish curated F1 corner definitions. Worth pulling theirs as the seed and refining, or hand-curate from scratch? My read: pull from FIA-published track maps as canonical numbering; auto-derive zone boundaries from `raw.location` GPS clustering; hand-tune the top 10 circuits.
 
-3. **Track-segments static-table duplication.** Some open-source projects publish curated F1 corner definitions (e.g. `f1-2024-corners` repos). Worth pulling theirs as the seed and refining, or hand-curate from scratch? My read: pull, refine, attribute.
+3. **Driver Performance 7-axis equivalence.** AWS publishes the 7 axes (qualifying pace, race starts, race lap 1, race pace, tyre management, pit-stop skill, overtaking) but not their exact normalization. Should `14-driver-performance-7axis` reproduce AWS's scoring, or define our own 0-10 scale per axis? My read: our own, with documented methodology, since AWS's exact formula is proprietary.
 
-4. **Driver Performance 7-axis equivalence.** AWS publishes the 7 axes (qualifying pace, race starts, race lap 1, race pace, tyre management, pit-stop skill, overtaking) but not their exact normalization. Should `14-driver-performance-7axis` reproduce AWS's scoring, or define our own 0-10 scale per axis? My read: our own, with documented methodology, since AWS's exact formula is proprietary.
+4. **Battle Forecast ground truth.** `raw.overtakes` is pre-labeled by OpenF1, but it includes pit-driven and DNF-driven position changes alongside true on-track passes. Should the labels filter to pure on-track passes only? My read: yes; filter via `raw.pit` join (exclude any overtake within ±2 laps of a pit event for either driver) and via `raw.race_control` (exclude any during SC/VSC).
 
-5. **Battle Forecast ground truth.** To validate the model, we need labeled overtake events. `14-overtake-events` produces these, but they include unforced changes (rival pit, DNF). Should the labels be pure on-track passes only? My read: yes; filter out pit-related and DNF-related position changes from the training set.
+5. **Tyre-deg model approach.** Without team telemetry (lat/lon acc + gyro for tyre-energy), we use lap-time decay vs tyre-age + compound + circuit. Should the v1 model add traffic-adjustment (deg-rate inflated when stuck behind another car)? My read: yes — `raw.intervals` makes traffic detection cheap, and ignoring it biases deg estimates upward.
 
-6. **Tyre-deg model — "tyre energy" without telemetry.** AWS's tyre-energy metric uses lateral/longitudinal acceleration + gyro. We have GPS speed and can derive lateral acc from cornering radius. Is that close enough, or fundamentally different? My read: documented approximation with a "this is a derived estimate, not AWS's tyre energy" disclaimer in the contract.
+6. **Strategy simulator UX.** The `16-strategy-simulator` slice shows counterfactual outcomes. Do we want a slider for the user to pick the alt-pit-lap, or auto-show the optimal alt-pit-lap? My read: both — auto-show the model's recommendation, slider lets user explore.
 
-7. **Strategy simulator UX.** The `16-strategy-simulator` slice shows counterfactual outcomes. Do we want a slider for the user to pick the alt-pit-lap, or auto-show the optimal alt-pit-lap? My read: both — auto-show the model's recommendation, slider lets user explore.
+7. **Phase 15 modeling validation gate.** Each model slice should have a held-out validation step (e.g. train on 2024 races 1-20, test on 21-24). Is "AUC ≥ 0.65" the right gate for `14-overtake-events` × `15-battle-forecast`? Or some other calibration metric? My read: defer to slice author with a recommendation; plan-audit can push back.
 
-8. **Phase 15 modeling validation gate.** Each model slice should have a held-out validation step (e.g. train on 2024 races 1-20, test on 21-24). Is "AUC ≥ 0.65" the right gate for `15-battle-forecast`? Or some other calibration metric? My read: defer to slice author with a recommendation; cap audit can push back.
+8. **Phase-8 FactContract `time-series fact` shape.** Some analytics need to attach a trace (telemetry-over-distance) to the synthesis prompt. What's the size limit before we should pre-compute summary statistics instead of attaching the raw trace? My read: ≤ 200 sample points per trace; beyond that, summarize.
 
-9. **Permissions model.** All `analytics.*` matviews are read-public from the chat path. No user-segregated data. Is there any reason to gate (cost-sensitivity, data licensing)? My read: no; F1 timing data is publicly licensed via FastF1.
+9. **`raw.intervals.interval` lapped-car parsing.** The "L+N" notation for lapped cars must return NULL gracefully. Should we also expose a separate `laps_down` integer column from the parser, or keep that as a separate matview? My read: parser returns `(seconds_or_null, laps_down_or_null)` tuple; matviews using "gap < 1.5s" for battle detection naturally exclude lapped cars via the NULL.
 
-10. **Phase-8 FactContract `time-series fact` shape.** Some analytics need to attach a trace (telemetry over distance) to the synthesis prompt. What's the size limit before we should pre-compute summary statistics instead of attaching the raw trace? My read: ≤ 200 sample points per trace; beyond that, summarize.
+10. **Team-radio transcription scope.** `raw.team_radio.recording_url` is public audio; transcription via Whisper costs ~$0.006/min. A whole-season transcription is ~$50-100. Worth doing for storyline/incident detection, or defer until Phase 17? My read: defer; not blocking any other slice.
 
 ---
 
@@ -368,16 +387,16 @@ Once Phases 13–16 complete:
 
 ## 11. Codex audit ask
 
-This plan is intentionally broad (38 slices, 4 phases, ~21 days through the autonomous loop). Codex review please:
+This plan is intentionally broad (35 slices, 4 phases, ~9-18 days through the autonomous loop). Codex review please:
 
-- §3 data-layer feasibility: are the volume estimates realistic? Is FastF1 the right ingest path or is there a better source I'm missing?
-- §4 matview list: is the 20-matview list right-sized? Are there any obvious candidates missing or duplicates?
-- §5 surface picks: 6 surfaces is a defensible MVP. Are any of them mis-prioritized vs. the chat-only path?
-- §7 deferred decisions: any of these worth pre-committing in the plan vs. leaving to slice authors?
-- §8 risks: anything mis-classified or missing? Particularly interested in the modeling-slice convergence risk.
-- §9 open questions: triage as `High` / `Medium` / `Low` per the existing iterative-plan-audit format. I'll resolve and re-submit until APPROVED before adding any of these slices to `diagnostic/slices/_index.md`.
+- §3 data-layer correctness: I rewrote this section after discovering the production data is **OpenF1**, not FastF1. Schema cross-check against `sql/002_create_tables.sql` confirms every table I reference exists. Anything still mis-mapped?
+- §4 matview list: is the 20-matview list right-sized? Are there any obvious candidates missing or duplicates? Specifically — should `14-track-dominance-gps` and `14-minisector-dominance` be one slice or two? My read: two, because the GPS-driven version is meaningfully more precise and worth its own contract.
+- §5 surface picks: 6 surfaces is a defensible MVP. Are any mis-prioritized vs. the chat-only path?
+- §7 deferred decisions: any worth pre-committing in the plan vs. leaving to slice authors?
+- §8 risks: the OpenF1 sample-rate ceiling (#1) is the most consequential — it caps Corner-Analysis precision. Is the matview-aggregation mitigation sufficient, or do we need to bake "minimum-N-laps" thresholds into each contract?
+- §9 open questions: triage as `High` / `Medium` / `Low` per the iterative-plan-audit format. Round-1 audit cap is 10 (per round-12 plan-iter raise).
 
-If APPROVED, the next step is generating the 38 slice stub files (mechanical, similar to the `stub_slices.py` approach used for the perf roadmap), then queuing them in `_index.md` under new headers `## Phase 13`, `## Phase 14`, etc.
+If APPROVED, next step is generating the 35 slice stub files (mechanical, similar to the `stub_slices.py` approach used for the perf roadmap), then queuing them in `diagnostic/slices/_index.md` under new headers `## Phase 13`, `## Phase 14`, `## Phase 15`, `## Phase 16`.
 
 ---
 
