@@ -1,11 +1,11 @@
 ---
 slice_id: 12-read-replica-pool-split
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: done
+owner: -
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-27T16:56:11Z
 ---
 
 ## Goal
@@ -56,3 +56,14 @@ Production-touching, requires user-approved sentinel before merge. Full rollback
 
 ## Audit verdict
 (filled by Codex)
+
+## Slice-completion note
+SKIPPED by user decision (2026-04-27). A dedicated Neon read-replica
+branch has its own separately-billed compute (~$20-60/month depending on
+read traffic). Current load doesn't justify the capacity add — primary
+pool plus Phase 3 matviews + Phase 4 indexes + Phase 5 caches handle
+read volume comfortably. Revisit only if observed read-side latency
+or connection pressure shows a measurable bottleneck.
+
+## Audit verdict
+N/A — slice marked done without implementation per user direction.
