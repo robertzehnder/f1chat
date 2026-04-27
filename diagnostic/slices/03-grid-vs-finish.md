@@ -1,11 +1,11 @@
 ---
 slice_id: 03-grid-vs-finish
 phase: 3
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T18:31:01-04:00
+updated: 2026-04-27T18:40:05-04:00
 ---
 
 ## Goal
@@ -367,7 +367,33 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 - No web cutover happened in this slice. `web/src/lib/queries.ts`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/chatRuntime.ts` continue to read `core.grid_vs_finish` through the public view, which now transparently resolves to the matview via the facade.
 
 ## Audit verdict
-(filled by Codex)
+**REVISE**
+
+[slice:03-grid-vs-finish][revise]
+
+Gate exit codes observed by audit agent:
+- Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... core_build.grid_vs_finish grain probe ... SQL` → exit `0`.
+- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/014_grid_vs_finish_mat.sql` → exit `0`.
+- Gate #2 structural DO block (`relkind`, PK order, facade dependency check) → exit `0`.
+- Gate #3 parity DO block (3 deterministic `analytic_ready` sessions, global rowcount equality, bidirectional `EXCEPT ALL`) → exit `0`.
+- `npm --prefix web run build` → exit `0`.
+- `npm --prefix web run typecheck` → exit `0`.
+- `npm --prefix web run test:grading` → exit `0`.
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/slices/03-grid-vs-finish.md` and `sql/014_grid_vs_finish_mat.sql` only.
+- That path set is in scope. The slice file is explicitly allowed by the audit policy.
+
+Criterion-by-criterion:
+- `sql/014_grid_vs_finish_mat.sql` is substantively correct. It creates `core.grid_vs_finish_mat` as a base table with `PRIMARY KEY (session_key, driver_number)`, repopulates from `core_build.grid_vs_finish`, and swaps `core.grid_vs_finish` to a thin facade via `CREATE OR REPLACE VIEW` [sql/014_grid_vs_finish_mat.sql](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/sql/014_grid_vs_finish_mat.sql:12).
+- Gate #0 verified the claimed grain before DDL: `total=7581`, `distinct_pair=7581`, `duplicate=0`.
+- Gate #2 verified the storage/view shape and that `core.grid_vs_finish` depends only on `core.grid_vs_finish_mat`.
+- Gate #3 verified global rowcount equality and bidirectional session-scoped `EXCEPT ALL` parity for the deterministic three-session selector.
+- The web gates pass when run in the declared sequential order.
+- The slice still fails its own file-content constraint. The allowed scope for the slice file is “frontmatter + Slice-completion note only; no edits to the plan body or to any prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes” [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:83). Compared against `integration/perf-roadmap`, this branch rewrites the plan body at [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:12), [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:24), [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:54), and appends prior plan-audit sections at [diagnostic/slices/03-grid-vs-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/03-grid-vs-finish/diagnostic/slices/03-grid-vs-finish.md:372). That violates the last acceptance criterion even though the SQL work itself passes.
+
+Required revision:
+- Restore `diagnostic/slices/03-grid-vs-finish.md` so the only branch-local edits relative to `integration/perf-roadmap` are the permitted frontmatter changes, the `## Slice-completion note`, and this `## Audit verdict` section. Remove the branch-local rewrites to the plan body and the appended prior `## Plan-audit verdict` sections.
 
 ## Plan-audit verdict (round 1)
 
