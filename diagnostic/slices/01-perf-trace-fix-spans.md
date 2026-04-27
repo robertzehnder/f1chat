@@ -1,11 +1,11 @@
 ---
 slice_id: 01-perf-trace-fix-spans
 phase: 1
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-26T23:31:40-04:00
 ---
 
 ## Goal
@@ -69,3 +69,23 @@ Rollback: `git revert <commit>`. The original baseline artifact is preserved; v2
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the repeated `cd web && ...` gate block with commands that preserve the intended working directory, such as repo-root subshells `(cd web && npm run build)`, `(cd web && npm run typecheck)`, and `(cd web && npm run test:grading)`.
+- [ ] Specify the exact re-baseline command, benchmark size, trace-isolation procedure, required `OPENF1_CHAT_BASE_URL`, and window validation so the v2 baseline is reproducible and cannot pass using stale perfTrace records.
+
+### Medium
+- [ ] Add `diagnostic/_state.md` to "Changed files expected" because step 6 and the acceptance criteria require updating the "Latest perf baseline" headline.
+- [ ] Tighten `Required services / env` to include every service and secret needed for the re-baseline run, including the running dev server URL and LLM/database environment variables required by the benchmark path.
+- [ ] Decide whether the v2 baseline should follow the existing perf artifact convention by producing both `.json` and `.md`; if not, state explicitly why this repair slice only promotes the JSON artifact.
+- [ ] Make the new perf-trace span test acceptance testable without live DB timing assumptions, or document the exact service dependency and deterministic assertions it will use when `resolve_db` reflects actual DB time.
+
+### Low
+
+### Notes (informational only — no action)
+- `_state.md` was last updated at `2026-04-26T15:24:13Z`, which is less than 24 hours old at audit time.
+- Prior context was read; the previous baseline slice's gate block documents the same repo-root subshell pattern needed here, and its benchmark steps show the trace-isolation/window checks this plan should reuse for the v2 baseline.
