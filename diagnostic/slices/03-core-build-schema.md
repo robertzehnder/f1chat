@@ -1,11 +1,11 @@
 ---
 slice_id: 03-core-build-schema
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T14:03:11Z
+updated: 2026-04-27T14:30:00Z
 ---
 
 ## Goal
@@ -32,7 +32,10 @@ Bootstrap the `core_build` schema and clone the *current* aggregating SELECT of 
 ## Steps
 1. Add `sql/008_core_build_schema.sql`:
    - `CREATE SCHEMA IF NOT EXISTS core_build;`
-   - For each hot contract listed in **Decisions**, emit `CREATE OR REPLACE VIEW core_build.<name> AS <verbatim SELECT body of core.<name>>` with stable column ordering matching the current `core.<name>` view. Keep the original SELECT byte-for-byte except for the schema-qualified name on the `CREATE` line so a future audit can `diff` the two and prove no semantic drift.
+   - For each hot contract listed in **Decisions**, emit `CREATE OR REPLACE VIEW core_build.<name> AS <SELECT body of core.<name>>` with stable column ordering matching the current `core.<name>` view. Preserve the original SELECT verbatim **except** for these two rewrites:
+     1. The schema-qualified name on the `CREATE` line (`core.<name>` → `core_build.<name>`).
+     2. Any reference inside the SELECT body to another hot contract in **Decisions** (e.g. `core.laps_enriched`, `core.stint_summary`) is rewritten to its `core_build.*` counterpart. References to non-hot relations (`raw.*`, helper/internal views not in the hot list, lookup tables) remain unchanged.
+     The intent of rewrite #2 is that the `core_build.*` source-definition graph is closed under itself for hot contracts, so when later materialization slices replace public `core.<name>` with a facade over `core.<name>_mat`, refreshing `core.<name>_mat` via `INSERT … SELECT * FROM core_build.<name>` does not read its own (potentially stale) materialized output. The parity check in gate command #3 still holds at this slice because `core_build.<x>` and `core.<x>` are set-wise identical at the moment of this slice. A future audit can confirm semantic non-drift by diffing each `core_build.<name>` SELECT against the original `core.<name>` SELECT after applying the same two rewrites.
    - Wrap the file in a single `BEGIN; … COMMIT;` so partial application cannot leave the schema half-built.
 2. Apply the SQL to the database referenced by `DATABASE_URL` (gate command #1 below).
 3. Verify schema and view existence (gate command #2).
@@ -71,9 +74,13 @@ No separate parity SQL file, no TypeScript contract files, no parity test `.mjs`
 # 1. Apply the schema migration. Must exit 0.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/008_core_build_schema.sql
 
-# 2. Confirm the schema and all eleven views exist. Expect rowcount = 11.
-psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
-  SELECT count(*) FROM information_schema.views
+# 2. Confirm the schema and all eleven views exist. Fails non-zero (via
+#    RAISE EXCEPTION + ON_ERROR_STOP=1) unless the count is exactly 11.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE n int;
+BEGIN
+  SELECT count(*) INTO n FROM information_schema.views
   WHERE table_schema = 'core_build'
     AND table_name IN (
       'driver_session_summary','laps_enriched','stint_summary','strategy_summary',
@@ -81,11 +88,17 @@ psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 -c "
       'strategy_evidence_summary','lap_phase_summary','lap_context_summary',
       'telemetry_lap_bridge'
     );
-"
+  IF n <> 11 THEN
+    RAISE EXCEPTION 'expected 11 core_build views, found %', n;
+  END IF;
+END $$;
+SQL
 
 # 3. Pick 3 analytic-ready sessions and run bidirectional EXCEPT ALL parity for every
-#    (contract, session_key) pair as an inline heredoc. Must exit 0; no row may report
-#    diff_rows > 0. Implementation MUST keep this inline — no separate parity SQL file.
+#    (contract, session_key) pair as an inline heredoc. Must exit 0; the block
+#    fails non-zero if (a) fewer than 3 analytic_ready sessions are available, or
+#    (b) any (contract, session_key) pair reports diff_rows > 0. Implementation MUST
+#    keep this inline — no separate parity SQL file.
 psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL'
 \set ON_ERROR_STOP on
 DO $$
@@ -99,7 +112,20 @@ DECLARE
   sess record;
   c text;
   diff bigint;
+  sess_count int;
 BEGIN
+  -- Hard-fail unless the deterministic selector returns exactly 3 sessions.
+  SELECT count(*) INTO sess_count FROM (
+    SELECT session_key
+    FROM core.session_completeness
+    WHERE completeness_status = 'analytic_ready'
+    ORDER BY session_key ASC
+    LIMIT 3
+  ) s;
+  IF sess_count <> 3 THEN
+    RAISE EXCEPTION
+      'expected 3 analytic_ready sessions for parity check, found %', sess_count;
+  END IF;
   FOR sess IN
     SELECT session_key
     FROM core.session_completeness
@@ -140,7 +166,7 @@ npm --prefix web run test:grading
 - [ ] All eleven `core_build.<name>` views in **Decisions** exist (gate command #2 returns `11`).
 - [ ] For each hot contract in **Decisions**, the bidirectional `EXCEPT ALL` parity check returns `0` for **each** of the 3 deterministic `analytic_ready` sessions selected by the query in step 4.
 - [ ] `npm --prefix web run build`, `npm --prefix web run typecheck`, and `npm --prefix web run test:grading` all exit 0.
-- [ ] No file outside `sql/008_core_build_schema.sql` is modified (the parity check is an inline heredoc in gate command #3 — no `.parity.sql` file is permitted).
+- [ ] The only files modified by this slice are `sql/008_core_build_schema.sql` (new) and `diagnostic/slices/03-core-build-schema.md` (this slice file — frontmatter + Slice-completion note only; no body edits beyond filling that section). The parity check is an inline heredoc in gate command #3 — no `.parity.sql` file is permitted.
 
 ## Out of scope
 - `core.<name>_mat` storage tables (each contract's own slice).
@@ -205,14 +231,14 @@ conflate the two._
 **Status: REVISE**
 
 ### High
-- [ ] Make gate command #2 fail non-zero unless exactly all eleven expected `core_build` views exist; the current `SELECT count(*)` exits 0 even when the count is not `11`.
-- [ ] Make gate command #3 fail non-zero unless the deterministic session selector returns exactly 3 `analytic_ready` sessions; the current DO block silently passes if it loops over fewer than 3 sessions.
+- [x] Make gate command #2 fail non-zero unless exactly all eleven expected `core_build` views exist; the current `SELECT count(*)` exits 0 even when the count is not `11`.
+- [x] Make gate command #3 fail non-zero unless the deterministic session selector returns exactly 3 `analytic_ready` sessions; the current DO block silently passes if it loops over fewer than 3 sessions.
 
 ### Medium
-- [ ] Reconcile the scope rule for the slice file itself: `Changed files expected` includes `diagnostic/slices/03-core-build-schema.md`, but Acceptance criteria currently says no file outside `sql/008_core_build_schema.sql` is modified.
+- [x] Reconcile the scope rule for the slice file itself: `Changed files expected` includes `diagnostic/slices/03-core-build-schema.md`, but Acceptance criteria currently says no file outside `sql/008_core_build_schema.sql` is modified.
 
 ### Low
-- [ ] Clarify whether "verbatim SELECT body" should preserve dependencies on `core.*` views or rewrite hot-contract dependencies to `core_build.*`, so later materialization slices do not have to infer the intended source-definition dependency graph.
+- [x] Clarify whether "verbatim SELECT body" should preserve dependencies on `core.*` views or rewrite hot-contract dependencies to `core_build.*`, so later materialization slices do not have to infer the intended source-definition dependency graph.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current for this audit (`last updated: 2026-04-27T05:12:12Z`).
