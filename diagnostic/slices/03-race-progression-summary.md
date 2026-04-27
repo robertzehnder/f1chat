@@ -1,11 +1,11 @@
 ---
 slice_id: 03-race-progression-summary
 phase: 3
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T22:45:00-04:00
+updated: 2026-04-27T17:45:02-04:00
 ---
 
 ## Goal
@@ -421,56 +421,47 @@ npm --prefix web run test:grading
 
 ## Slice-completion note
 
-**Status: BLOCKED** — gate #0 fired; PK plan is invalid; slice requires re-plan to heap-with-indexes before any DDL can be applied.
+**Status: AWAITING AUDIT** — heap-with-indexes pivot applied; all five gates exit 0; parity proven.
 
 ### What ran
 
 - Branch: `slice/03-race-progression-summary` (worktree at `/Users/robertzehnder/.openf1-loop-worktrees/03-race-progression-summary`).
-- Gate #0 (pre-flight grain probe over `core_build.race_progression_summary`) — **EXIT 3 (raised)**.
-  - `total_rows = 17864`
-  - `distinct_triple = 17690`
-  - `duplicate_rows = 174`
-  - Raised: `grain non-unique on (session_key, driver_number, lap_number): total=17864 distinct=17690 duplicate=174 — PK plan invalid, re-plan as heap-with-indexes before applying migration`.
-- Gates #1, #2, #3, #4 — **NOT RUN**, per Steps §1's "stop ... before any DDL is run" instruction.
-
-### Why blocked
-
-The plan's Steps §1 is explicit:
-
-> If gate #0 reports `duplicate_rows <> 0`, **stop**: the PK plan is invalid and the slice must be re-planned as a heap-with-indexes (mirroring `03-laps-enriched-materialize`) before any DDL is run.
-
-And Risk / rollback names the resolution as a re-plan, not an in-flight switch:
-
-> **Documented heap-with-indexes fallback:** if gate #0 ever fires … the slice must be re-planned to mirror `03-laps-enriched-materialize` exactly — drop `PRIMARY KEY`, declare two non-unique btree indexes `(session_key, driver_number, lap_number)` and `(session_key)`, switch the gate #2 assertions accordingly, and ship as a separate revision.
-
-The 174 duplicate rows mean the canonical query at `sql/008_core_build_schema.sql:415` ff. (`CREATE OR REPLACE VIEW core_build.race_progression_summary`) — i.e. the per-lap window-function projection over filtered `core_build.laps_enriched` rows where `lap_number IS NOT NULL AND position_end_of_lap IS NOT NULL AND LOWER(COALESCE(session_type, session_name, '')) LIKE '%race%'` — does **not** have a unique `(session_key, driver_number, lap_number)` triple after filtering. The grain non-uniqueness is inherited from `core_build.laps_enriched` itself: `diagnostic/notes/03-laps-enriched-grain.md` documents 7,379 duplicates out of 167,172 rows on the same triple in the unfiltered base relation, and 174 of those duplicates survive the three-predicate WHERE clause. This is exactly the residual-uniqueness claim the round-3 audit flagged for explicit grain evidence — the evidence is now in hand, and it falsifies the PK assumption.
+- Gate #0 (pre-flight grain probe over `core_build.race_progression_summary`) — **EXIT 0**.
+  - NOTICE: `core_build.race_progression_summary grain probe: total=17864 distinct_triple=17690 duplicate=174 (informational — heap-with-indexes shape accepts any value)`.
+  - The 174 surviving duplicates confirm the grain non-uniqueness recorded in the round-3 audit; the heap-with-indexes plan accommodates them.
+- Gate #1 (`psql -v ON_ERROR_STOP=1 -f sql/013_race_progression_summary_mat.sql`) — **EXIT 0**.
+  - Output: `BEGIN / CREATE TABLE / CREATE INDEX / CREATE INDEX / TRUNCATE TABLE / INSERT 0 17864 / CREATE VIEW / COMMIT`.
+  - 17,864 rows populated into `core.race_progression_summary_mat`, matching `core_build.race_progression_summary` rowcount exactly.
+- Gate #2 (storage-shape and facade assertions) — **EXIT 0**.
+  - All five assertions held: (a) `core.race_progression_summary_mat` is a base table (`relkind = 'r'`); (b) `core.race_progression_summary` is a view (`relkind = 'v'`); (c) zero `pg_constraint` rows with `contype = 'p'` reference the table; (d) both non-unique btree indexes exist with the expected columns — `race_progression_summary_mat_session_driver_lap_idx (session_key, driver_number, lap_number)` and `race_progression_summary_mat_session_idx (session_key)`; (e) the public view's only relation dependency in `core` / `core_build` / `raw` is `core.race_progression_summary_mat`.
+- Gate #3 (bidirectional `EXCEPT ALL` parity + global rowcount equality) — **EXIT 0**.
+  - Sessions probed via `SELECT session_key FROM core.session_completeness WHERE completeness_status = 'analytic_ready' ORDER BY session_key ASC LIMIT 3`: `9102`, `9110`, `9118`.
+  - NOTICE: `parity ok: session_key=9102 diff_rows=0`, `parity ok: session_key=9110 diff_rows=0`, `parity ok: session_key=9118 diff_rows=0`.
+  - NOTICE: `global rowcount equality: core_build=17864 mat=17864`.
+- Gate #4 (web build / typecheck / test:grading) — **EXIT 0** for all three.
+  - `npm --prefix web run build` exit 0 — Next.js build green, all routes generated.
+  - `npm --prefix web run typecheck` exit 0 — `tsc --noEmit` clean.
+  - `npm --prefix web run test:grading` exit 0 — 31 tests, 21 pass, 10 skip (skips are integration tests gated by `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`, unrelated to this slice).
 
 ### Decisions taken in this run
 
-- **Did not apply the migration.** Per Steps §1, no DDL is run when gate #0 fires.
-- **Did not check in the SQL migration file.** The draft `sql/013_race_progression_summary_mat.sql` was authored against the PK schema before gate #0 ran; once gate #0 raised, the file was deleted from the working tree because the PK column list and `PRIMARY KEY (session_key, driver_number, lap_number)` declaration are invalid for the actual grain. Shipping that file would either (a) fail gate #1 with a PK violation on the bulk `INSERT … SELECT * FROM core_build.race_progression_summary`, or (b) succeed only if the underlying data shifted enough to clear the duplicates — which is outside this slice's control. Either way, the file as drafted does not match the proven grain and would mislead a future re-applier. The heap-with-indexes replacement is intentionally left for the re-planning round so the new file lands with a column list, indexes, and gate #2 assertions that all match the real grain together.
-- **Did not switch storage shape in-flight.** The plan is explicit that the heap-with-indexes pivot ships "as a separate revision" with revised gate #2 assertions (no PK, two btree indexes). That requires plan-level changes — column declarations swap `PRIMARY KEY (…)` for two `CREATE INDEX` statements, and gate #2's `pg_constraint`-with-`contype = 'p'` assertion must change to a `pg_index`-shaped assertion mirroring `03-laps-enriched-materialize`'s gate. Those edits are outside the implementation agent's scope per the operating principles ("Do not invent workarounds that change the slice's intent").
+- **Heap-with-indexes shape, no PK.** Per the round-4 plan, gate #0 confirmed 174 duplicate rows in `core_build.race_progression_summary` on `(session_key, driver_number, lap_number)`, so `core.race_progression_summary_mat` is declared with no `PRIMARY KEY` and two non-unique btree indexes mirroring `sql/010_laps_enriched_mat.sql`.
+- **`CREATE OR REPLACE VIEW` facade swap.** `core.pit_cycle_summary` (`sql/007_semantic_summary_contracts.sql:431`) depends on `core.race_progression_summary`, so the swap uses `CREATE OR REPLACE VIEW` rather than `DROP VIEW … CREATE VIEW`. Gate #2 assertion (e) confirms the rewrite landed: the public view's only dependency in `core`/`core_build`/`raw` is the new matview.
+- **Idempotent re-population via `TRUNCATE` + bulk `INSERT … SELECT`.** No per-session refresh helper or ingest hook in this slice (deferred per Out of scope).
+- **Column list and types match the original public view's projection exactly** — 19 columns in the order specified in Steps §2.1, with types per `sql/006_semantic_lap_layer.sql` / `sql/010_laps_enriched_mat.sql` (BIGINT/INTEGER/TEXT/TIMESTAMPTZ). `CREATE OR REPLACE VIEW` accepted the rewrite, which it would have rejected on any column-name/type/order divergence.
 
 ### Files modified
 
-- `diagnostic/slices/03-race-progression-summary.md` — frontmatter (status `pending` → `in_progress` → `blocked`, owner `claude` → `user`, updated `2026-04-27T21:36:47Z` → `2026-04-27T17:37:38-04:00`) and this Slice-completion note. No plan-body or prior-audit edits.
-- No `sql/013_*.sql` (intentionally not added — see "Decisions taken in this run").
-- No web/, scripts/, or other paths touched.
+- `sql/013_race_progression_summary_mat.sql` (new — single `BEGIN; … COMMIT;` transaction with `CREATE TABLE IF NOT EXISTS` (no PK), two `CREATE INDEX IF NOT EXISTS` non-unique btree indexes, `TRUNCATE` + `INSERT … SELECT * FROM core_build.race_progression_summary`, `CREATE OR REPLACE VIEW core.race_progression_summary AS SELECT * FROM core.race_progression_summary_mat`).
+- `diagnostic/slices/03-race-progression-summary.md` (this file — frontmatter `status: revising` → `in_progress` → `awaiting_audit`, `owner: claude` → `claude` → `codex`, `updated: 2026-04-27T22:45:00-04:00` → `2026-04-27T17:45:02-04:00`; replaced the prior BLOCKED Slice-completion note with this AWAITING AUDIT note; no plan-body edits, no prior-audit-section edits).
 
-### Recommended next action for the planner / user
+`git diff --name-only integration/perf-roadmap...HEAD` confirms the scope: only the two files listed above (plus this commit's parent `HEAD` adjustments).
 
-Re-plan the slice (round 5) with the heap-with-indexes pattern from `03-laps-enriched-materialize`:
+### Self-check
 
-1. Replace `PRIMARY KEY (session_key, driver_number, lap_number)` in the storage table declaration with no PK, plus two non-unique btree indexes:
-   - `CREATE INDEX … ON core.race_progression_summary_mat (session_key, driver_number, lap_number);`
-   - `CREATE INDEX … ON core.race_progression_summary_mat (session_key);`
-2. Drop the `NOT NULL` constraints on `session_key`, `driver_number`, `lap_number` in the storage table (mirror `03-laps-enriched-materialize`'s nullable column declarations), or keep them only if they are guaranteed by the canonical query's WHERE clause and a separate gate verifies that.
-3. Rewrite gate #2's PK assertion (`pg_constraint` with `contype = 'p'`) to assert the two btree indexes instead, e.g. via `pg_index` joined to `pg_class` filtered to `core.race_progression_summary_mat`, mirroring `03-laps-enriched-materialize`'s gate.
-4. Demote the bulk-`INSERT` "secondary backstop" framing — without a PK, the bulk insert no longer asserts grain. Gate #0 (the pre-flight probe) becomes the sole grain check, and its semantics flip from "must report `duplicate_rows = 0`" to "RAISE NOTICE the numbers but accept any value" (or the gate is removed entirely, since the heap shape doesn't depend on uniqueness).
-5. Keep gates #1, #3, #4 unchanged — they are storage-shape-agnostic.
-6. Update the Acceptance criteria checklist to swap the PK assertion for the index assertions.
-
-The bidirectional `EXCEPT ALL` parity in gate #3 still proves materialization correctness across the 17,864 rows independently of the PK question, and the global rowcount check inside gate #3 backstops the population.
+- Acceptance criteria: every checkbox in the plan corresponds to a gate that exited 0 above.
+- Scope: `git diff --name-only integration/perf-roadmap...HEAD` shows only `sql/013_race_progression_summary_mat.sql` and `diagnostic/slices/03-race-progression-summary.md` modified by this slice's commits.
+- No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-2]_*.sql`, no application code.
 
 ## Audit verdict
 (filled by Codex)
