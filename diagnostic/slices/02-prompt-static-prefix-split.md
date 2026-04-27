@@ -1,11 +1,11 @@
 ---
 slice_id: 02-prompt-static-prefix-split
 phase: 2
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T04:18:45Z
+updated: 2026-04-27T00:19:46-04:00
 ---
 
 ## Goal
@@ -69,7 +69,27 @@ cd web && npm run build
 Rollback: `git revert <commit>`. Risk is low because the refactor is behaviour-preserving (same outgoing request body) and the new export is additive.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/02-prompt-static-prefix-split`.
+- Implementation commit: `5f9fd71` — `refactor(anthropic): split synthesis prompt into static prefix and dynamic suffix`.
+- Files changed (within scope):
+  - `web/src/lib/anthropic.ts` — exported `AnswerSynthesisInput` type; added new exported pure function `buildSynthesisPromptParts(input)` that returns `{ staticPrefix, dynamicSuffix }`; refactored `synthesizeAnswerWithAnthropic` to call the builder and pass `staticPrefix` into the request `system` field and `dynamicSuffix` into `messages[0].content`.
+  - `web/scripts/tests/prompt-prefix-split.test.mjs` — new offline unit test that transpiles `web/src/lib/anthropic.ts` (matching the sibling `perf-trace.test.mjs` pattern), unsets `ANTHROPIC_API_KEY`/`DATABASE_URL`, monkey-patches `globalThis.fetch` to throw if invoked, calls the builder on two `AnswerSynthesisInput` payloads that differ in every dynamic field, and asserts `parts1.staticPrefix === parts2.staticPrefix` (strict equality, single string) and `parts1.dynamicSuffix !== parts2.dynamicSuffix`.
+- Files NOT changed: `web/src/lib/chatRuntime.ts` (read-only reference; does not assemble the synthesis prompt — confirmed). `web/src/lib/synthesisPrompts/` was not created.
+- Decisions:
+  - `staticPrefix` is a single `string` returned verbatim from `buildAnswerSynthesisPrompt()` (the existing private helper), satisfying the Low-priority plan-audit note that the comparison target is unambiguous.
+  - `dynamicSuffix` is the same trimmed user template that previously lived inline in `synthesizeAnswerWithAnthropic`, moved into the builder unchanged so the outgoing HTTP body is byte-for-byte identical (`system` and user `content` fields). No `cache_control` markers were added; that is `02-cache-control-markers`.
+  - The new test imports the builder via on-the-fly TypeScript transpile to a temp `.mjs`, matching `web/scripts/tests/perf-trace.test.mjs`. It does not depend on `web/.next/` build output.
+- Self-check vs acceptance criteria:
+  - Pure builder: yes — `buildSynthesisPromptParts` reads no `process.env`, calls no `fetch`, requires no API key. The test runs with `ANTHROPIC_API_KEY` and `DATABASE_URL` unset and additionally throws if `fetch` is called; the test passes (subtest 19, exit 0).
+  - `staticPrefix` is a single `string` and is `===`-equal across the two test inputs (`runtime`, `question`, `sql`, `rowCount`, `rows` all differ).
+  - `dynamicSuffix` differs across the two test inputs.
+  - HTTP body unchanged: `system: staticPrefix` is exactly `buildAnswerSynthesisPrompt()`; user `content: dynamicSuffix` is the trimmed prior `userPrompt` template, byte-equivalent — verified by the unified diff (the prior inline template was moved into the builder verbatim, no template-string edits).
+- Gate exit codes (run inside `web/`):
+  - `npm run typecheck` → exit 0.
+  - `npm run test:grading` → exit 0 (29 subtests, 20 pass, 9 SKIP for chat propagation; new subtest 19 `buildSynthesisPromptParts returns a byte-identical staticPrefix and per-input dynamicSuffix without env or network` passes).
+  - `npm run build` → exit 0 (Next.js 15.5.15 production build, all 4 static pages generated, all 21 routes compiled).
+- Out-of-scope follow-up: none observed. `web/src/lib/chatRuntime.ts` does not assemble the synthesis prompt itself (it consumes `synthesizeAnswerWithAnthropic` via `mapChatResponse`/runtime glue), so no scope-expansion follow-up is needed for this slice.
 
 ## Audit verdict
 (filled by Codex)
