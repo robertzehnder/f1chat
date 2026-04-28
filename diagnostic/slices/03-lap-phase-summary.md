@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-phase-summary
 phase: 3
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:23:08-04:00
+updated: 2026-04-27T23:24:18-04:00
 ---
 
 ## Goal
@@ -411,7 +411,7 @@ npm --prefix web run test:grading
 ## Slice-completion note
 
 - **Branch:** `slice/03-lap-phase-summary` (off `integration/perf-roadmap`).
-- **Implementation commit:** filled at commit time (this slice ships a single commit on top of the round-4 plan-approved commit `20c32e4`).
+- **Implementation commits:** `add979b` (initial migration: `sql/017_lap_phase_summary_mat.sql`) on top of round-4 plan-approved commit `20c32e4`; this slice-completion-note refresh re-runs every gate against the current worktree state and re-records exit codes after the round-1 audit's `.next/types`-missing failure was traced to a stale worktree (gate #4a `npm --prefix web run build` regenerates `.next/types/**` before gate #4b `npm --prefix web run typecheck` reads them, so when run in the documented order all three web gates exit `0`).
 - **Files changed (matches "Changed files expected" exactly — verified `git diff --name-only integration/perf-roadmap...HEAD`):**
   - `sql/017_lap_phase_summary_mat.sql` (new)
   - `diagnostic/slices/03-lap-phase-summary.md` (frontmatter status/owner/timestamp transitions and this Slice-completion note only)
