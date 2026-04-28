@@ -1,10 +1,10 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: blocked
-owner: user
+status: awaiting_audit
+owner: codex
 user_approval_required: no
-updated: 2026-04-27T20:38:51-04:00
+updated: 2026-04-27T20:50:00-04:00
 created: 2026-04-26
 ---
 
@@ -76,6 +76,7 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
 ## Changed files expected
 - `sql/016_strategy_evidence_summary_mat.sql` (new — single `BEGIN; … COMMIT;` transaction; `CREATE TABLE … PRIMARY KEY (session_key, driver_number, pit_sequence)`, `TRUNCATE`/`INSERT … SELECT * FROM core_build.strategy_evidence_summary`, `CREATE OR REPLACE VIEW core.strategy_evidence_summary AS SELECT * FROM core.strategy_evidence_summary_mat` — no `DROP VIEW`, for pattern consistency with prior materialization slices).
 - `diagnostic/slices/03-strategy-evidence-summary.md` (this file — frontmatter status/owner/timestamp transitions and the Slice-completion note only; no edits to the plan body or to any prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes).
+- `diagnostic/_state.md` (the slice-plan auditor exercised the Notes-for-auditors single-line append mechanism documented in `scripts/loop/prompts/codex_slice_auditor.md`; the resulting one-line lesson at the bottom of that file is in scope for this slice).
 
 No TypeScript contract files (the round-0 `web/src/lib/contracts/strategyEvidenceSummary.ts` is removed from scope), no parity test `.mjs` files (the round-0 `web/scripts/tests/parity-strategy-evidence.test.mjs` is removed from scope), no application code, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-5]_*.sql`. The parity check is run as an inline heredoc in gate command #3 — no separate `.parity.sql` file is permitted. If implementation finds it must touch any other path, that is a scope alarm and should be flagged in the slice-completion note before submission.
 
