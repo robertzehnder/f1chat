@@ -1,11 +1,11 @@
 ---
 slice_id: 05-resolver-lru
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T00:00:01Z
+updated: 2026-04-28T13:10:00Z
 ---
 
 ## Goal
@@ -85,3 +85,19 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T12:53:01Z, so no stale-state note is required.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite the plan around the real resolver integration surface in this repo: `web/src/lib/resolver/` and `web/src/lib/resolver/index.ts` do not exist, while the lookup calls the cache must wrap currently come from `web/src/lib/queries.ts` into `web/src/lib/chatRuntime.ts`.
+
+### Medium
+- [ ] Update `Inputs`, Steps 1-3, and `Changed files expected` so every referenced path exists in this worktree, including the actual module that will own the cache wrapper and the actual lookup/resolver call sites it will intercept.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T12:53:01Z, so no stale-state note is required.
+- Repository check: `web/package.json` already has `test:grading`, but neither `lru-cache` nor `test:resolver-lru` exists yet.
