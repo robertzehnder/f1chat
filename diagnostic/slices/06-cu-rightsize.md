@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T20:45:00Z
+updated: 2026-04-28T21:05:00Z
 ---
 
 ## Goal
@@ -446,6 +446,22 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Medium
 - [x] Tighten gate `2a` so it verifies the three required evidence lines are recorded in the declared `<field path> = <value>` format under `## Evidence`, not merely that the field-path strings appear somewhere in the note.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 11)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Make the `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms` contract auditable as written: either require `latency_budget_p95_ms` to equal `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)` within tolerance, or relax the step/acceptance prose so it no longer says that basis is "used when the budget is set to the larger" while the gate currently accepts any larger value.
 
 ### Low
 - [ ] None.
