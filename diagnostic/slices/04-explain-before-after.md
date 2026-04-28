@@ -1,11 +1,11 @@
 ---
 slice_id: 04-explain-before-after
 phase: 4
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T17:00:00Z
+updated: 2026-04-28T17:45:00Z
 ---
 
 ## Goal
@@ -251,3 +251,21 @@ node web/scripts/perf-explain-validate.mjs "$ARTIFACT"
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on `2026-04-28T11:30:14Z`, so no stale-state note is required this round.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — genuine High and Medium items found)**
+
+### High
+- [ ] Steps §2's `spawnSync` call for `psql -f sql/020_perf_indexes.sql` will fail at runtime: gate #2 invokes the helper as `( cd web && node scripts/perf-explain-before-after.mjs ... )`, so the Node process CWD is `web/`, which makes the relative path `sql/020_perf_indexes.sql` resolve to `web/sql/020_perf_indexes.sql` — a non-existent path. Steps §2 must specify that the `spawnSync` call explicitly sets `cwd` to the repo root (e.g., `path.resolve(new URL('.', import.meta.url).pathname, '..')` to go one level up from `web/scripts/`) so that `sql/020_perf_indexes.sql` resolves correctly against the worktree root.
+
+### Medium
+- [ ] Steps §3 says the validate script "asserts the shape (presence of …)" but three acceptance criteria are attributed to gate #6: `aggregate.net_p50_speedup ≥ 1.5`, `aggregate.net_p95_speedup ≥ 1.0`, and `regressions` array empty. Steps §3 must explicitly state the validator also asserts these numeric thresholds and array-emptiness check — not merely field presence — so the implementer does not write a shape-only validator that lets a sub-threshold artifact pass gate #6.
+
+### Low
+- [ ] `## Changed files expected` and the acceptance criteria diff-check enumerate exactly 4 files with no provision for `diagnostic/_state.md`. If any auditor appends a `[state-note]` commit to this branch (permitted by the loop's auditor role prompt), that file appears in the diff and the diff-check acceptance criterion fails. Consider adding `diagnostic/_state.md` as a conditionally expected file (auditor-note commits only), matching the pattern the sibling slice `04-perf-indexes-sql` used to handle the same situation.
+
+### Notes (informational only — no action)
+- Round-1 items are all ticked `[x]` in the round-1 verdict block; each is substantively addressed in the revised plan body.
+- `diagnostic/_state.md` is still current (2026-04-28T11:30:14Z); no stale-state note needed.
