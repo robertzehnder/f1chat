@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T14:00:00Z
+updated: 2026-04-28T18:00:00Z
 ---
 
 ## Goal
@@ -79,3 +79,19 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Move the cache lookup/store boundary ahead of `runReadOnlySql` for deterministic-template requests, and add a gateable assertion that the second identical request skips both SQL execution and synthesis; the current “synthesis-path” wording would still allow the database work to run on every hit and misses the answer-cache goal described in the prior-context audit.
+
+### Medium
+- [ ] Update `## Inputs` and `## Changed files expected` to include `web/src/app/api/chat/route.ts` (or explicitly name the extracted module that owns the synthesis/answer-cache boundary), because the live synthesis call site is not in `web/src/lib/chatRuntime.ts`.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
+- `web/package.json:10` confirms `npm run test:grading` executes `scripts/tests/*.test.mjs`, so the proposed test file is covered by the existing gate command.
