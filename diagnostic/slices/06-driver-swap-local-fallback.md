@@ -1,8 +1,8 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-28
@@ -124,3 +124,20 @@ cd web && node --test scripts/tests/driver-fallback.test.mjs
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
 - The gate order `build` before `typecheck` matches the current auditor note for web slices.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Fix the snapshot default-path contract so the plan names one resolution basis consistently: either default `OPENF1_LOCAL_SNAPSHOT_PATH` to `data/local-fallback-snapshot.sql` when resolving from `web/`, or keep `web/data/local-fallback-snapshot.sql` and state it is repo-root-relative, because the current wording points the fallback at `web/web/data/...`.
+
+### Medium
+- [ ] Align the Goal text with the decided opt-in trigger by stating that missing-URL and probe-failed fallback only happen when `OPENF1_LOCAL_FALLBACK=1`, otherwise the first paragraph still promises automatic fallback.
+- [ ] Specify how the synchronous exported `pool` behaves before the async `chooseDriver()` probe resolves on the healthy-Neon path, or drop the promise to preserve `pool` as a usable compatibility export, because Step 4 currently requires a sync export from an async selection flow without defining the contract.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+- The gate order `build` before `typecheck` still matches the current auditor note for web slices.
