@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T16:30:00Z
+updated: 2026-04-28T17:08:38Z
 ---
 
 ## Goal
@@ -116,6 +116,24 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 
 ### Medium
 - [x] Reconcile Step 3 and its acceptance criterion with the actual `sql<T>(text, values)` helper signature in `web/src/lib/db.ts`: either expand the planned API change to support/query-config inputs explicitly, or rewrite the regression case around a real supported call path instead of "a caller passes `{ text, values, name: \"foo\" }` directly".
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Reconcile the slice with the actual Phase 6 requirement in [diagnostic/roadmap_2026-04_performance_and_upgrade.md:279-281](/Users/robertzehnder/.openf1-loop-worktrees/06-stmt-cache-off/diagnostic/roadmap_2026-04_performance_and_upgrade.md:279): `statement_cache_size: 0` is a driver-level setting tied to the `@neondatabase/serverless` path, while the current repo uses `pg` and `sql()` currently calls `pool.query(text, values)` with no `name` at [web/src/lib/db.ts:93-98](/Users/robertzehnder/.openf1-loop-worktrees/06-stmt-cache-off/web/src/lib/db.ts:93); rewriting that call to `{ name: undefined }` does not disable an existing cache, so retarget the slice to a real cache-bearing codepath or rewrite the goal/steps around a behavior the current `pg` path can actually change.
+- [ ] Replace the planned unit-test location and gate with the repo’s actual harness: `web/package.json:5-16` defines `build`, `typecheck`, and `test:grading`, but no `test` script, so `web/src/lib/__tests__/db.stmt-cache.test.ts` plus `cd web && npm test -- db.stmt-cache` is not runnable as written (`rg -n "__tests__/|test:grading|vitest|jest|db\\.stmt-cache" web -g '!web/.next'` exited 0 and found no matching harness beyond `test:grading`).
+
+### Medium
+- [ ] Resolve the contradiction between `## Required services / env` and the final acceptance bullet: the plan explicitly allows a local PgBouncer fallback, but the acceptance criterion requires proof that verification ran against “a non-production pooled Neon endpoint”; either allow the documented local PgBouncer path in acceptance/gates or remove it from the permitted verification targets.
+- [ ] Narrow or expand the scope so it matches the repo’s real DB call sites: the slice claims to prove “every `pool.query()` call” / “no code path passes a `name` field,” but `runReadOnlySql()` bypasses `sql()` and uses `pool.connect()` plus `client.query(...)` directly at [web/src/lib/queries.ts:789-806](/Users/robertzehnder/.openf1-loop-worktrees/06-stmt-cache-off/web/src/lib/queries.ts:789); either include direct `client.query` paths in the plan or limit the goal/acceptance to the `sql()` helper only.
 
 ### Low
 - [ ] None.
