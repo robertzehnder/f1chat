@@ -5,7 +5,7 @@ status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T20:16:18-04:00
+updated: 2026-04-27T20:16:43-0400
 ---
 
 ## Goal
@@ -63,16 +63,15 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace the slice body with the actual Phase 3 materialization pattern for `strategy_evidence_summary`: use the existing `core_build.strategy_evidence_summary` source-definition view, create a real `core.strategy_evidence_summary_mat` table refreshed from `core_build`, and swap `core.strategy_evidence_summary` to a thin facade; do not introduce a standalone PostgreSQL materialized view.
-- [ ] Add executable DB gate commands that apply the SQL and verify the new `_mat` table, the public facade, and bidirectional session-scoped `EXCEPT ALL` parity against `core_build.strategy_evidence_summary` for 3 deterministic `analytic_ready` sessions; the current web-only gates cannot prove the acceptance criteria.
+- [ ] Name the exact database objects this slice must create and validate, using the Phase 3 pattern from `03-core-build-schema`: make `core_build.strategy_evidence_summary` the source input, and specify whether implementation creates `core.strategy_evidence_summary_mat`, a public `core.strategy_evidence_summary` facade swap, or both.
+- [ ] Replace the web-only gate list with executable database gates that apply the SQL and prove success end-to-end, including object existence and a bidirectional parity check against the live-query equivalent for three deterministic sessions.
 
 ### Medium
-- [ ] Rewrite `Steps`, `Changed files expected`, and `Acceptance criteria` to match the repo's SQL-only Phase 3 summary-slice pattern: this plan should not add a TypeScript contract file or a `.mjs` parity test, and it must include the new SQL migration file plus this slice file in scope.
-- [ ] Specify the required DB gate prerequisites completely, including `psql` on `PATH` and any object-level checks needed for `core.strategy_evidence_summary_mat` shape and facade dependency, so the implementer can run the slice without inferring missing tooling or assertions.
+- [ ] Replace the ambiguous path `sql/strategy_evidence_summary.sql` with the actual migration file the implementer should add, following the repo's numbered SQL migration convention and matching the database objects named in the steps.
+- [ ] Make the parity requirement reproducible by specifying exactly how the three sessions are chosen and where that logic runs; `for ≥3 sessions` is not deterministic enough for an audit-grade acceptance check.
+- [ ] Expand `Required services / env` to cover the tooling the gates need, including `psql` on `PATH` and the database privileges required for the exact relation type named in the plan.
 
 ### Low
-- [ ] Tighten the acceptance criteria so each item is directly testable by a named gate command exit `0` rather than the generic `Parity test passes`.
 
 ### Notes (informational only — no action)
-- `diagnostic/_state.md` is current enough to use; no staleness note is needed this round.
-- `sql/008_core_build_schema.sql` already defines `core_build.strategy_evidence_summary`, so this slice should build on that prior artifact rather than recreate the source-definition query.
+- `diagnostic/_state.md` is current enough to use; no stale-state note is needed for this round.
