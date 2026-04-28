@@ -1,10 +1,10 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: pending
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
-updated: 2026-04-27T20:37:34-04:00
+updated: 2026-04-27T20:38:51-04:00
 created: 2026-04-26
 ---
 
@@ -350,7 +350,36 @@ npm --prefix web run test:grading
 - **Out-of-scope items:** unchanged from plan (refresh helper / per-session ingest hook, additional indexes, materialization of remaining hot contracts, refresh-strategy decision, runtime-path cutover) — all deferred to later Phase 3 slices, no work done in this slice.
 
 ## Audit verdict
-(filled by Codex)
+
+**REJECT**
+
+[slice:03-strategy-evidence-summary][reject]
+
+Gate exit codes observed by audit agent:
+- Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... core_build.strategy_evidence_summary grain probe ... SQL` -> exit `0`. NOTICE: `core_build.strategy_evidence_summary grain probe: total=18717 distinct_triple=18717 duplicate=0`.
+- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/016_strategy_evidence_summary_mat.sql` -> exit `0`. Output included `BEGIN`, `CREATE TABLE`, `TRUNCATE TABLE`, `INSERT 0 18717`, `CREATE VIEW`, `COMMIT`.
+- Gate #2 facade/relkind/PK DO block -> exit `0`. Output: `DO`.
+- Gate #3 global-rowcount + three-session bidirectional `EXCEPT ALL` parity DO block -> exit `0`. Output: `DO`.
+- Gate #4 sequential web gates `npm --prefix web run build && npm --prefix web run typecheck && npm --prefix web run test:grading` -> exit `0`.
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` -> exit `0` and returned `diagnostic/_state.md`, `diagnostic/slices/03-strategy-evidence-summary.md`, `sql/016_strategy_evidence_summary_mat.sql`.
+- `diagnostic/_state.md:60` is out of scope. "Changed files expected" allows only `sql/016_strategy_evidence_summary_mat.sql` plus this slice file, and the audit policy only adds the slice file itself to the allow-list. Any extra path is REJECT for scope creep.
+
+Criterion-by-criterion:
+- Pre-flight grain probe on `(session_key, driver_number, pit_sequence)`: pass (`0`).
+- `core.strategy_evidence_summary_mat` base table with `PRIMARY KEY (session_key, driver_number, pit_sequence)`: pass (`0` / `0`).
+- `core.strategy_evidence_summary` exists as a view: pass (`0`).
+- `core.strategy_evidence_summary` is a thin facade over `core.strategy_evidence_summary_mat`: pass (`0`).
+- Global rowcount equality between `core_build.strategy_evidence_summary` and `core.strategy_evidence_summary_mat`: pass (`0`).
+- Three-session bidirectional `EXCEPT ALL` parity: pass (`0`).
+- `npm --prefix web run build`: pass (`0`).
+- `npm --prefix web run typecheck`: pass (`0`) when run after build, matching the slice's sequential gate block.
+- `npm --prefix web run test:grading`: pass (`0`) with `21` pass, `10` skip, `0` fail.
+- File-scope criterion: fail. `git diff --name-only integration/perf-roadmap...HEAD` includes out-of-scope `diagnostic/_state.md`.
+
+Decision:
+- REJECT. The implementation is substantively green, but scope creep on `diagnostic/_state.md` blocks merge under the audit policy.
 
 ## Plan-audit verdict (round 1)
 
