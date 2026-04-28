@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:45:00Z
+updated: 2026-04-28T20:10:00Z
 ---
 
 ## Goal
@@ -169,6 +169,22 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 
 ### Medium
 - [x] Add the slice file itself to `Changed files expected` if the acceptance criteria continue to require the slice-completion note to record which pooled target was used.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite Step 5, `Changed files expected`, the gate command, and acceptance text so the pooled-endpoint verifier exercises the repo’s actual `sql()` path in `web/src/lib/db.ts` (or an equivalent direct import of that helper/pool module), not a standalone `pg` `Pool` call; otherwise the runtime gate can pass without validating the slice’s only behavioral change.
+
+### Medium
+- [ ] If the verifier is updated to hit `sql()`/`db.ts`, specify the exact safe env wiring for that process (for example a one-shot `NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL"` mapping) so the helper reads the non-production pooled URL without relying on production credentials.
 
 ### Low
 - [ ] None.
