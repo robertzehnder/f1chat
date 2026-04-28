@@ -1,18 +1,18 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T16:31:00Z
+updated: 2026-04-28T17:05:00Z
 ---
 
 ## Goal
 Assert `DATABASE_URL` uses the Neon pooler connection string (port 6543 / `-pooler` suffix) in production. Throw a startup error if direct-connection URL is detected in `NODE_ENV=production`.
 
 ## Inputs
-- `web/src/lib/db/driver.ts`
+- `web/src/lib/db.ts` (the repo's actual DB entrypoint; there is no `web/src/lib/db/driver.ts` file in this codebase)
 - `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 6
 
 ## Prior context
@@ -26,20 +26,22 @@ Assert `DATABASE_URL` uses the Neon pooler connection string (port 6543 / `-pool
 - No Neon API token or console access is required for this slice.
 
 ## Steps
-1. Read the current implementation in `web/src/lib/db/driver.ts` (or `web/src/lib/db.ts` if `driver.ts` does not exist). Locate the module-load path that reads `process.env.DATABASE_URL` and creates the connection.
-2. Add a startup assertion that runs once at module load: when `process.env.NODE_ENV === 'production'`, parse `process.env.DATABASE_URL` and throw a descriptive `Error` if the host does not contain the substring `-pooler` OR the port (URL `port`, defaulting to 5432 when omitted) is not `6543`. The error message must include the offending host and port and instruct the operator to switch to the Neon pooler URL.
-3. Add an automated test at `web/scripts/tests/pooled-url-assertion.test.mjs` covering all four cases below (Acceptance criteria #1–#4) by importing the assertion as a pure function (extract it from the module-load side effect so it is unit-testable) — do NOT rely on side-effectful module load, do NOT add a docs file.
+1. Read the current implementation in `web/src/lib/db.ts` (the actual entrypoint in this repo — `web/src/lib/db/driver.ts` does not exist). Locate the `createPool` path that resolves a connection string from `NEON_DATABASE_URL` / `DATABASE_URL` (see `firstUrl` helper) and creates the `pg.Pool`.
+2. In `web/src/lib/db.ts`, add and export a pure function `assertPooledDatabaseUrl(env: NodeJS.ProcessEnv): void` that, when `env.NODE_ENV === 'production'`, parses the connection string returned by the same precedence used by `firstUrl` (i.e., `env.NEON_DATABASE_URL ?? env.DATABASE_URL`) and throws a descriptive `Error` if the host does not contain the substring `-pooler` OR the port (URL `port`, defaulting to 5432 when omitted) is not `6543`. The thrown message must include the offending host and port, contain the literal phrase `Neon pooler URL required` (so tests and staging verification can match it), and instruct the operator to switch to the Neon pooler URL. Then invoke `assertPooledDatabaseUrl(process.env)` once at module load — before `createPool()` runs — so the startup error fires when `db.ts` is first imported in production.
+3. Add an automated test at `web/scripts/tests/pooled-url-assertion.test.mjs` covering all four Acceptance-criteria cases. Follow the existing test pattern (see `web/scripts/tests/answer-cache.test.mjs`) and use the in-process `typescript` compiler to transpile `web/src/lib/db.ts` and import the exported `assertPooledDatabaseUrl` as a pure function with controlled `env` fixtures — do NOT rely on side-effectful module load, do NOT add a docs file.
 4. Pre-merge verification (staging, evidence required):
-   - Set `NODE_ENV=production` and `DATABASE_URL` to the staging Neon pooler URL, then run `cd web && NODE_ENV=production DATABASE_URL=<staging-pooler-url> node -e "import('./src/lib/db/driver.ts').then(()=>console.log('OK: pooler url accepted'))"`. Expect exit 0 and stdout containing `OK: pooler url accepted`.
-   - Set `NODE_ENV=production` and `DATABASE_URL` to the staging Neon **direct** URL (port 5432, no `-pooler`), then run the same `node -e` command. Expect non-zero exit and stderr matching `/Neon pooler URL required/i` (or the implementer's chosen wording, asserted by the test file).
+   - Add a runnable harness `web/scripts/verify-pooled-url.mjs` that uses the same in-process `typescript` transpile pattern as the test file to load `assertPooledDatabaseUrl` from `web/src/lib/db.ts`, then calls it with `process.env`. On success it must `console.log('OK: pooler url accepted')` and exit 0; on a thrown error it must let the error propagate (or `console.error` then `process.exit(1)`) so stderr surfaces the assertion message.
+   - Run with the staging Neon **pooler** URL: `cd web && NODE_ENV=production DATABASE_URL=<staging-pooler-url> node scripts/verify-pooled-url.mjs`. Expect exit 0 and stdout containing `OK: pooler url accepted`.
+   - Run with the staging Neon **direct** URL (port 5432, no `-pooler`): `cd web && NODE_ENV=production DATABASE_URL=<staging-direct-url> node scripts/verify-pooled-url.mjs`. Expect non-zero exit and stderr matching `/Neon pooler URL required/i`.
    - Save the combined stdout+stderr of both invocations to `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` and reference that path in the implementation slice-completion note.
 
 ## Changed files expected
-- `web/src/lib/db/driver.ts`
-- `web/scripts/tests/pooled-url-assertion.test.mjs`
+- `web/src/lib/db.ts` (add and invoke `assertPooledDatabaseUrl` at module load — this is the actual existing DB entrypoint; `web/src/lib/db/driver.ts` is not present in this repo)
+- `web/scripts/tests/pooled-url-assertion.test.mjs` (new unit test)
+- `web/scripts/verify-pooled-url.mjs` (new staging-verification harness used by Step 4)
 
 ## Artifact paths
-- `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` — combined stdout/stderr of the two staging `node -e` invocations from Steps §4.
+- `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` — combined stdout/stderr of the two staging `node scripts/verify-pooled-url.mjs` invocations (pooler URL and direct URL) from Steps §4.
 
 ## Gate commands
 ```bash
@@ -91,10 +93,10 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite Step 4's staging verification import target to the repo's actual DB entrypoint, because `web/src/lib/db/driver.ts` does not exist here and the artifact command cannot run as written.
+- [x] Rewrite Step 4's staging verification import target to the repo's actual DB entrypoint, because `web/src/lib/db/driver.ts` does not exist here and the artifact command cannot run as written.
 
 ### Medium
-- [ ] Align `Changed files expected` with Step 1's fallback path: either name `web/src/lib/db.ts` as the expected implementation edit in this repo or require creating and using `web/src/lib/db/driver.ts` consistently across the plan.
+- [x] Align `Changed files expected` with Step 1's fallback path: either name `web/src/lib/db.ts` as the expected implementation edit in this repo or require creating and using `web/src/lib/db/driver.ts` consistently across the plan.
 
 ### Low
 - [ ] None.
