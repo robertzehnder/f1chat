@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T18:02:29Z
+updated: 2026-04-28T18:06:03Z
 ---
 
 ## Goal
@@ -47,7 +47,7 @@ Before step 4 may run, the implementer MUST:
    - From `04-explain-before-after.json`:
      - `aggregate.{pre_p50_ms, pre_p95_ms, post_p50_ms, post_p95_ms}` — post-index DB latency floor the new CU window must preserve.
    Record every extracted field under a `## Evidence` heading in `diagnostic/notes/06-cu-rightsize.md` as `<field path> = <value>` (one line each). The gate below greps for the `## Evidence` heading and for the literal field-path strings `stages.total.p95_ms`, `stages.execute_db.p95_ms`, and `aggregate.post_p95_ms` to verify evidence capture happened.
-2. Capture the current Neon endpoint settings into `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` via the Neon API (`GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`); record at minimum `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, `suspend_timeout_seconds`, and the timestamp.
+2. Capture the current Neon endpoint settings into `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` via the Neon API (`GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`); record at minimum `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, `suspend_timeout_seconds`, and a top-level `captured_at` field set to the ISO-8601 UTC timestamp at which the `GET` was issued (e.g. `"captured_at":"2026-04-28T19:25:00Z"`).
 3. In `diagnostic/notes/06-cu-rightsize.md`, document on their own grep-able lines:
    - `chosen_min_cu:` `<value>`
    - `chosen_max_cu:` `<value>`
@@ -55,9 +55,14 @@ Before step 4 may run, the implementer MUST:
    - `cu_hour_rate_usd:` `<rate>` — the per-CU-hour USD price taken from the project's current Neon billing plan. The decision note must record the source on a separate `cu_hour_rate_source:` line as the public URL the rate was copied from (e.g. `https://neon.tech/pricing`); it must begin with `http://` or `https://`. Saved pricing artifacts are out of scope for this slice. The rate MUST be a fixed constant in the note; it must not be left as a parameter for the implementer to vary at gate time.
    - `cost_delta_usd_per_month_max:` `<value>` — computed as `(chosen_max_cu - prior_max_cu) * cu_hour_rate_usd * 730` (730 ≈ hours per average month, treated as an upper bound assuming the endpoint runs at `max_cu` continuously).
    - `cost_delta_usd_per_month_min:` `<value>` — computed as `(chosen_min_cu - prior_min_cu) * cu_hour_rate_usd * 730` (lower bound assuming the endpoint runs at `min_cu` continuously).
-   - `latency_budget_p95_ms:` `<value>` — the p95 latency the resized window must preserve, derived from `stages.execute_db.p95_ms` (baseline) and `aggregate.post_p95_ms` (post-index floor). The note must state which of those two it equals or how it is bounded by them.
+   - `latency_budget_p95_ms:` `<value>` — the p95 latency (in milliseconds) the resized window must preserve, derived from `stages.execute_db.p95_ms` (baseline) and `aggregate.post_p95_ms` (post-index floor).
+   - `latency_budget_p95_ms_basis:` `<basis>` — exactly one of the following grep-able strings, declaring how `latency_budget_p95_ms` relates to the cited evidence:
+     - `equals stages.execute_db.p95_ms`
+     - `equals aggregate.post_p95_ms`
+     - `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms` (used when the budget is set to the larger — i.e., looser — of the two values, so it preserves both)
+     The gate (2c below) re-derives `stages.execute_db.p95_ms` from `01-baseline-snapshot_2026-04-26.json` and `aggregate.post_p95_ms` from `04-explain-before-after_2026-04-28.json` and asserts: for `equals X`, `latency_budget_p95_ms` matches `X` within ±0.01 ms; for `bounded_by …`, `latency_budget_p95_ms` ≥ `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)`.
    The `prior_min_cu` / `prior_max_cu` values used in the cost formulas MUST equal the values captured in `06-cu-rightsize-before_2026-04-28.json` (gate 4 enforces parity below by recomputing the deltas).
-4. **Only after** the user-approval sentinel line (see "User approval mechanism" in Required services / env) is recorded under `## User approval` in `diagnostic/notes/06-cu-rightsize.md`, apply the new window via the Neon API (`PATCH /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`) — patch `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` to the documented values — and capture the post-apply endpoint payload into `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`.
+4. **Only after** the user-approval sentinel line (see "User approval mechanism" in Required services / env) is recorded under `## User approval` in `diagnostic/notes/06-cu-rightsize.md`, apply the new window via the Neon API (`PATCH /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`) — patch `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` to the documented values — and capture the post-apply endpoint payload into `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`. The post-change artifact MUST include a top-level `captured_at` field set to the ISO-8601 UTC timestamp at which the post-apply `GET` was issued. Gate 2b' (below) asserts the approval sentinel's timestamp is strictly **earlier** than `captured_at`, which is the audit signal that approval was recorded before the `PATCH` rather than backfilled afterward.
 5. Run the smoke-test query `psql "$DATABASE_URL" -At -c "SELECT 1"` post-resize. The gate (below) checks the command exits 0 and prints `1`; no latency recording is required, so the plan only promises verifiable outputs.
 
 ## Changed files expected
@@ -76,6 +81,8 @@ No `web/` source files are expected to change; if any do, the slice is out of sc
 # 1. Pre-change capture exists and parses, with the fields the decision relies on.
 test -f diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
 jq -e '.endpoint | (.autoscaling_limit_min_cu and .autoscaling_limit_max_cu and .suspend_timeout_seconds != null)' \
+  diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
+jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' \
   diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
 
 # 2. Decision note exists and declares the chosen window + auditable cost/perf tradeoff.
@@ -125,6 +132,46 @@ awk '
   END { exit !found }
 ' diagnostic/notes/06-cu-rightsize.md
 
+# 2b'. Approval timestamp is strictly EARLIER than the post-change artifact's capture
+# timestamp. ISO-8601 UTC strings sort lexicographically when both end in 'Z', so a
+# string compare is equivalent to a chronological compare. This is the audit signal
+# that approval was recorded before the Neon PATCH, not backfilled afterward.
+APPROVAL_TS=$(awk '
+  /^##[[:space:]]+User approval[[:space:]]*$/ { in_section=1; next }
+  in_section && /^[[:space:]]*$/ { next }
+  in_section && /^APPROVE-CU-RIGHTSIZE[[:space:]]+/ { print $2; exit }
+' diagnostic/notes/06-cu-rightsize.md)
+AFTER_TS=$(jq -r '.captured_at' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
+test -n "$APPROVAL_TS"
+test -n "$AFTER_TS" && test "$AFTER_TS" != "null"
+# Both must be ISO-8601 UTC ending in 'Z'.
+echo "$APPROVAL_TS" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
+echo "$AFTER_TS"    | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
+# Strict less-than: approval recorded before the post-apply GET.
+awk -v a="$APPROVAL_TS" -v b="$AFTER_TS" 'BEGIN{ exit !(a < b) }'
+
+# 2c. latency_budget_p95_ms basis is declared on a grep-able line, and the documented
+# numeric value matches the cited basis when re-derived from the perf input artifacts.
+grep -Eq '^latency_budget_p95_ms_basis:[[:space:]]*(equals[[:space:]]+(stages\.execute_db\.p95_ms|aggregate\.post_p95_ms)|bounded_by[[:space:]]+stages\.execute_db\.p95_ms,aggregate\.post_p95_ms)[[:space:]]*$' diagnostic/notes/06-cu-rightsize.md
+DOC_BUDGET=$(grep -E '^latency_budget_p95_ms:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
+BASIS=$(grep -E '^latency_budget_p95_ms_basis:' diagnostic/notes/06-cu-rightsize.md | sed -E 's/^latency_budget_p95_ms_basis:[[:space:]]*//' | sed -E 's/[[:space:]]+$//')
+EXEC_DB_P95=$(jq -r '.stages.execute_db.p95_ms' diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json)
+POST_P95=$(jq -r '.aggregate.post_p95_ms' diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json)
+case "$BASIS" in
+  "equals stages.execute_db.p95_ms")
+    awk -v a="$DOC_BUDGET" -v b="$EXEC_DB_P95" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<0.01)}'
+    ;;
+  "equals aggregate.post_p95_ms")
+    awk -v a="$DOC_BUDGET" -v b="$POST_P95" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<0.01)}'
+    ;;
+  "bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms")
+    awk -v b="$DOC_BUDGET" -v e="$EXEC_DB_P95" -v p="$POST_P95" 'BEGIN{m=(e>p)?e:p; exit !(b>=m)}'
+    ;;
+  *)
+    exit 1
+    ;;
+esac
+
 # 3. Live Neon endpoint matches the documented chosen window for every in-scope mutable setting.
 LIVE=$(curl -fsS -H "Authorization: Bearer $NEON_API_KEY" \
   "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/endpoints/$NEON_ENDPOINT_ID")
@@ -140,6 +187,8 @@ test "$LIVE_SUS" = "$DOC_SUS"
 
 # 4. Post-change artifact exists and matches BOTH the live endpoint AND the note for every in-scope setting.
 test -f diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json
+jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' \
+  diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json
 AFTER_MIN=$(jq -r '.endpoint.autoscaling_limit_min_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
 AFTER_MAX=$(jq -r '.endpoint.autoscaling_limit_max_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
 AFTER_SUS=$(jq -r '.endpoint.suspend_timeout_seconds' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
@@ -157,11 +206,11 @@ psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
 ```
 
 ## Acceptance criteria
-- [ ] `diagnostic/notes/06-cu-rightsize.md` declares, on grep-able lines, `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, `cu_hour_rate_usd` (a fixed numeric constant), `cu_hour_rate_source` (a public URL beginning with `http://` or `https://`), `cost_delta_usd_per_month_max`, `cost_delta_usd_per_month_min`, and `latency_budget_p95_ms`. The two `cost_delta_*` values equal `(chosen_*_cu − prior_*_cu) × cu_hour_rate_usd × 730` (within $0.01) where the `prior_*_cu` values are read from `06-cu-rightsize-before_2026-04-28.json`; the gate recomputes and asserts this.
+- [ ] `diagnostic/notes/06-cu-rightsize.md` declares, on grep-able lines, `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, `cu_hour_rate_usd` (a fixed numeric constant), `cu_hour_rate_source` (a public URL beginning with `http://` or `https://`), `cost_delta_usd_per_month_max`, `cost_delta_usd_per_month_min`, `latency_budget_p95_ms`, and `latency_budget_p95_ms_basis` (exactly one of `equals stages.execute_db.p95_ms`, `equals aggregate.post_p95_ms`, or `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms`). The two `cost_delta_*` values equal `(chosen_*_cu − prior_*_cu) × cu_hour_rate_usd × 730` (within $0.01) where the `prior_*_cu` values are read from `06-cu-rightsize-before_2026-04-28.json`, and `latency_budget_p95_ms` matches `latency_budget_p95_ms_basis` when re-derived from the perf input artifacts (within ±0.01 ms for `equals …`, or ≥ `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)` for `bounded_by …`); the gate recomputes and asserts both.
 - [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## Evidence` section that records, at minimum, the `stages.total.p95_ms` and `stages.execute_db.p95_ms` values from `01-baseline-snapshot_2026-04-26.json` and the `aggregate.post_p95_ms` value from `04-explain-before-after_2026-04-28.json` as `<field path> = <value>` lines.
-- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section whose first non-blank line under the heading matches `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, and that sentinel appears exactly once in the file. The line is copied verbatim from a chat message authored by the slice owner and was recorded **before** the Neon `PATCH` was issued.
-- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change, including `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`.
-- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time.
+- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section whose first non-blank line under the heading matches `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, and that sentinel appears exactly once in the file. The recorded approval timestamp is strictly earlier than the `captured_at` field of `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` (which the gate asserts via lexicographic compare on the two ISO-8601 UTC strings); this is the audit signal that the approval was recorded before the Neon `PATCH` rather than backfilled afterward.
+- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change, including `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`, plus a top-level `captured_at` field set to the ISO-8601 UTC timestamp of the pre-change `GET`.
+- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time. It also includes a top-level `captured_at` field (ISO-8601 UTC) that is strictly later than the recorded approval timestamp.
 - [ ] A live `GET` of the production Neon endpoint at gate time returns `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal to the values declared in the decision note (no staging environment is involved).
 - [ ] `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` succeeds post-change (the pipeline exits 0, confirming `psql` printed exactly `1`), confirming the pooler still routes through the resized endpoint.
 
@@ -268,10 +317,10 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 **Status: REVISE**
 
 ### High
-- [ ] Make the "approval recorded before the Neon PATCH" requirement auditable, or narrow the acceptance claim: as written, the gate only proves the sentinel line exists at gate time, so an implementer could patch first and add the approval line afterward without failing the plan.
+- [x] Make the "approval recorded before the Neon PATCH" requirement auditable, or narrow the acceptance claim: as written, the gate only proves the sentinel line exists at gate time, so an implementer could patch first and add the approval line afterward without failing the plan.
 
 ### Medium
-- [ ] Add a measurable gate/acceptance check for the required latency-budget rationale in step 3, or drop the requirement that the note state whether `latency_budget_p95_ms` equals `stages.execute_db.p95_ms`, equals `aggregate.post_p95_ms`, or is otherwise bounded by them; the current gate only verifies that some numeric `latency_budget_p95_ms` line exists.
+- [x] Add a measurable gate/acceptance check for the required latency-budget rationale in step 3, or drop the requirement that the note state whether `latency_budget_p95_ms` equals `stages.execute_db.p95_ms`, equals `aggregate.post_p95_ms`, or is otherwise bounded by them; the current gate only verifies that some numeric `latency_budget_p95_ms` line exists.
 
 ### Low
 - [ ] None.
