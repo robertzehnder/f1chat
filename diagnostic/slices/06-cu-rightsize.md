@@ -1,8 +1,8 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-28
@@ -146,6 +146,24 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Low
 - [x] Add a measurable gate or acceptance check for the smoke-test wall-clock latency recorded in `diagnostic/notes/06-cu-rightsize.md`, or drop that recording requirement from step 5 so the plan only promises verifiable outputs.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the step-1 requirement to extract peak concurrent connections and p99 latency from the cited perf baselines, or add a concrete additional input artifact that actually exposes those metrics; the current listed inputs do not contain them, so the decision cannot be audited as written.
+
+### Medium
+- [ ] Narrow the "which stages dominate" evidence requirement to a cited artifact that actually contains stage timing data, or add that artifact to Inputs; `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` does not expose per-stage timings.
+- [ ] Add a measurable gate or acceptance check for the required "Evidence" subsection from step 1, or drop the requirement to record the extracted numbers verbatim; the current gates never verify that evidence capture happened.
+- [ ] Specify the exact user-approval sentinel text or approval mechanism required before the live Neon `PATCH`, so step 4 is executable without ad hoc interpretation.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
