@@ -1,11 +1,11 @@
 ---
 slice_id: 04-explain-before-after
 phase: 4
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T17:45:00Z
+updated: 2026-04-28T18:30:00Z
 ---
 
 ## Goal
@@ -56,12 +56,18 @@ Capture `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans for a deterministic set 
    - **POST capture**: for each of Q1–Q10, runs `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) <sql>` with `:s` substituted; parses the JSON plan; records `plan_json` (the array Postgres returns), `execution_time_ms` (from the plan's `Execution Time`), and `total_cost` (from the plan's `Plan.Total Cost`). Stores under `post[<id>]`.
    - **DROP step**: issues five `DROP INDEX CONCURRENTLY IF EXISTS raw.<name>;` statements (one per Phase 4 index), each as its own `client.query()` call (no transaction wrapper).
    - **PRE capture**: same as POST, but stored under `pre[<id>]`.
-   - **Re-apply step**: invokes `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql` via `child_process.spawnSync`; aborts if exit != 0.
+   - **Re-apply step**: invokes `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql` via `child_process.spawnSync`. Because gate #2 invokes the helper from `web/` (i.e. process CWD is `web/`), the helper MUST explicitly compute the worktree-root path and pass it as `spawnSync`'s `cwd` option so the relative `sql/020_perf_indexes.sql` resolves correctly. Concretely: `const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');` (one level up from `web/scripts/` to `web/`, then one more to the worktree root) and pass `{ cwd: repoRoot, stdio: 'inherit' }` to `spawnSync`. Aborts non-zero if `status !== 0`.
    - **Re-validate**: re-runs the `pg_index.indisvalid` check; aborts if any of the five are missing or invalid after re-apply.
    - **Compute deltas**: for each Q, `speedup = pre.execution_time_ms / post.execution_time_ms`; records per-query speedup. Aggregates `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms` (nearest-rank ceiling, sorted ascending, rounded to 2 decimals — same algorithm as `web/src/lib/perfSummary.mjs`) across the 10 `execution_time_ms` values per phase. Computes `net_p50_speedup = pre_p50_ms / post_p50_ms` and `net_p95_speedup = pre_p95_ms / post_p95_ms`.
    - **Flag regressions**: marks any `Q` with `speedup < 1 / 1.2` (i.e. >1.2× slower post-index) into a top-level `regressions: []` array.
    - **Write artifact** to the path passed via `--output=<path>` (created via `fs.promises.writeFile`, JSON-pretty 2-space). The artifact shape is documented under "Artifact paths" below.
-3. **Author `web/scripts/perf-explain-validate.mjs`** — a plain `.mjs` node script that takes the artifact path and asserts the shape (presence of `pre`, `post`, `aggregate.pre_p50_ms`, `aggregate.pre_p95_ms`, `aggregate.post_p50_ms`, `aggregate.post_p95_ms`, `aggregate.net_p50_speedup`, `aggregate.net_p95_speedup`, ≥10 query entries each carrying both `pre.plan_json` and `post.plan_json`, and `regressions` array). Exits non-zero with a clear diagnostic on any missing/wrong field. This decouples shape validation from the capture run so a re-validate after edits doesn't require touching the DB.
+3. **Author `web/scripts/perf-explain-validate.mjs`** — a plain `.mjs` node script that takes the artifact path and asserts BOTH shape AND numeric thresholds. It exits non-zero with a clear diagnostic on any failure. The validator MUST assert all of the following (gate #6 fails if any check fails):
+   - **Shape**: presence of `session_key` (number), `captured_at` (ISO string), `queries` (array of length ≥10), `aggregate` object, and `regressions` (array). Each query entry must carry `id`, `motivation`, `indexes`, `sql`, `pre.plan_json`, `pre.execution_time_ms`, `pre.total_cost`, `post.plan_json`, `post.execution_time_ms`, `post.total_cost`, and per-query `speedup`. The `aggregate` block must contain numeric (non-null, non-NaN) `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms`, `net_p50_speedup`, `net_p95_speedup`.
+   - **Threshold: `aggregate.net_p50_speedup ≥ 1.5`** — fails non-zero with diagnostic `aggregate.net_p50_speedup=<value> below threshold 1.5` if not satisfied.
+   - **Threshold: `aggregate.net_p95_speedup ≥ 1.0`** — fails non-zero with diagnostic `aggregate.net_p95_speedup=<value> below threshold 1.0 (net p95 regression)` if not satisfied.
+   - **Regressions empty: `regressions.length === 0`** — fails non-zero with diagnostic listing the offending query IDs if not satisfied.
+
+   This decouples shape and threshold validation from the capture run so a re-validate after edits doesn't require touching the DB. Asserting thresholds in the validator (not only documenting them in acceptance criteria) is what makes acceptance criteria for the three numeric/array gates testable via gate #6.
 4. **Run gate commands** (see "Gate commands" below) to: (#0) refresh `web/node_modules` if needed, (#1) verify pre-state validity, (#2) execute the helper, (#3) confirm the artifact exists, (#4) re-apply the migration as a safety net (idempotent), (#5) re-assert validity, (#6) validate artifact shape.
 5. **Capture command outputs into the slice-completion note** — including the artifact's `aggregate` block and the `regressions` array.
 
@@ -71,6 +77,7 @@ Files the implementer will add or edit during this slice:
 - `web/scripts/perf-explain-validate.mjs` — new (~80 LOC). Pure shape validator over the artifact JSON.
 - `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` — new. Versioned artifact (date in filename matches the implementer's run date; if the run lands on a different date, the implementer adjusts the filename in this Steps section, the gate commands, and the slice-completion note).
 - `diagnostic/slices/04-explain-before-after.md` — this slice file (frontmatter status/owner/timestamp + slice-completion note + ticking previously-addressed verdict checkboxes; no edits to the plan body or to any prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes).
+- `diagnostic/_state.md` — **conditionally permitted only when an auditor appends a `[state-note]` commit** (the loop's auditor role prompt allows this; the sibling slice `04-perf-indexes-sql` handled the same case). The implementer does not edit `_state.md`; if it appears in the branch diff, it must be an auditor-authored line under "Notes for auditors". The acceptance-criteria diff-check accepts this exact path as an additional allowed entry.
 
 No edits to `sql/*.sql`, application code under `web/src/`, or any other slice file.
 
@@ -211,7 +218,7 @@ node web/scripts/perf-explain-validate.mjs "$ARTIFACT"
 - [ ] `aggregate.net_p50_speedup ≥ 1.5`. Validated by gate #6 (the validator reads the artifact and asserts the threshold).
 - [ ] `aggregate.net_p95_speedup ≥ 1.0` (no net regression at p95). Validated by gate #6.
 - [ ] `regressions` array is empty (no per-query regression > 1.2× slower post-index). Validated by gate #6.
-- [ ] The set of files modified by this branch versus `integration/perf-roadmap` is exactly `web/scripts/perf-explain-before-after.mjs` (new), `web/scripts/perf-explain-validate.mjs` (new), `diagnostic/artifacts/perf/04-explain-before-after_<date>.json` (new), and `diagnostic/slices/04-explain-before-after.md` (this slice file). Verified via `git diff --name-only integration/perf-roadmap...HEAD`.
+- [ ] The set of files modified by this branch versus `integration/perf-roadmap` is a subset of `web/scripts/perf-explain-before-after.mjs` (new), `web/scripts/perf-explain-validate.mjs` (new), `diagnostic/artifacts/perf/04-explain-before-after_<date>.json` (new), `diagnostic/slices/04-explain-before-after.md` (this slice file), and `diagnostic/_state.md` (only if an auditor appended a `[state-note]` commit). Verified via `git diff --name-only integration/perf-roadmap...HEAD`. The first four files MUST appear; `diagnostic/_state.md` is permitted but optional.
 
 ## Out of scope
 - Editing `sql/020_perf_indexes.sql` or any other migration. The drop here is a transient runtime operation, not a schema change.
@@ -258,13 +265,13 @@ node web/scripts/perf-explain-validate.mjs "$ARTIFACT"
 **Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — genuine High and Medium items found)**
 
 ### High
-- [ ] Steps §2's `spawnSync` call for `psql -f sql/020_perf_indexes.sql` will fail at runtime: gate #2 invokes the helper as `( cd web && node scripts/perf-explain-before-after.mjs ... )`, so the Node process CWD is `web/`, which makes the relative path `sql/020_perf_indexes.sql` resolve to `web/sql/020_perf_indexes.sql` — a non-existent path. Steps §2 must specify that the `spawnSync` call explicitly sets `cwd` to the repo root (e.g., `path.resolve(new URL('.', import.meta.url).pathname, '..')` to go one level up from `web/scripts/`) so that `sql/020_perf_indexes.sql` resolves correctly against the worktree root.
+- [x] Steps §2's `spawnSync` call for `psql -f sql/020_perf_indexes.sql` will fail at runtime: gate #2 invokes the helper as `( cd web && node scripts/perf-explain-before-after.mjs ... )`, so the Node process CWD is `web/`, which makes the relative path `sql/020_perf_indexes.sql` resolve to `web/sql/020_perf_indexes.sql` — a non-existent path. Steps §2 must specify that the `spawnSync` call explicitly sets `cwd` to the repo root (e.g., `path.resolve(new URL('.', import.meta.url).pathname, '..')` to go one level up from `web/scripts/`) so that `sql/020_perf_indexes.sql` resolves correctly against the worktree root.
 
 ### Medium
-- [ ] Steps §3 says the validate script "asserts the shape (presence of …)" but three acceptance criteria are attributed to gate #6: `aggregate.net_p50_speedup ≥ 1.5`, `aggregate.net_p95_speedup ≥ 1.0`, and `regressions` array empty. Steps §3 must explicitly state the validator also asserts these numeric thresholds and array-emptiness check — not merely field presence — so the implementer does not write a shape-only validator that lets a sub-threshold artifact pass gate #6.
+- [x] Steps §3 says the validate script "asserts the shape (presence of …)" but three acceptance criteria are attributed to gate #6: `aggregate.net_p50_speedup ≥ 1.5`, `aggregate.net_p95_speedup ≥ 1.0`, and `regressions` array empty. Steps §3 must explicitly state the validator also asserts these numeric thresholds and array-emptiness check — not merely field presence — so the implementer does not write a shape-only validator that lets a sub-threshold artifact pass gate #6.
 
 ### Low
-- [ ] `## Changed files expected` and the acceptance criteria diff-check enumerate exactly 4 files with no provision for `diagnostic/_state.md`. If any auditor appends a `[state-note]` commit to this branch (permitted by the loop's auditor role prompt), that file appears in the diff and the diff-check acceptance criterion fails. Consider adding `diagnostic/_state.md` as a conditionally expected file (auditor-note commits only), matching the pattern the sibling slice `04-perf-indexes-sql` used to handle the same situation.
+- [x] `## Changed files expected` and the acceptance criteria diff-check enumerate exactly 4 files with no provision for `diagnostic/_state.md`. If any auditor appends a `[state-note]` commit to this branch (permitted by the loop's auditor role prompt), that file appears in the diff and the diff-check acceptance criterion fails. Consider adding `diagnostic/_state.md` as a conditionally expected file (auditor-note commits only), matching the pattern the sibling slice `04-perf-indexes-sql` used to handle the same situation.
 
 ### Notes (informational only — no action)
 - Round-1 items are all ticked `[x]` in the round-1 verdict block; each is substantively addressed in the revised plan body.
