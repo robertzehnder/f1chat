@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: awaiting_audit
-owner: codex
+status: blocked
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:36:35-04:00
+updated: 2026-04-28T19:42:12-04:00
 ---
 
 ## Goal
@@ -327,7 +327,28 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 - Production smoke test (`SELECT 1`) succeeded post-resize, confirming pooler still routes through the resized endpoint.
 
 ## Audit verdict
-(filled by Codex)
+**Status: REJECT**
+
+- Gate 1 pre-change artifact exists/parses -> exit `0`
+- Gate 2 note declares required fields -> exit `0`
+- Gate 2-recompute cost-delta math -> exit `0`
+- Gate 2a evidence section format/uniqueness -> exit `0`
+- Gate 2b approval sentinel placement/uniqueness -> exit `0`
+- Gate 2b' approval-before-mutation timestamp chain -> exit `0`
+- Gate 2c latency-budget basis re-derivation -> exit `0`
+- Gate 3 live Neon endpoint matches note -> exit `0`
+- Gate 4 post-change artifact matches live and note -> exit `0`
+- Gate 5 `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` -> exit `0`
+- Scope-diff -> FAIL. `git diff --name-only integration/perf-roadmap...HEAD` includes out-of-scope `diagnostic/_state.md`; changed lines at [diagnostic/_state.md](/Users/robertzehnder/.openf1-loop-worktrees/06-cu-rightsize/diagnostic/_state.md:61), [diagnostic/_state.md](/Users/robertzehnder/.openf1-loop-worktrees/06-cu-rightsize/diagnostic/_state.md:62), [diagnostic/_state.md](/Users/robertzehnder/.openf1-loop-worktrees/06-cu-rightsize/diagnostic/_state.md:63).
+- Acceptance 1 required grep-able fields, cost deltas, and latency-budget basis -> PASS
+- Acceptance 2 `## Evidence` section exact lines/uniqueness -> PASS
+- Acceptance 3 `## User approval` section and approval-before-mutation chain -> PASS
+- Acceptance 4 pre-change artifact capture/parsing -> PASS
+- Acceptance 5 post-change artifact/live/note parity and timestamps -> PASS
+- Acceptance 6 live Neon endpoint settings equal documented values -> PASS
+- Acceptance 7 post-change pooler smoke test -> PASS
+- Decision -> REJECT
+- Rationale -> Scope creep: `diagnostic/_state.md` is not in `Changed files expected`, and only the slice file itself is implicitly allow-listed.
 
 ## Plan-audit verdict (round 1)
 
