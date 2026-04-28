@@ -3,15 +3,20 @@ BEGIN;
 -- Phase 3 scale-out: materialize core.strategy_evidence_summary into a real
 -- storage table and replace the public view with a thin SELECT * facade over
 -- that table. Column list, types, and ordering mirror the public view as
--- defined at sql/007_semantic_summary_contracts.sql:553 ff. Grain
--- (session_key, driver_number, pit_sequence) is verified by gate #0's
--- pre-flight probe over core_build.strategy_evidence_summary. Each row in
--- core_build.strategy_evidence_summary corresponds to exactly one row of its
--- pit_cycle a input via the rival_rank = 1 filter, and core_build.pit_cycle_summary
--- itself has the verified unique grain (session_key, driver_number, pit_sequence),
--- so the triple is unique by construction. The PRIMARY KEY enforces that
--- invariant; a non-unique grain would also abort the bulk INSERT below with a
--- clean PK-violation error and roll back the whole transaction.
+-- defined at sql/007_semantic_summary_contracts.sql:553 ff. Uniqueness on
+-- (session_key, driver_number, pit_sequence) is asserted at the output level
+-- only — established by gate #0's pre-flight probe over
+-- core_build.strategy_evidence_summary, NOT inherited transitively from
+-- core_build.pit_cycle_summary. The canonical view body
+-- (sql/008_core_build_schema.sql:865 ff.) ranks rivals via
+-- ROW_NUMBER() OVER (PARTITION BY a.session_key, a.driver_number, a.pit_lap ...)
+-- and filters rival_rank = 1, which can collapse multiple pit_cycle a rows
+-- sharing (session_key, driver_number, pit_lap) into a single output row, so
+-- the input-side grain is not preserved row-for-row through the canonical
+-- query and the triple's uniqueness is a property of the overall pipeline at
+-- this output relation, gate-enforced rather than inherited. The PRIMARY KEY
+-- enforces that invariant; a non-unique grain would also abort the bulk INSERT
+-- below with a clean PK-violation error and roll back the whole transaction.
 CREATE TABLE IF NOT EXISTS core.strategy_evidence_summary_mat (
   session_key                                    BIGINT  NOT NULL,
   meeting_key                                    BIGINT,
