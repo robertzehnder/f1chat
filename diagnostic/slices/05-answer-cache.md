@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T21:30:00Z
+updated: 2026-04-28T22:05:00Z
 ---
 
 ## Goal
@@ -116,3 +116,18 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
 - `web/package.json` already depends on `lru-cache`, so no package-manifest changes are implied by this slice.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Restrict cache writes to successful deterministic-template responses only; do not cache the heuristic fallback path reached after deterministic SQL failure, or identical deterministic requests can be pinned to a degraded non-deterministic answer for the full TTL.
+- [ ] Stop describing the cache value as the entire final response payload returned by `route.ts`, and update the hit-path acceptance criteria accordingly; `requestId`, `runtime`, and other per-request metadata must be regenerated on each hit instead of being replayed from the first request.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
