@@ -386,6 +386,17 @@ dispatch_with_guards() {
   rc=$?
   set -e
 
+  # rc=42 = sentinel for codex usage-limit (set by dispatch_codex.sh /
+  # dispatch_slice_audit.sh via codex_usage_limit.sh). The slice's status
+  # didn't change because codex never produced work — do NOT increment the
+  # slice failure counter (this isn't the slice's fault) and signal the
+  # main loop to exit cleanly. The cooldown gate at loop top will respect
+  # codex_not_before on next start.
+  if [[ "$rc" -eq 42 ]]; then
+    log "CIRCUIT BREAKER: codex usage limit (slice=$sid type=$dispatch_type rc=42); exiting cleanly"
+    return 3
+  fi
+
   status_after=$(read_slice_field "$sid" "status" 2>/dev/null || echo "")
 
   if [[ -n "$status_before" && -n "$status_after" ]] \
@@ -435,6 +446,34 @@ while true; do
   if ! check_circuit_breakers; then
     rm -f "$PIDFILE"
     exit 0
+  fi
+
+  # Codex cooldown gate (Tier A.A3 + Tier B.B3). codex_usage_limit.sh
+  # writes codex_not_before when a usage-limit error is observed; default
+  # behavior is to sleep until the parsed retry-time (bounded by TICK so a
+  # stale/clock-corrupted file can't strand the runner). When
+  # LOOP_AUTO_CLAUDE_FALLBACK=1 is set, we DON'T sleep — the dispatcher
+  # checks the same sentinel and routes to claude instead, so the runner
+  # should keep ticking. Missing or unreadable file = no cooldown.
+  if [[ -r "$LOOP_STATE_DIR/codex_not_before" ]]; then
+    not_before=$(cat "$LOOP_STATE_DIR/codex_not_before" 2>/dev/null || echo 0)
+    if [[ "$not_before" =~ ^[0-9]+$ ]] && (( $(date +%s) < not_before )); then
+      if [[ "${LOOP_AUTO_CLAUDE_FALLBACK:-0}" == "1" ]]; then
+        # Don't sleep: dispatcher will route to claude. Just log once and
+        # continue to dispatch normally.
+        :
+      else
+        remaining=$(( not_before - $(date +%s) ))
+        sleep_for=$(( remaining < TICK ? remaining : TICK ))
+        log "codex cooldown active; remaining=${remaining}s sleep=${sleep_for}s"
+        sleep "$sleep_for"
+        continue
+      fi
+    else
+      # Cooldown expired (or junk in the file) — clear it.
+      rm -f "$LOOP_STATE_DIR/codex_not_before"
+      log "codex cooldown cleared; resuming dispatch"
+    fi
   fi
 
   if ! "$LOOP_DIR/preconditions.sh" >>"$LOG" 2>&1; then
@@ -510,7 +549,10 @@ while true; do
       ;;
   esac
 
-  if [[ $guard_rc -eq 2 ]]; then
+  # guard_rc=2 — slice consecutive-failure cap; guard_rc=3 — codex usage
+  # limit (Tier A). Both are clean-exit signals. The cooldown gate at loop
+  # top will pick up codex_not_before on next runner start.
+  if [[ $guard_rc -eq 2 || $guard_rc -eq 3 ]]; then
     rm -f "$PIDFILE"; exit 0
   fi
 

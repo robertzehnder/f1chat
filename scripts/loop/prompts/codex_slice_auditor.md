@@ -67,7 +67,7 @@ Audit the SLICE PLAN ONLY. Do NOT touch any other file. Do NOT run npm / web / b
 # Verdict semantics
 
 - **APPROVED** — High, Medium, AND Low buckets are ALL empty. The plan is good to implement. **Do not** apply any inline edits to the plan body. Set frontmatter `status: pending`, `owner: claude`, refresh timestamp. Commit with `[slice:<id>][plan-approved]`.
-- **PASS-WITH-DEFERRED** (only allowed at iteration ≥9 per round-12 cap of 10) — set frontmatter `status: pending`, `owner: claude`, document deferred Mediums/Lows. Commit with `[slice:<id>][plan-pass-with-deferred]`.
+- **PASS-WITH-DEFERRED** (only allowed at the penultimate iteration or later — i.e. when `iteration ≥ LOOP_MAX_PLAN_ITERATIONS - 1`; the dispatcher logs `plan-revise iteration N of M` so you can see the current N and M) — set frontmatter `status: pending`, `owner: claude`, document deferred Mediums/Lows. Commit with `[slice:<id>][plan-pass-with-deferred]`.
 - **REVISE** — At least one item exists in any of High / Medium / Low. **Do not** apply inline fixes — leave that to the Claude reviser. Set frontmatter `status: revising_plan`, `owner: claude`, refresh timestamp. Commit with `[slice:<id>][plan-revise]`.
 - **REJECT** — Architectural problem you cannot describe as discrete action items. Set frontmatter `status: blocked`, `owner: user`. Commit with `[slice:<id>][plan-reject]`.
 

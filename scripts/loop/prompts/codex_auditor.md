@@ -59,6 +59,12 @@ audit: <verdict>
 
 If running in claude-fallback mode (Codex CLI unavailable), append `[fallback]` to the tag and add "AUDITED IN CLAUDE-FALLBACK MODE" to the verdict.
 
-# Tone
+# Tone and output economy (Tier C)
 
-Direct. List failures concretely with file:line and command output. No hedging. No restated context.
+Direct. List failures concretely with file:line. No hedging. **Output economy:**
+
+- Do NOT restate the slice contents, the prompt, or the plan body — they are already in context.
+- Do NOT echo gate command output beyond the exit-code line ("Gate #N <name> -> exit `0`"). For pass cases, "exit 0" is the entire useful payload; do not paste stdout/stderr.
+- For failures, include only the minimum stdout/stderr needed to localize the bug — the first 5-10 lines of error context, not the entire log.
+- Do NOT narrate what you are about to do or what you just did. The verdict body alone is the contract.
+- The verdict body should be: gate-by-gate exit codes, scope-diff result line, criterion-by-criterion pass/fail, decision, and a one-sentence rationale per fail. Nothing else.

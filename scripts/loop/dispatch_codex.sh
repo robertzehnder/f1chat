@@ -95,6 +95,8 @@ trap 'rm -f "$worktree_path_file" "$inline_payload"' EXIT
 )
 
 run_codex_native() {
+  local capture="$LOOP_STATE_DIR/.codex_capture_${slice_id}.$$"
+  local rc=0
   (
     cd "$slice_worktree"
     {
@@ -111,8 +113,17 @@ run_codex_native() {
         -c model_reasoning_summary=none \
         -c model_verbosity=low \
         -o "$LOOP_STATE_DIR/.last_msg_${slice_id}.txt" \
-        -
-  )
+        - 2>&1 | tee "$capture"
+  ) || rc=$?
+  # Detect Codex usage-limit errors: write cooldown sentinel + return rc=42
+  # so the runner can pause cleanly without burning more retries.
+  if [[ -f "$capture" ]] && \
+     "$LOOP_MAIN_WORKTREE/scripts/loop/codex_usage_limit.sh" "$capture" 2>/dev/null; then
+    rm -f "$capture"
+    return 42
+  fi
+  rm -f "$capture"
+  return "$rc"
 }
 
 run_claude_fallback() {
@@ -120,7 +131,8 @@ run_claude_fallback() {
     cd "$slice_worktree"
     claude --print \
       --append-system-prompt "$(cat "$prompt_file")
-ROLEPLAY: You are the Codex audit agent. You did NOT implement this slice. Be more skeptical than usual. Assume the implementer cut corners. Read the diff with fresh eyes; do not trust 'Slice-completion note' claims without re-running the gate commands yourself." \
+ROLEPLAY (adversarial self-audit, Tier B): You did NOT implement this slice. You are the impartial auditor. Be ruthlessly skeptical. Assume the implementer cut corners — find them. Re-run EVERY gate command yourself; never trust 'Slice-completion note' claims without executing them. The diff in the prompt is your scope-check evidence — if any file outside 'Changed files expected' is modified, that is REJECT for scope creep regardless of substantive correctness.
+Cold context discipline: do NOT use any inherited conversation context. Audit the slice from scratch as if seeing it for the first time." \
       --permission-mode acceptEdits \
       --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
 Audit slice diagnostic/slices/${slice_id}.md.
@@ -147,13 +159,52 @@ EOF
   )
 }
 
-# Run the agent. Capture rc but do NOT abort on non-zero — Codex frequently
-# exits rc=1 even on successful audits (round-7 C-5).
+# Agent selection. Precedence (Tier B):
+#   1. LOOP_FORCE_CLAUDE_AUDIT=1     → claude only (skip codex unconditionally)
+#   2. codex_not_before active AND LOOP_AUTO_CLAUDE_FALLBACK=1
+#                                    → claude (avoids re-hitting the limit)
+#   3. codex CLI on PATH             → codex; on usage-limit AND
+#                                      LOOP_AUTO_CLAUDE_FALLBACK=1 the inner
+#                                      run_codex_native may itself fall through
+#                                      to claude (handled below)
+#   4. claude CLI on PATH            → claude (legacy "codex CLI missing")
+#
+# Capture rc but do NOT abort on non-zero — Codex frequently exits rc=1 even
+# on successful audits (round-7 C-5).
 agent_rc=0
 agent_kind=""
-if command -v codex >/dev/null 2>&1; then
+
+_codex_quota_active() {
+  local nb_file="$LOOP_STATE_DIR/codex_not_before"
+  [[ -r "$nb_file" ]] || return 1
+  local nb
+  nb=$(cat "$nb_file" 2>/dev/null || echo 0)
+  [[ "$nb" =~ ^[0-9]+$ ]] || return 1
+  (( $(date +%s) < nb ))
+}
+
+if [[ "${LOOP_FORCE_CLAUDE_AUDIT:-0}" == "1" ]]; then
+  echo "[$(date -Iseconds)] LOOP_FORCE_CLAUDE_AUDIT=1; skipping codex" >> "$LOG"
+  if command -v claude >/dev/null 2>&1; then
+    run_claude_fallback || agent_rc=$?
+    agent_kind="codex-fallback-forced"
+  else
+    echo "FORCE_CLAUDE_AUDIT set but claude CLI not available" >&2; exit 3
+  fi
+elif [[ "${LOOP_AUTO_CLAUDE_FALLBACK:-0}" == "1" ]] && _codex_quota_active && command -v claude >/dev/null 2>&1; then
+  echo "[$(date -Iseconds)] codex quota cooldown active + LOOP_AUTO_CLAUDE_FALLBACK=1; routing to claude" >> "$LOG"
+  run_claude_fallback || agent_rc=$?
+  agent_kind="codex-fallback-on-quota"
+elif command -v codex >/dev/null 2>&1; then
   run_codex_native || agent_rc=$?
-  agent_kind="codex"
+  if [[ "$agent_rc" -eq 42 ]] && [[ "${LOOP_AUTO_CLAUDE_FALLBACK:-0}" == "1" ]] && command -v claude >/dev/null 2>&1; then
+    echo "[$(date -Iseconds)] codex hit usage limit + LOOP_AUTO_CLAUDE_FALLBACK=1; falling through to claude" >> "$LOG"
+    agent_rc=0
+    run_claude_fallback || agent_rc=$?
+    agent_kind="codex-fallback-on-quota"
+  else
+    agent_kind="codex"
+  fi
 elif command -v claude >/dev/null 2>&1; then
   echo "[$(date -Iseconds)] codex CLI not found; using claude fallback" >> "$LOG"
   run_claude_fallback || agent_rc=$?
@@ -163,14 +214,18 @@ else
   exit 3
 fi
 
-# Cost telemetry (round-12 Item 9).
+# Cost telemetry (round-12 Item 9). Always run, even on rc=42, so the ledger
+# carries a row for every dispatch attempt.
 "$LOOP_MAIN_WORKTREE/scripts/loop/post_dispatch_cost.sh" "$slice_id" "$agent_kind" || true
 
-# Mirror the slice file from slice branch back to integration under lock.
-# Expected terminal states for impl-audit: ready_to_merge | revising | blocked.
-with_repo_lock "dispatch_codex:$slice_id:mirror" \
-  mirror_slice_to_integration "$slice_id" "ready_to_merge|revising|blocked" \
-  || echo "[$stamp] dispatch_codex $slice_id mirror returned non-zero" >> "$LOG"
+# Skip the mirror on rc=42 (codex usage limit) — the slice file was not
+# modified by the agent, so there's nothing to mirror, and a failed mirror
+# would only generate misleading "refusing to mirror" log noise.
+if [[ "$agent_rc" -ne 42 ]]; then
+  with_repo_lock "dispatch_codex:$slice_id:mirror" \
+    mirror_slice_to_integration "$slice_id" "ready_to_merge|revising|blocked" \
+    || echo "[$stamp] dispatch_codex $slice_id mirror returned non-zero" >> "$LOG"
+fi
 
 echo "[$(date -Iseconds)] dispatch_codex $slice_id end (agent_rc=$agent_rc)" >> "$LOG"
 exit $agent_rc

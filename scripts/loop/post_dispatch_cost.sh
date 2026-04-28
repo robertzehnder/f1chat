@@ -32,7 +32,10 @@ model="${3:-}"
 billing_source="${LOOP_BILLING_SOURCE:-}"
 if [[ -z "$billing_source" ]]; then
   case "$agent" in
-    claude|claude-revise|claude-repair|codex|codex-native|codex-claude-fallback|codex-slice-audit|codex-slice-audit-claude-fallback)
+    claude|claude-revise|claude-repair|codex|codex-native|\
+    codex-claude-fallback|codex-slice-audit|codex-slice-audit-claude-fallback|\
+    codex-fallback-on-quota|codex-fallback-forced|\
+    codex-slice-audit-fallback-on-quota|codex-slice-audit-fallback-forced)
       billing_source="plan" ;;
     *)
       billing_source="plan" ;;  # conservative default
@@ -50,8 +53,14 @@ if [[ -z "$model" ]]; then
     claude)              model="${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}" ;;
     claude-revise)       model="${LOOP_CLAUDE_REVISE_MODEL:-claude-opus-4-7}" ;;
     claude-repair)       model="${LOOP_CLAUDE_REPAIR_MODEL:-claude-opus-4-7}" ;;
-    codex|codex-native)  model="gpt-5" ;;
-    codex-claude-fallback) model="${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}" ;;
+    codex|codex-native|codex-slice-audit)  model="${CODEX_AUDIT_MODEL:-gpt-5.4}" ;;
+    codex-claude-fallback|\
+    codex-slice-audit-claude-fallback|\
+    codex-fallback-on-quota|\
+    codex-fallback-forced|\
+    codex-slice-audit-fallback-on-quota|\
+    codex-slice-audit-fallback-forced)
+                         model="${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}" ;;
     *)                   model="claude-cli" ;;  # placeholder
   esac
 fi
@@ -107,13 +116,18 @@ cache_write_tokens=0
 token_source="unknown"
 
 if [[ -n "$session_log" && -f "$session_log" ]]; then
-  # Try to parse usage blocks via python — handles both Claude and Codex shapes.
+  # Codex CLI v0.125+ emits cumulative `total_token_usage` per token_count
+  # event_msg — taking the LAST event gives the session total. Claude SDK
+  # rolls forward usage per-turn — sum across turns. Distinguish by file
+  # path so cumulative codex totals aren't double-counted.
   read -r input_tokens output_tokens cache_read_tokens cache_write_tokens token_source < <(
     python3 - "$session_log" <<'PY'
-import sys, json
+import sys, json, os
 path = sys.argv[1]
+is_codex = "/.codex/" in path
 in_tok = out_tok = cache_r = cache_w = 0
 src = "unknown"
+codex_last = None  # most recent {input,cached_input,output,reasoning} from token_count event
 try:
     with open(path) as fh:
         lines = fh.readlines()
@@ -125,7 +139,26 @@ try:
             obj = json.loads(line)
         except Exception:
             continue
-        # Claude: top-level "usage" or nested in "message.usage"
+
+        if is_codex:
+            # Codex CLI v0.125+ format:
+            #   {"type":"event_msg","payload":{"type":"token_count",
+            #     "info":{"total_token_usage":{...},"last_token_usage":{...},...},...}}
+            if obj.get("type") == "event_msg":
+                payload = obj.get("payload") or {}
+                if payload.get("type") == "token_count":
+                    info = payload.get("info") or {}
+                    tot = info.get("total_token_usage") or {}
+                    if isinstance(tot, dict):
+                        codex_last = {
+                            "in":   int(tot.get("input_tokens", 0) or 0),
+                            "cr":   int(tot.get("cached_input_tokens", 0) or 0),
+                            "out":  int(tot.get("output_tokens", 0) or 0),
+                            "reas": int(tot.get("reasoning_output_tokens", 0) or 0),
+                        }
+            continue
+
+        # Claude SDK: per-turn usage rolls forward; sum across turns.
         for path_to_usage in [
             obj.get("usage"),
             (obj.get("message") or {}).get("usage") if isinstance(obj.get("message"), dict) else None,
@@ -137,11 +170,29 @@ try:
                 cache_r   += int(path_to_usage.get("cache_read_input_tokens",  path_to_usage.get("cache_read_tokens", 0)) or 0)
                 cache_w   += int(path_to_usage.get("cache_creation_input_tokens", path_to_usage.get("cache_write_tokens", 0)) or 0)
                 src = "session-log"
+    if is_codex and codex_last:
+        in_tok  = codex_last["in"]
+        cache_r = codex_last["cr"]
+        out_tok = codex_last["out"] + codex_last["reas"]  # reasoning is billed as output
+        cache_w = 0
+        src = "codex_cli_session_v2"
 except Exception:
     pass
 print(in_tok, out_tok, cache_r, cache_w, src)
 PY
   )
+fi
+
+# High-uncached-input warning — uncached input tokens are what actually
+# count against quota / cost most. Threshold defaults to 100k; tune via
+# LOOP_PER_DISPATCH_UNCACHED_WARN. (input_tokens already includes cached
+# in the codex shape — uncached = input - cache_read.)
+WARN_UNCACHED="${LOOP_PER_DISPATCH_UNCACHED_WARN:-100000}"
+if [[ "$input_tokens" =~ ^[0-9]+$ && "$cache_read_tokens" =~ ^[0-9]+$ ]]; then
+  uncached=$(( input_tokens - cache_read_tokens ))
+  if (( uncached > WARN_UNCACHED )); then
+    logmsg "WARN high-uncached-input slice=$slice_id agent=$agent uncached=${uncached} threshold=${WARN_UNCACHED}"
+  fi
 fi
 
 # ---------------- Cost computation ----------------
