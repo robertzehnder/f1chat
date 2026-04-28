@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:15:33Z
+updated: 2026-04-28T04:17:31Z
 ---
 
 ## Goal
@@ -478,6 +478,22 @@ _None._
 
 ### Low
 _None._
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+_None._
+
+### Medium
+_None._
+
+### Low
+- [ ] Correct the Step 1.1 / Decisions nullability rationale to distinguish `COUNT(*)` aggregates from nullable `MAX` / `AVG` / `MIN` aggregates: `car_samples`, `brake_samples`, and `location_samples` evaluate to `0` on empty lap windows and should not be described as columns the canonical query can null out.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
