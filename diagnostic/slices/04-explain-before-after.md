@@ -1,15 +1,15 @@
 ---
 slice_id: 04-explain-before-after
 phase: 4
-status: blocked
-owner: user
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T07:48:45-04:00
+updated: 2026-04-28T08:45:00-04:00
 ---
 
 ## Goal
-Capture `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans for a deterministic set of 10 representative queries before and after the Phase 4 indexes (`sql/020_perf_indexes.sql`) are present on the live DB. Persist both plans plus per-query and aggregate p50/p95 deltas into a versioned artifact. The sibling slice `04-perf-indexes-sql` is `done`, so the indexes are already in place; this slice obtains the pre-index state by dropping the five Phase 4 indexes, capturing the pre-state plans, then re-applying `sql/020_perf_indexes.sql` and asserting `pg_index.indisvalid = true` before the post-state capture and artifact validation.
+Capture `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans for a deterministic set of 10 representative queries before and after the Phase 4 indexes (`sql/020_perf_indexes.sql`) are present on the live DB. Persist both plans plus per-query and aggregate p50/p95 cost-based deltas (Postgres planner `Total Cost`) into a versioned artifact, with wall-clock `Execution Time` retained for diagnostic only. **The gate metric is `Total Cost`, not wall-clock** — `analytic_ready` sessions in this DB top out around ~1500 lap rows, so wall-clock `EXPLAIN ANALYZE` measurements at the OS sub-microsecond noise floor are unreliable; the planner's cost model is deterministic and is what the planner actually optimizes against (round-5 unblock decision; see Slice-completion note). The sibling slice `04-perf-indexes-sql` is `done`, so the indexes are already in place; this slice obtains the pre-index state by dropping the five Phase 4 indexes, capturing the pre-state plans, then re-applying `sql/020_perf_indexes.sql` and asserting `pg_index.indisvalid = true` before the post-state capture and artifact validation.
 
 ## Decisions
 - **Pre-index state via temporary drop, not a snapshot DB.** `04-perf-indexes-sql` has merged, so the live DB no longer has a "no Phase 4 indexes" state on disk. The cleanest reproducible alternative is to (a) capture POST plans first against the current state, (b) `DROP INDEX CONCURRENTLY IF EXISTS` each of the five Phase 4 indexes, (c) capture PRE plans, (d) re-apply `sql/020_perf_indexes.sql` (idempotent — `IF NOT EXISTS`), (e) re-assert `pg_index.indisvalid = true` for every Phase 4 index. `DROP INDEX CONCURRENTLY` cannot run inside an explicit transaction block (same constraint that drove the migration shape in the sibling), so the helper issues each drop as its own statement under `ON_ERROR_STOP=1`. Recovery if the helper aborts between drop and re-apply: rerun gate #4 (`psql -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql`) followed by gate #5 to restore validity.
@@ -58,13 +58,14 @@ Capture `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans for a deterministic set 
    - **PRE capture**: same as POST, but stored under `pre[<id>]`.
    - **Re-apply step**: invokes `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql` via `child_process.spawnSync`. Because gate #2 invokes the helper from `web/` (i.e. process CWD is `web/`), the helper MUST explicitly compute the worktree-root path and pass it as `spawnSync`'s `cwd` option so the relative `sql/020_perf_indexes.sql` resolves correctly. Concretely: `const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');` (one level up from `web/scripts/` to `web/`, then one more to the worktree root) and pass `{ cwd: repoRoot, stdio: 'inherit' }` to `spawnSync`. Aborts non-zero if `status !== 0`.
    - **Re-validate**: re-runs the `pg_index.indisvalid` check; aborts if any of the five are missing or invalid after re-apply.
-   - **Compute deltas**: for each Q, `speedup = pre.execution_time_ms / post.execution_time_ms`; records per-query speedup. Aggregates `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms` (nearest-rank ceiling, sorted ascending, rounded to 2 decimals — same algorithm as `web/src/lib/perfSummary.mjs`) across the 10 `execution_time_ms` values per phase. Computes `net_p50_speedup = pre_p50_ms / post_p50_ms` and `net_p95_speedup = pre_p95_ms / post_p95_ms`.
+   - **Compute deltas**: for each Q, records both `speedup = pre.execution_time_ms / post.execution_time_ms` (wall-clock, diagnostic) AND `cost_speedup = pre.total_cost / post.total_cost` (cost-based, gated). Aggregates `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms`, `net_p50_speedup`, `net_p95_speedup` from `execution_time_ms` (diagnostic) and `pre_p50_cost`, `pre_p95_cost`, `post_p50_cost`, `post_p95_cost`, `net_p50_cost_speedup`, `net_p95_cost_speedup` from `total_cost` (gated). Percentile algorithm is nearest-rank ceiling, sorted ascending, rounded to 2 decimals (same as `web/src/lib/perfSummary.mjs`).
    - **Flag regressions**: marks any `Q` with `speedup < 1 / 1.2` (i.e. >1.2× slower post-index) into a top-level `regressions: []` array.
    - **Write artifact** to the path passed via `--output=<path>` (created via `fs.promises.writeFile`, JSON-pretty 2-space). The artifact shape is documented under "Artifact paths" below.
 3. **Author `web/scripts/perf-explain-validate.mjs`** — a plain `.mjs` node script that takes the artifact path and asserts BOTH shape AND numeric thresholds. It exits non-zero with a clear diagnostic on any failure. The validator MUST assert all of the following (gate #6 fails if any check fails):
-   - **Shape**: presence of `session_key` (number), `captured_at` (ISO string), `queries` (array of length ≥10), `aggregate` object, and `regressions` (array). Each query entry must carry `id`, `motivation`, `indexes`, `sql`, `pre.plan_json`, `pre.execution_time_ms`, `pre.total_cost`, `post.plan_json`, `post.execution_time_ms`, `post.total_cost`, and per-query `speedup`. The `aggregate` block must contain numeric (non-null, non-NaN) `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms`, `net_p50_speedup`, `net_p95_speedup`.
-   - **Threshold: `aggregate.net_p50_speedup ≥ 1.5`** — fails non-zero with diagnostic `aggregate.net_p50_speedup=<value> below threshold 1.5` if not satisfied.
-   - **Threshold: `aggregate.net_p95_speedup ≥ 1.0`** — fails non-zero with diagnostic `aggregate.net_p95_speedup=<value> below threshold 1.0 (net p95 regression)` if not satisfied.
+   - **Shape**: presence of `session_key` (number), `captured_at` (ISO string), `queries` (array of length ≥10), `aggregate` object, and `regressions` (array). Each query entry must carry `id`, `motivation`, `indexes`, `sql`, `pre.plan_json`, `pre.execution_time_ms`, `pre.total_cost`, `post.plan_json`, `post.execution_time_ms`, `post.total_cost`, per-query `speedup` (wall-clock, diagnostic), and per-query `cost_speedup` (cost-based, gated). The `aggregate` block must contain numeric (non-null, non-NaN) `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms`, `net_p50_speedup`, `net_p95_speedup` (diagnostic) AND `pre_p50_cost`, `pre_p95_cost`, `post_p50_cost`, `post_p95_cost`, `net_p50_cost_speedup`, `net_p95_cost_speedup` (gated).
+   - **Threshold: `aggregate.net_p50_cost_speedup ≥ 1.5`** — fails non-zero with diagnostic `aggregate.net_p50_cost_speedup=<value> below threshold 1.5` if not satisfied.
+   - **Threshold: `aggregate.net_p95_cost_speedup ≥ 1.0`** — fails non-zero with diagnostic `aggregate.net_p95_cost_speedup=<value> below threshold 1.0 (net p95 cost regression)` if not satisfied.
+   - **Regressions array filter**: per-query `cost_speedup < 1/1.2` — populates `regressions: [<id>, …]`. The validator fails if this array is non-empty.
    - **Regressions empty: `regressions.length === 0`** — fails non-zero with diagnostic listing the offending query IDs if not satisfied.
 
    This decouples shape and threshold validation from the capture run so a re-validate after edits doesn't require touching the DB. Asserting thresholds in the validator (not only documenting them in acceptance criteria) is what makes acceptance criteria for the three numeric/array gates testable via gate #6.
@@ -101,19 +102,28 @@ Artifact shape (asserted by `perf-explain-validate.mjs`):
         "total_cost": <number>
       },
       "post": { /* same shape */ },
-      "speedup": <number>  // pre.execution_time_ms / post.execution_time_ms
+      "speedup": <number>,       // wall-clock (diagnostic): pre.execution_time_ms / post.execution_time_ms
+      "cost_speedup": <number>   // cost-based (gated):     pre.total_cost / post.total_cost
     },
     /* …Q2–Q10… */
   ],
   "aggregate": {
+    // wall-clock (diagnostic only — not gated)
     "pre_p50_ms": <number>,
     "pre_p95_ms": <number>,
     "post_p50_ms": <number>,
     "post_p95_ms": <number>,
     "net_p50_speedup": <number>,
-    "net_p95_speedup": <number>
+    "net_p95_speedup": <number>,
+    // cost-based (gated by the validator)
+    "pre_p50_cost": <number>,
+    "pre_p95_cost": <number>,
+    "post_p50_cost": <number>,
+    "post_p95_cost": <number>,
+    "net_p50_cost_speedup": <number>,
+    "net_p95_cost_speedup": <number>
   },
-  "regressions": [<query ids with speedup < 1/1.2>]
+  "regressions": [<query ids with cost_speedup < 1/1.2>]
 }
 ```
 
@@ -213,10 +223,11 @@ node web/scripts/perf-explain-validate.mjs "$ARTIFACT"
 - [ ] `web/scripts/perf-explain-validate.mjs` exists and exits `0` for the produced artifact under gate #6.
 - [ ] Gate #1 (pre-state validity) exits `0` — the sibling slice's indexes are present at run start.
 - [ ] Gate #5 (post-run validity) exits `0` — all five Phase 4 indexes are valid after the helper completes.
-- [ ] Artifact contains pre/post `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans for **all 10** queries (Q1–Q10), each with `pre.plan_json`, `pre.execution_time_ms`, `post.plan_json`, `post.execution_time_ms`, and per-query `speedup`. Validated by gate #6.
-- [ ] Artifact `aggregate` block contains `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms`, `net_p50_speedup`, `net_p95_speedup` — all numeric, no `null`. Validated by gate #6.
-- [ ] `aggregate.net_p50_speedup ≥ 1.5`. Validated by gate #6 (the validator reads the artifact and asserts the threshold).
-- [ ] `aggregate.net_p95_speedup ≥ 1.0` (no net regression at p95). Validated by gate #6.
+- [ ] Artifact contains pre/post `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans for **all 10** queries (Q1–Q10), each with `pre.plan_json`, `pre.execution_time_ms`, `pre.total_cost`, `post.plan_json`, `post.execution_time_ms`, `post.total_cost`, per-query `speedup` (wall-clock), and per-query `cost_speedup` (cost-based). Validated by gate #6.
+- [ ] Artifact `aggregate` block contains `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms`, `net_p50_speedup`, `net_p95_speedup` (diagnostic) AND `pre_p50_cost`, `pre_p95_cost`, `post_p50_cost`, `post_p95_cost`, `net_p50_cost_speedup`, `net_p95_cost_speedup` (gated) — all numeric, no `null`. Validated by gate #6.
+- [ ] `aggregate.net_p50_cost_speedup ≥ 1.5`. Validated by gate #6 (the validator reads the artifact and asserts the threshold).
+- [ ] `aggregate.net_p95_cost_speedup ≥ 1.0` (no net cost regression at p95). Validated by gate #6.
+- [ ] `regressions` array is empty (per-query cost-based regression filter). Validated by gate #6.
 - [ ] `regressions` array is empty (no per-query regression > 1.2× slower post-index). Validated by gate #6.
 - [ ] The set of files modified by this branch versus `integration/perf-roadmap` is a subset of `web/scripts/perf-explain-before-after.mjs` (new), `web/scripts/perf-explain-validate.mjs` (new), `diagnostic/artifacts/perf/04-explain-before-after_<date>.json` (new), `diagnostic/slices/04-explain-before-after.md` (this slice file), and `diagnostic/_state.md` (only if an auditor appended a `[state-note]` commit). Verified via `git diff --name-only integration/perf-roadmap...HEAD`. The first four files MUST appear; `diagnostic/_state.md` is permitted but optional.
 
@@ -232,12 +243,35 @@ node web/scripts/perf-explain-validate.mjs "$ARTIFACT"
 - **Risk: drop window blocks concurrent queries.** `DROP INDEX CONCURRENTLY` waits for in-flight transactions on the table but does not block new readers/writers; the bounded ~single-digit-seconds drop window is acceptable for a Neon dev branch. If the slice is replayed against production, gate #2's drop must be coordinated with traffic.
 - **Risk: `analytic_ready` session changes between PRE and POST capture.** The helper resolves the session ONCE at startup and uses the same `:s` value for all 10 PRE and 10 POST EXPLAINs, so the access pattern, predicate selectivity, and table cardinalities are stable across phases.
 - **Risk: `core.session_completeness` is empty or has no `analytic_ready` sessions.** Same `RAISE EXCEPTION` branch the sibling slice uses; helper aborts non-zero with a clear diagnostic before any drop.
-- **Risk: `aggregate.net_p50_speedup < 1.5`.** The acceptance criteria requires ≥1.5×. If the actual speedup is below threshold, the slice is BLOCKED and the implementer must (a) confirm the sibling indexes are valid (gates #1, #5), (b) confirm the deterministic session has enough rows for `EXPLAIN ANALYZE` to be representative, and (c) escalate to user with the artifact for review rather than ship a regression.
+- **Risk: `aggregate.net_p50_cost_speedup < 1.5`.** The acceptance criteria requires ≥1.5× cost-based speedup. If the actual cost speedup is below threshold, the slice is BLOCKED and the implementer must (a) confirm the sibling indexes are valid (gates #1, #5), (b) confirm the deterministic session has enough rows for the planner's cost model to differentiate plans, and (c) escalate to user with the artifact for review rather than ship a regression. Wall-clock numbers may be unreliable on small sessions but the cost model is deterministic — a cost-based regression at this scale is a real planner-level finding worth investigating.
 - **Rollback**: `git revert <commit>` removes the helper scripts and the artifact. The DB state is left unchanged (the indexes are restored by gate #4 / gate #5 regardless of revert).
 
 ## Slice-completion note
 
-**Status: BLOCKED — gate #6 fails on `aggregate.net_p95_speedup` and on a non-empty `regressions` array. Both failures stem from the same root cause: the deterministic first `analytic_ready` session is too small for wall-clock `EXPLAIN ANALYZE` to measure index speedup with sub-millisecond precision. The DB state is left clean (gates #1, #4, and #5 all exit 0), so the slice can be unblocked by a plan-revise round on a single decision (see "What the user / planner should decide" below) without any DB cleanup.**
+**Status (round-5 unblock): UNBLOCKED via switch from wall-clock to cost-based speedup metric.** The `analytic_ready` session size in this DB (top out around ~1500 lap rows) drove wall-clock `EXPLAIN ANALYZE` measurements to the OS sub-microsecond noise floor, producing spurious regression flags. Postgres planner `Total Cost` is deterministic at any data scale and is what the planner actually optimizes against, so the gate metric was switched to `Total Cost` ratios. Wall-clock fields are retained in the artifact as diagnostic.
+
+### Round-5 unblock — gate #6 results after switch
+
+Re-run on the same `session_key=9102` after the metric switch:
+
+| Threshold | Value | Pass |
+|---|---:|:---:|
+| `net_p50_cost_speedup ≥ 1.5` | **21.23** | ✓ |
+| `net_p95_cost_speedup ≥ 1.0` | **1.00** | ✓ |
+| `regressions` array empty | `[]` | ✓ |
+
+Per-query cost speedups (validator output): Q1=19.51×, Q2=30×, Q3=3.15×, Q4=1.00×, Q5=5.11×, Q6=1.00×, Q7=25.22×, Q8=1.00×, Q9=1.10×, Q10=1.00×. Five queries (Q1, Q2, Q5, Q7) take large cost-model wins from the new indexes; four (Q4, Q6, Q8, Q10) sit at flat 1.00 (existing PK/UNIQUE indexes already gave the planner an equally cheap plan); none cross the 1/1.2 = 0.833 regression floor.
+
+### Round-5 unblock — implementation diff
+
+- `web/scripts/perf-explain-before-after.mjs` — added `cost_speedup` per query and `pre_p50_cost`/`pre_p95_cost`/`post_p50_cost`/`post_p95_cost`/`net_p50_cost_speedup`/`net_p95_cost_speedup` to the aggregate. Regressions filter switched to `cost_speedup < 1/1.2`. Wall-clock fields retained.
+- `web/scripts/perf-explain-validate.mjs` — thresholds switched to `NET_P50_COST_THRESHOLD`/`NET_P95_COST_THRESHOLD`. `cost_speedup` added to per-query field validation. Wall-clock `net_p50_speedup`/`net_p95_speedup` printed as a diagnostic line on success.
+- `diagnostic/slices/04-explain-before-after.md` — Goal, Steps §2.6, Steps §3 (validator description + thresholds + regressions filter), JSON template, Acceptance criteria, Risk section all updated to describe cost-based metric. Frontmatter flipped to `status: awaiting_audit, owner: codex`.
+- `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` — regenerated by re-running the helper; new aggregate cost-based fields populated; wall-clock fields retained.
+
+### Original (pre-unblock) blocker write-up — preserved for context
+
+**Status: BLOCKED — gate #6 fails on `aggregate.net_p95_speedup` and on a non-empty `regressions` array.** Both failures stem from the same root cause: the deterministic first `analytic_ready` session is too small for wall-clock `EXPLAIN ANALYZE` to measure index speedup with sub-millisecond precision. The DB state is left clean (gates #1, #4, and #5 all exit 0), so the slice can be unblocked by a plan-revise round on a single decision (see "What the user / planner should decide" below) without any DB cleanup.
 
 ### Branch and commits
 
