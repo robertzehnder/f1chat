@@ -60,3 +60,4 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
 - For config-only infra slices, gate live-system parity and artifact parity for every mutable setting the plan may change, not just the primary knob pair (slice:06-cu-rightsize).
 - Cite only artifact-backed evidence requirements in plan steps and gates; if a metric is required, one listed input must actually expose it (slice:06-cu-rightsize).
+- If a plan claims user approval preceded a production mutation, gate against a mutation-time artifact or recorded apply timestamp, not only a later verification capture (slice:06-cu-rightsize).
