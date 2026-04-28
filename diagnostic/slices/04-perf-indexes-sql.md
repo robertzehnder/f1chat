@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: blocked
-owner: user
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T00:58:20-04:00
+updated: 2026-04-28T01:25:00-04:00
 ---
 
 ## Goal
@@ -39,15 +39,14 @@ Add the schema-verified indexes from roadmap §4 Phase 4 to support common acces
 - `psql` available on PATH for the gate commands below (same prerequisite as the Phase 3 materialization slices).
 
 ## Steps
-1. Author `sql/020_perf_indexes.sql` listing one `CREATE INDEX CONCURRENTLY IF NOT EXISTS …;` statement per access pattern from roadmap §4 Phase 4, with a one-line `--` comment above each statement naming the access pattern it supports. No `BEGIN; … COMMIT;` wrapper. The exact statements (column lists schema-verified against `sql/002_create_tables.sql`):
-   1. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_driver_lap ON raw.laps (session_key, driver_number, lap_number);` — driver+session+lap primary access pattern.
-   2. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_include ON raw.laps (session_key) INCLUDE (lap_duration, is_pit_out_lap, duration_sector_1, duration_sector_2, duration_sector_3);` — index-only scans for valid-lap and sector filters. Schema-verified: `raw.laps` has `is_pit_out_lap` but **not** `is_pit_in_lap`, and **no compound column** (compound is on `raw.stints`); pit-in is derived from `raw.pit` at the semantic layer.
-   3. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_stints_session_driver_window ON raw.stints (session_key, driver_number, lap_start, lap_end) INCLUDE (compound);` — compound dimension and stint-window join key.
-   4. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_pit_session_driver_lap ON raw.pit (session_key, driver_number, lap_number);` — pit-in lap derivation.
-   5. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_position_history_session_date ON raw.position_history (session_key, date);` — position-history time scans.
-   6. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_driver_valid_partial ON raw.laps (session_key, driver_number) WHERE lap_duration IS NOT NULL;` — partial index for the valid-lap filter.
+1. Author `sql/020_perf_indexes.sql` listing one `CREATE INDEX CONCURRENTLY IF NOT EXISTS …;` statement per access pattern from roadmap §4 Phase 4, with a one-line `--` comment above each statement naming the access pattern it supports. No `BEGIN; … COMMIT;` wrapper. The exact statements (column lists schema-verified against `sql/002_create_tables.sql`). The driver+session+lap primary access pattern is intentionally NOT listed — it is already served by the pre-existing unique index `uq_laps_session_driver_lap` on the same column tuple (`sql/004_constraints.sql:7-8`); a duplicate `idx_raw_laps_session_driver_lap` would be functionally redundant and never picked by the planner (round-5 unblock):
+   1. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_include ON raw.laps (session_key) INCLUDE (lap_duration, is_pit_out_lap, duration_sector_1, duration_sector_2, duration_sector_3);` — index-only scans for valid-lap and sector filters. Schema-verified: `raw.laps` has `is_pit_out_lap` but **not** `is_pit_in_lap`, and **no compound column** (compound is on `raw.stints`); pit-in is derived from `raw.pit` at the semantic layer.
+   2. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_stints_session_driver_window ON raw.stints (session_key, driver_number, lap_start, lap_end) INCLUDE (compound);` — compound dimension and stint-window join key.
+   3. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_pit_session_driver_lap ON raw.pit (session_key, driver_number, lap_number);` — pit-in lap derivation.
+   4. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_position_history_session_date ON raw.position_history (session_key, date);` — position-history time scans.
+   5. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_driver_valid_partial ON raw.laps (session_key, driver_number) WHERE lap_duration IS NOT NULL;` — partial index for the valid-lap filter.
 2. Apply the migration via gate #1 (no `--single-transaction`; each `CREATE INDEX CONCURRENTLY` runs in its own implicit transaction).
-3. Verify every declared index exists AND is valid by asserting `pg_index.indisvalid = true` for each of the six index names under schema `raw` — gate #2. (Pure-existence in `pg_indexes` is insufficient: a `CREATE INDEX CONCURRENTLY` that aborts mid-build leaves an INVALID index the planner will skip, so gate #3 could fall back to Seq Scan even though the index "exists".)
+3. Verify every declared index exists AND is valid by asserting `pg_index.indisvalid = true` for each of the **five** index names under schema `raw` — gate #2. (Pure-existence in `pg_indexes` is insufficient: a `CREATE INDEX CONCURRENTLY` that aborts mid-build leaves an INVALID index the planner will skip, so gate #3 could fall back to Seq Scan even though the index "exists".)
 4. Run `EXPLAIN (FORMAT JSON)` on a deterministic set of representative queries (Q1–Q6 enumerated inline in gate #3, where Q3 is a real stint-window predicate `lap_start <= L AND lap_end >= L` and Q6 is a dedicated assertion that the partial index `idx_raw_laps_session_driver_valid_partial` is picked on its own) pinned to the first `analytic_ready` session selected by:
    ```sql
    SELECT session_key
@@ -62,7 +61,7 @@ Add the schema-verified indexes from roadmap §4 Phase 4 to support common acces
 
 ## Changed files expected
 Files the implementer will add or edit during this slice:
-- `sql/020_perf_indexes.sql` (new — six `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements per Steps §1, no `BEGIN; … COMMIT;` wrapper).
+- `sql/020_perf_indexes.sql` (new — five `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements per Steps §1, no `BEGIN; … COMMIT;` wrapper).
 - `diagnostic/slices/04-perf-indexes-sql.md` (this file — frontmatter status/owner/timestamp transitions and the Slice-completion note only; no edits to the plan body or to any prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes).
 
 Pre-existing branch modification (NOT added by the implementer; carried in from a prior loop step):
@@ -94,7 +93,6 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
   expected text[] := ARRAY[
-    'idx_raw_laps_session_driver_lap',
     'idx_raw_laps_session_include',
     'idx_raw_stints_session_driver_window',
     'idx_raw_pit_session_driver_lap',
@@ -143,14 +141,10 @@ BEGIN
     RAISE EXCEPTION 'no analytic_ready session available for EXPLAIN gate';
   END IF;
 
-  -- Q1: driver+session+lap lookup -> idx_raw_laps_session_driver_lap
-  EXECUTE format($q$EXPLAIN (FORMAT JSON) SELECT * FROM raw.laps
-                    WHERE session_key = %s AND driver_number = 1 AND lap_number = 1$q$, s_key)
-    INTO plan_text;
-  IF plan_text NOT LIKE '%idx_raw_laps_session_driver_lap%'
-     OR plan_text LIKE '%"Node Type": "Seq Scan"%' THEN
-    failures := failures || ' Q1';
-  END IF;
+  -- (Q1 dropped at round-5 unblock: the driver+session+lap access pattern is
+  --  served by the pre-existing unique index uq_laps_session_driver_lap on the
+  --  same column tuple — sql/004_constraints.sql:7-8 — so a duplicate index
+  --  would be functionally redundant and never picked by the planner.)
 
   -- Q2: valid-lap + sector filter -> idx_raw_laps_session_include OR
   --     idx_raw_laps_session_driver_valid_partial (planner's choice).
@@ -231,8 +225,8 @@ npm --prefix web run test:grading
 
 ## Acceptance criteria
 - [ ] `sql/020_perf_indexes.sql` applies cleanly against the live DB — gate #1 (`psql -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql`) exits `0`.
-- [ ] All six declared indexes exist under schema `raw` AND are valid (`pg_index.indisvalid = true`) — gate #2 exits `0` (the DO block raises if any of `idx_raw_laps_session_driver_lap`, `idx_raw_laps_session_include`, `idx_raw_stints_session_driver_window`, `idx_raw_pit_session_driver_lap`, `idx_raw_position_history_session_date`, `idx_raw_laps_session_driver_valid_partial` is missing **or** exists with `indisvalid = false`). The validity check is what guarantees `idx_raw_laps_session_include` is usable on its own even though gate #3's Q2 accepts either lap index.
-- [ ] EXPLAIN against Q1–Q6 (gate #3, pinned to the deterministic first `analytic_ready` session from `core.session_completeness`) reports the corresponding new index name in the plan and does **not** contain `"Node Type": "Seq Scan"` — gate #3 exits `0`. Q2 accepts either `idx_raw_laps_session_include` or `idx_raw_laps_session_driver_valid_partial` (both are legitimate plans for the valid-lap predicate). Q3 uses a stint-window predicate (`lap_start <= L AND lap_end >= L`) that exercises the lap-range columns, not just the `(session_key, driver_number)` prefix. Q6 is a dedicated assertion that requires the partial index `idx_raw_laps_session_driver_valid_partial` specifically (so an invalid-but-named partial index cannot let the gate pass).
+- [ ] All five declared indexes exist under schema `raw` AND are valid (`pg_index.indisvalid = true`) — gate #2 exits `0` (the DO block raises if any of `idx_raw_laps_session_include`, `idx_raw_stints_session_driver_window`, `idx_raw_pit_session_driver_lap`, `idx_raw_position_history_session_date`, `idx_raw_laps_session_driver_valid_partial` is missing **or** exists with `indisvalid = false`). The validity check is what guarantees `idx_raw_laps_session_include` is usable on its own even though gate #3's Q2 accepts either lap index.
+- [ ] EXPLAIN against Q2–Q6 (gate #3, pinned to the deterministic first `analytic_ready` session from `core.session_completeness`) reports the corresponding new index name in the plan and does **not** contain `"Node Type": "Seq Scan"` — gate #3 exits `0`. Q2 accepts either `idx_raw_laps_session_include` or `idx_raw_laps_session_driver_valid_partial` (both are legitimate plans for the valid-lap predicate). Q3 uses a stint-window predicate (`lap_start <= L AND lap_end >= L`) that exercises the lap-range columns, not just the `(session_key, driver_number)` prefix. Q6 is a dedicated assertion that requires the partial index `idx_raw_laps_session_driver_valid_partial` specifically (so an invalid-but-named partial index cannot let the gate pass). (Q1 dropped at round-5 unblock — see Slice-completion note round-5 unblock entry.)
 - [ ] `npm --prefix web run build` exits `0`.
 - [ ] `npm --prefix web run typecheck` exits `0`.
 - [ ] `npm --prefix web run test:grading` exits `0`.
@@ -255,7 +249,17 @@ npm --prefix web run test:grading
 
 ## Slice-completion note
 
-**Status: BLOCKED — gate #3 Q1 fails because the new index is functionally redundant with a pre-existing unique index.**
+**Status (round-5 unblock): UNBLOCKED via option (A) — `idx_raw_laps_session_driver_lap` removed from the plan and migration. The five remaining indexes are non-redundant and verified.**
+
+### Round-5 unblock summary
+
+User chose option (A) from the prior blocker analysis: drop the redundant index from Steps §1.1, gate #2's expected-array, gate #3's Q1 block, and `sql/020_perf_indexes.sql`. The pre-existing `uq_laps_session_driver_lap` already serves the `(session_key, driver_number, lap_number)` access pattern; the previously-created `idx_raw_laps_session_driver_lap` would be functionally redundant and is never picked by the planner.
+
+Live DB state: the redundant `raw.idx_raw_laps_session_driver_lap` index from the prior blocked run is left in place (a future cleanup slice can `DROP INDEX CONCURRENTLY raw.idx_raw_laps_session_driver_lap;` if desired). It's harmless: gate #2 only asserts that the **five** declared indexes exist, and gate #1's migration is idempotent (`IF NOT EXISTS`). Re-running gate #1 against a fresh DB now creates exactly five indexes.
+
+### Original (pre-unblock) blocker write-up — preserved for context
+
+**Status: BLOCKED — gate #3 Q1 failed because the new index was functionally redundant with a pre-existing unique index.**
 
 ### Branch and commits
 
