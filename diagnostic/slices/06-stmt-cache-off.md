@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28
+updated: 2026-04-28T16:30:00Z
 ---
 
 ## Goal
@@ -30,12 +30,14 @@ This slice MUST NOT be verified against the production `DATABASE_URL` / `NEON_DA
 The user-approval sentinel for this slice authorises the implementer to obtain or use the staging Neon branch URL; production credentials remain off-limits.
 
 ## Steps
-1. Read `web/src/lib/db.ts` and confirm the `pg.Pool` is instantiated via `createPool()` and that `sql<T>()` calls `pool.query(text, values)` without a `name` field.
-2. Apply the change: ensure `sql<T>()` always sends an unnamed statement. Specifically — call `pool.query({ text, values, name: undefined })` (or equivalent) so that even if a future caller passes a query config object that includes `name`, the `sql()` helper strips it. This guarantees no statement is registered server-side and therefore nothing for the pooler to lose across checkouts. Do NOT add a Neon-specific config knob; keep the helper driver-agnostic.
+1. Read `web/src/lib/db.ts` and confirm the `pg.Pool` is instantiated via `createPool()` and that the existing `sql<T>(text, values)` helper calls `pool.query(text, values)`. The current public signature is `sql<T extends QueryResultRow>(text: string, values?: unknown[]): Promise<T[]>` and the helper does NOT accept a `QueryConfig` object from callers — keep that surface unchanged.
+2. Apply the change: rewrite the body of `sql<T>()` so that instead of `pool.query<T>(text, values)` it calls `pool.query<T>({ text, values, name: undefined })`. This makes the unnamed-statement intent explicit and assertable by tests, without altering the public `(text, values)` signature. Do NOT add a Neon-specific config knob; keep the helper driver-agnostic.
 3. Add a unit test at `web/src/lib/__tests__/db.stmt-cache.test.ts` (or co-located equivalent if the suite uses a different convention) that:
-   - Stubs `pool.query` and asserts every call from `sql<T>()` produces a `QueryConfig` with `name === undefined` (or is a plain text+values call with no `name`).
-   - Includes a regression case where a caller passes `{ text, values, name: "foo" }` directly and verifies the assertion still holds (i.e. the helper strips `name`).
-4. Verify against the staging endpoint (NOT production) by running the script described in the Gate commands section, which opens 20 short-lived pool checkouts in parallel against `STAGING_NEON_DATABASE_URL`, runs a parameterised query on each, and asserts no `prepared statement` error is raised. Capture stdout+stderr to `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` and commit it as the verification artifact.
+   - Stubs `pool.query` (e.g. by re-exporting `pool` and using a `jest.spyOn` / `vi.spyOn` against it, or by injecting a fake `Pool` via the global cache `globalThis.__openf1Pool` in a `beforeEach`).
+   - Calls `sql<T>("SELECT $1::int AS x", [1])` and `sql<T>("SELECT 1")` and asserts that `pool.query` was invoked with a single `QueryConfig` argument whose `name` property is `undefined` (using e.g. `expect(spy.mock.calls[0][0]).toMatchObject({ name: undefined })` or `expect(spy.mock.calls[0][0].name).toBeUndefined()`).
+   - Asserts that the `QueryConfig` passed to `pool.query` has the expected `text` and `values` fields populated from the helper arguments — i.e. the helper preserves text/values while keeping `name` undefined.
+   - Adds a TypeScript-level regression guard using `// @ts-expect-error` showing that the public API of `sql()` does NOT accept a `QueryConfig` (so a caller cannot smuggle a `name` field through the helper). Example: `// @ts-expect-error sql() does not accept QueryConfig` followed by `await sql({ text: "SELECT 1", values: [], name: "foo" } as never)`. Compilation of the test file under `npm run typecheck` is itself the assertion that the type-level guard holds.
+4. Verify against the staging endpoint (NOT production) by running the script described in the Gate commands section, which opens 20 short-lived pool checkouts in parallel against `STAGING_NEON_DATABASE_URL`, runs a parameterised query on each, and asserts no `prepared statement` error is raised. Capture stdout+stderr to `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` and commit it as the verification artifact. The gate command MUST use `set -o pipefail` (or an equivalent explicit exit-status check) so a non-zero exit from the verifier cannot be masked by the trailing `tee`.
 5. Update `diagnostic/_state.md` only as the merge step requires; this slice itself does not modify it.
 
 ## Changed files expected
@@ -54,19 +56,23 @@ cd web && npm run typecheck
 cd web && npm run test:grading
 # Unit test specifically asserting the unnamed-statement invariant:
 cd web && npm test -- db.stmt-cache
-# Staging-pooler verification (REQUIRES STAGING_NEON_DATABASE_URL — must NOT be production):
-cd web && STAGING_NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL" \
+# Staging-pooler verification (REQUIRES STAGING_NEON_DATABASE_URL — must NOT be production).
+# `set -o pipefail` is REQUIRED so a non-zero exit from the verifier cannot be
+# masked by the trailing `tee`. Run the whole block in a single `bash -c` (or
+# inline `set -o pipefail` at the start of the same shell session) so the
+# pipefail option is in effect for the piped command on the next line.
+bash -c 'set -euo pipefail; cd web && STAGING_NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL" \
   node --loader tsx scripts/verify-stmt-cache-off.ts \
-  | tee ../diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log
+  | tee ../diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log'
 test -s diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log
 ! grep -E 'prepared statement .* (already exists|does not exist)' \
     diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/db.ts` `sql<T>()` helper passes `name: undefined` (or strips `name`) on every outbound `pool.query` call, so no server-side prepared statement is registered.
-- [ ] `web/src/lib/__tests__/db.stmt-cache.test.ts` exists and its assertions pass under `npm test -- db.stmt-cache`, including the regression case where a caller-supplied `name` field is dropped by the helper.
-- [ ] All commands in `## Gate commands` exit 0, including the `! grep …` check that proves the staging-pooler log contains no `prepared statement` error.
+- [ ] `web/src/lib/db.ts` `sql<T>()` helper invokes `pool.query` with a `QueryConfig` argument whose `name` property is `undefined` on every call, so no server-side prepared statement is registered. The helper's public signature remains `sql<T>(text: string, values?: unknown[])`.
+- [ ] `web/src/lib/__tests__/db.stmt-cache.test.ts` exists and its assertions pass under `npm test -- db.stmt-cache`. The test stubs `pool.query`, asserts the `QueryConfig` passed has `name === undefined` (and the expected `text` / `values`), and includes a `// @ts-expect-error` line proving the public API of `sql()` rejects a `QueryConfig` (so callers cannot smuggle a `name` field through the helper).
+- [ ] All commands in `## Gate commands` exit 0, including the `! grep …` check that proves the staging-pooler log contains no `prepared statement` error. The staging-verification gate runs under `set -o pipefail` (or equivalent) so a verifier failure cannot be masked by the `tee` pipeline.
 - [ ] `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` is committed and is non-empty (`test -s` passes) — this is the proof that step 4 ran against a non-production pooled Neon endpoint.
 
 ## Out of scope
@@ -106,10 +112,10 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 **Status: REVISE**
 
 ### High
-- [ ] Require `set -o pipefail` (or an equivalent explicit exit-status check) in the Step 4 staging-verification gate so a failing `node --loader tsx scripts/verify-stmt-cache-off.ts` run cannot be masked by the `| tee ...` pipeline.
+- [x] Require `set -o pipefail` (or an equivalent explicit exit-status check) in the Step 4 staging-verification gate so a failing `node --loader tsx scripts/verify-stmt-cache-off.ts` run cannot be masked by the `| tee ...` pipeline.
 
 ### Medium
-- [ ] Reconcile Step 3 and its acceptance criterion with the actual `sql<T>(text, values)` helper signature in `web/src/lib/db.ts`: either expand the planned API change to support/query-config inputs explicitly, or rewrite the regression case around a real supported call path instead of "a caller passes `{ text, values, name: \"foo\" }` directly".
+- [x] Reconcile Step 3 and its acceptance criterion with the actual `sql<T>(text, values)` helper signature in `web/src/lib/db.ts`: either expand the planned API change to support/query-config inputs explicitly, or rewrite the regression case around a real supported call path instead of "a caller passes `{ text, values, name: \"foo\" }` directly".
 
 ### Low
 - [ ] None.
