@@ -1,11 +1,11 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T20:30:00-04:00
+updated: 2026-04-27T20:55:00-04:00
 ---
 
 ## Goal
@@ -316,7 +316,38 @@ npm --prefix web run test:grading
   ```
 
 ## Slice-completion note
-(filled by Claude)
+
+- **Branch:** `slice/03-strategy-evidence-summary` (off `integration/perf-roadmap`).
+- **Implementation commit:** filled at commit time (this slice ships a single commit on top of the round-2 plan-approved commit `1425c08`).
+- **Files changed (matches "Changed files expected" exactly — verified `git diff --name-only integration/perf-roadmap...HEAD`):**
+  - `sql/016_strategy_evidence_summary_mat.sql` (new)
+  - `diagnostic/slices/03-strategy-evidence-summary.md` (frontmatter status/owner/timestamp transitions and this Slice-completion note only)
+- **Decisions executed verbatim from the approved plan:**
+  - Real `CREATE TABLE core.strategy_evidence_summary_mat` (NOT `CREATE MATERIALIZED VIEW`), with explicit 44-column declaration mirroring `core.strategy_evidence_summary` at `sql/007_semantic_summary_contracts.sql:553` ff. and `PRIMARY KEY (session_key, driver_number, pit_sequence)`.
+  - `TRUNCATE` + `INSERT INTO core.strategy_evidence_summary_mat SELECT * FROM core_build.strategy_evidence_summary` for idempotent population.
+  - Public view swapped via `CREATE OR REPLACE VIEW core.strategy_evidence_summary AS SELECT * FROM core.strategy_evidence_summary_mat` (not `DROP VIEW … CREATE VIEW`), inside the same `BEGIN; … COMMIT;` transaction.
+  - No TypeScript contract (`web/src/lib/contracts/strategyEvidenceSummary.ts`), no `.mjs` parity script (`web/scripts/tests/parity-strategy-evidence.test.mjs`), no edits to `sql/00[1-9]_*.sql` or `sql/01[0-5]_*.sql`, no application code, no `.parity.sql` file — parity check runs as inline `psql` heredoc in gate command #3.
+- **Gate results (run order matches the slice's "Gate commands" block — all exit 0):**
+  - Gate #0 (pre-flight grain probe over `core_build.strategy_evidence_summary` on `(session_key, driver_number, pit_sequence)`): exit `0`. NOTICE: `total=18717 distinct_triple=18717 duplicate=0`.
+  - Gate #1 (`psql -f sql/016_strategy_evidence_summary_mat.sql`): exit `0`. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 18717 / CREATE VIEW / COMMIT`.
+  - Gate #2 (storage relation is base table; public relation is view; PK columns are `[session_key, driver_number, pit_sequence]` in that order; public view's `pg_depend`-via-`pg_rewrite` references in schemas `core` / `core_build` / `raw` are exactly `{core.strategy_evidence_summary_mat}`): exit `0` (DO block raised on no assertion).
+  - Gate #3 (deterministic 3 `analytic_ready` sessions + global rowcount equality + bidirectional `EXCEPT ALL` parity per session): exit `0`. NOTICEs: `global rowcount equality: core_build=18717 mat=18717`; `parity session_key=9102 diff_rows=0`; `parity session_key=9110 diff_rows=0`; `parity session_key=9118 diff_rows=0`.
+  - Gate #4a (`npm --prefix web run build`): exit `0`.
+  - Gate #4b (`npm --prefix web run typecheck`): exit `0`.
+  - Gate #4c (`npm --prefix web run test:grading`): exit `0` (21 pass, 10 skip, 0 fail — skipped tests are gated on `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`, identical to prior precedent slices).
+- **Self-checks against acceptance criteria:**
+  - [x] Pre-flight grain probe `total=18717 distinct_triple=18717 duplicate=0` — gate #0 exit `0`.
+  - [x] `core.strategy_evidence_summary_mat` exists as base table with PK `(session_key, driver_number, pit_sequence)` — gates #1 and #2 exit `0`.
+  - [x] `core.strategy_evidence_summary` exists as a view (the facade) — gate #2 exit `0`.
+  - [x] `core.strategy_evidence_summary` is a thin facade over `core.strategy_evidence_summary_mat` (sole `pg_depend`-via-`pg_rewrite` reference in `core` / `core_build` / `raw`) — gate #2 exit `0`.
+  - [x] Global rowcount equality `core_build.strategy_evidence_summary` (18717) = `core.strategy_evidence_summary_mat` (18717) — gate #3 exit `0`.
+  - [x] Bidirectional `EXCEPT ALL` parity returns `0` for each of the 3 deterministic `analytic_ready` sessions — gate #3 exit `0`.
+  - [x] `npm --prefix web run build` exit `0`.
+  - [x] `npm --prefix web run typecheck` exit `0`.
+  - [x] `npm --prefix web run test:grading` exit `0`.
+  - [x] Only `sql/016_strategy_evidence_summary_mat.sql` (new) and `diagnostic/slices/03-strategy-evidence-summary.md` (frontmatter + this note) modified — verified via `git diff --name-only integration/perf-roadmap...HEAD` immediately prior to push.
+- **Scope alarms:** none.
+- **Out-of-scope items:** unchanged from plan (refresh helper / per-session ingest hook, additional indexes, materialization of remaining hot contracts, refresh-strategy decision, runtime-path cutover) — all deferred to later Phase 3 slices, no work done in this slice.
 
 ## Audit verdict
 (filled by Codex)
@@ -346,6 +377,20 @@ npm --prefix web run test:grading
 ### High
 
 ### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current enough to use; no stale-state note is needed for this round.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Correct the PK/grain rationale so it does not claim `core_build.strategy_evidence_summary` inherits per-pit-event `(session_key, driver_number, pit_sequence)` grain transitively from `core_build.pit_cycle_summary` without qualification: because the canonical view ranks rivals with `ROW_NUMBER() OVER (PARTITION BY a.session_key, a.driver_number, a.pit_lap ...)` and filters `rival_rank = 1`, duplicate `pit_lap` rows inside a driver-session would collapse before materialization. Either add an explicit prerequisite/probe proving `core_build.pit_cycle_summary` is unique on `(session_key, driver_number, pit_lap)`, or restate the PK as an output-level uniqueness assertion only and remove the stronger inherited-grain claim.
 
 ### Low
 
