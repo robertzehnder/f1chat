@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:30:00Z
+updated: 2026-04-28T20:15:00Z
 ---
 
 ## Goal
@@ -421,6 +421,22 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Medium
 - [x] Make the full step-1 evidence requirement auditable, or narrow step 1 to the evidence the gates and acceptance criteria actually verify: the current plan still requires extra per-stage fields (`count`/`p50_ms`/`max_ms` and multiple other stage `p95_ms` values plus an explicit dominant-stage callout) that no gate or acceptance check enforces.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 10)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Tighten gate `2a` so it verifies the three required evidence lines are recorded in the declared `<field path> = <value>` format under `## Evidence`, not merely that the field-path strings appear somewhere in the note.
 
 ### Low
 - [ ] None.
