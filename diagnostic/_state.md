@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-28T11:30:14Z
+# Project state — last updated: 2026-04-28T12:53:01Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -12,7 +12,7 @@ accumulated context the loop carries between slices._
 | 1 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 2 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 3 | 13 | 13 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 4 | 2 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 4 | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
 | 6 | 5 | 1 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
 | 7 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
@@ -33,11 +33,12 @@ accumulated context the loop carries between slices._
 
 ## Latest perf baseline
 
-- File: `diagnostic/artifacts/perf/02-cache-hit_2026-04-27.json`
-- (could not parse stages from diagnostic/artifacts/perf/02-cache-hit_2026-04-27.json)
+- File: `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json`
+- (could not parse stages from diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json)
 
 ## Recent slice merges (last 10)
 
+- `07da581` merge: 04-explain-before-after [pass] — 2026-04-28
 - `34f2c00` merge: 04-perf-indexes-sql [pass] — 2026-04-28
 - `6c36218` merge: 03-telemetry-lap-bridge [pass] — 2026-04-28
 - `6aeef39` merge: 03-lap-context-summary [pass] — 2026-04-27
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `f452f90` merge: 03-grid-vs-finish [pass] — 2026-04-27
 - `7fc151a` merge: 03-race-progression-summary [pass] — 2026-04-27
 - `501c910` merge: 03-strategy-summary [pass] — 2026-04-27
-- `9cc249b` merge: 03-stint-summary [pass] — 2026-04-27
 
 ## Open architectural decisions
 
