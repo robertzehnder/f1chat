@@ -7,10 +7,12 @@
 -- transaction; ON_ERROR_STOP=1 aborts the run on the first failure.
 --
 -- Column lists are schema-verified against sql/002_create_tables.sql.
-
--- driver+session+lap primary access pattern on raw.laps
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_driver_lap
-  ON raw.laps (session_key, driver_number, lap_number);
+--
+-- The driver+session+lap primary access pattern is already served by the
+-- pre-existing unique index `uq_laps_session_driver_lap` on the same column
+-- tuple (sql/004_constraints.sql:7-8). A duplicate `idx_raw_laps_session_driver_lap`
+-- index would be functionally redundant and never picked by the planner — see
+-- the Blocker diagnosis in diagnostic/slices/04-perf-indexes-sql.md (round-5).
 
 -- index-only scans for valid-lap and sector filters on raw.laps
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_include
