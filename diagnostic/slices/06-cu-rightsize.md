@@ -1,8 +1,8 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-28
@@ -114,6 +114,23 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Low
 - [x] Tighten the step list so it names the evidence to inspect and the artifact to produce, instead of generic placeholders like “Apply the change per the slice goal” and “Add tests / docs as appropriate.”
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Make `suspend_timeout_seconds` auditable end-to-end: either declare it fixed/out of scope for this slice, or add gate and acceptance checks that compare the documented value, the live Neon endpoint, and the post-change artifact when it is allowed to change.
+- [ ] Fix gate 4 so it actually proves `06-cu-rightsize-after_2026-04-28.json` matches the live Neon endpoint, not just the note; compare the artifact fields directly to the `LIVE` payload for every in-scope setting.
+
+### Low
+- [ ] Add a measurable gate or acceptance check for the smoke-test wall-clock latency recorded in `diagnostic/notes/06-cu-rightsize.md`, or drop that recording requirement from step 5 so the plan only promises verifiable outputs.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
