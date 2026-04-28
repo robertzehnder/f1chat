@@ -1,15 +1,15 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T17:53:41Z
+updated: 2026-04-28T17:57:05Z
 ---
 
 ## Goal
-Right-size the Neon production endpoint's autoscaling compute-unit window (`autoscaling_limit_min_cu` / `autoscaling_limit_max_cu`, plus `suspend_timeout_seconds` if it changes) based on observed peak concurrent connections and query latency from the existing perf baselines. Record the chosen window and the cost/perf tradeoff in `diagnostic/notes/06-cu-rightsize.md` and capture before/after Neon endpoint settings as JSON artifacts.
+Right-size the Neon production endpoint's autoscaling compute-unit window (`autoscaling_limit_min_cu` / `autoscaling_limit_max_cu`, plus `suspend_timeout_seconds` if it changes) based on the per-stage query-latency evidence the existing perf baselines actually expose (per-stage `p50_ms`/`p95_ms`/`max_ms` from `01-baseline-snapshot_2026-04-26.json` plus the post-index aggregate DB latency floor from `04-explain-before-after_2026-04-28.json`). Concurrent-connection and `p99` metrics are explicitly out of scope for the sizing rationale because the listed inputs do not expose them. Record the chosen window and the cost/perf tradeoff in `diagnostic/notes/06-cu-rightsize.md` and capture before/after Neon endpoint settings as JSON artifacts.
 
 ## Inputs
 - `web/src/lib/db/driver.ts` (only to confirm pooler usage; no code edits expected)
@@ -48,7 +48,15 @@ Before step 4 may run, the implementer MUST:
      - `aggregate.{pre_p50_ms, pre_p95_ms, post_p50_ms, post_p95_ms}` — post-index DB latency floor the new CU window must preserve.
    Record every extracted field under a `## Evidence` heading in `diagnostic/notes/06-cu-rightsize.md` as `<field path> = <value>` (one line each). The gate below greps for the `## Evidence` heading and for the literal field-path strings `stages.total.p95_ms`, `stages.execute_db.p95_ms`, and `aggregate.post_p95_ms` to verify evidence capture happened.
 2. Capture the current Neon endpoint settings into `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` via the Neon API (`GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`); record at minimum `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, `suspend_timeout_seconds`, and the timestamp.
-3. In `diagnostic/notes/06-cu-rightsize.md`, document on their own grep-able lines: `chosen_min_cu:`, `chosen_max_cu:`, `suspend_timeout_seconds:` (the retained or changed value), the cost-per-month delta estimate (Neon list price × CU-hours), and the latency budget (e.g. "p95 ≤ X ms at observed peak load") that the new window must preserve.
+3. In `diagnostic/notes/06-cu-rightsize.md`, document on their own grep-able lines:
+   - `chosen_min_cu:` `<value>`
+   - `chosen_max_cu:` `<value>`
+   - `suspend_timeout_seconds:` `<retained or changed value>`
+   - `cu_hour_rate_usd:` `<rate>` — the per-CU-hour USD price taken from the project's current Neon billing plan. The decision note must record the source on a separate `cu_hour_rate_source:` line as either (a) the URL the rate was copied from (e.g. `https://neon.tech/pricing`) or (b) the path of a saved screenshot/JSON artifact under `diagnostic/artifacts/perf/` showing the rate at decision time. The rate MUST be a fixed constant in the note; it must not be left as a parameter for the implementer to vary at gate time.
+   - `cost_delta_usd_per_month_max:` `<value>` — computed as `(chosen_max_cu - prior_max_cu) * cu_hour_rate_usd * 730` (730 ≈ hours per average month, treated as an upper bound assuming the endpoint runs at `max_cu` continuously).
+   - `cost_delta_usd_per_month_min:` `<value>` — computed as `(chosen_min_cu - prior_min_cu) * cu_hour_rate_usd * 730` (lower bound assuming the endpoint runs at `min_cu` continuously).
+   - `latency_budget_p95_ms:` `<value>` — the p95 latency the resized window must preserve, derived from `stages.execute_db.p95_ms` (baseline) and `aggregate.post_p95_ms` (post-index floor). The note must state which of those two it equals or how it is bounded by them.
+   The `prior_min_cu` / `prior_max_cu` values used in the cost formulas MUST equal the values captured in `06-cu-rightsize-before_2026-04-28.json` (gate 4 enforces parity below by recomputing the deltas).
 4. **Only after** the user-approval sentinel line (see "User approval mechanism" in Required services / env) is recorded under `## User approval` in `diagnostic/notes/06-cu-rightsize.md`, apply the new window via the Neon API (`PATCH /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`) — patch `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` to the documented values — and capture the post-apply endpoint payload into `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`.
 5. Run the smoke-test query `psql "$DATABASE_URL" -At -c "SELECT 1"` post-resize. The gate (below) checks the command exits 0 and prints `1`; no latency recording is required, so the plan only promises verifiable outputs.
 
@@ -70,12 +78,32 @@ test -f diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
 jq -e '.endpoint | (.autoscaling_limit_min_cu and .autoscaling_limit_max_cu and .suspend_timeout_seconds != null)' \
   diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
 
-# 2. Decision note exists and declares the chosen window + cost/perf tradeoff.
+# 2. Decision note exists and declares the chosen window + auditable cost/perf tradeoff.
 test -f diagnostic/notes/06-cu-rightsize.md
 grep -E '^chosen_min_cu:[[:space:]]*[0-9.]+' diagnostic/notes/06-cu-rightsize.md
 grep -E '^chosen_max_cu:[[:space:]]*[0-9.]+' diagnostic/notes/06-cu-rightsize.md
 grep -E '^suspend_timeout_seconds:[[:space:]]*[0-9]+' diagnostic/notes/06-cu-rightsize.md
-grep -Eq '(Cost/perf tradeoff|cost_delta_usd_per_month)' diagnostic/notes/06-cu-rightsize.md
+grep -E '^cu_hour_rate_usd:[[:space:]]*[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
+grep -E '^cu_hour_rate_source:[[:space:]]*\S+' diagnostic/notes/06-cu-rightsize.md
+grep -E '^cost_delta_usd_per_month_max:[[:space:]]*-?[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
+grep -E '^cost_delta_usd_per_month_min:[[:space:]]*-?[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
+grep -E '^latency_budget_p95_ms:[[:space:]]*[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
+
+# 2-recompute. Verify the documented cost-deltas equal the formula
+# (chosen_*_cu - prior_*_cu) * cu_hour_rate_usd * 730 within $0.01,
+# using prior_*_cu from 06-cu-rightsize-before_2026-04-28.json.
+RATE=$(grep -E '^cu_hour_rate_usd:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
+CHOSEN_MIN=$(grep -E '^chosen_min_cu:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
+CHOSEN_MAX=$(grep -E '^chosen_max_cu:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
+PRIOR_MIN=$(jq -r '.endpoint.autoscaling_limit_min_cu' diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json)
+PRIOR_MAX=$(jq -r '.endpoint.autoscaling_limit_max_cu' diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json)
+DOC_DELTA_MAX=$(grep -E '^cost_delta_usd_per_month_max:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
+DOC_DELTA_MIN=$(grep -E '^cost_delta_usd_per_month_min:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
+EXP_DELTA_MAX=$(echo "($CHOSEN_MAX - $PRIOR_MAX) * $RATE * 730" | bc -l)
+EXP_DELTA_MIN=$(echo "($CHOSEN_MIN - $PRIOR_MIN) * $RATE * 730" | bc -l)
+# Absolute difference must be < $0.01 for both bounds.
+awk -v a="$DOC_DELTA_MAX" -v b="$EXP_DELTA_MAX" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<0.01)}'
+awk -v a="$DOC_DELTA_MIN" -v b="$EXP_DELTA_MIN" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<0.01)}'
 
 # 2a. Evidence capture from the listed perf inputs is recorded under a "## Evidence" heading.
 grep -Eq '^##[[:space:]]+Evidence' diagnostic/notes/06-cu-rightsize.md
@@ -83,9 +111,19 @@ grep -Fq 'stages.total.p95_ms' diagnostic/notes/06-cu-rightsize.md
 grep -Fq 'stages.execute_db.p95_ms' diagnostic/notes/06-cu-rightsize.md
 grep -Fq 'aggregate.post_p95_ms' diagnostic/notes/06-cu-rightsize.md
 
-# 2b. User approval sentinel is recorded under a "## User approval" heading with the exact token + ISO-8601 timestamp.
-grep -Eq '^##[[:space:]]+User approval' diagnostic/notes/06-cu-rightsize.md
-grep -Eq '^APPROVE-CU-RIGHTSIZE[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$' diagnostic/notes/06-cu-rightsize.md
+# 2b. User approval sentinel is recorded as the FIRST non-blank line under "## User approval"
+# AND is the only APPROVE-CU-RIGHTSIZE line in the file. This blocks the alternative of
+# stashing a sentinel anywhere in the document with a heading present elsewhere.
+test "$(grep -Ec '^APPROVE-CU-RIGHTSIZE' diagnostic/notes/06-cu-rightsize.md)" = 1
+awk '
+  /^##[[:space:]]+User approval[[:space:]]*$/ { in_section=1; next }
+  in_section && /^[[:space:]]*$/ { next }
+  in_section {
+    if ($0 ~ /^APPROVE-CU-RIGHTSIZE[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$/) found=1
+    exit
+  }
+  END { exit !found }
+' diagnostic/notes/06-cu-rightsize.md
 
 # 3. Live Neon endpoint matches the documented chosen window for every in-scope mutable setting.
 LIVE=$(curl -fsS -H "Authorization: Bearer $NEON_API_KEY" \
@@ -119,9 +157,9 @@ psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
 ```
 
 ## Acceptance criteria
-- [ ] `diagnostic/notes/06-cu-rightsize.md` declares `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, the per-month cost-delta estimate (USD), and the latency budget the chosen window must preserve.
+- [ ] `diagnostic/notes/06-cu-rightsize.md` declares, on grep-able lines, `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, `cu_hour_rate_usd` (a fixed numeric constant), `cu_hour_rate_source` (URL or saved-artifact path), `cost_delta_usd_per_month_max`, `cost_delta_usd_per_month_min`, and `latency_budget_p95_ms`. The two `cost_delta_*` values equal `(chosen_*_cu − prior_*_cu) × cu_hour_rate_usd × 730` (within $0.01) where the `prior_*_cu` values are read from `06-cu-rightsize-before_2026-04-28.json`; the gate recomputes and asserts this.
 - [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## Evidence` section that records, at minimum, the `stages.total.p95_ms` and `stages.execute_db.p95_ms` values from `01-baseline-snapshot_2026-04-26.json` and the `aggregate.post_p95_ms` value from `04-explain-before-after_2026-04-28.json` as `<field path> = <value>` lines.
-- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section with a single line matching `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, copied verbatim from a chat message authored by the slice owner; this line was recorded **before** the Neon `PATCH` was issued.
+- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section whose first non-blank line under the heading matches `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, and that sentinel appears exactly once in the file. The line is copied verbatim from a chat message authored by the slice owner and was recorded **before** the Neon `PATCH` was issued.
 - [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change, including `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`.
 - [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time.
 - [ ] A live `GET` of the production Neon endpoint at gate time returns `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal to the values declared in the decision note (no staging environment is involved).
@@ -198,13 +236,13 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 **Status: REVISE**
 
 ### High
-- [ ] Resolve the contradiction between the Goal and the cited Inputs/Steps: either add a listed input artifact that actually exposes observed peak concurrent connections, or rewrite the goal/sizing rationale so this slice no longer claims the CU window is based on concurrency evidence that the plan explicitly says does not exist.
+- [x] Resolve the contradiction between the Goal and the cited Inputs/Steps: either add a listed input artifact that actually exposes observed peak concurrent connections, or rewrite the goal/sizing rationale so this slice no longer claims the CU window is based on concurrency evidence that the plan explicitly says does not exist.
 
 ### Medium
-- [ ] Make the cost-delta requirement auditable by naming the exact Neon pricing source or fixed unit-rate formula the implementer must use; as written, `cost-per-month delta estimate` can vary arbitrarily and the gate only proves that some number was written down.
+- [x] Make the cost-delta requirement auditable by naming the exact Neon pricing source or fixed unit-rate formula the implementer must use; as written, `cost-per-month delta estimate` can vary arbitrarily and the gate only proves that some number was written down.
 
 ### Low
-- [ ] Tighten gate 2b so it proves the approval sentinel is recorded immediately under `## User approval` as the only approval line, instead of separately grepping for a heading and a matching token anywhere in the file.
+- [x] Tighten gate 2b so it proves the approval sentinel is recorded immediately under `## User approval` as the only approval line, instead of separately grepping for a heading and a matching token anywhere in the file.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
