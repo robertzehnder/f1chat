@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-28
 ---
 
 ## Goal
@@ -56,3 +56,22 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the real-Neon/staging verification requirement with repo-local gates that prove both modes, because this slice's goal is a local fallback when Neon is missing or unreachable and the current plan cannot be completed in an isolated implementation pass.
+- [ ] Specify the fallback mechanism concretely by choosing SQLite snapshot or PGlite and naming every required code/config/artifact path, because `web/src/lib/db/driver.ts` alone does not provide the local data source the goal requires.
+
+### Medium
+- [ ] Update `Required services / env` to describe the local fallback prerequisites and any selection logic instead of only Neon access, or narrow the goal so it no longer promises offline development.
+- [ ] Replace the acceptance criteria with command-testable checks that cover `DATABASE_URL` missing and primary-connection failure cases, rather than "implemented and tested per the goal" and "verified in the staging environment before merge."
+- [ ] Expand `Changed files expected` and `Artifact paths` to include the fallback snapshot/PGlite setup and any docs/config/test harness files the chosen approach necessarily touches.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+- The gate order `build` before `typecheck` matches the current auditor note for web slices.
