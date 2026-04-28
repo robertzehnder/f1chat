@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-context-summary
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:46:43-04:00
+updated: 2026-04-28T03:55:31Z
 ---
 
 ## Goal
@@ -334,6 +334,28 @@ npm --prefix web run test:grading
 **Out-of-scope items left untouched (per the slice's `## Out of scope` section):** no per-session ingest-hook refresh helper was added, no secondary indexes beyond the PK-implied unique btree, no materialization of `core.telemetry_lap_bridge`, no refresh-strategy/cron decision, and no cutover of any TypeScript runtime path — those callers (`web/src/lib/anthropic.ts:60`, `web/src/lib/queries.ts:81/129`, `web/src/lib/chatRuntime.ts:174`, `web/src/lib/deterministicSql.ts:1110`) continue to read `core.lap_context_summary` through the public view, which now transparently resolves through the facade to the matview.
 
 **Implementation commit:** tip of branch `slice/03-lap-context-summary`, tagged `[slice:03-lap-context-summary][awaiting-audit]` (resolve via `git rev-parse origin/slice/03-lap-context-summary` after push).
+
+## Audit verdict
+
+**PASS**
+
+[slice:03-lap-context-summary][pass]
+
+- Gate #0 `psql --version` -> exit `0`
+- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/018_lap_context_summary_mat.sql` -> exit `0`
+- Gate #2 structure DO block -> exit `0`
+- Gate #3 parity DO block -> exit `0`
+- Gate #4 `npm --prefix web run build` -> exit `0`
+- Gate #5 `npm --prefix web run typecheck` -> exit `0`
+- Gate #6 `npm --prefix web run test:grading` -> exit `0`
+- `git diff --name-only integration/perf-roadmap...HEAD` -> `diagnostic/slices/03-lap-context-summary.md`, `sql/018_lap_context_summary_mat.sql` only; scope OK
+- PASS: `core.lap_context_summary_mat` exists as a base table with exactly one primary-key constraint on `(session_key, lap_number)` in that order; gates #1-#2 exit `0`
+- PASS: `core.lap_context_summary` exists as a view; gate #2 exit `0`
+- PASS: `core.lap_context_summary` is a thin facade over `core.lap_context_summary_mat`; gate #2 exit `0`
+- PASS: global rowcount matches between `core_build.lap_context_summary` and `core.lap_context_summary_mat`; gate #3 exit `0`
+- PASS: bidirectional `EXCEPT ALL` parity is zero for each of the 3 deterministic `analytic_ready` sessions; gate #3 exit `0`
+- PASS: web regression gates all exit `0`
+- Decision: PASS. Phase 3 slice; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
