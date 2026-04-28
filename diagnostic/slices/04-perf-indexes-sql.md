@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:44:05Z
+updated: 2026-04-28T04:47:40Z
 ---
 
 ## Goal
@@ -31,7 +31,7 @@ Add the schema-verified indexes from roadmap §4 Phase 4 to support common acces
 
 ## Required services / env
 - `DATABASE_URL` (Neon Postgres). The role used by the loop must have:
-  - `CREATE` on schema `raw` (to add the new indexes — index ownership matches table ownership). No `core` schema privilege is required because this slice does not add any `core.*` index (see Decisions).
+  - **The right to create indexes on the existing `raw.*` tables.** In Postgres, `CREATE INDEX` on a pre-existing table is gated by table-level authority, not schema-level `CREATE`: the role must either (a) own the target table, (b) be a member of the role that owns the target table, (c) have the `MAINTAIN` privilege on the table (Postgres ≥ 17), or (d) be a superuser. The schema-level `CREATE` privilege governs creating *new* relations under the schema and is **not** sufficient on its own to add an index to a table the role does not own. The loop's DB role on Neon already owns the `raw.*` tables (it created them via `sql/002_create_tables.sql`); if the role is rotated or this slice is replayed under a different role, that role must be granted membership in the table-owning role (or, on PG ≥ 17, `GRANT MAINTAIN ON TABLE raw.laps, raw.stints, raw.pit, raw.position_history TO <role>;`) before gate #1 will succeed. Failure surfaces as `must be owner of table <name>` and aborts gate #1 under `ON_ERROR_STOP=1`.
   - `USAGE` on schema `raw` and `SELECT` on `raw.laps`, `raw.stints`, `raw.pit`, `raw.position_history` (read access is needed for `EXPLAIN` to plan the queries — `EXPLAIN` without `ANALYZE` does not execute the query, but it still requires the same privileges as a regular `SELECT`).
   - `SELECT` on `core.session_completeness` (the deterministic-session selector for the EXPLAIN gate).
 - **`CREATE INDEX CONCURRENTLY` constraint: cannot run inside an explicit transaction block.** The migration file ships as a series of statements with no `BEGIN; … COMMIT;` wrapper. Gate #1 invokes `psql -f sql/020_perf_indexes.sql` **without** `-1` / `--single-transaction`, so each statement runs in its own implicit transaction. `ON_ERROR_STOP=1` aborts the run on the first failure.
@@ -48,7 +48,7 @@ Add the schema-verified indexes from roadmap §4 Phase 4 to support common acces
    6. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_driver_valid_partial ON raw.laps (session_key, driver_number) WHERE lap_duration IS NOT NULL;` — partial index for the valid-lap filter.
 2. Apply the migration via gate #1 (no `--single-transaction`; each `CREATE INDEX CONCURRENTLY` runs in its own implicit transaction).
 3. Verify every declared index exists in `pg_indexes` with the expected schema and table — gate #2.
-4. Run `EXPLAIN (FORMAT JSON)` on a deterministic set of representative queries (Q1–Q5 enumerated inline in gate #3) pinned to the first `analytic_ready` session selected by:
+4. Run `EXPLAIN (FORMAT JSON)` on a deterministic set of representative queries (Q1–Q6 enumerated inline in gate #3, where Q3 is a real stint-window predicate `lap_start <= L AND lap_end >= L` and Q6 is a dedicated assertion that the partial index `idx_raw_laps_session_driver_valid_partial` is picked on its own) pinned to the first `analytic_ready` session selected by:
    ```sql
    SELECT session_key
    FROM core.session_completeness
@@ -151,9 +151,17 @@ BEGIN
     failures := failures || ' Q2';
   END IF;
 
-  -- Q3: stint window -> idx_raw_stints_session_driver_window
-  EXECUTE format($q$EXPLAIN (FORMAT JSON) SELECT compound, lap_start, lap_end
-                    FROM raw.stints WHERE session_key = %s AND driver_number = 1$q$, s_key)
+  -- Q3: stint-window predicate that constrains a lap against
+  --     raw.stints.lap_start / lap_end (the access pattern named in the Goal
+  --     and Steps §1.3) -> idx_raw_stints_session_driver_window. The literal
+  --     lap_number = 10 is hard-coded because EXPLAIN only plans the query;
+  --     no row need actually match for the planner to pick the index.
+  EXECUTE format($q$EXPLAIN (FORMAT JSON) SELECT compound
+                    FROM raw.stints
+                    WHERE session_key = %s
+                      AND driver_number = 1
+                      AND lap_start <= 10
+                      AND lap_end   >= 10$q$, s_key)
     INTO plan_text;
   IF plan_text NOT LIKE '%idx_raw_stints_session_driver_window%'
      OR plan_text LIKE '%"Node Type": "Seq Scan"%' THEN
@@ -179,6 +187,23 @@ BEGIN
     failures := failures || ' Q5';
   END IF;
 
+  -- Q6: dedicated partial-index assertion. The query shape
+  --     (session_key, driver_number, lap_duration IS NOT NULL) matches the
+  --     partial index's predicate exactly, so the planner should pick
+  --     idx_raw_laps_session_driver_valid_partial here. This is separate
+  --     from Q2 (which accepts either lap index) so that an invalid or
+  --     never-selected partial index cannot let gate #3 exit 0.
+  EXECUTE format($q$EXPLAIN (FORMAT JSON) SELECT count(*)
+                    FROM raw.laps
+                    WHERE session_key = %s
+                      AND driver_number = 1
+                      AND lap_duration IS NOT NULL$q$, s_key)
+    INTO plan_text;
+  IF plan_text NOT LIKE '%idx_raw_laps_session_driver_valid_partial%'
+     OR plan_text LIKE '%"Node Type": "Seq Scan"%' THEN
+    failures := failures || ' Q6';
+  END IF;
+
   IF failures <> '' THEN
     RAISE EXCEPTION 'EXPLAIN gate failures (queries that did not pick the expected index or fell back to Seq Scan):%', failures;
   END IF;
@@ -194,7 +219,7 @@ npm --prefix web run test:grading
 ## Acceptance criteria
 - [ ] `sql/020_perf_indexes.sql` applies cleanly against the live DB — gate #1 (`psql -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql`) exits `0`.
 - [ ] All six declared indexes exist in `pg_indexes` under schema `raw` — gate #2 exits `0` (the DO block raises if any of `idx_raw_laps_session_driver_lap`, `idx_raw_laps_session_include`, `idx_raw_stints_session_driver_window`, `idx_raw_pit_session_driver_lap`, `idx_raw_position_history_session_date`, `idx_raw_laps_session_driver_valid_partial` is missing).
-- [ ] EXPLAIN against Q1–Q5 (gate #3, pinned to the deterministic first `analytic_ready` session from `core.session_completeness`) reports the corresponding new index name in the plan and does **not** contain `"Node Type": "Seq Scan"` — gate #3 exits `0`. Q2 accepts either `idx_raw_laps_session_include` or `idx_raw_laps_session_driver_valid_partial` (both are legitimate plans for the valid-lap predicate).
+- [ ] EXPLAIN against Q1–Q6 (gate #3, pinned to the deterministic first `analytic_ready` session from `core.session_completeness`) reports the corresponding new index name in the plan and does **not** contain `"Node Type": "Seq Scan"` — gate #3 exits `0`. Q2 accepts either `idx_raw_laps_session_include` or `idx_raw_laps_session_driver_valid_partial` (both are legitimate plans for the valid-lap predicate). Q3 uses a stint-window predicate (`lap_start <= L AND lap_end >= L`) that exercises the lap-range columns, not just the `(session_key, driver_number)` prefix. Q6 is a dedicated assertion that requires the partial index `idx_raw_laps_session_driver_valid_partial` specifically (so an invalid-but-named partial index cannot let the gate pass).
 - [ ] `npm --prefix web run build` exits `0`.
 - [ ] `npm --prefix web run typecheck` exits `0`.
 - [ ] `npm --prefix web run test:grading` exits `0`.
@@ -244,11 +269,11 @@ npm --prefix web run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Replace Q3 in gate #3 with an actual stint-window predicate or join shape that constrains a lap against `raw.stints.lap_start` / `lap_end`, so the plan verifies the access pattern named in the Goal and in Steps §1.3 instead of only re-testing the `(session_key, driver_number)` prefix of the index.
-- [ ] Add a dedicated gate assertion that proves `idx_raw_laps_session_driver_valid_partial` is usable on its own; the current Q2 check accepts either lap index, so gate #3 can exit `0` even if the partial index is invalid or never selected.
+- [x] Replace Q3 in gate #3 with an actual stint-window predicate or join shape that constrains a lap against `raw.stints.lap_start` / `lap_end`, so the plan verifies the access pattern named in the Goal and in Steps §1.3 instead of only re-testing the `(session_key, driver_number)` prefix of the index.
+- [x] Add a dedicated gate assertion that proves `idx_raw_laps_session_driver_valid_partial` is usable on its own; the current Q2 check accepts either lap index, so gate #3 can exit `0` even if the partial index is invalid or never selected.
 
 ### Medium
-- [ ] Correct `## Required services / env` to state the real privilege prerequisite for creating indexes on existing `raw.*` tables; `CREATE` on schema `raw` is not sufficient by itself for `CREATE INDEX CONCURRENTLY` on those tables.
+- [x] Correct `## Required services / env` to state the real privilege prerequisite for creating indexes on existing `raw.*` tables; `CREATE` on schema `raw` is not sufficient by itself for `CREATE INDEX CONCURRENTLY` on those tables.
 
 ### Low
 
