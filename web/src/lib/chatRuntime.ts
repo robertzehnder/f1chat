@@ -1,14 +1,16 @@
 import {
-  getDriversFromIdentityLookup,
-  getDriversForResolution,
   getGlobalTableCounts,
   getSessionByKey,
-  getSessionsFromSearchLookup,
   getSessionTableCounts,
-  getSessionsForResolution,
   type DriverResolutionRow,
   type SessionResolutionRow
 } from "@/lib/queries";
+import {
+  getDriversForResolutionCached,
+  getDriversFromIdentityLookupCached,
+  getSessionsForResolutionCached,
+  getSessionsFromSearchLookupCached
+} from "@/lib/resolverCache";
 import { startSpan, type SpanRecord } from "@/lib/perfTrace";
 
 type ChatContext = {
@@ -1614,14 +1616,14 @@ export async function buildChatRuntime(input: {
   }
 
   if (!selectedSession) {
-    sessionRows = await getSessionsForResolution({
+    sessionRows = await getSessionsForResolutionCached({
       year: extractedYear,
       sessionName: sessionNameHint,
       includeFutureSessions: includeFutureOrPlaceholderSessions,
       includePlaceholderSessions: includeFutureOrPlaceholderSessions
     });
     const sessionLookupAliases = unique([...venueHints, ...lookupAliasCandidates]);
-    const lookupSessionRows = await getSessionsFromSearchLookup({
+    const lookupSessionRows = await getSessionsFromSearchLookupCached({
       aliases: sessionLookupAliases,
       year: extractedYear,
       sessionName: sessionNameHint,
@@ -1729,10 +1731,10 @@ export async function buildChatRuntime(input: {
 
   const forceDriverClarification = asksSpecificDriverClarification && explicitDriverNumbers.length === 0;
 
-  let driverRows = await getDriversForResolution({
+  let driverRows = await getDriversForResolutionCached({
     sessionKey: selectedSession?.sessionKey
   });
-  const lookupDriverRows = await getDriversFromIdentityLookup({
+  const lookupDriverRows = await getDriversFromIdentityLookupCached({
     aliases: lookupAliasCandidates,
     sessionKey: selectedSession?.sessionKey,
     limit: 120

@@ -8,6 +8,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:grading": "node --test scripts/tests/*.test.mjs",
+    "test:resolver-lru": "node --test scripts/tests/resolver-lru.test.mjs",
     "healthcheck:chat": "node scripts/chat-health-check.mjs",
     "healthcheck:chat:intense": "node scripts/chat-health-check.mjs --rubric scripts/chat-health-check.rubric.intense.json",
     "healthcheck:grade": "node scripts/chat-health-check-grade.mjs",
@@ -15,6 +16,7 @@
     "verify": "npm run typecheck && npm run test:grading && npm run build"
   },
   "dependencies": {
+    "lru-cache": "^11.0.2",
     "next": "^15.5.15",
     "pg": "^8.13.1",
     "react": "^19.2.5",
