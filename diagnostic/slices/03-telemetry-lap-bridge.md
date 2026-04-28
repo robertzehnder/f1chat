@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:17:31Z
+updated: 2026-04-28T04:19:48Z
 ---
 
 ## Goal
@@ -69,7 +69,7 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
       - `car_samples`, `brake_samples`, `location_samples` are `BIGINT` (`COUNT(*)` and `COUNT(*) FILTER (...)` produce `BIGINT`).
       - `max_speed` is `INTEGER` (`MAX(cd.speed)` where `raw.car_data.speed` is `INTEGER` per `sql/002_create_tables.sql:216`; `MAX` preserves the input type and there is no `ROUND` wrapper on this column).
       - `avg_speed`, `max_throttle`, `avg_throttle`, `first_brake_time_sec` are `NUMERIC` (the `ROUND(...::numeric, 3)` projection produces `NUMERIC`).
-      Implementation: copy the column-and-type signature from the existing view (e.g. via `pg_typeof()` on each column or by reading the source column types from `sql/002`/`sql/006`/`sql/007`/`sql/010`) so the `_mat` table is positionally compatible with the source-definition view. **Declare no `PRIMARY KEY`** — the grain inherited from `core_build.laps_enriched` is non-unique (see Decisions). Do not declare any `NOT NULL` constraints on columns that the canonical query can null out: `lap_start_ts` and `lap_end_ts` are gated `IS NOT NULL` by the `lap_windows` CTE, but the LATERAL aggregate columns (`car_samples`, `max_speed`, `avg_speed`, `max_throttle`, `avg_throttle`, `brake_samples`, `first_brake_time_sec`, `location_samples`) can each be `NULL` when no `raw.car_data` / `raw.location` rows fall inside the lap window — leave them nullable.
+      Implementation: copy the column-and-type signature from the existing view (e.g. via `pg_typeof()` on each column or by reading the source column types from `sql/002`/`sql/006`/`sql/007`/`sql/010`) so the `_mat` table is positionally compatible with the source-definition view. **Declare no `PRIMARY KEY`** — the grain inherited from `core_build.laps_enriched` is non-unique (see Decisions). Declare every column nullable. The LATERAL aggregate columns split into two empty-window cases: the `MAX` / `AVG` / `ROUND(...::numeric, 3)` aggregates (`max_speed`, `avg_speed`, `max_throttle`, `avg_throttle`, `first_brake_time_sec`) evaluate to `NULL` when no `raw.car_data` rows fall inside the lap window and so are genuinely nullable; the `COUNT(*)` aggregates (`car_samples`, `brake_samples`, `location_samples`) instead evaluate to `0` and are never `NULL` from the canonical query, because aggregate functions without `GROUP BY` always return exactly one row, so the `LEFT JOIN LATERAL`'s no-match branch never fires for the aggregate columns. The COUNT columns are therefore non-null in practice but are still left nullable in the storage table to match the public view's projection (which carries no `NOT NULL` declarations) and to avoid creating breakage risk against future revisions to the canonical query. `lap_start_ts` and `lap_end_ts` are gated `IS NOT NULL` by the `lap_windows` CTE upstream and so are also non-null in practice, but for the same reasons leave them nullable in the storage table — `NOT NULL` constraints would not be load-bearing here, and the positional `EXCEPT ALL` parity gate is what enforces correctness.
    2. `CREATE INDEX IF NOT EXISTS telemetry_lap_bridge_mat_session_driver_lap_idx ON core.telemetry_lap_bridge_mat (session_key, driver_number, lap_number);` — non-unique btree on the natural query key.
    3. `CREATE INDEX IF NOT EXISTS telemetry_lap_bridge_mat_session_idx ON core.telemetry_lap_bridge_mat (session_key);` — non-unique btree to support the deferred delete-then-insert refresh per `session_key`.
    4. `TRUNCATE core.telemetry_lap_bridge_mat;` then `INSERT INTO core.telemetry_lap_bridge_mat SELECT * FROM core_build.telemetry_lap_bridge;` for initial population. The `TRUNCATE` before `INSERT` makes re-running the migration idempotent. Since the table has no PK and the indexes are non-unique, the bulk insert cannot fail on duplicate-key violation — the duplicate-row multiplicity from the source view is preserved verbatim, exactly as required by the inherited non-unique grain.
@@ -493,7 +493,7 @@ _None._
 _None._
 
 ### Low
-- [ ] Correct the Step 1.1 / Decisions nullability rationale to distinguish `COUNT(*)` aggregates from nullable `MAX` / `AVG` / `MIN` aggregates: `car_samples`, `brake_samples`, and `location_samples` evaluate to `0` on empty lap windows and should not be described as columns the canonical query can null out.
+- [x] Correct the Step 1.1 / Decisions nullability rationale to distinguish `COUNT(*)` aggregates from nullable `MAX` / `AVG` / `MIN` aggregates: `car_samples`, `brake_samples`, and `location_samples` evaluate to `0` on empty lap windows and should not be described as columns the canonical query can null out.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
