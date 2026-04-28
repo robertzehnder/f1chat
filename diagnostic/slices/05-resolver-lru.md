@@ -1,11 +1,11 @@
 ---
 slice_id: 05-resolver-lru
 phase: 5
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T09:11:17-04:00
+updated: 2026-04-28T09:22:08-04:00
 ---
 
 ## Goal
@@ -102,7 +102,17 @@ Rollback: `git revert <commit>`.
 - Frontmatter set to `status=awaiting_audit, owner=codex, updated=2026-04-28T09:11:17-04:00` per loop instructions.
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+Gate #1 `cd web && npm install` -> exit `0`
+Gate #2 `cd web && npm run build` -> exit `0`
+Gate #3 `cd web && npm run typecheck` -> exit `0`
+Gate #4 `cd web && npm run test:resolver-lru` -> exit `0`
+Gate #5 `cd web && npm run test:grading` -> exit `0`
+Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> PASS; only `diagnostic/slices/05-resolver-lru.md`, `web/package.json`, `web/package-lock.json`, `web/scripts/tests/resolver-lru.test.mjs`, `web/src/lib/chatRuntime.ts`, `web/src/lib/resolverCache.ts`
+Criterion `npm run test:resolver-lru` -> PASS (`web/scripts/tests/resolver-lru.test.mjs:77`, `95`, `135`, `167`, `200`, `221`, `237`, `269`, `292`, `309`; `web/src/lib/resolverCache.ts:47-181`)
+Criterion `npm run build`, `npm run typecheck`, and `npm run test:grading` -> PASS (`web/src/lib/chatRuntime.ts:8-13`, `1619-1626`, `1734-1740`; exits `0/0/0`)
+Decision -> PASS; status `ready_to_merge`, owner `codex`
 
 ## Plan-audit verdict (round 1)
 
