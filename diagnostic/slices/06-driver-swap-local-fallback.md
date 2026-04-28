@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T16:05:25Z
+updated: 2026-04-28T16:08:22Z
 ---
 
 ## Goal
@@ -50,9 +50,9 @@ When the developer opts in via `OPENF1_LOCAL_FALLBACK=1` **and** either `DATABAS
    - One driver row, one session row, lookup tables (`compound_alias_lookup`, `metric_registry`, `valid_lap_policy`, `replay_contract_registry`).
    - One row in each summary contract the resolver and grading tests touch.
    - The file is human-readable SQL so a follow-up slice can regenerate it from `pg_dump`.
-6. Add `web/scripts/tests/driver-fallback.test.mjs` (`node --test`) with subtests, each in its own worker (`node:test` `t.test` + `import()` against a unique cache-busting query string, or one subtest per file invocation) so the module-level driver singleton resets:
-   - **Case A — URL missing, opt-in:** `DATABASE_URL=""`, `NEON_DATABASE_URL=""`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=test`. Import `sql`, run `SELECT 1 AS x`, assert `rows[0].x === 1`.
-   - **Case B — URL unreachable, opt-in:** `DATABASE_URL="postgres://invalid:invalid@127.0.0.1:1/none"`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=test`. Assert the probe fails, the fallback log line is emitted, and `SELECT 1` succeeds.
+6. Add `web/scripts/tests/driver-fallback.test.mjs` (`node --test`) with subtests, each in its own worker (`node:test` `t.test` + `import()` against a unique cache-busting query string, or one subtest per file invocation) so the module-level driver singleton resets. Cases A and B do NOT use `SELECT 1` — they exercise real chat-runtime queries against the seeded `core.*` / `contract.*` rows so the test fails if the snapshot is missing schemas/rows the resolver actually relies on (the audit's round-3 High):
+   - **Case A — URL missing, opt-in:** `DATABASE_URL=""`, `NEON_DATABASE_URL=""`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=test`. Import `sql` and run two representative chat-runtime queries: (1) `SELECT driver_number, full_name FROM core.driver` — assert ≥ 1 row matching the seeded driver; (2) `SELECT * FROM contract.replay_contract_registry` — assert ≥ 1 row, and assert at least one of the seeded summary contracts the resolver/grading suites touch (e.g., `contract.pit_cycle_summary`, `contract.lap_phase_summary`) returns a row when queried directly. The intent: prove the snapshot supplies the offline data path the developer flow advertises, not just connectivity.
+   - **Case B — URL unreachable, opt-in:** `DATABASE_URL="postgres://invalid:invalid@127.0.0.1:1/none"`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=test`. Assert the probe fails, the fallback log line is emitted, and the same chat-runtime queries from Case A succeed against the snapshot.
    - **Case C — URL missing, opt-out:** `DATABASE_URL=""`, `NEON_DATABASE_URL=""`, `OPENF1_LOCAL_FALLBACK` unset, `NODE_ENV=test`. Importing `sql` and calling it must throw `Missing required environment variable: DB_HOST` (the same error today's code path raises).
    - **Case D — production guard:** `DATABASE_URL=""`, `NEON_DATABASE_URL=""`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=production`. Must throw the missing-URL error; the fallback must never engage.
 7. Add `web/docs/local-fallback.md` (~30 lines): when to set `OPENF1_LOCAL_FALLBACK=1`, where the snapshot lives, the production guard, and the command to run the test file standalone.
@@ -78,13 +78,17 @@ cd web && npm run build
 cd web && npm run typecheck
 cd web && npm run test:grading
 cd web && node --test scripts/tests/driver-fallback.test.mjs
+# Step 4 survivor check: no direct pool.query/pool.connect callers may remain under web/src/.
+# `!` makes the gate fail if rg finds any matches; succeeds (exit 1 from rg → negated to 0) when there are none.
+cd web && ! rg -n "pool\.(query|connect)\(" src/
 ```
 
 ## Acceptance criteria
 - [ ] `cd web && npm run build` succeeds.
 - [ ] `cd web && npm run typecheck` succeeds.
 - [ ] `cd web && npm run test:grading` passes (existing tests still green after the move + barrel).
-- [ ] `cd web && node --test scripts/tests/driver-fallback.test.mjs` passes all four cases (A: missing URL + opt-in → PGlite; B: unreachable URL + opt-in → PGlite; C: missing URL, opt-out → throws today's missing-env error; D: `NODE_ENV=production` ignores `OPENF1_LOCAL_FALLBACK` and throws).
+- [ ] `cd web && node --test scripts/tests/driver-fallback.test.mjs` passes all four cases (A: missing URL + opt-in → PGlite; B: unreachable URL + opt-in → PGlite; C: missing URL, opt-out → throws today's missing-env error; D: `NODE_ENV=production` ignores `OPENF1_LOCAL_FALLBACK` and throws). Cases A and B specifically assert real chat-runtime queries against `core.driver` and a seeded `contract.*` summary return ≥ 1 row, proving the snapshot exposes the offline data path — not just `SELECT 1` connectivity.
+- [ ] `cd web && ! rg -n "pool\.(query|connect)\(" src/` succeeds (i.e., rg finds no direct `pool.query(` / `pool.connect(` callers remaining under `web/src/`), enforcing Step 4's survivor-elimination requirement before fallback can be considered safe.
 - [ ] Existing call sites that `import { sql, pool } from "@/lib/db"` continue to compile and resolve via the new barrel — verified by `npm run typecheck` succeeding without modifying any call site that uses only `sql`.
 - [ ] No new gate requires a real Neon connection or staging environment to merge.
 
@@ -147,10 +151,10 @@ cd web && node --test scripts/tests/driver-fallback.test.mjs
 **Status: REVISE**
 
 ### High
-- [ ] Replace the fallback-path `SELECT 1` proof with a repo-local assertion that exercises at least one real chat/runtime query against the seeded snapshot, because the current gates can pass while `web/data/local-fallback-snapshot.sql` is missing required `core.*` / `contract.*` rows and the advertised offline developer flow still fails at runtime.
+- [x] Replace the fallback-path `SELECT 1` proof with a repo-local assertion that exercises at least one real chat/runtime query against the seeded snapshot, because the current gates can pass while `web/data/local-fallback-snapshot.sql` is missing required `core.*` / `contract.*` rows and the advertised offline developer flow still fails at runtime.
 
 ### Medium
-- [ ] Add a command-testable gate for Step 4's `pool.query(` / `pool.connect(` survivor search, such as an `rg` check under `web/src/`, so the plan enforces the stated requirement that direct `pool.*` callers are eliminated before fallback can be considered safe.
+- [x] Add a command-testable gate for Step 4's `pool.query(` / `pool.connect(` survivor search, such as an `rg` check under `web/src/`, so the plan enforces the stated requirement that direct `pool.*` callers are eliminated before fallback can be considered safe.
 
 ### Low
 
