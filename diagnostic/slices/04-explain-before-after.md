@@ -1,11 +1,11 @@
 ---
 slice_id: 04-explain-before-after
 phase: 4
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T08:45:00-04:00
+updated: 2026-04-28T08:51:45-04:00
 ---
 
 ## Goal
@@ -396,6 +396,26 @@ All five Phase 4 indexes exist and are `pg_index.indisvalid = true` on the live 
 - [x] Files modified vs `integration/perf-roadmap` is a subset of the declared set (`web/scripts/perf-explain-before-after.mjs` new, `web/scripts/perf-explain-validate.mjs` new, `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` new, `diagnostic/slices/04-explain-before-after.md` modified). `diagnostic/_state.md` not touched.
 
 ## Audit verdict
+**Status: PASS**
+
+- Gate #0 `[ -d web/node_modules ] || npm --prefix web ci` -> exit `0`
+- Gate #1 pre-state `pg_index.indisvalid` DO-block -> exit `0`
+- Gate #2 `( cd web && node scripts/perf-explain-before-after.mjs --output="../$ARTIFACT" )` -> exit `0`
+- Gate #3 `test -f "$ARTIFACT"` -> exit `0`
+- Gate #4 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql` -> exit `0`
+- Gate #5 post-run `pg_index.indisvalid` DO-block -> exit `0`
+- Gate #6 `node web/scripts/perf-explain-validate.mjs "$ARTIFACT"` -> exit `0`
+- Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> exit `0`; matches expected files only: `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json`, `diagnostic/slices/04-explain-before-after.md`, `web/scripts/perf-explain-before-after.mjs`, `web/scripts/perf-explain-validate.mjs`
+- Acceptance: helper script exists and completed under gate #2 -> PASS
+- Acceptance: validator exists and exited `0` under gate #6 -> PASS
+- Acceptance: pre-run index validity gate -> PASS
+- Acceptance: post-run index validity gate -> PASS
+- Acceptance: artifact carries all 10 queries with pre/post `plan_json`, `execution_time_ms`, `total_cost`, `speedup`, and `cost_speedup` -> PASS
+- Acceptance: artifact aggregate carries all wall-clock and cost fields, numeric and non-null -> PASS
+- Acceptance: `aggregate.net_p50_cost_speedup >= 1.5` -> PASS (`21.23`)
+- Acceptance: `aggregate.net_p95_cost_speedup >= 1.0` -> PASS (`1`)
+- Acceptance: `regressions` array empty under cost-based filter -> PASS (`[]`)
+- Acceptance: branch diff subset of declared paths -> PASS
 
 ## Plan-audit verdict (round 1)
 
