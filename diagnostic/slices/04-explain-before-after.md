@@ -1,11 +1,11 @@
 ---
 slice_id: 04-explain-before-after
 phase: 4
-status: pending
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T18:50:00Z
+updated: 2026-04-28T07:48:45-04:00
 ---
 
 ## Goal
@@ -236,7 +236,130 @@ node web/scripts/perf-explain-validate.mjs "$ARTIFACT"
 - **Rollback**: `git revert <commit>` removes the helper scripts and the artifact. The DB state is left unchanged (the indexes are restored by gate #4 / gate #5 regardless of revert).
 
 ## Slice-completion note
-(filled by Claude)
+
+**Status: BLOCKED — gate #6 fails on `aggregate.net_p95_speedup` and on a non-empty `regressions` array. Both failures stem from the same root cause: the deterministic first `analytic_ready` session is too small for wall-clock `EXPLAIN ANALYZE` to measure index speedup with sub-millisecond precision. The DB state is left clean (gates #1, #4, and #5 all exit 0), so the slice can be unblocked by a plan-revise round on a single decision (see "What the user / planner should decide" below) without any DB cleanup.**
+
+### Branch and commits
+
+- Branch: `slice/04-explain-before-after`
+- Implementation tip will be appended in the same commit that records this note. Approved-plan tip: `e30af8e`.
+
+### Gate exit codes
+
+| Gate | Command | Exit |
+|---|---|---:|
+| 0 | `[ -d web/node_modules ] || npm --prefix web ci` | 0 |
+| 1 | Pre-state `pg_index.indisvalid` DO-block (5 indexes) | 0 |
+| 2 | `( cd web && node scripts/perf-explain-before-after.mjs --output=… )` | 0 |
+| 3 | `test -f $ARTIFACT` | 0 |
+| 4 | `psql -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql` (safety re-apply) | 0 |
+| 5 | Post-run `pg_index.indisvalid` DO-block (5 indexes) | 0 |
+| 6 | `node web/scripts/perf-explain-validate.mjs $ARTIFACT` | **1** |
+
+Gate #6 diagnostic: `aggregate.net_p95_speedup=0.97 below threshold 1 (net p95 regression)`. The validator exits at the first failing assertion; the artifact `regressions` array is also non-empty (`["Q3"]`), which would have failed the third validator threshold.
+
+### Captured artifact summary
+
+Artifact: `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json`
+- `session_key = 9102` (first `analytic_ready` session in `core.session_completeness`).
+- `aggregate`:
+  - `pre_p50_ms = 0.02`, `post_p50_ms = 0.01`, `net_p50_speedup = 2.0` ✓ ≥ 1.5
+  - `pre_p95_ms = 0.31`, `post_p95_ms = 0.32`, `net_p95_speedup = 0.97` ✗ < 1.0
+- `regressions = ["Q3"]` (Q3 speedup 0.75 < 1/1.2 = 0.833)
+
+Per-query speedups (median of 11 EXPLAIN ANALYZE iterations after 2 warm-up runs):
+
+| Q | pre (ms) | post (ms) | speedup | indexes targeted |
+|---|---:|---:|---:|---|
+| Q1 | 0.167 | 0.121 | 1.38 | idx_raw_laps_session_include |
+| Q2 | 0.017 | 0.010 | 1.70 | idx_raw_laps_session_driver_valid_partial |
+| **Q3** | **0.003** | **0.004** | **0.75** | idx_raw_stints_session_driver_window |
+| Q4 | 0.003 | 0.003 | 1.00 | idx_raw_pit_session_driver_lap |
+| Q5 | 0.113 | 0.015 | 7.53 | idx_raw_position_history_session_date |
+| Q6 | 0.202 | 0.206 | 0.98 | idx_raw_laps_session_include |
+| Q7 | 0.024 | 0.018 | 1.33 | idx_raw_stints_session_driver_window |
+| Q8 | 0.012 | 0.010 | 1.20 | idx_raw_pit_session_driver_lap |
+| Q9 | 0.067 | 0.008 | 8.38 | idx_raw_position_history_session_date |
+| Q10 | 0.310 | 0.318 | 0.97 | idx_raw_laps_session_driver_valid_partial |
+
+### Blocker diagnosis
+
+Three of the 10 queries (Q3, Q4, Q6, Q10) end up with effectively identical pre/post wall-clock timings or with timings at the OS-level sub-microsecond noise floor. Looking at each in turn:
+
+1. **Q3** — `SELECT compound FROM raw.stints WHERE session_key = 9102 AND driver_number = 1 AND lap_start <= 10 AND lap_end >= 10`.
+   - PRE plan: `Index Scan` using pre-existing `uq_stints_session_driver_stint`, `Total Cost = 13.62`, `Actual Total Time = 0.003 ms`.
+   - POST plan: `Index Only Scan` using new `idx_raw_stints_session_driver_window`, `Total Cost = 4.33`, `Actual Total Time = 0.004 ms`.
+   - The planner *is* picking the new index post-state and the cost estimate drops 3.1×, but session 9102 has only **63 stint rows total**, so both phases run in 3–4 μs. The 1 μs difference between PRE and POST flips the `speedup` ratio to 0.75, falsely flagging a regression even though the new index demonstrably wins on the cost model and would win on wall clock at any realistic data scale.
+2. **Q4** — `SELECT * FROM raw.pit WHERE session_key = 9102 AND driver_number = 1 AND lap_number = 10`.
+   - PRE plan: `Index Scan` using pre-existing `uq_pit_session_driver_lap_date` (4 cols incl. `date`), `Total Cost = 8.31`.
+   - POST plan: `Index Scan` using new `idx_raw_pit_session_driver_lap` (3 cols), `Total Cost = 8.31`.
+   - The new 3-column index has the same cost as the existing 4-column unique index when the predicate fixes all three leading columns; the planner can pick either. Both phases run in ~3 μs against the 43-row session. There is no wall-clock difference to measure.
+3. **Q6** — `SELECT driver_number, avg(lap_duration) FROM raw.laps WHERE session_key = 9102 AND lap_duration IS NOT NULL GROUP BY driver_number`.
+   - PRE and POST both report the same `Aggregate` parent plan with `Total Cost = 1428.32`. The covering `idx_raw_laps_session_include` does not help reduce GROUP BY cost on 1312 rows; the planner picks an equivalent shape pre and post. Wall-clock 0.20 ms in both phases.
+4. **Q10** — `SELECT driver_number, percentile_cont(0.5) … FROM raw.laps WHERE session_key = 9102 AND lap_duration IS NOT NULL GROUP BY driver_number`.
+   - Same as Q6: identical Aggregate plan and `Total Cost = 1501.58` pre vs post. The partial index doesn't help the percentile aggregate at this row count. Wall-clock 0.31 ms both phases.
+
+The remaining six queries (Q1, Q2, Q5, Q7, Q8, Q9) DO show measurable speedups (1.20× to 8.38×). The four "noise-floor" queries above pull `aggregate.net_p95_speedup` to 0.97, just below the 1.0 threshold, and pull Q3 specifically into the `regressions` array.
+
+#### Why the deterministic-session selector is too small
+
+`core.session_completeness` lists 100+ `analytic_ready` sessions; the first five by `session_key` are:
+
+| session_key | laps | stints | pits | position_history |
+|---:|---:|---:|---:|---:|
+| 9102 | 1312 | 63 | 43 | 705 |
+| 9110 | 1318 | 53 | 34 | 346 |
+| 9118 | 1355 | 83 | 63 | 534 |
+| 9126 | 974 | 44 | 24 | 305 |
+| 9133 | 1255 | 56 | 36 | 464 |
+
+All `analytic_ready` sessions in this DB are similar in size — none has more than ~1500 lap rows. With `raw.laps = 159 793 rows / 111 MB` total but only ~1300 rows per session, the planner consistently completes session-scoped scans in microseconds against the pre-existing PK/UNIQUE indexes (which already provide a leading `(session_key, …)` btree). The new Phase 4 indexes ARE picked correctly when they help (Q1, Q2, Q5, Q7, Q9 all switch to the new index in the POST plan), but at this data scale the wall-clock signal sits at or below the OS scheduler's noise floor.
+
+This is the failure mode anticipated by the slice's `## Risk / rollback` section ("Risk: `aggregate.net_p50_speedup < 1.5`. … escalate to user with the artifact for review"). The same root cause hits `aggregate.net_p95_speedup < 1.0` and a non-empty `regressions` array; the prescribed protocol is identical: BLOCK and escalate.
+
+### Why this cannot be fixed within the slice's documented scope
+
+Per the loop's operating principles ("Do not invent workarounds that change the slice's intent"), every viable fix would require editing artifacts the slice's `## Steps`, `## Decisions`, or acceptance criteria fix in place:
+
+1. **Switch from EXPLAIN ANALYZE wall-clock to `Total Cost` deltas.** Would prove the indexes win on the cost model (Q3 already shows 13.62 → 4.33), but Steps §2 explicitly prescribes `execution_time_ms (from the plan's Execution Time)` as the speedup metric, not Total Cost. Changing the metric changes the slice spec.
+2. **Pick a larger session.** Steps §2 mandates the deterministic selector `SELECT session_key … WHERE completeness_status = 'analytic_ready' ORDER BY session_key ASC LIMIT 1`. A different selector (e.g., `ORDER BY (SELECT count(*) FROM raw.laps WHERE session_key = s.session_key) DESC`) would change Steps §2 and the slice's reproducibility decision (Decisions: "deterministic `analytic_ready` session key, same selector as the sibling slice").
+3. **Add a noise-floor guard to regression detection.** E.g., only flag `speedup < 1/1.2` when both `pre.execution_time_ms` and `post.execution_time_ms` are above some absolute threshold (e.g., 0.1 ms). This would clear Q3 cleanly. But Steps §2 prescribes the rule literally as `speedup < 1 / 1.2`; a noise-floor guard changes that rule.
+4. **Loosen the `aggregate.net_p95_speedup ≥ 1.0` threshold.** Steps §3 prescribes the literal threshold and the validator's diagnostic message. Changing it changes the slice spec.
+5. **Force the planner to seq-scan in PRE.** E.g., `SET enable_indexscan = off` before PRE captures. Would inflate pre timings into the measurable range — but invents a workaround whose only purpose is making the gate green, not improving real performance, and changes the slice's intent (the slice measures actual planner choices in each state, not a forced-seq-scan baseline).
+
+The implementer DID apply two scope-conforming refinements to reduce noise, both internal to the helper script (not changes to the artifact shape or the spec):
+
+- **Warm-up runs (2) before the measured iterations.** Eliminates first-iteration cold-cache effects.
+- **Median of 11 measured iterations.** More robust than min-of-N to outliers and to the chosen iteration count.
+
+These refinements eliminated the spurious Q4 / Q6 regression flags that earlier single-iteration and min-of-5 runs produced (Q6 was an apparent regression on an early run, Q4 on the next). They could not eliminate the Q3 flag because Q3's pre/post wall clock differs by exactly 1 μs, which is at the resolution limit.
+
+### What the user / planner should decide
+
+Three viable resolutions, in order of how invasively they touch the slice spec:
+
+- **(A) Loosen the per-query regression rule to `speedup < 1/1.2 AND post.execution_time_ms ≥ NOISE_FLOOR_MS`.** A reasonable noise floor is 0.1 ms (100 μs), which excludes only the four sub-millisecond queries on the smallest session. Pair with loosening `aggregate.net_p95_speedup ≥ 1.0` to `≥ 0.95` (allowing 5% noise) OR replacing `aggregate.net_p95_speedup` with an aggregate that excludes queries below the noise floor. Smallest spec change. Requires a plan-revise round to update Steps §2 (regression rule) and Steps §3 / acceptance criteria (validator threshold).
+- **(B) Replace the deterministic-session selector with one that yields a larger session.** E.g., add a row-count predicate `WHERE … AND (SELECT count(*) FROM raw.laps WHERE session_key = s.session_key) > 10000` — but no `analytic_ready` session in this DB has >1500 laps, so the selector would have to widen to non-`analytic_ready` sessions (the largest is `session_key = 9094` with 1516 laps — only marginally bigger). On this DB, option (B) does not actually fix the noise-floor problem; on a larger production DB it would.
+- **(C) Replace EXPLAIN ANALYZE wall-clock with `Total Cost` deltas as the speedup metric.** Stable across runs (Q3 cost drops 13.62 → 4.33 deterministically; Q4/Q6/Q10 are unchanged at the cost level, which the validator can interpret as "no improvement" rather than as a regression). Requires a plan-revise round to update Steps §2 (metric) and Steps §3 (validator) and to redefine the per-query / aggregate thresholds in cost-ratio terms.
+
+The recommended option is (A) — it preserves the slice's intent (wall-clock-measured speedup), preserves the deterministic-session selector (reproducibility), and only relaxes the regression rule and the p95 threshold by an amount calibrated to the actual measurement noise (single-microsecond resolution).
+
+### State left in the database
+
+All five Phase 4 indexes exist and are `pg_index.indisvalid = true` on the live DB under schema `raw` (gate #5 confirms post-run). The helper's drop / re-apply / re-validate flow completed successfully (gate #2 exit 0); the safety re-apply (gate #4) was a no-op (all five indexes still present after the helper's own re-apply). Re-running this slice after a plan-revise round is idempotent and does not require any DB cleanup.
+
+### Self-check vs acceptance criteria
+
+- [x] `web/scripts/perf-explain-before-after.mjs` exists and runs to completion under gate #2.
+- [x] `web/scripts/perf-explain-validate.mjs` exists and exits non-zero with a clear diagnostic.
+- [x] Gate #1 (pre-state validity) exits `0`.
+- [x] Gate #5 (post-run validity) exits `0`.
+- [x] Artifact contains pre/post `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans for all 10 queries (Q1–Q10), each with `pre.plan_json`, `pre.execution_time_ms`, `post.plan_json`, `post.execution_time_ms`, and per-query `speedup`.
+- [x] Artifact `aggregate` block contains `pre_p50_ms`, `pre_p95_ms`, `post_p50_ms`, `post_p95_ms`, `net_p50_speedup`, `net_p95_speedup` — all numeric, no `null`.
+- [x] `aggregate.net_p50_speedup ≥ 1.5` — actual `2.0`.
+- [ ] `aggregate.net_p95_speedup ≥ 1.0` — actual `0.97`. **FAILS** by 0.03; root cause documented above.
+- [ ] `regressions` array is empty — actual `["Q3"]`. **FAILS**; root cause documented above.
+- [x] Files modified vs `integration/perf-roadmap` is a subset of the declared set (`web/scripts/perf-explain-before-after.mjs` new, `web/scripts/perf-explain-validate.mjs` new, `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` new, `diagnostic/slices/04-explain-before-after.md` modified). `diagnostic/_state.md` not touched.
 
 ## Audit verdict
 
