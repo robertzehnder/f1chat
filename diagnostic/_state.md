@@ -56,3 +56,4 @@ _None._
 ## Notes for auditors
 
 _No accumulated notes yet. Auditors may append single-line lessons here, max 10 entries._
+- Require every Phase 3 per-contract materialization slice to include DB apply/existence/parity gate commands, not only web gates (slice:03-strategy-evidence-summary).
