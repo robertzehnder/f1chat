@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T08:15:00Z
+updated: 2026-04-28T15:07:34Z
 ---
 
 ## Goal
@@ -291,3 +291,18 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - Branch clean since round-14 `[plan-approved]` commit. Re-verified both prior-context paths exist (`diagnostic/_state.md`, `diagnostic/notes/05-template-cache-coverage.md`). Re-applied all nine audit principles: no contradictions, no gate ordering bugs, no missing step dependencies, no scope mismatches, no under-specified env (lru-cache is in-memory, DI seams avoid real DB), all acceptance criteria concretely testable with specific spy counts and deep-equality assertions, no out-of-scope steps, no SQL index collisions (no migrations), gate commands idempotent. Nothing to flag.
+
+## Plan-audit verdict (round 16)
+
+**Status: REVISE**
+
+### High
+- [ ] Expand the cached deterministic-derived subset, the Step 3 hit-path merge contract, and the matching tests/acceptance criteria to cover every deterministic response field `route.ts` currently returns that would otherwise be lost on a hit, especially `answerReasoning` and the deterministic portions of `result` (at minimum `rowCount` and `truncated`, plus `sql`/rows alignment); the current subset (`answer`, sql preview, rows, `generationSource`, `model`, `generationNotes`) is too narrow to reconstruct the existing success payload without replaying synthesis or silently regressing fields.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
+- `web/src/app/api/chat/route.ts` currently returns deterministic success fields beyond the plan's cached subset, including `answerReasoning`, `sql`, and `result`; the slice needs to state whether those are cached or deterministically recomputed on hit.
