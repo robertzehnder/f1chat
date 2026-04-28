@@ -1,15 +1,15 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28
+updated: 2026-04-28T15:53:45Z
 ---
 
 ## Goal
-When `DATABASE_URL` / `NEON_DATABASE_URL` is missing **or** a startup probe against the configured Neon pool fails, fall back to an in-process **PGlite** (`@electric-sql/pglite`) database seeded from a committed snapshot so dev can run without Neon connectivity. Production is unchanged: when `NODE_ENV === "production"` the fallback is refused regardless of any other env, and a missing URL is still a hard error.
+When the developer opts in via `OPENF1_LOCAL_FALLBACK=1` **and** either `DATABASE_URL` / `NEON_DATABASE_URL` is missing **or** a startup probe against the configured Neon pool fails, fall back to an in-process **PGlite** (`@electric-sql/pglite`) database seeded from a committed snapshot so dev can run without Neon connectivity. The fallback never engages automatically: without `OPENF1_LOCAL_FALLBACK=1` behavior is identical to today (missing URL throws, unreachable URL surfaces the probe error). Production is unchanged: when `NODE_ENV === "production"` the fallback is refused regardless of any other env, and a missing URL is still a hard error.
 
 ## Inputs
 - `web/src/lib/db.ts` (current `pg.Pool` driver — to be moved under `web/src/lib/db/driver.ts`)
@@ -29,7 +29,7 @@ When `DATABASE_URL` / `NEON_DATABASE_URL` is missing **or** a startup probe agai
 - **Production (unchanged):** `NEON_DATABASE_URL` (or `DATABASE_URL`) pointing at the Neon pooler. SSL/timeout behavior in `web/src/lib/db.ts` is preserved verbatim by the move.
 - **Local fallback prerequisites:**
   - `OPENF1_LOCAL_FALLBACK=1` — opt-in switch. Without it, behavior is identical to today.
-  - `OPENF1_LOCAL_SNAPSHOT_PATH` — optional; defaults to `web/data/local-fallback-snapshot.sql` resolved against the web cwd.
+  - `OPENF1_LOCAL_SNAPSHOT_PATH` — optional; defaults to `data/local-fallback-snapshot.sql` resolved against the `web/` cwd (i.e., the on-disk path is `web/data/local-fallback-snapshot.sql`). Absolute paths in the env var are honored as-is. The plan, the test file, and `bootPglite()` all use this same `web/`-relative basis — no other resolution rule.
   - `@electric-sql/pglite` added to `web/package.json` dependencies.
   - The snapshot SQL file checked into the repo.
 - **Selection logic** (implemented in a single `chooseDriver()` function and asserted by the new test file):
@@ -44,7 +44,7 @@ When `DATABASE_URL` / `NEON_DATABASE_URL` is missing **or** a startup probe agai
 3. In `driver.ts`, factor the existing pool construction into a private `tryNeonPool()` (current logic, untouched semantics) and add:
    - `bootPglite(snapshotPath: string): Promise<PGlite>` — instantiates `new PGlite()`, runs the snapshot SQL via `db.exec(...)`, returns the instance.
    - `chooseDriver(): Promise<{ kind: "neon"; pool: Pool } | { kind: "pglite"; db: PGlite }>` — implements the selection logic above; logs `[db] using local PGlite fallback (reason=<missing-url|probe-failed>)` once on the fallback path so a developer can see why.
-4. Replace the exported `pool`/`sql` with a thin shim: `sql<T>(text, values)` awaits a memoized `chooseDriver()` and dispatches to either `pool.query(...)` or `pglite.query(...)`, normalizing both `{ rows }` shapes to `T[]`. Keep `pool` as a deprecated re-export of the `pg.Pool` instance when present (and `undefined` otherwise) so the few call sites that touch it directly fail loudly under fallback rather than silently lying — search `web/src/` for `pool.query(` / `pool.connect(` and convert any survivors to `sql(...)` in this slice.
+4. Wire the exports. `sql<T>(text, values)` is the async-aware shim: it awaits a memoized `chooseDriver()` (resolved exactly once per process) and dispatches to either the `pg.Pool` or the PGlite instance, normalizing both `{ rows }` shapes to `T[]`. The `pool` export keeps today's contract — synchronous, eagerly constructed at module load whenever a URL is present, identical to the current `web/src/lib/db.ts` behavior — and exported from the barrel as `Pool | undefined`. The async `chooseDriver()` probe does NOT gate `pool`'s construction; it only governs which driver `sql()` dispatches to. Concretely: under healthy-Neon (URL set, probe passes), `pool` is the same `pg.Pool` instance both at import time and after the probe resolves, and `sql()` routes to it. Under fallback (probe fails, opt-in), `pool` is still the (now-unhealthy) `pg.Pool` and direct callers of `pool.*` will fail loudly against a dead Neon — which is why this step also requires: search `web/src/` for `pool.query(` / `pool.connect(` and convert any survivors to `sql(...)` in this slice. Under URL-missing, `pool` is `undefined` (matches today's pre-throw state). The barrel re-exports `pool` and `sql`; no behavioral surprise for healthy-Neon callers.
 5. Add `web/data/local-fallback-snapshot.sql` containing the minimum schema + seed needed for the chat runtime to answer something offline:
    - `CREATE SCHEMA` for `raw`, `core`, `contract` (mirrors prod).
    - One driver row, one session row, lookup tables (`compound_alias_lookup`, `metric_registry`, `valid_lap_policy`, `replay_contract_registry`).
@@ -130,11 +130,11 @@ cd web && node --test scripts/tests/driver-fallback.test.mjs
 **Status: REVISE**
 
 ### High
-- [ ] Fix the snapshot default-path contract so the plan names one resolution basis consistently: either default `OPENF1_LOCAL_SNAPSHOT_PATH` to `data/local-fallback-snapshot.sql` when resolving from `web/`, or keep `web/data/local-fallback-snapshot.sql` and state it is repo-root-relative, because the current wording points the fallback at `web/web/data/...`.
+- [x] Fix the snapshot default-path contract so the plan names one resolution basis consistently: either default `OPENF1_LOCAL_SNAPSHOT_PATH` to `data/local-fallback-snapshot.sql` when resolving from `web/`, or keep `web/data/local-fallback-snapshot.sql` and state it is repo-root-relative, because the current wording points the fallback at `web/web/data/...`.
 
 ### Medium
-- [ ] Align the Goal text with the decided opt-in trigger by stating that missing-URL and probe-failed fallback only happen when `OPENF1_LOCAL_FALLBACK=1`, otherwise the first paragraph still promises automatic fallback.
-- [ ] Specify how the synchronous exported `pool` behaves before the async `chooseDriver()` probe resolves on the healthy-Neon path, or drop the promise to preserve `pool` as a usable compatibility export, because Step 4 currently requires a sync export from an async selection flow without defining the contract.
+- [x] Align the Goal text with the decided opt-in trigger by stating that missing-URL and probe-failed fallback only happen when `OPENF1_LOCAL_FALLBACK=1`, otherwise the first paragraph still promises automatic fallback.
+- [x] Specify how the synchronous exported `pool` behaves before the async `chooseDriver()` probe resolves on the healthy-Neon path, or drop the promise to preserve `pool` as a usable compatibility export, because Step 4 currently requires a sync export from an async selection flow without defining the contract.
 
 ### Low
 
