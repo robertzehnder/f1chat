@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: blocked
-owner: user
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:42:12-04:00
+updated: 2026-04-28T20:50:00-04:00
 ---
 
 ## Goal
