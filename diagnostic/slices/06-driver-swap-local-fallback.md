@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T15:53:45Z
+updated: 2026-04-28T16:05:25Z
 ---
 
 ## Goal
@@ -135,6 +135,22 @@ cd web && node --test scripts/tests/driver-fallback.test.mjs
 ### Medium
 - [x] Align the Goal text with the decided opt-in trigger by stating that missing-URL and probe-failed fallback only happen when `OPENF1_LOCAL_FALLBACK=1`, otherwise the first paragraph still promises automatic fallback.
 - [x] Specify how the synchronous exported `pool` behaves before the async `chooseDriver()` probe resolves on the healthy-Neon path, or drop the promise to preserve `pool` as a usable compatibility export, because Step 4 currently requires a sync export from an async selection flow without defining the contract.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+- The gate order `build` before `typecheck` still matches the current auditor note for web slices.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the fallback-path `SELECT 1` proof with a repo-local assertion that exercises at least one real chat/runtime query against the seeded snapshot, because the current gates can pass while `web/data/local-fallback-snapshot.sql` is missing required `core.*` / `contract.*` rows and the advertised offline developer flow still fails at runtime.
+
+### Medium
+- [ ] Add a command-testable gate for Step 4's `pool.query(` / `pool.connect(` survivor search, such as an `rg` check under `web/src/`, so the plan enforces the stated requirement that direct `pool.*` callers are eliminated before fallback can be considered safe.
 
 ### Low
 
