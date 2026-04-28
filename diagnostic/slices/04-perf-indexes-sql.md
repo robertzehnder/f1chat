@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:50:38Z
+updated: 2026-04-28T05:05:00Z
 ---
 
 ## Goal
@@ -47,7 +47,7 @@ Add the schema-verified indexes from roadmap §4 Phase 4 to support common acces
    5. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_position_history_session_date ON raw.position_history (session_key, date);` — position-history time scans.
    6. `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_raw_laps_session_driver_valid_partial ON raw.laps (session_key, driver_number) WHERE lap_duration IS NOT NULL;` — partial index for the valid-lap filter.
 2. Apply the migration via gate #1 (no `--single-transaction`; each `CREATE INDEX CONCURRENTLY` runs in its own implicit transaction).
-3. Verify every declared index exists in `pg_indexes` with the expected schema and table — gate #2.
+3. Verify every declared index exists AND is valid by asserting `pg_index.indisvalid = true` for each of the six index names under schema `raw` — gate #2. (Pure-existence in `pg_indexes` is insufficient: a `CREATE INDEX CONCURRENTLY` that aborts mid-build leaves an INVALID index the planner will skip, so gate #3 could fall back to Seq Scan even though the index "exists".)
 4. Run `EXPLAIN (FORMAT JSON)` on a deterministic set of representative queries (Q1–Q6 enumerated inline in gate #3, where Q3 is a real stint-window predicate `lap_start <= L AND lap_end >= L` and Q6 is a dedicated assertion that the partial index `idx_raw_laps_session_driver_valid_partial` is picked on its own) pinned to the first `analytic_ready` session selected by:
    ```sql
    SELECT session_key
@@ -79,9 +79,13 @@ set -euo pipefail
 #    aborts the run on the first failure.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql
 
-# 2. Confirm every declared index exists in pg_indexes. Must exit 0; the DO
-#    block raises (and ON_ERROR_STOP=1 forces non-zero exit) if any expected
-#    index is missing.
+# 2. Confirm every declared index exists AND is VALID. We check
+#    pg_index.indisvalid (not just pg_indexes existence) because a
+#    CREATE INDEX CONCURRENTLY that aborts mid-build leaves an INVALID
+#    index that pg_indexes still lists; the planner skips invalid indexes,
+#    so EXPLAIN gate #3 could fall back to Seq Scan even though the index
+#    "exists". The DO block raises (and ON_ERROR_STOP=1 forces non-zero
+#    exit) if any expected index is missing OR exists but is invalid.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
@@ -94,15 +98,20 @@ DECLARE
     'idx_raw_laps_session_driver_valid_partial'
   ];
   idx text;
-  found bool;
+  is_valid bool;
 BEGIN
   FOREACH idx IN ARRAY expected LOOP
-    SELECT EXISTS(
-      SELECT 1 FROM pg_indexes
-      WHERE schemaname = 'raw' AND indexname = idx
-    ) INTO found;
-    IF NOT found THEN
-      RAISE EXCEPTION 'expected index raw.% missing from pg_indexes', idx;
+    SELECT i.indisvalid
+      FROM pg_index i
+      JOIN pg_class c ON c.oid = i.indexrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'raw' AND c.relname = idx
+    INTO is_valid;
+    IF is_valid IS NULL THEN
+      RAISE EXCEPTION 'expected index raw.% missing from pg_index', idx;
+    END IF;
+    IF NOT is_valid THEN
+      RAISE EXCEPTION 'expected index raw.% exists but is INVALID (pg_index.indisvalid = false); drop and re-create with CREATE INDEX CONCURRENTLY', idx;
     END IF;
   END LOOP;
 END $$;
@@ -218,7 +227,7 @@ npm --prefix web run test:grading
 
 ## Acceptance criteria
 - [ ] `sql/020_perf_indexes.sql` applies cleanly against the live DB — gate #1 (`psql -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql`) exits `0`.
-- [ ] All six declared indexes exist in `pg_indexes` under schema `raw` — gate #2 exits `0` (the DO block raises if any of `idx_raw_laps_session_driver_lap`, `idx_raw_laps_session_include`, `idx_raw_stints_session_driver_window`, `idx_raw_pit_session_driver_lap`, `idx_raw_position_history_session_date`, `idx_raw_laps_session_driver_valid_partial` is missing).
+- [ ] All six declared indexes exist under schema `raw` AND are valid (`pg_index.indisvalid = true`) — gate #2 exits `0` (the DO block raises if any of `idx_raw_laps_session_driver_lap`, `idx_raw_laps_session_include`, `idx_raw_stints_session_driver_window`, `idx_raw_pit_session_driver_lap`, `idx_raw_position_history_session_date`, `idx_raw_laps_session_driver_valid_partial` is missing **or** exists with `indisvalid = false`). The validity check is what guarantees `idx_raw_laps_session_include` is usable on its own even though gate #3's Q2 accepts either lap index.
 - [ ] EXPLAIN against Q1–Q6 (gate #3, pinned to the deterministic first `analytic_ready` session from `core.session_completeness`) reports the corresponding new index name in the plan and does **not** contain `"Node Type": "Seq Scan"` — gate #3 exits `0`. Q2 accepts either `idx_raw_laps_session_include` or `idx_raw_laps_session_driver_valid_partial` (both are legitimate plans for the valid-lap predicate). Q3 uses a stint-window predicate (`lap_start <= L AND lap_end >= L`) that exercises the lap-range columns, not just the `(session_key, driver_number)` prefix. Q6 is a dedicated assertion that requires the partial index `idx_raw_laps_session_driver_valid_partial` specifically (so an invalid-but-named partial index cannot let the gate pass).
 - [ ] `npm --prefix web run build` exits `0`.
 - [ ] `npm --prefix web run typecheck` exits `0`.
@@ -235,7 +244,7 @@ npm --prefix web run test:grading
 
 ## Risk / rollback
 - Risk: an index name collision with a pre-existing index. Mitigation: every statement uses `IF NOT EXISTS`, so re-applying the migration is idempotent on the index name.
-- Risk: a `CREATE INDEX CONCURRENTLY` build aborts mid-way (deadlock, session kill) and Postgres leaves an `INVALID` index on the table. The `IF NOT EXISTS` clause matches by name, so a follow-up apply does **not** retry the build — gate #2 will pass (the index exists in `pg_indexes`) but gate #3 may still see a Seq Scan because the planner skips invalid indexes. Manual recovery: `DROP INDEX CONCURRENTLY raw.<name>;` then re-run gate #1. Detection: query `pg_index.indisvalid = false` for any of the six names; this is captured as a Notes line in the slice-completion note rather than gated, because a clean first apply will not trigger it.
+- Risk: a `CREATE INDEX CONCURRENTLY` build aborts mid-way (deadlock, session kill) and Postgres leaves an `INVALID` index on the table. The `IF NOT EXISTS` clause matches by name, so a follow-up apply does **not** retry the build. Gate #2 catches this directly: it asserts `pg_index.indisvalid = true` for every declared index, so an invalid index causes gate #2 to exit non-zero with the diagnostic `expected index raw.<name> exists but is INVALID`. Manual recovery: `DROP INDEX CONCURRENTLY raw.<name>;` then re-run gate #1.
 - Risk: privilege denial on `CREATE INDEX`. Mitigation: see Required services / env above; gate #1 fails fast with `permission denied for table …` and the migration leaves the schema unchanged.
 - Risk: `core.session_completeness` is missing or has zero `analytic_ready` sessions when gate #3 runs. Mitigation: gate #3's `IF s_key IS NULL THEN RAISE EXCEPTION` branch fires with a clear diagnostic; the prerequisite (Phase 3 materialization migrations applied) is documented in Required services / env.
 - Rollback: `git revert <commit>` reverts the SQL file. To remove the indexes from the live DB after revert, run `DROP INDEX CONCURRENTLY IF EXISTS raw.<name>;` for each of the six indexes. `DROP INDEX CONCURRENTLY` (like `CREATE INDEX CONCURRENTLY`) cannot run inside an explicit transaction block, so issue each `DROP` as its own statement (no `BEGIN; … COMMIT;`).
@@ -285,7 +294,7 @@ npm --prefix web run test:grading
 **Status: REVISE**
 
 ### High
-- [ ] Add a dedicated assertion for `idx_raw_laps_session_include` or require `pg_index.indisvalid = true` for every declared index; as written, gate #2 accepts invalid indexes and gate #3 never requires `idx_raw_laps_session_include`, so this slice can pass with a broken declared index.
+- [x] Add a dedicated assertion for `idx_raw_laps_session_include` or require `pg_index.indisvalid = true` for every declared index; as written, gate #2 accepts invalid indexes and gate #3 never requires `idx_raw_laps_session_include`, so this slice can pass with a broken declared index.
 
 ### Medium
 
