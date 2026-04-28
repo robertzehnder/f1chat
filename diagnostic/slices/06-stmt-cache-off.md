@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T20:10:00Z
+updated: 2026-04-28T20:45:00Z
 ---
 
 ## Goal
@@ -46,14 +46,21 @@ The user-approval sentinel for this slice authorises the implementer to obtain o
    - Import `sql` from `../db`.
    - Add the line `// @ts-expect-error sql() requires (text: string, values?: unknown[]); a QueryConfig object is not assignable to string.` followed immediately by the expression `void sql({ text: "SELECT 1", values: [], name: "foo" });` — note: NO `as never as string` cast. Without the cast the object literal is not assignable to `string`, so today `tsc` emits exactly one error on that line and `@ts-expect-error` consumes it (typecheck passes). If a future refactor widened `sql()` to accept `QueryConfig` (or `string | QueryConfig`), the call would type-check, the `@ts-expect-error` would become unused, and `tsc --noEmit` would fail with TS2578 "Unused '@ts-expect-error' directive." That failure mode is the assertion. (The previous draft used `... as never as string`, which made the argument typed as `string`, leaving zero errors and breaking the gate for the wrong reason; that cast is removed.)
    - Mark the file with `export {};` so it is treated as a module and never executed at runtime.
-5. Verify against a non-production pooled endpoint by running the script described in the Gate commands section, which opens 20 short-lived pool checkouts in parallel against `STAGING_NEON_DATABASE_URL`, runs a parameterised query on each, and asserts no `prepared statement` error is raised. The script is `web/scripts/verify-stmt-cache-off.mjs` (Node ESM, no TS loader required); add it as part of this slice. Capture stdout+stderr to `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` and commit it as the verification artifact. The gate command MUST use `set -o pipefail` (or an equivalent explicit exit-status check) so a non-zero exit from the verifier cannot be masked by the trailing `tee`.
+5. Verify against a non-production pooled endpoint by running the script described in the Gate commands section. The verifier MUST exercise the slice's only behavioural change — the `pool.query<…>({ text, values, name: undefined })` call shape inside `sql<T>` in `web/src/lib/db.ts` — by importing that helper directly, not by re-implementing it against `pg.Pool` ad-hoc. A parallel hand-written `pg.Pool` script could pass even if `db.ts` regressed, so the runtime gate would be vacuous; importing `sql` from `db.ts` is what makes this gate load-bearing.
+   - Script path: `web/scripts/verify-stmt-cache-off.ts` (TypeScript ESM). It imports `{ sql, pool } from '../src/lib/db.js'` (TypeScript's NodeNext ESM convention uses the `.js` extension on import specifiers even when the source file is `.ts`).
+   - The script issues 20 parameterised `sql<{ x: number }>("SELECT $1::int AS x", [i])` calls via `Promise.all`, asserts each row has the expected `x === i`, then awaits `pool.end()` so the process exits cleanly. Any thrown error is logged and the script `process.exit(1)`s so the gate's `set -o pipefail` flips the pipeline to non-zero.
+   - Run-time strategy: invoke via `npx tsx scripts/verify-stmt-cache-off.ts`. This requires adding `tsx` to `web/package.json`'s `devDependencies` (and the resulting `web/package-lock.json` update), declared up-front per the per-auditor lesson on `diagnostic/_state.md` line 62 ("declare any package/lockfile changes up front"). `tsx` is used here for the one-shot verifier only; the regression test harness in step 3 remains pure-`node --test` and pure-source-level — no `tsx` involvement there.
+   - **Safe env wiring (REQUIRED):** the verifier process MUST be launched with `NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL"` AND with every other DB key cleared via `env -u`. `createPool()` in `web/src/lib/db.ts` resolves the connection in this order: `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`, then `NEON_DB_HOST`+`NEON_DB_USER`+…, then `DB_HOST`+`DB_USER`+…. To rule out any chance of the verifier silently picking up a production-shaped value, the gate command unsets `DATABASE_URL`, `NEON_DB_HOST`, `NEON_DB_USER`, `NEON_DB_PASSWORD`, `NEON_DB_PORT`, `NEON_DB_NAME`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` for the verifier sub-process so the only DB var visible is the staging one.
+   - Capture stdout+stderr to `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` and commit it as the verification artifact. The gate command MUST use `set -o pipefail` (or an equivalent explicit exit-status check) so a non-zero exit from the verifier cannot be masked by the trailing `tee`.
 6. Update `diagnostic/_state.md` only as the merge step requires; this slice itself does not modify it.
 
 ## Changed files expected
 - `web/src/lib/db.ts` — set `name: undefined` explicitly in the `pool.query` call inside `sql<T>()`.
 - `web/scripts/tests/db-stmt-cache.test.mjs` — new Node-test-runner test that (a) reads `web/src/lib/db.ts` as a string and asserts `pool.query<…>({ … name: undefined … })` is the call shape inside `sql<T>`, and (b) reads both `web/src/lib/db.ts` and `web/src/lib/queries.ts` and asserts neither file contains a `query(...)` call argument list with a `name:` field whose value is anything other than `undefined`. Pure source-level assertions; no runtime import of TS sources.
 - `web/src/lib/__tests__/db.stmt-cache.types.ts` — new TypeScript type-level guard with `@ts-expect-error` that fails `npm run typecheck` if the public `sql()` signature ever widens to accept a `QueryConfig`.
-- `web/scripts/verify-stmt-cache-off.mjs` — small Node ESM script (uses `pg`'s `Pool` directly against `STAGING_NEON_DATABASE_URL`) that the Gate command in step 5 invokes.
+- `web/scripts/verify-stmt-cache-off.ts` — small TypeScript ESM script that imports `sql` and `pool` from `../src/lib/db.js` and runs 20 parallel `sql<…>("SELECT $1::int AS x", [i])` calls against `STAGING_NEON_DATABASE_URL` (mapped onto `NEON_DATABASE_URL` for the sub-process). Importing the actual `sql()` helper — rather than newing a `pg.Pool` directly — is what makes the runtime gate exercise the slice's only behavioural change.
+- `web/package.json` — adds `tsx` to `devDependencies` so the verifier above can be run via `npx tsx`. No other scripts/deps change.
+- `web/package-lock.json` — lockfile update from the `tsx` install.
 - `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` — captured pooled-endpoint verification output.
 - `diagnostic/slices/06-stmt-cache-off.md` — this slice file itself; the `## Slice-completion note` section is filled in at merge time and must record which non-production target (Neon staging branch URL or local PgBouncer) was used for the pooled-endpoint verification.
 
@@ -62,6 +69,7 @@ The user-approval sentinel for this slice authorises the implementer to obtain o
 
 ## Gate commands
 ```bash
+cd web && npm install # picks up the newly-declared `tsx` devDependency
 cd web && npm run build
 cd web && npm run typecheck
 # `test:grading` runs every `scripts/tests/*.test.mjs` via Node's native test
@@ -73,11 +81,25 @@ cd web && npm run test:grading
 # Pooled-endpoint verification (REQUIRES STAGING_NEON_DATABASE_URL — must NOT be production;
 # either a Neon staging/preview-branch pooler URL OR the local PgBouncer fallback documented
 # under `## Required services / env`).
-# `set -o pipefail` is REQUIRED so a non-zero exit from the verifier cannot be
-# masked by the trailing `tee`. Run the whole block in a single `bash -c` so the
-# pipefail option is in effect for the piped command.
-bash -c 'set -euo pipefail; cd web && STAGING_NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL" \
-  node scripts/verify-stmt-cache-off.mjs \
+#
+# Two invariants enforced by this command:
+#   1. `set -o pipefail` — the verifier's exit status survives the `| tee` pipeline.
+#   2. `env -u …` — every other DB-related env key is unset for the verifier
+#      sub-process so the only DB url visible is the mapped `NEON_DATABASE_URL`.
+#      This rules out any path where `createPool()` in `web/src/lib/db.ts` could
+#      accidentally fall through to a production-shaped value via `DATABASE_URL`,
+#      `NEON_DB_HOST`+credentials, or the local `DB_*` block.
+#
+# The verifier is `web/scripts/verify-stmt-cache-off.ts`, run via `npx tsx`. It
+# imports `sql` (and `pool`) from `../src/lib/db.js`, so the gate exercises the
+# slice's only behavioural change — the `pool.query<…>({ text, values, name: undefined })`
+# call shape inside `sql<T>` — and not a parallel hand-written `pg.Pool` script.
+bash -c 'set -euo pipefail; cd web && \
+  env -u DATABASE_URL \
+      -u NEON_DB_HOST -u NEON_DB_USER -u NEON_DB_PASSWORD -u NEON_DB_PORT -u NEON_DB_NAME \
+      -u DB_HOST -u DB_PORT -u DB_NAME -u DB_USER -u DB_PASSWORD \
+      NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL" \
+    npx tsx scripts/verify-stmt-cache-off.ts \
   | tee ../diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log'
 test -s diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log
 ! grep -E 'prepared statement .* (already exists|does not exist)' \
@@ -88,8 +110,9 @@ test -s diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log
 - [ ] `web/src/lib/db.ts` `sql<T>()` helper invokes `pool.query` with a `QueryConfig` argument whose `name` property is `undefined` on every call, so no server-side prepared statement is registered. The helper's public signature remains `sql<T>(text: string, values?: unknown[])`.
 - [ ] `web/scripts/tests/db-stmt-cache.test.mjs` exists and its assertions pass under `cd web && npm run test:grading` (which is the only test harness defined by `web/package.json` and which already runs every `scripts/tests/*.test.mjs`). The test performs only source-level assertions — it reads `web/src/lib/db.ts` and `web/src/lib/queries.ts` as strings via `fs.readFileSync`, asserts the positive call shape `pool.query<…>({ … name: undefined … })` is present in the body of `sql<T>` in `db.ts`, and asserts the negative-lookahead regex `/\.query\([^)]*\bname\s*:\s*(?!undefined\b)/s` matches nothing in either file. No runtime import of TypeScript sources is performed and no new dev dependency (e.g. `tsx`) is introduced.
 - [ ] `web/src/lib/__tests__/db.stmt-cache.types.ts` exists with a `// @ts-expect-error` line proving the public API of `sql()` rejects a `QueryConfig`. `npm run typecheck` exits 0 — i.e. the `@ts-expect-error` is consumed by exactly one expected error and not by zero (which would mean the signature accidentally widened) and not by more than one (which would mean an unrelated type error crept in).
-- [ ] All commands in `## Gate commands` exit 0, including the `! grep …` check that proves the pooled-endpoint log contains no `prepared statement` error. The pooled-endpoint verification gate runs under `set -o pipefail` (or equivalent) so a verifier failure cannot be masked by the `tee` pipeline.
-- [ ] `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` is committed and is non-empty (`test -s` passes) — this is the proof that step 5 ran against a non-production pooled endpoint, which per `## Required services / env` may be either a Neon staging/preview-branch pooler URL OR the documented local PgBouncer-in-transaction-mode fallback. The slice-completion note must record which target was used.
+- [ ] All commands in `## Gate commands` exit 0, including the `! grep …` check that proves the pooled-endpoint log contains no `prepared statement` error. The pooled-endpoint verification gate runs under `set -o pipefail` (or equivalent) so a verifier failure cannot be masked by the `tee` pipeline, and is launched with every non-staging DB env key cleared via `env -u` so `createPool()` in `web/src/lib/db.ts` cannot resolve to a production-shaped url.
+- [ ] `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` is committed and is non-empty (`test -s` passes) — this is the proof that step 5 ran against a non-production pooled endpoint via the `web/scripts/verify-stmt-cache-off.ts` script, which imports `sql` (and `pool`) from `web/src/lib/db.ts` directly so the gate is exercising the slice's only behavioural change rather than a parallel `pg.Pool` re-implementation. Per `## Required services / env` the target may be either a Neon staging/preview-branch pooler URL OR the documented local PgBouncer-in-transaction-mode fallback. The slice-completion note must record which target was used.
+- [ ] `web/package.json` declares `tsx` in `devDependencies` and `web/package-lock.json` reflects the install, both committed in this slice — this is the up-front package/lockfile declaration required by the per-auditor lesson on `diagnostic/_state.md` line 62.
 
 ## Out of scope
 - Switching to `@neondatabase/serverless` (Phase 6 item 1). The roadmap's `statement_cache_size: 0` knob is specific to that driver and is therefore deferred to that swap slice.
@@ -181,10 +204,10 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite Step 5, `Changed files expected`, the gate command, and acceptance text so the pooled-endpoint verifier exercises the repo’s actual `sql()` path in `web/src/lib/db.ts` (or an equivalent direct import of that helper/pool module), not a standalone `pg` `Pool` call; otherwise the runtime gate can pass without validating the slice’s only behavioral change.
+- [x] Rewrite Step 5, `Changed files expected`, the gate command, and acceptance text so the pooled-endpoint verifier exercises the repo’s actual `sql()` path in `web/src/lib/db.ts` (or an equivalent direct import of that helper/pool module), not a standalone `pg` `Pool` call; otherwise the runtime gate can pass without validating the slice’s only behavioral change.
 
 ### Medium
-- [ ] If the verifier is updated to hit `sql()`/`db.ts`, specify the exact safe env wiring for that process (for example a one-shot `NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL"` mapping) so the helper reads the non-production pooled URL without relying on production credentials.
+- [x] If the verifier is updated to hit `sql()`/`db.ts`, specify the exact safe env wiring for that process (for example a one-shot `NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL"` mapping) so the helper reads the non-production pooled URL without relying on production credentials.
 
 ### Low
 - [ ] None.
