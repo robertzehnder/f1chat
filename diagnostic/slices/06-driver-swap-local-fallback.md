@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T16:08:22Z
+updated: 2026-04-28T16:10:18Z
 ---
 
 ## Goal
@@ -161,3 +161,20 @@ cd web && ! rg -n "pool\.(query|connect)\(" src/
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
 - The gate order `build` before `typecheck` still matches the current auditor note for web slices.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Reconcile the plan with the current `web/src/lib/db.ts` env contract: today `createPool()` still accepts `NEON_DB_HOST` and `DB_*` host/port credentials, and the no-URL path does not throw `Missing required environment variable: DB_HOST`, so revise the goal, selection logic, and test expectations to preserve or intentionally replace those existing branches instead of treating “no URL” as a hard error.
+- [ ] Define the fallback decision against every currently supported config shape, not only `DATABASE_URL` / `NEON_DATABASE_URL`, because the proposed `chooseDriver()` would regress deployments and local setups that rely on `NEON_DB_HOST` or plain `DB_HOST`-style Postgres settings by misclassifying them as “missing URL” and either booting PGlite or throwing.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+- Repository check: `sed -n '1,240p' web/src/lib/db.ts` exited 0 and shows `createPool()` still supports both URL and host-based envs with local-default fallbacks.
+- Repository check: `rg -n "pool\\.(query|connect)\\(" web/src/` exited 0 and currently finds one direct survivor at `web/src/lib/queries.ts:789`.
