@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T16:14:11Z
+updated: 2026-04-28T16:19:33Z
 ---
 
 ## Goal
@@ -189,3 +189,19 @@ cd web && ! rg -n "pool\.(query|connect)\(" src/
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
 - Repository check: `sed -n '1,240p' web/src/lib/db.ts` exited 0 and shows `createPool()` still supports both URL and host-based envs with local-default fallbacks.
 - Repository check: `rg -n "pool\\.(query|connect)\\(" web/src/` exited 0 and currently finds one direct survivor at `web/src/lib/queries.ts:789`.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] Make Case A deterministic without assuming `127.0.0.1:5432` is down, because the current gate can spuriously pass or fail on any machine that happens to have a local Postgres listening on the default `DB_*` fallback address.
+
+### Medium
+- [ ] Specify that `chooseDriver()` probes and returns the eagerly exported `pool` instance on the healthy-DB path, rather than constructing a second `pg.Pool`, because Step 3 and Step 4 currently claim both “`pool` is eagerly constructed directly” and “`sql()` routes to the same `pg.Pool` instance” without defining how that identity is preserved.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+- The gate order `build` before `typecheck` still matches the current auditor note for web slices.
