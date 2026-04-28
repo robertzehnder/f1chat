@@ -59,3 +59,4 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - Require every Phase 3 per-contract materialization slice to include DB apply/existence/parity gate commands, not only web gates (slice:03-strategy-evidence-summary).
 - For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
 - When a gate pipes verifier output through `tee`, require `set -o pipefail` or an equivalent explicit exit-status check so the verifier cannot fail silently (slice:06-stmt-cache-off).
+- For native-Node test slices that exercise TypeScript source, require one concrete import/transpile path that works with the existing harness and declare any package/lockfile changes up front (slice:06-stmt-cache-off).
