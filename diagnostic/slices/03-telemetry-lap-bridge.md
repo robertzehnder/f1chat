@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:08:41Z
+updated: 2026-04-28T04:10:34Z
 ---
 
 ## Goal
@@ -446,6 +446,22 @@ _None._
 
 ### Low
 - [x] Add the web-tooling prerequisites to `Required services / env` because gate #4 depends on `npm --prefix web ...` succeeding, but the plan currently documents only `DATABASE_URL` and `psql` requirements.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+_None._
+
+### Medium
+- [ ] Add `diagnostic/notes/03-laps-enriched-grain.md` to `## Prior context`, because the no-PK/non-unique grain decision depends on that artifact and auditors are instructed to read every path in that block before triaging.
+
+### Low
+- [ ] Remove the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict (round N)` sections remain the slice's single audit-status surface.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
