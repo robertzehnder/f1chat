@@ -1,11 +1,11 @@
 ---
 slice_id: 05-template-cache-coverage-audit
 phase: 5
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T09:29:21-04:00
+updated: 2026-04-28T13:40:00-04:00
 ---
 
 ## Goal
@@ -109,7 +109,19 @@ Rollback: `git revert <commit>`.
 - `diagnostic/slices/05-template-cache-coverage-audit.md` (frontmatter + this completion note; metadata bookkeeping only, not subject to "Changed files expected").
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `cd web && npm run test:grading` -> exit `0`
+- Gate #4 coverage gate shell block -> exit `0`
+- Scope diff -> PASS: `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/notes/05-template-cache-coverage.md` and `diagnostic/slices/05-template-cache-coverage-audit.md`; subset of allow-list with implicit slice-file allowance.
+- Criterion 1 -> PASS: `grep -oE 'templateKey: "[^"]+"' web/src/lib/deterministicSql.ts | sed -E 's/templateKey: "([^"]+)"/\1/' | sort -u | wc -l` returned `32`; the doc contains 32 coverage rows at `diagnostic/notes/05-template-cache-coverage.md:45` through `diagnostic/notes/05-template-cache-coverage.md:76`, and `## Excluded` is explicitly empty at `diagnostic/notes/05-template-cache-coverage.md:78`.
+- Criterion 2 -> PASS: every documented template row carries `cache-eligible (Y/N)` plus a populated `reason if N` column at `diagnostic/notes/05-template-cache-coverage.md:43` through `diagnostic/notes/05-template-cache-coverage.md:76`.
+- Criterion 3 -> PASS: the coverage gate exited `0` locally.
+- Substantive check -> PASS: the doc’s headline claim at `diagnostic/notes/05-template-cache-coverage.md:9` through `diagnostic/notes/05-template-cache-coverage.md:34` matches the code. `web/src/lib/resolverCache.ts:114` through `web/src/lib/resolverCache.ts:168` cache only resolver lookups, `web/src/lib/chatRuntime.ts:1371` through `web/src/lib/chatRuntime.ts:1471` and `web/src/lib/chatRuntime.ts:1474` through `web/src/lib/chatRuntime.ts:1523` implement resolver-skip fast paths only, and `web/src/app/api/chat/route.ts:400` through `web/src/app/api/chat/route.ts:461` still executes deterministic template SQL via `runReadOnlySql` on request.
+
+Ready to merge.
 
 ## Plan-audit verdict (round 1)
 
