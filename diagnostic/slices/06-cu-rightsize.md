@@ -1,15 +1,15 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:08:38Z
+updated: 2026-04-28T19:30:00Z
 ---
 
 ## Goal
-Right-size the Neon production endpoint's autoscaling compute-unit window (`autoscaling_limit_min_cu` / `autoscaling_limit_max_cu`, plus `suspend_timeout_seconds` if it changes) based on the per-stage query-latency evidence the existing perf baselines actually expose (per-stage `p50_ms`/`p95_ms`/`max_ms` from `01-baseline-snapshot_2026-04-26.json` plus the post-index aggregate DB latency floor from `04-explain-before-after_2026-04-28.json`). Concurrent-connection and `p99` metrics are explicitly out of scope for the sizing rationale because the listed inputs do not expose them. Record the chosen window and the cost/perf tradeoff in `diagnostic/notes/06-cu-rightsize.md` and capture before/after Neon endpoint settings as JSON artifacts.
+Right-size the Neon production endpoint's autoscaling compute-unit window (`autoscaling_limit_min_cu` / `autoscaling_limit_max_cu`, plus `suspend_timeout_seconds` if it changes) based on the query-latency evidence the existing perf baselines actually expose: the `stages.total.p95_ms` and `stages.execute_db.p95_ms` values from `01-baseline-snapshot_2026-04-26.json` plus the post-index aggregate DB latency floor `aggregate.post_p95_ms` from `04-explain-before-after_2026-04-28.json`. Concurrent-connection and `p99` metrics, plus other stage timings (`stages.resolve_db.*`, `stages.sqlgen_llm.*`, etc.), are explicitly out of scope for the sizing rationale. Record the chosen window and the cost/perf tradeoff in `diagnostic/notes/06-cu-rightsize.md` and capture before/after Neon endpoint settings as JSON artifacts.
 
 ## Inputs
 - `web/src/lib/db/driver.ts` (only to confirm pooler usage; no code edits expected)
@@ -39,14 +39,14 @@ Before step 4 may run, the implementer MUST:
 - In-scope mutable settings for this slice are exactly: `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`. Per the `_state.md` lesson on config-only infra slices, gate live-system parity and artifact parity for **every** mutable setting the plan may change, not just the primary CU pair. If `suspend_timeout_seconds` is intentionally unchanged, the decision note must declare the retained value and the gate still asserts parity (note ↔ live ↔ after artifact).
 
 ## Steps
-1. Read `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json` and `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` and extract ONLY metrics the artifacts actually expose:
-   - From `01-baseline-snapshot.json` (per-stage latencies — no concurrent-connection or p99 fields exist in this artifact, so do not cite them):
-     - `stages.total.{count, p50_ms, p95_ms, max_ms}`
-     - `stages.execute_db.{count, p50_ms, p95_ms, max_ms}` (the DB stage — the one the CU window most directly affects)
-     - For the "which stage dominates" determination, also record `p95_ms` for `stages.resolve_db`, `stages.sqlgen_llm`, `stages.synthesize_llm`, `stages.template_match`. Pick the dominant stage as the one with the largest `p95_ms` and name it explicitly.
+1. Read `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json` and `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` and extract exactly the three metrics the gates and acceptance criteria audit (no others):
+   - From `01-baseline-snapshot.json` (no concurrent-connection or p99 fields exist in this artifact, so do not cite them):
+     - `stages.total.p95_ms` — overall request p95 the CU window must preserve.
+     - `stages.execute_db.p95_ms` — the DB stage p95 (the one the CU window most directly affects); also feeds the latency-budget derivation in step 3.
    - From `04-explain-before-after.json`:
-     - `aggregate.{pre_p50_ms, pre_p95_ms, post_p50_ms, post_p95_ms}` — post-index DB latency floor the new CU window must preserve.
-   Record every extracted field under a `## Evidence` heading in `diagnostic/notes/06-cu-rightsize.md` as `<field path> = <value>` (one line each). The gate below greps for the `## Evidence` heading and for the literal field-path strings `stages.total.p95_ms`, `stages.execute_db.p95_ms`, and `aggregate.post_p95_ms` to verify evidence capture happened.
+     - `aggregate.post_p95_ms` — post-index DB latency floor the new CU window must preserve; also feeds the latency-budget derivation in step 3.
+   Per-stage `count`/`p50_ms`/`max_ms` fields, additional stage `p95_ms` values (`stages.resolve_db`, `stages.sqlgen_llm`, `stages.synthesize_llm`, `stages.template_match`, etc.), and the pre-index/p50 fields from the explain artifact are not required by this slice and should not be cited as evidence (citing them invites unaudited claims about which stage dominates or how pre-index latency compares — neither is in scope here).
+   Record each of the three required fields under a `## Evidence` heading in `diagnostic/notes/06-cu-rightsize.md` as `<field path> = <value>` (one line each). The gate below greps for the `## Evidence` heading and for the literal field-path strings `stages.total.p95_ms`, `stages.execute_db.p95_ms`, and `aggregate.post_p95_ms` to verify evidence capture happened.
 2. Capture the current Neon endpoint settings into `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` via the Neon API (`GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`); record at minimum `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, `suspend_timeout_seconds`, and a top-level `captured_at` field set to the ISO-8601 UTC timestamp at which the `GET` was issued (e.g. `"captured_at":"2026-04-28T19:25:00Z"`).
 3. In `diagnostic/notes/06-cu-rightsize.md`, document on their own grep-able lines:
    - `chosen_min_cu:` `<value>`
@@ -420,7 +420,7 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 - [ ] None.
 
 ### Medium
-- [ ] Make the full step-1 evidence requirement auditable, or narrow step 1 to the evidence the gates and acceptance criteria actually verify: the current plan still requires extra per-stage fields (`count`/`p50_ms`/`max_ms` and multiple other stage `p95_ms` values plus an explicit dominant-stage callout) that no gate or acceptance check enforces.
+- [x] Make the full step-1 evidence requirement auditable, or narrow step 1 to the evidence the gates and acceptance criteria actually verify: the current plan still requires extra per-stage fields (`count`/`p50_ms`/`max_ms` and multiple other stage `p95_ms` values plus an explicit dominant-stage callout) that no gate or acceptance check enforces.
 
 ### Low
 - [ ] None.
