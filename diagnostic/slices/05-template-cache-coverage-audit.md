@@ -1,8 +1,8 @@
 ---
 slice_id: 05-template-cache-coverage-audit
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-28
@@ -88,6 +88,22 @@ Rollback: `git revert <commit>`.
 ### Medium
 - [x] Tighten the acceptance criteria to require decisions for every template in `web/src/lib/templates/`, or explicitly enumerate any excluded templates; the current `>=80%` threshold contradicts Step 1's per-template audit goal and can miss real coverage gaps.
 - [x] Add a gate or acceptance check that verifies `diagnostic/notes/05-template-cache-coverage.md` covers the full template set; `build`, `typecheck`, and `test:grading` do not validate the slice's only promised artifact.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current on 2026-04-28; no stale-state note required.
+
+## Plan-audit verdict (round 2)
+
+**Status: APPROVED**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] None.
 
 ### Low
 - [ ] None.
