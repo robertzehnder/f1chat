@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T17:45:00Z
+updated: 2026-04-28T22:10:00Z
 ---
 
 ## Goal
@@ -224,6 +224,22 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 
 ### Medium
 - [x] Remove the contradiction between Acceptance criteria bullets 2 and 6 by making the test-only bullet explicitly local to `web/scripts/tests/db-stmt-cache.test.mjs` instead of stating that no new dev dependency such as `tsx` is introduced anywhere in the slice.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 7)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Tighten Step 3 and the matching acceptance bullet so the positive source-level assertion proves the `pool.query({ text, values, name: undefined })` call is inside the body of `sql<T>()` specifically, not merely somewhere in `web/src/lib/db.ts`; the current regex can pass if another helper grows that call shape while `sql()` itself regresses.
 
 ### Low
 - [ ] None.
