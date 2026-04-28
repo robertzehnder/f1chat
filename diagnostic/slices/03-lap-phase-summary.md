@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-phase-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:05:00-04:00
+updated: 2026-04-27T23:00:16-04:00
 ---
 
 ## Goal
@@ -118,6 +118,23 @@ Rollback: `git revert <commit>`.
 
 ### Low
 - [x] Add `psql` on PATH to `Required services / env` at `diagnostic/slices/03-lap-phase-summary.md:21` if the revised gate list applies SQL directly, so the execution prerequisites are complete.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T01:09:52Z, so no stale-state note is required for this round.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the `core.lap_phase_summary` materialized-view plan with the established Phase 3 contract pattern from `diagnostic/slices/03-core-build-schema.md`: materialize into a real `core.lap_phase_summary_mat` relation sourced from `core_build.lap_phase_summary`, then restore `core.lap_phase_summary` as the public facade the web contract reads.
+- [ ] Rewrite the gate commands and acceptance criteria to prove the artifacts from that Phase 3 pattern exist and are parity-clean, instead of only asserting a single `core.lap_phase_summary` matview exists; the current plan at `diagnostic/slices/03-lap-phase-summary.md:43` and `diagnostic/slices/03-lap-phase-summary.md:71` would pass while leaving no public facade in place.
+
+### Medium
+- [ ] Update `Required services / env` and `Changed files expected` so they match the corrected storage-plus-facade plan, including any additional SQL artifacts needed to create `core.lap_phase_summary_mat` and the public `core.lap_phase_summary` facade rather than only a standalone matview file.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T01:09:52Z, so no stale-state note is required for this round.
