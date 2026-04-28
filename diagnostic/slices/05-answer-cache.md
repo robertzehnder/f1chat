@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T22:05:00Z
+updated: 2026-04-28T23:30:00Z
 ---
 
 ## Goal
@@ -25,17 +25,18 @@ None at author time.
 
 ## Steps
 1. Build a normalizer that produces a stable cache key from `(templateKey, sessionKey, sortedDriverNumbers, year)` — these are the canonical inputs `buildDeterministicSqlTemplate` already branches on plus the `year` discriminator that the prior-context note's "Recommended cache-key design" calls out (see `diagnostic/notes/05-template-cache-coverage.md`). `templateKey` comes from `deterministic.templateKey` in `route.ts` (~line 403), `sessionKey` from `pinnedSessionKey` (~line 376), `sortedDriverNumbers` from `runtime.resolution.selectedDriverNumbers` (numerically sorted), and `year` from the runtime's extracted year (see `web/src/lib/chatRuntime.ts` `extractedYear`; pass it through to `route.ts` if not already exposed on the runtime object — implementer confirms during Step 3). Non-deterministic paths (no `templateKey`) bypass the cache entirely in this slice. The normalizer must produce a deterministic string regardless of `selectedDriverNumbers` insertion order, and must handle `undefined` for any of `sessionKey`/`sortedDriverNumbers`/`year` (e.g., the three Abu-Dhabi-2025 / canonical-lookup templates whose inputs are baked into `templateKey` — for them the cache key collapses to `templateKey` plus `undefined` placeholders, which is the intended behavior).
-2. Use `lru-cache` with TTL=10min, max-size=500. The cache stores the **final response payload** that `route.ts` would otherwise return (answer text, sql preview, generationSource, model, generationNotes, etc.) so a hit can be served without re-running SQL or synthesis.
-3. Wire the cache into `web/src/app/api/chat/route.ts` such that the lookup/store boundary sits **after** deterministic-template selection (line ~400, where `selectedTemplateKey` and `pinnedSessionKey` are known) and **before** `runReadOnlySql` (line ~461). On a cache hit: emit `cache_hit: true` on the query trace, skip `executeSqlWithTrace` / `runReadOnlySql` entirely, skip any downstream synthesis/LLM step, and return the stored payload directly. On a miss: emit `cache_hit: false`, run the existing SQL + synthesis path, then store the final payload under the cache key before returning.
+2. Use `lru-cache` with TTL=10min, max-size=500. The cache stores **only the deterministic-derived answer subset** that `route.ts` produces from running the deterministic SQL plus synthesis — concretely the answer text, sql preview, rows, `generationSource`, `model`, and `generationNotes`. It does **not** store per-request metadata: `requestId`, `runtime`, timestamps, telemetry IDs, and any other fields that vary by request must be regenerated fresh on each hit and merged with the cached subset before responding. The implementer enumerates the exact field set during Step 3 by inspecting the route response shape, but the rule is: cached subset = deterministic-template + synthesis output that is a pure function of `(templateKey, sessionKey, sortedDriverNumbers, year)`; everything else is regenerated. Only **successful deterministic-template responses** are eligible for caching — see Step 3 for the success-gate definition.
+3. Wire the cache into `web/src/app/api/chat/route.ts` such that the lookup/store boundary sits **after** deterministic-template selection (line ~400, where `selectedTemplateKey` and `pinnedSessionKey` are known) and **before** `runReadOnlySql` (line ~461). On a cache hit: emit `cache_hit: true` on the query trace, skip `executeSqlWithTrace` / `runReadOnlySql` entirely, skip any downstream synthesis/LLM step, and **merge** the cached subset (answer text, sql preview, rows, `generationSource`, `model`, `generationNotes`) with **freshly-generated per-request metadata** (`requestId`, `runtime`, timestamps, telemetry IDs, and any other per-request fields) before returning — never replay the first request's metadata. On a miss: emit `cache_hit: false`, run the existing SQL + synthesis path, then **conditionally** store the cached subset only if the **success gate** holds: (a) `runReadOnlySql` returned successfully (no thrown error, no error sentinel), AND (b) the response was produced via the deterministic-template path (i.e. `selectedTemplateKey` was used end-to-end and the request did **not** fall through to the heuristic / non-deterministic fallback). If either condition fails — deterministic SQL throws, returns an error, or control falls through to the heuristic fallback — **no cache write occurs** for that key, so the next identical request still misses and re-runs the deterministic path. The success-gate predicate must be implemented as an explicit, single-purpose check in the wiring (e.g., a boolean `shouldCache` derived from the response branch) so the test in Step 5 can drive it deterministically.
 4. Add gateable test seams that let a node-only test assert both side-effects are skipped on a hit:
    - Export an injectable `runSql` dependency (default = `runReadOnlySql`) and an injectable `synthesize` dependency (default = the current synthesis call) from the cache wiring module, **or** export monotonically-increasing call-count counters for both, so the test can spy on each. The seam must allow asserting: SQL executor invoked exactly once across two identical deterministic requests, and synthesis/LLM invoked at most once across the same pair.
    - Export the answer-cache module's `lru-cache` instance (or a `__resetForTests()` helper) so the test can isolate its state.
 5. Tests in `web/scripts/tests/answer-cache.test.mjs` (run by `cd web && npm run test:grading`, which globs `scripts/tests/*.test.mjs` per `web/package.json:10`):
-   - Hit/miss + side-effect skip: two identical deterministic requests → first miss, second hit; assert the SQL-executor spy recorded **exactly one** invocation and the synthesis spy recorded **at most one** invocation across both requests, and the second response payload deep-equals the first.
+   - Hit/miss + side-effect skip: two identical deterministic requests → first miss, second hit; assert the SQL-executor spy recorded **exactly one** invocation and the synthesis spy recorded **at most one** invocation across both requests. Assert that the second response's **deterministic-derived subset** (answer text, sql preview, rows, `generationSource`, `model`, `generationNotes`) deep-equals the first, and **separately** assert that per-request metadata (`requestId`, plus any timestamp-like field present on the response) **differs** between the two responses (i.e. is regenerated on the hit, not replayed from the miss).
    - Trace assertion: capture emitted query-trace entries and assert the second call emits `cache_hit: true` while the first emits `cache_hit: false`.
    - Key-distinctness: two requests with different `(templateKey, sessionKey, sortedDriverNumbers, year)` tuples → both miss; SQL-executor spy records two invocations. (Cover at least two pairings: differing `sessionKey` and differing `sortedDriverNumbers`.)
    - TTL expiry: after advancing fake time past 10min, the same key re-misses; both the SQL-executor spy and (if present) the synthesis spy increment again.
    - Non-deterministic bypass: a request with no deterministic `templateKey` does **not** populate or read the cache (SQL spy increments on every call, no `cache_hit` field is emitted as `true`).
+   - **Failed-deterministic / fallback bypass on writes**: simulate a deterministic request whose `runSql` injection throws or whose response branch flips to the heuristic fallback. Assert (a) no cache entry is written for that key (a follow-up identical request still misses, SQL spy increments again, trace re-emits `cache_hit: false`), and (b) once a subsequent identical request **does** complete via the deterministic-success path, the cache then populates and the next identical request hits as normal.
 
 ## Changed files expected
 - `web/src/lib/cache/answerCache.ts` (new — normalizer, lru-cache instance, `__resetForTests`)
@@ -54,10 +55,11 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] Two identical deterministic requests in succession: the test spies on the SQL executor (`runReadOnlySql`) and asserts it ran **exactly once** across both requests; the synthesis/LLM spy recorded **at most one** invocation across the pair; the second request's emitted trace contains `cache_hit: true` and returns a payload that deep-equals the first.
+- [ ] Two identical deterministic requests in succession: the test spies on the SQL executor (`runReadOnlySql`) and asserts it ran **exactly once** across both requests; the synthesis/LLM spy recorded **at most one** invocation across the pair; the second request's emitted trace contains `cache_hit: true`. The second response's **deterministic-derived subset** (answer text, sql preview, rows, `generationSource`, `model`, `generationNotes`) deep-equals the first, **and** per-request metadata (`requestId`, plus any timestamp-like field present on the response) **differs** between the two — proving metadata is regenerated on the hit rather than replayed.
 - [ ] Different `(templateKey, sessionKey, sortedDriverNumbers, year)` tuples never collide on the cache key (both miss; SQL-executor spy increments twice). At minimum, cover one pair that differs only in `sessionKey` and one pair that differs only in `sortedDriverNumbers`.
 - [ ] TTL expiry: after fake-time advance past 10min, the same key re-misses, the SQL-executor spy increments again, and the trace re-emits `cache_hit: false` then `cache_hit: true` on a follow-up identical call.
 - [ ] Non-deterministic requests (no `templateKey`) bypass the cache: SQL-executor spy increments on every call and no entry is written to or read from the cache.
+- [ ] **Failed-deterministic / fallback path is not cached**: when the deterministic request fails (SQL throws / errors) or falls through to the heuristic / non-deterministic path, no cache entry is written. A follow-up identical request still misses, SQL spy increments again, and the trace re-emits `cache_hit: false`. Once a subsequent identical request completes via the deterministic-success path, the cache populates and the next identical request hits.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -122,8 +124,8 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Restrict cache writes to successful deterministic-template responses only; do not cache the heuristic fallback path reached after deterministic SQL failure, or identical deterministic requests can be pinned to a degraded non-deterministic answer for the full TTL.
-- [ ] Stop describing the cache value as the entire final response payload returned by `route.ts`, and update the hit-path acceptance criteria accordingly; `requestId`, `runtime`, and other per-request metadata must be regenerated on each hit instead of being replayed from the first request.
+- [x] Restrict cache writes to successful deterministic-template responses only; do not cache the heuristic fallback path reached after deterministic SQL failure, or identical deterministic requests can be pinned to a degraded non-deterministic answer for the full TTL.
+- [x] Stop describing the cache value as the entire final response payload returned by `route.ts`, and update the hit-path acceptance criteria accordingly; `requestId`, `runtime`, and other per-request metadata must be regenerated on each hit instead of being replayed from the first request.
 
 ### Medium
 
