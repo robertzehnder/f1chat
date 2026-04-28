@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-context-summary
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:45:44-0400
+updated: 2026-04-27T23:46:43-04:00
 ---
 
 ## Goal
@@ -306,7 +306,34 @@ npm --prefix web run test:grading
   ```
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/03-lap-context-summary` (worktree at `/Users/robertzehnder/.openf1-loop-worktrees/03-lap-context-summary`).
+
+**Files changed:** exactly the two files declared in `## Changed files expected`:
+- `sql/018_lap_context_summary_mat.sql` (new)
+- `diagnostic/slices/03-lap-context-summary.md` (this file — frontmatter + this Slice-completion note only)
+
+`git diff --name-only integration/perf-roadmap...HEAD` shows only those two paths once the implementation commit lands. No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-7]_*.sql`, no application code.
+
+**Decisions confirmed at implementation time:**
+- Storage relation declared as a base table (`CREATE TABLE IF NOT EXISTS core.lap_context_summary_mat`) with the 12-column projection mirroring `core.lap_context_summary` from `sql/007_semantic_summary_contracts.sql:763` ff. — `session_key BIGINT NOT NULL`, `meeting_key BIGINT`, `year INTEGER`, `session_name TEXT`, `session_type TEXT`, `country_name TEXT`, `location TEXT`, `lap_number INTEGER NOT NULL`, `valid_driver_count BIGINT`, `fastest_valid_lap_on_number NUMERIC`, `avg_valid_lap_on_number NUMERIC`, `rep_valid_lap_on_number NUMERIC`, `PRIMARY KEY (session_key, lap_number)`. No additional `CREATE INDEX` statements emitted — the PK-implied unique btree on `(session_key, lap_number)` doubles as the deferred per-`session_key` refresh's lookup index.
+- Idempotent population via `TRUNCATE core.lap_context_summary_mat;` then `INSERT INTO core.lap_context_summary_mat SELECT * FROM core_build.lap_context_summary;` inside a single `BEGIN; … COMMIT;` transaction. Initial bulk INSERT loaded 9414 rows. The PK held — no upstream grain drift.
+- Public view swung to facade via `CREATE OR REPLACE VIEW core.lap_context_summary AS SELECT * FROM core.lap_context_summary_mat;` — no `DROP VIEW`.
+
+**Gate-command exit codes (run from worktree root, in slice-listed order):**
+- Gate #0 — `psql --version` → exit `0` (`psql (PostgreSQL) 15.14 (Homebrew)`).
+- Gate #1 — `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/018_lap_context_summary_mat.sql` → exit `0`. Output: `BEGIN / CREATE TABLE / TRUNCATE TABLE / INSERT 0 9414 / CREATE VIEW / COMMIT`.
+- Gate #2 — structure DO block (`relkind = 'r'` on storage, `relkind = 'v'` on facade, exactly one PK with columns `[session_key, lap_number]` in that order resolved via `array_position`, and `pg_depend`-via-`pg_rewrite` reports `core.lap_context_summary_mat` as the only `core/core_build/raw` relation the public view depends on) → exit `0`. The DO block returned `DO` with no `RAISE EXCEPTION` firing on any of the four assertions.
+- Gate #3 — parity DO block (deterministic 3 `analytic_ready` sessions selector, global rowcount equality between `core_build.lap_context_summary` and `core.lap_context_summary_mat`, and bidirectional `EXCEPT ALL` per session) → exit `0`. Side-channel confirmation: `SELECT count(*) FROM core.lap_context_summary_mat;` and `SELECT count(*) FROM core_build.lap_context_summary;` both returned `9414`.
+- Gate #4 — `npm --prefix web run build` → exit `0` (Next.js build succeeded; route table printed).
+- Gate #5 — `npm --prefix web run typecheck` → exit `0` (`tsc --noEmit` clean).
+- Gate #6 — `npm --prefix web run test:grading` → exit `0` (`# tests 31 / # pass 21 / # fail 0 / # skipped 10`).
+
+**Self-check vs acceptance criteria:** every checkbox in the `## Acceptance criteria` block is satisfied — base-table-with-single-PK on `(session_key, lap_number)` (gate #2), public relation is a view (gate #2), facade dependency-set is exactly `core.lap_context_summary_mat` (gate #2), global rowcount equality (gate #3, both sides = 9414), bidirectional `EXCEPT ALL` parity = 0 for all 3 deterministic sessions (gate #3), `psql --version` exits 0 (gate #0), all three web gates exit 0, and the only files modified are the two listed in `## Changed files expected`.
+
+**Out-of-scope items left untouched (per the slice's `## Out of scope` section):** no per-session ingest-hook refresh helper was added, no secondary indexes beyond the PK-implied unique btree, no materialization of `core.telemetry_lap_bridge`, no refresh-strategy/cron decision, and no cutover of any TypeScript runtime path — those callers (`web/src/lib/anthropic.ts:60`, `web/src/lib/queries.ts:81/129`, `web/src/lib/chatRuntime.ts:174`, `web/src/lib/deterministicSql.ts:1110`) continue to read `core.lap_context_summary` through the public view, which now transparently resolves through the facade to the matview.
+
+**Implementation commit:** tip of branch `slice/03-lap-context-summary`, tagged `[slice:03-lap-context-summary][awaiting-audit]` (resolve via `git rev-parse origin/slice/03-lap-context-summary` after push).
 
 ## Plan-audit verdict (round 1)
 
