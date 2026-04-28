@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:13:55Z
+updated: 2026-04-28T04:15:33Z
 ---
 
 ## Goal
@@ -41,6 +41,8 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
 - `sql/007_semantic_summary_contracts.sql` (where the public `core.telemetry_lap_bridge` view body lives, lines 792–859).
 - `sql/008_core_build_schema.sql` (where `core_build.telemetry_lap_bridge` is defined, lines 549–616 — already merged; this slice **does not** recreate it).
 - `sql/002_create_tables.sql` (where `raw.car_data` and `raw.location` column types are pinned, used to derive the aggregate result types in step 1.1).
+- `sql/006_semantic_lap_layer.sql` (where the upstream `core.laps_enriched` source view's column types are defined — read alongside `sql/010_laps_enriched_mat.sql` to confirm the `lap_start_ts` / `lap_end_ts` `TIMESTAMPTZ` projection that step 1.1 mirrors into the storage table).
+- `sql/010_laps_enriched_mat.sql` (the immediate upstream materialization; lines 25–26 pin `lap_start_ts` / `lap_end_ts` as `TIMESTAMPTZ` — the canonical type source step 1.1 cites for those two storage-table columns).
 
 ## Required services / env
 - `DATABASE_URL` (Neon Postgres). The role used by the loop must have:
@@ -472,7 +474,7 @@ _None._
 _None._
 
 ### Medium
-- [ ] Add `sql/006_semantic_lap_layer.sql` and `sql/010_laps_enriched_mat.sql` to `## Prior context`, because Steps §1.1 relies on those artifacts for the declared `lap_start_ts` / `lap_end_ts` types and upstream column-type derivation, and auditors are required to read every path in that block before triaging.
+- [x] Add `sql/006_semantic_lap_layer.sql` and `sql/010_laps_enriched_mat.sql` to `## Prior context`, because Steps §1.1 relies on those artifacts for the declared `lap_start_ts` / `lap_end_ts` types and upstream column-type derivation, and auditors are required to read every path in that block before triaging.
 
 ### Low
 _None._
