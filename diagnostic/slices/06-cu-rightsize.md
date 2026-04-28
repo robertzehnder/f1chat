@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending
-owner: claude
+status: blocked
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T15:25:00-04:00
+updated: 2026-04-28T15:51:54-04:00
 ---
 
 ## Goal
@@ -284,7 +284,62 @@ psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
 Production-touching: a `PATCH` to the live Neon endpoint immediately changes the autoscaling window for production traffic. Require user-approved sentinel before step 4 (the Neon `PATCH`). Rollback: `PATCH` the endpoint back to the values captured in `06-cu-rightsize-before_2026-04-28.json` and `git revert` the slice's commit; capture the rollback's resulting endpoint payload as an addendum so the audit trail stays consistent.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Status: BLOCKED (owner: user)** — the implementer cannot execute steps 2, 4, or 5, nor pass gates 1, 2b, 2b', 3, 4, or 5, because two prerequisites declared in the slice are not satisfied at dispatch time. Both must be supplied by the user before this slice can resume.
+
+### Blocker 1 — Neon API credentials are not in the implementer environment
+
+The slice's "Required services / env" section names three secrets that the gates and steps consume directly:
+
+- `NEON_API_KEY`
+- `NEON_PROJECT_ID`
+- `NEON_ENDPOINT_ID`
+
+None are present in the dispatched shell:
+
+```
+$ env | grep -E '^(NEON_API_KEY|NEON_PROJECT_ID|NEON_ENDPOINT_ID)='
+(no output)
+```
+
+They are also absent from the worktree's `.env*` files (only `.env.example` exists at the worktree root) and from the primary repo at `/Users/robertzehnder/Documents/coding/f1-openf1/` (no `.env*` files there). Without them I cannot:
+
+- Step 2: `GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}` to capture pre-change settings into `06-cu-rightsize-before_2026-04-28.json`.
+- Step 4: `PATCH …` to apply the resized window and capture `06-cu-rightsize-after_2026-04-28.json`.
+- Gate 3: `curl -fsS -H "Authorization: Bearer $NEON_API_KEY" …` for live-endpoint parity.
+
+These are production-touching credentials. Per the operating principles, I will not fabricate or substitute them, and I do not have a permissioned alternate path to discover them.
+
+### Blocker 2 — user-approval chat sentinel was not provided
+
+The slice's "User approval mechanism (exact, no ad hoc interpretation)" section is unambiguous: before step 4, the implementer MUST receive a chat message from `rjzehnder@gmail.com` containing the literal token
+
+```
+APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>
+```
+
+(e.g. `APPROVE-CU-RIGHTSIZE 2026-04-28T19:30:00Z`). The dispatching prompt does not contain that sentinel. A repo-wide grep confirms no instance exists outside the slice file itself (which only contains the contract-defining matches):
+
+```
+$ grep -rE 'APPROVE-CU-RIGHTSIZE' .
+diagnostic/slices/06-cu-rightsize.md: <contract-defining matches only>
+```
+
+The empty filesystem sentinels `diagnostic/slices/.approved`, `.approved-merge`, `.approved-loop-infra-repair` authorize loop dispatch and merge of the slice plan; the round-12 verdict notes "the operator created the `.approved` sentinel to permit dispatch." None of those are the chat sentinel. Without the chat sentinel, gates 2b and 2b' cannot pass and step 4 is explicitly blocked by the slice text.
+
+### Self-check
+
+- Frontmatter: status=blocked, owner=user, updated=2026-04-28T15:51:54-04:00.
+- Branch: `slice/06-cu-rightsize` (this worktree). No code or artifacts modified beyond this slice file.
+- Gate commands: not run. Steps 2 and 4 are upstream of every gate that produces evidence; running gates without prior steps would only produce file-not-found failures that don't add diagnostic value.
+- Scope discipline: only `diagnostic/slices/06-cu-rightsize.md` was edited (frontmatter + this note). No file under `Changed files expected` was created, since creating them with placeholder values would silently mask the credential and approval blockers.
+
+### What the user must provide to unblock
+
+1. Set `NEON_API_KEY`, `NEON_PROJECT_ID`, `NEON_ENDPOINT_ID` in the implementer's shell environment (or place them in a worktree-local `.env` the loop runner sources). The token must have rights to read and update the production endpoint's settings.
+2. Send a chat message of exactly the form `APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>` (UTC, ending in `Z`, optional fractional seconds) from `rjzehnder@gmail.com`. The implementer will copy that line verbatim under a new `## User approval` heading in `diagnostic/notes/06-cu-rightsize.md` before issuing the `PATCH`. The recorded timestamp must be strictly earlier than the Neon-server `endpoint.updated_at` returned by the post-apply `GET` (gate 2b').
+
+When both are in place, flip frontmatter back to `status=pending, owner=claude` (and update `updated`) and re-dispatch.
 
 ## Audit verdict
 (filled by Codex)
