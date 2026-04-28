@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: pending
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T14:00:00Z
+updated: 2026-04-28T00:58:20-04:00
 ---
 
 ## Goal
@@ -254,7 +254,87 @@ npm --prefix web run test:grading
 - Rollback: `git revert <commit>` reverts the SQL file. To remove the indexes from the live DB after revert, run `DROP INDEX CONCURRENTLY IF EXISTS raw.<name>;` for each of the six indexes. `DROP INDEX CONCURRENTLY` (like `CREATE INDEX CONCURRENTLY`) cannot run inside an explicit transaction block, so issue each `DROP` as its own statement (no `BEGIN; … COMMIT;`).
 
 ## Slice-completion note
-(filled by Claude)
+
+**Status: BLOCKED — gate #3 Q1 fails because the new index is functionally redundant with a pre-existing unique index.**
+
+### Branch and commits
+
+- Branch: `slice/04-perf-indexes-sql`
+- Implementation commits on top of approved-plan tip `eb39a4d`:
+  - `f2865d1` — `sql/020_perf_indexes.sql` (six `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements per Steps §1) and this Slice-completion note (initial blocker write-up; commit-hash placeholder still present in this commit's note body).
+  - `d47d48d` — back-fills `f2865d1` into the bullet above. Implementer added this follow-up commit so the recorded hash matches the commit it describes; either commit alone is sufficient to reproduce the diff.
+
+### Gate exit codes
+
+| Gate | Command | Exit |
+|---|---|---:|
+| 1 | `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql` | 0 |
+| 2 | `pg_index.indisvalid` DO-block check for all six indexes | 0 |
+| 3 | EXPLAIN Q1–Q6 against the first `analytic_ready` session (`session_key = 9102`) | **3 (Q1 fails; Q2–Q6 pass)** |
+| 4a | `npm --prefix web run build` | 0 |
+| 4b | `npm --prefix web run typecheck` | 0 |
+| 4c | `npm --prefix web run test:grading` | 0 |
+
+### Self-check vs acceptance criteria
+
+- [x] `sql/020_perf_indexes.sql` applies cleanly — gate #1 exits 0; six `CREATE INDEX` lines emitted by `psql`.
+- [x] All six declared indexes exist under schema `raw` AND are valid — gate #2 exits 0; the DO-block iterates every expected name and asserts `pg_index.indisvalid = true`.
+- [ ] EXPLAIN Q1–Q6 each picks the corresponding new index — **fails on Q1 only**. Q2 picks `idx_raw_laps_session_include` (Index Only Scan). Q3 picks `idx_raw_stints_session_driver_window` (Index Only Scan, with `lap_start <= 10 AND lap_end >= 10` in Index Cond). Q4 picks `idx_raw_pit_session_driver_lap`. Q5 picks `idx_raw_position_history_session_date`. Q6 picks `idx_raw_laps_session_driver_valid_partial` (Index Only Scan). Q1 picks `uq_laps_session_driver_lap` (a pre-existing unique index, not the new `idx_raw_laps_session_driver_lap`) — see "Blocker diagnosis" below.
+- [x] `npm --prefix web run build` exits 0.
+- [x] `npm --prefix web run typecheck` exits 0.
+- [x] `npm --prefix web run test:grading` exits 0 (21 pass, 10 skipped, 0 fail).
+- [x] Files modified vs `integration/perf-roadmap` — exactly `sql/020_perf_indexes.sql` (new), `diagnostic/slices/04-perf-indexes-sql.md` (frontmatter + this note), and `diagnostic/_state.md` (the pre-existing auditor-note commit declared in "Changed files expected"). Verified via `git diff --name-only integration/perf-roadmap...HEAD`.
+
+### Blocker diagnosis (Q1)
+
+Q1's expected new index `idx_raw_laps_session_driver_lap` is defined on the column tuple `(session_key, driver_number, lap_number)`. That is the *exact* same column tuple as the pre-existing unique index `uq_laps_session_driver_lap` declared in `sql/004_constraints.sql:7-8`:
+
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS uq_laps_session_driver_lap
+  ON raw.laps(session_key, driver_number, lap_number);
+```
+
+For Q1's equality predicate `WHERE session_key = X AND driver_number = 1 AND lap_number = 1`, both indexes are equally usable; the Postgres planner prefers the unique index because uniqueness is a stronger property — it tightens the row estimate to ≤1 and yields a lower expected total cost. Captured plan for Q1 at `session_key = 9102`:
+
+```json
+[
+  {
+    "Plan": {
+      "Node Type": "Index Scan",
+      "Index Name": "uq_laps_session_driver_lap",
+      "Relation Name": "laps",
+      "Index Cond": "((session_key = 9102) AND (driver_number = 1) AND (lap_number = 1))",
+      "Total Cost": 13.10
+    }
+  }
+]
+```
+
+Gate #3's Q1 assertion `plan_text NOT LIKE '%idx_raw_laps_session_driver_lap%'` rejects the unique-index plan even though the access pattern is served correctly (the substring `idx_raw_laps_session_driver_lap` does not appear in `uq_laps_session_driver_lap`).
+
+The new `idx_raw_laps_session_driver_lap` is therefore **functionally redundant** with the pre-existing unique index: same columns, weaker uniqueness, never preferred by the planner, pure storage overhead. Gate #2 confirms the new index exists and is valid (`indisvalid = true`); it is just never selected.
+
+### Why this cannot be fixed within the slice's documented scope
+
+Per the loop's operating principles ("Do not invent workarounds that change the slice's intent"), every fix would require editing artifacts that this slice's `## Out of scope` section explicitly forbids:
+
+1. **Drop `idx_raw_laps_session_driver_lap` from `sql/020_perf_indexes.sql`** — contradicts Steps §1.1, which prescribes that exact statement and name. Would also break the round-3 audit acceptance criterion that gate #3 prove the partial index *and* every other declared index, which Q1 references by name.
+2. **Drop `uq_laps_session_driver_lap` in `sql/004_constraints.sql`** — out of scope ("No edits to `sql/00[1-9]_*.sql`"), and semantically wrong: the unique index enforces an idempotent-upsert invariant on `raw.laps`, called out in `sql/004_constraints.sql:3` ("Uniqueness for idempotent upserts"). Removing it would let duplicate `(session_key, driver_number, lap_number)` rows accumulate and break the Phase 3 materialized contracts.
+3. **Relax gate #3 Q1 to accept either index name** — changes the gate-command block, which is part of the approved slice spec (5 plan-audit rounds).
+4. **Force the planner to pick the new index** (e.g. `pg_hint_plan`, `enable_indexscan = off`, drop+recreate column order) — invents a workaround whose only purpose is making the gate green, not improving query performance, and changes the slice's intent.
+
+### What the user / planner should decide
+
+Two clean resolutions, neither of which the implementer can take without changing slice intent:
+
+- **(A) Drop `idx_raw_laps_session_driver_lap` from Steps §1.1 and gate #3 Q1.** The pre-existing `uq_laps_session_driver_lap` already covers the (session_key, driver_number, lap_number) access pattern. The new index is pure storage overhead. This is the recommended resolution — five out of six new indexes (`idx_raw_laps_session_include`, `idx_raw_stints_session_driver_window`, `idx_raw_pit_session_driver_lap`, `idx_raw_position_history_session_date`, `idx_raw_laps_session_driver_valid_partial`) are non-redundant and verified by gates #2 and #3 Q2–Q6 to be picked by the planner.
+- **(B) Relax gate #3 Q1 to accept either `idx_raw_laps_session_driver_lap` OR `uq_laps_session_driver_lap`.** Keeps the new index as a defensive duplicate (e.g. for future `DROP CONSTRAINT` resilience), but pays storage cost forever for an index the planner will never pick while the unique index exists.
+
+Note that this same analysis would apply to Q4 (`idx_raw_pit_session_driver_lap`) if `uq_pit_session_driver_lap_date` had identical leading columns — but `uq_pit_session_driver_lap_date` adds `date` as a fourth column (sql/004_constraints.sql:40-41), so the planner correctly picks the narrower 3-column `idx_raw_pit_session_driver_lap` for Q4's `(session_key, driver_number, lap_number)`-only predicate. Q4 passes; only Q1 has a true uniqueness-collision.
+
+### State left in the database
+
+All six new indexes exist and are `indisvalid = true` on the live DB (Neon) under schema `raw`. The migration is idempotent (`IF NOT EXISTS`), so re-running gate #1 after a plan-revise round is a no-op for already-built indexes. To roll back if the planner chooses option (A): `DROP INDEX CONCURRENTLY raw.idx_raw_laps_session_driver_lap;` (must run outside an explicit transaction block, same constraint as `CREATE INDEX CONCURRENTLY`).
 
 ## Audit verdict
 (filled by Codex)
