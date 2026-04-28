@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-phase-summary
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:08:17-04:00
+updated: 2026-04-28T03:11:52Z
 ---
 
 ## Goal
@@ -63,7 +63,7 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
    4. `TRUNCATE core.lap_phase_summary_mat;` then `INSERT INTO core.lap_phase_summary_mat SELECT * FROM core_build.lap_phase_summary;` for initial population. The `TRUNCATE` before `INSERT` makes re-running the migration idempotent. Since the table has no PK and the indexes are non-unique, the bulk insert cannot fail on duplicate-key violation — the duplicate-row multiplicity from the source view is preserved verbatim, exactly as required by the inherited non-unique grain.
    5. `CREATE OR REPLACE VIEW core.lap_phase_summary AS SELECT * FROM core.lap_phase_summary_mat;` — replace the public view body in place with the facade. Use `CREATE OR REPLACE VIEW` (not `DROP VIEW … CREATE VIEW`) for pattern consistency with every preceding Phase 3 materialization slice and for robustness against any future SQL view that depends on `core.lap_phase_summary`. `CREATE OR REPLACE VIEW` succeeds dependency-free because step 1.1 declares the storage table's columns in exactly the same names, types, and order as the original view's projection.
 2. Apply the SQL to `$DATABASE_URL` (gate command #1).
-3. Verify (a) the storage relation is a base table (`relkind = 'r'`), (b) the public relation is a view (`relkind = 'v'`), (c) the storage relation carries **no** primary-key constraint, (d) the storage relation carries the two expected non-unique btree indexes (by name), and (e) the public view is actually a thin facade over the matview (its only relation dependency in schemas `core` / `core_build` / `raw`, sourced from `pg_depend` joined through `pg_rewrite`, is `core.lap_phase_summary_mat`) — gate command #2. Without check (e), gate #2 would pass if the migration accidentally left the original aggregating view body in place, since that would still be a view (`relkind = 'v'`).
+3. Verify (a) the storage relation is a base table (`relkind = 'r'`), (b) the public relation is a view (`relkind = 'v'`), (c) the storage relation carries **no** primary-key constraint, (d) each of the two expected indexes exists exactly once and is a **non-unique btree** (`pg_index.indisunique = false`, `pg_am.amname = 'btree'`) on the **exact declared column list** (resolved via `array_position` over `ix.indkey` joined to `pg_attribute`) — name-only would silently pass a unique index, a non-btree index, or one whose column list drifted — and (e) the public view is actually a thin facade over the matview (its only relation dependency in schemas `core` / `core_build` / `raw`, sourced from `pg_depend` joined through `pg_rewrite`, is `core.lap_phase_summary_mat`) — gate command #2. Without check (e), gate #2 would pass if the migration accidentally left the original aggregating view body in place, since that would still be a view (`relkind = 'v'`).
 4. Run the bidirectional, session-scoped, multiplicity-preserving `EXCEPT ALL` parity check between `core_build.lap_phase_summary` (canonical query) and `core.lap_phase_summary_mat` (storage) for the **3 deterministic `analytic_ready` sessions** selected by:
    ```sql
    SELECT session_key
@@ -94,8 +94,12 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/017_lap_phase_summary_mat.sql
 
 # 2. Confirm (a) the storage relation is a base table, (b) the public relation
 #    is a view, (c) the storage relation carries NO primary-key constraint,
-#    (d) the storage relation carries the two expected non-unique btree
-#    indexes by name, and (e) the public view is actually a thin facade over
+#    (d) each of the two expected indexes exists exactly once and is a
+#    non-unique btree on the exact declared column list (per-index existence
+#    count, indisunique, pg_am.amname, and the resolved column array via
+#    array_position over ix.indkey -- a name-only check would silently pass
+#    a unique index, a non-btree index, or one whose column list drifted),
+#    and (e) the public view is actually a thin facade over
 #    core.lap_phase_summary_mat (its only relation dependency in core /
 #    core_build / raw is the matview). Must exit 0; the DO block raises (and
 #    ON_ERROR_STOP=1 forces non-zero exit) unless every assertion holds.
@@ -108,7 +112,14 @@ DECLARE
   table_kind text;
   view_kind text;
   pk_count int;
-  idx_names text[];
+  triple_idx_count int;
+  triple_idx_unique boolean;
+  triple_idx_am text;
+  triple_idx_cols text[];
+  session_idx_count int;
+  session_idx_unique boolean;
+  session_idx_am text;
+  session_idx_cols text[];
   facade_refs text[];
 BEGIN
   -- (a) storage relation is a base table.
@@ -143,26 +154,115 @@ BEGIN
       pk_count;
   END IF;
 
-  -- (d) Both expected non-unique btree indexes exist by name.
-  SELECT array_agg(i.relname::text ORDER BY i.relname)
-    INTO idx_names
-  FROM pg_index x
-  JOIN pg_class i ON i.oid = x.indexrelid
-  JOIN pg_class t ON t.oid = x.indrelid
-  JOIN pg_namespace n ON n.oid = t.relnamespace
+  -- (d) Each expected index must be a non-unique btree on the exact declared
+  --     column list. A name-only check (the prior version) would silently pass
+  --     a unique index, a non-btree index, or one whose column list drifted —
+  --     so we verify (per index) existence-by-name, indisunique, the joined
+  --     pg_am.amname, and the resolved column array via array_position over
+  --     ix.indkey. Counts are taken over pg_index/pg_class without joining
+  --     pg_attribute (so the count is index relations, not column-multiplied);
+  --     the column list is computed in a separate aggregating query.
+
+  -- (d.1) (session_key, driver_number, lap_number) non-unique btree index.
+  SELECT count(*) INTO triple_idx_count
+  FROM pg_index ix
+  JOIN pg_class ic ON ic.oid = ix.indexrelid
+  JOIN pg_class tc ON tc.oid = ix.indrelid
+  JOIN pg_namespace n ON n.oid = tc.relnamespace
   WHERE n.nspname = 'core'
-    AND t.relname = 'lap_phase_summary_mat'
-    AND i.relname IN (
-      'lap_phase_summary_mat_session_driver_lap_idx',
-      'lap_phase_summary_mat_session_idx'
-    );
-  IF idx_names IS DISTINCT FROM ARRAY[
-    'lap_phase_summary_mat_session_driver_lap_idx',
-    'lap_phase_summary_mat_session_idx'
-  ]::text[] THEN
+    AND tc.relname = 'lap_phase_summary_mat'
+    AND ic.relname = 'lap_phase_summary_mat_session_driver_lap_idx';
+  IF triple_idx_count <> 1 THEN
     RAISE EXCEPTION
-      'expected indexes [lap_phase_summary_mat_session_driver_lap_idx, lap_phase_summary_mat_session_idx], got %',
-      idx_names;
+      'expected exactly one index named lap_phase_summary_mat_session_driver_lap_idx, found %',
+      triple_idx_count;
+  END IF;
+
+  SELECT ix.indisunique, am.amname
+    INTO triple_idx_unique, triple_idx_am
+  FROM pg_index ix
+  JOIN pg_class ic ON ic.oid = ix.indexrelid
+  JOIN pg_am am ON am.oid = ic.relam
+  JOIN pg_class tc ON tc.oid = ix.indrelid
+  JOIN pg_namespace n ON n.oid = tc.relnamespace
+  WHERE n.nspname = 'core'
+    AND tc.relname = 'lap_phase_summary_mat'
+    AND ic.relname = 'lap_phase_summary_mat_session_driver_lap_idx';
+  IF triple_idx_unique THEN
+    RAISE EXCEPTION
+      'expected lap_phase_summary_mat_session_driver_lap_idx to be non-unique (grain is non-unique), it is unique';
+  END IF;
+  IF triple_idx_am IS DISTINCT FROM 'btree' THEN
+    RAISE EXCEPTION
+      'expected lap_phase_summary_mat_session_driver_lap_idx access method btree, got %',
+      triple_idx_am;
+  END IF;
+
+  SELECT array_agg(a.attname ORDER BY array_position(ix.indkey::int[], a.attnum::int))
+    INTO triple_idx_cols
+  FROM pg_index ix
+  JOIN pg_class ic ON ic.oid = ix.indexrelid
+  JOIN pg_class tc ON tc.oid = ix.indrelid
+  JOIN pg_namespace n ON n.oid = tc.relnamespace
+  JOIN pg_attribute a ON a.attrelid = tc.oid AND a.attnum = ANY(ix.indkey)
+  WHERE n.nspname = 'core'
+    AND tc.relname = 'lap_phase_summary_mat'
+    AND ic.relname = 'lap_phase_summary_mat_session_driver_lap_idx';
+  IF triple_idx_cols IS DISTINCT FROM ARRAY['session_key','driver_number','lap_number']::text[] THEN
+    RAISE EXCEPTION
+      'expected lap_phase_summary_mat_session_driver_lap_idx columns (session_key, driver_number, lap_number), got %',
+      triple_idx_cols;
+  END IF;
+
+  -- (d.2) (session_key) non-unique btree index.
+  SELECT count(*) INTO session_idx_count
+  FROM pg_index ix
+  JOIN pg_class ic ON ic.oid = ix.indexrelid
+  JOIN pg_class tc ON tc.oid = ix.indrelid
+  JOIN pg_namespace n ON n.oid = tc.relnamespace
+  WHERE n.nspname = 'core'
+    AND tc.relname = 'lap_phase_summary_mat'
+    AND ic.relname = 'lap_phase_summary_mat_session_idx';
+  IF session_idx_count <> 1 THEN
+    RAISE EXCEPTION
+      'expected exactly one index named lap_phase_summary_mat_session_idx, found %',
+      session_idx_count;
+  END IF;
+
+  SELECT ix.indisunique, am.amname
+    INTO session_idx_unique, session_idx_am
+  FROM pg_index ix
+  JOIN pg_class ic ON ic.oid = ix.indexrelid
+  JOIN pg_am am ON am.oid = ic.relam
+  JOIN pg_class tc ON tc.oid = ix.indrelid
+  JOIN pg_namespace n ON n.oid = tc.relnamespace
+  WHERE n.nspname = 'core'
+    AND tc.relname = 'lap_phase_summary_mat'
+    AND ic.relname = 'lap_phase_summary_mat_session_idx';
+  IF session_idx_unique THEN
+    RAISE EXCEPTION
+      'expected lap_phase_summary_mat_session_idx to be non-unique, it is unique';
+  END IF;
+  IF session_idx_am IS DISTINCT FROM 'btree' THEN
+    RAISE EXCEPTION
+      'expected lap_phase_summary_mat_session_idx access method btree, got %',
+      session_idx_am;
+  END IF;
+
+  SELECT array_agg(a.attname ORDER BY array_position(ix.indkey::int[], a.attnum::int))
+    INTO session_idx_cols
+  FROM pg_index ix
+  JOIN pg_class ic ON ic.oid = ix.indexrelid
+  JOIN pg_class tc ON tc.oid = ix.indrelid
+  JOIN pg_namespace n ON n.oid = tc.relnamespace
+  JOIN pg_attribute a ON a.attrelid = tc.oid AND a.attnum = ANY(ix.indkey)
+  WHERE n.nspname = 'core'
+    AND tc.relname = 'lap_phase_summary_mat'
+    AND ic.relname = 'lap_phase_summary_mat_session_idx';
+  IF session_idx_cols IS DISTINCT FROM ARRAY['session_key']::text[] THEN
+    RAISE EXCEPTION
+      'expected lap_phase_summary_mat_session_idx columns (session_key), got %',
+      session_idx_cols;
   END IF;
 
   -- (e) Assert the public view is a thin facade over the matview. Walk
@@ -261,7 +361,9 @@ npm --prefix web run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `core.lap_phase_summary_mat` exists as a base table with **no** primary-key constraint and the two expected non-unique btree indexes (`lap_phase_summary_mat_session_driver_lap_idx`, `lap_phase_summary_mat_session_idx`) — gate #1 (`psql -f sql/017_lap_phase_summary_mat.sql`) exits `0` and gate #2 exits `0` (its DO block raises unless `relkind = 'r'`, the table carries zero `pg_constraint` rows with `contype = 'p'`, and the index-name set sourced from `pg_index` ⋈ `pg_class` is exactly `{lap_phase_summary_mat_session_driver_lap_idx, lap_phase_summary_mat_session_idx}`).
+- [ ] `core.lap_phase_summary_mat` exists as a base table with **no** primary-key constraint — gate #1 (`psql -f sql/017_lap_phase_summary_mat.sql`) exits `0` and gate #2 exits `0` (its DO block raises unless `relkind = 'r'` and the table carries zero `pg_constraint` rows with `contype = 'p'`).
+- [ ] `core.lap_phase_summary_mat` carries the non-unique btree index `lap_phase_summary_mat_session_driver_lap_idx` on `(session_key, driver_number, lap_number)` — gate #2 exits `0` (raises unless exactly one index relation by that name exists with `pg_index.indisunique = false`, `pg_am.amname = 'btree'`, and the column array resolved via `array_position(ix.indkey::int[], a.attnum::int)` is exactly `[session_key, driver_number, lap_number]` in that order).
+- [ ] `core.lap_phase_summary_mat` carries the non-unique btree index `lap_phase_summary_mat_session_idx` on `(session_key)` — gate #2 exits `0` (raises unless exactly one index relation by that name exists with `pg_index.indisunique = false`, `pg_am.amname = 'btree'`, and the column array is exactly `[session_key]`).
 - [ ] `core.lap_phase_summary` exists as a view (the facade) — gate #2 exits `0` (the same DO block raises unless `relkind = 'v'`).
 - [ ] `core.lap_phase_summary` is a thin facade over `core.lap_phase_summary_mat` — gate #2 exits `0` (the DO block's final assertion raises unless `pg_depend`-via-`pg_rewrite` reports `core.lap_phase_summary_mat` as the **only** relation the view depends on within schemas `core` / `core_build` / `raw`; this is the check that distinguishes the facade swap from the original aggregating view body, which depended on `core.laps_enriched`).
 - [ ] Global rowcount of `core.lap_phase_summary_mat` equals the global rowcount of `core_build.lap_phase_summary` — gate #3 exits `0` (the DO block's `RAISE EXCEPTION 'global rowcount mismatch …'` branch does not fire).
@@ -356,7 +458,7 @@ npm --prefix web run test:grading
 - [ ] None.
 
 ### Medium
-- [ ] Strengthen gate command `#2` and the matching acceptance criteria so they prove each expected index is a non-unique `btree` on the exact declared column list, not only that the two expected index names exist; the current `pg_index` check would pass a unique or wrong-column index if it kept the expected names.
+- [x] Strengthen gate command `#2` and the matching acceptance criteria so they prove each expected index is a non-unique `btree` on the exact declared column list, not only that the two expected index names exist; the current `pg_index` check would pass a unique or wrong-column index if it kept the expected names.
 
 ### Low
 - [ ] None.
