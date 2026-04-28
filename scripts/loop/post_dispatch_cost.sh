@@ -36,7 +36,8 @@ if [[ -z "$billing_source" ]]; then
     codex-claude-fallback|codex-slice-audit|codex-slice-audit-claude-fallback|\
     codex-fallback-on-quota|codex-fallback-forced|\
     codex-slice-audit-fallback-on-quota|codex-slice-audit-fallback-forced|\
-    claude-plan-audit|claude-plan-audit-codex-fallback)
+    claude-plan-audit|claude-plan-audit-codex-fallback|\
+    auto-reject-persistence)
       billing_source="plan" ;;
     *)
       billing_source="plan" ;;  # conservative default
@@ -58,6 +59,8 @@ if [[ -z "$model" ]]; then
     claude-plan-audit-codex-fallback)
                          model="${CODEX_AUDIT_MODEL:-gpt-5.4}" ;;
     codex|codex-native|codex-slice-audit)  model="${CODEX_AUDIT_MODEL:-gpt-5.4}" ;;
+    auto-reject-persistence)
+                         model="none" ;;
     codex-claude-fallback|\
     codex-slice-audit-claude-fallback|\
     codex-fallback-on-quota|\
@@ -119,11 +122,72 @@ cache_read_tokens=0
 cache_write_tokens=0
 token_source="unknown"
 
-if [[ -n "$session_log" && -f "$session_log" ]]; then
-  # Codex CLI v0.125+ emits cumulative `total_token_usage` per token_count
-  # event_msg — taking the LAST event gives the session total. Claude SDK
-  # rolls forward usage per-turn — sum across turns. Distinguish by file
-  # path so cumulative codex totals aren't double-counted.
+# Claude --output-format json result file (preferred — Anthropic-reported
+# numbers, no estimation). The claude dispatchers write the JSON output of
+# `claude --print --output-format json` into per-slice files like
+# .claude_result_revise_<slice>.json / .claude_result_impl_<slice>.json /
+# .claude_result_plan_audit_<slice>.json. We probe in role priority order
+# matching the agent kind so a stray older file from a different role
+# doesn't poison the read.
+case "$agent" in
+  claude|codex-claude-fallback)             role_glob="impl" ;;
+  claude-revise)                            role_glob="revise" ;;
+  claude-repair)                            role_glob="repair" ;;
+  claude-plan-audit|claude-plan-audit-codex-fallback) role_glob="plan_audit" ;;
+  codex-slice-audit-claude-fallback|codex-slice-audit-fallback-on-quota|codex-slice-audit-fallback-forced) role_glob="plan_audit" ;;
+  *) role_glob="" ;;
+esac
+claude_result_file=""
+if [[ -n "$role_glob" ]]; then
+  candidate="$LOOP_STATE_DIR/.claude_result_${role_glob}_${slice_id}.json"
+  if [[ -s "$candidate" ]]; then claude_result_file="$candidate"; fi
+fi
+
+if [[ -n "$claude_result_file" ]]; then
+  read -r input_tokens output_tokens cache_read_tokens cache_write_tokens token_source claude_cost_usd < <(
+    python3 - "$claude_result_file" <<'PY'
+import sys, json
+path = sys.argv[1]
+in_t = out_t = cache_r = cache_w = 0
+src = "unknown"
+cost = 0.0
+try:
+    with open(path) as fh:
+        # The capture file may contain a single JSON line OR a leading text
+        # banner before the JSON; find the last { … } that parses.
+        text = fh.read().strip()
+    obj = None
+    try:
+        obj = json.loads(text)
+    except Exception:
+        # Try last line
+        for line in reversed(text.splitlines()):
+            line = line.strip()
+            if line.startswith("{") and line.endswith("}"):
+                try:
+                    obj = json.loads(line); break
+                except Exception:
+                    continue
+    if isinstance(obj, dict):
+        u = obj.get("usage") or {}
+        in_t  = int(u.get("input_tokens", 0) or 0)
+        out_t = int(u.get("output_tokens", 0) or 0)
+        cache_r = int(u.get("cache_read_input_tokens", 0) or 0)
+        cache_w = int(u.get("cache_creation_input_tokens", 0) or 0)
+        cost = float(obj.get("total_cost_usd", 0) or 0)
+        src = "claude_cli_result_json"
+except Exception:
+    pass
+print(in_t, out_t, cache_r, cache_w, src, f"{cost:.6f}")
+PY
+  )
+elif [[ -n "$session_log" && -f "$session_log" ]]; then
+  # Fallback: legacy session-log parser. Codex CLI v0.125+ emits cumulative
+  # `total_token_usage` per token_count event_msg — taking the LAST event
+  # gives the session total. Claude SDK rolls forward usage per-turn — sum
+  # across turns. Distinguish by file path so cumulative codex totals
+  # aren't double-counted.
+  claude_cost_usd=""
   read -r input_tokens output_tokens cache_read_tokens cache_write_tokens token_source < <(
     python3 - "$session_log" <<'PY'
 import sys, json, os
@@ -200,6 +264,12 @@ if [[ "$input_tokens" =~ ^[0-9]+$ && "$cache_read_tokens" =~ ^[0-9]+$ ]]; then
 fi
 
 # ---------------- Cost computation ----------------
+# If the JSON capture path provided a real Anthropic-reported cost, use
+# it directly (most accurate). Otherwise fall back to the pricing-table
+# estimator below.
+if [[ -n "${claude_cost_usd:-}" ]] && [[ "$claude_cost_usd" =~ ^[0-9]+\.[0-9]+$ ]] && [[ "$claude_cost_usd" != "0.000000" ]]; then
+  cost_usd="$claude_cost_usd"
+else
 cost_usd=$(python3 - "$PRICING_FILE" "$model" "$input_tokens" "$output_tokens" "$cache_read_tokens" "$cache_write_tokens" <<'PY'
 import sys, json, os, datetime
 pricing_path, model, in_tok, out_tok, cache_r, cache_w = sys.argv[1:7]
@@ -228,6 +298,7 @@ except Exception as e:
     print("0")
 PY
 )
+fi
 
 # ---------------- Ledger write ----------------
 ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)

@@ -54,10 +54,12 @@ slice_worktree=$(cat "$worktree_path_file")
 
 # Run the agent in the slice worktree via subshell. Note: the working dir
 # must be the slice worktree so claude sees the right git context.
+claude_result_capture="$LOOP_STATE_DIR/.claude_result_impl_${slice_id}.json"
 (
   cd "$slice_worktree"
   claude --print \
     --model "${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}" \
+    --output-format json \
     --append-system-prompt "$(cat "$prompt_file")" \
     --permission-mode acceptEdits \
     --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
@@ -84,7 +86,7 @@ CRITICAL CONSTRAINTS:
 - Do NOT touch ../<other-slice-worktrees> — you only own this worktree.
 - If gates fail and you cannot fix them within scope, set status=blocked, owner=user, and document why.
 EOF
-)
+) > "$claude_result_capture"
 agent_rc=$?
 
 # 3. Mirror the slice file from slice branch back to integration under lock.

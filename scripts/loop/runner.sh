@@ -342,6 +342,32 @@ slice_fail_reset() {
   rm -f "$(fail_counter_path "$1")" 2>/dev/null || true
 }
 
+# Per-slice claude-dispatch counter (separate from the consecutive-failure
+# counter). Increments on every claude-side dispatch (impl, plan_revise,
+# plan_audit-by-claude). When the count exceeds LOOP_CLAUDE_DISPATCH_CAP_PER_SLICE
+# (default 12 — ~6 plan iterations + 1 impl), the slice is escalated to
+# user attention and the runner exits cleanly.
+claude_count_path() { echo "$LOOP_STATE_DIR/claude_dispatch_count_$1"; }
+
+slice_claude_count() {
+  cat "$(claude_count_path "$1")" 2>/dev/null || echo 0
+}
+
+slice_claude_increment() {
+  local f n
+  f=$(claude_count_path "$1")
+  n=$(slice_claude_count "$1")
+  echo $((n + 1)) > "$f"
+}
+
+# Reset the claude counter whenever the slice cleanly advances out of
+# claude territory (impl→awaiting_audit, or plan→pending after final
+# codex APPROVED). Called from dispatch_with_guards after any successful
+# transition that moves owner away from claude.
+slice_claude_reset() {
+  rm -f "$(claude_count_path "$1")" 2>/dev/null || true
+}
+
 check_circuit_breakers() {
   local now elapsed
   now=$(date +%s)
@@ -376,6 +402,38 @@ dispatch_with_guards() {
   if [[ "$fc" -ge "$MAX_SLICE_FAILURES" ]]; then
     log "CIRCUIT BREAKER: slice=$sid has failed $fc times consecutively (limit $MAX_SLICE_FAILURES); exiting cleanly"
     return 2
+  fi
+
+  # Per-slice claude-dispatch budget cap. Counts claude calls (impl,
+  # plan_revise, plan_audit-by-claude) for THIS slice and exits cleanly
+  # if the slice has consumed too many — catches slow/oscillating slices
+  # that pass the consecutive-failure check (because they technically
+  # transition each round) but burn the user's claude quota anyway.
+  local CLAUDE_CAP="${LOOP_CLAUDE_DISPATCH_CAP_PER_SLICE:-12}"
+  local is_claude_dispatch="false"
+  case "$dispatch_type" in
+    impl|plan_revise) is_claude_dispatch="true" ;;
+    plan_audit)
+      # Plan-audit can be either claude (default) or codex (legacy). The
+      # dispatcher selects based on slice-owner; mirror that here using
+      # the same env-knob precedence.
+      if [[ -n "${LOOP_PLAN_AUDIT_AGENT:-}" ]]; then
+        [[ "$LOOP_PLAN_AUDIT_AGENT" == "claude" ]] && is_claude_dispatch="true"
+      else
+        local owner
+        owner=$(read_slice_field "$sid" "owner" 2>/dev/null || echo "")
+        [[ "$owner" == "claude" ]] && is_claude_dispatch="true"
+      fi
+      ;;
+  esac
+  if [[ "$is_claude_dispatch" == "true" ]]; then
+    local claude_n
+    claude_n=$(slice_claude_count "$sid")
+    if (( claude_n >= CLAUDE_CAP )); then
+      log "CIRCUIT BREAKER: slice=$sid has consumed $claude_n claude dispatches (cap $CLAUDE_CAP); USER ATTENTION; exiting cleanly"
+      return 2
+    fi
+    slice_claude_increment "$sid"
   fi
 
   local status_before status_after owner_before owner_after
@@ -415,6 +473,13 @@ dispatch_with_guards() {
   if [[ -n "$status_before" && -n "$status_after" && "$transitioned" == "true" ]] \
      && is_valid_terminal_transition "$dispatch_type" "$status_before" "$status_after"; then
     slice_fail_reset "$sid"
+    # Reset the per-slice claude budget when the slice hands off out of
+    # claude's hands (e.g. plan APPROVED → owner=codex, or impl done →
+    # awaiting_audit). The counter is meant to catch claude-side
+    # oscillation, not accumulated lifetime use.
+    if [[ "$owner_after" != "claude" ]]; then
+      slice_claude_reset "$sid"
+    fi
     log "dispatch ok slice=$sid type=$dispatch_type ${status_before}/${owner_before} → ${status_after}/${owner_after} (rc=$rc)"
   else
     slice_fail_increment "$sid"

@@ -89,6 +89,43 @@ with_repo_lock "dispatch_slice_audit:$slice_id:worktree-prep" \
 }
 slice_worktree=$(cat "$worktree_path_file")
 
+# ----------------------------------------------------------------------
+# Pre-dispatch quality gate: auto-REJECT if the same item has persisted
+# across the threshold number of rounds (calibration-mismatch oscillation).
+# When this fires, we skip the auditor dispatch entirely and write the
+# REJECT verdict ourselves. The exit codes from check_iteration_quality:
+#   0 → no persistence, proceed with normal audit.
+#   2 → persistence detected, auto-REJECT; stdout is the summary.
+#   1 → usage error (treat as "no persistence detected" — fail open).
+# ----------------------------------------------------------------------
+slice_branch_file="$slice_worktree/diagnostic/slices/${slice_id}.md"
+if [[ -f "$slice_branch_file" ]]; then
+  set +e
+  persistence_summary=$("$LOOP_MAIN_WORKTREE/scripts/loop/check_iteration_quality.sh" "$slice_branch_file" 2>/dev/null)
+  qrc=$?
+  set -e
+  if [[ "$qrc" -eq 2 ]]; then
+    echo "[$(date -Iseconds)] dispatch_slice_audit $slice_id auto-REJECT (persistence detected): $persistence_summary" >> "$LOG"
+    with_repo_lock "dispatch_slice_audit:$slice_id:auto-reject" \
+      "$LOOP_MAIN_WORKTREE/scripts/loop/auto_reject_persistence.sh" \
+        "$slice_id" "$slice_worktree" "$persistence_summary" >> "$LOG" 2>&1 \
+      || echo "[$(date -Iseconds)] auto-reject failed for $slice_id" >> "$LOG"
+
+    # Cost ledger row for the (zero-token) auto-reject so the slice's
+    # accounting is complete.
+    "$LOOP_MAIN_WORKTREE/scripts/loop/post_dispatch_cost.sh" "$slice_id" "auto-reject-persistence" 2>/dev/null || true
+
+    # Mirror the slice file (now status=blocked) back to integration so
+    # the runner sees the new state on its next tick.
+    with_repo_lock "dispatch_slice_audit:$slice_id:auto-reject-mirror" \
+      mirror_slice_to_integration "$slice_id" "blocked" \
+      || echo "[$(date -Iseconds)] dispatch_slice_audit $slice_id auto-reject mirror returned non-zero" >> "$LOG"
+
+    echo "[$(date -Iseconds)] dispatch_slice_audit $slice_id end (auto-rejected)" >> "$LOG"
+    exit 0
+  fi
+fi
+
 # Pre-load the slice file inline so the auditor doesn't burn tokens on tool
 # calls re-reading it.
 inline_payload=$(mktemp -t plan_audit_inline.XXXXXX)
@@ -115,12 +152,18 @@ trap 'rm -f "$worktree_path_file" "$inline_payload"' EXIT
 # Claude (primary plan auditor — new default)
 # ----------------------------------------------------------------------
 run_claude_native() {
+  local claude_result_capture="$LOOP_STATE_DIR/.claude_result_plan_audit_${slice_id}.json"
   (
     cd "$slice_worktree"
     # System prompt is the role file (cache-friendly stable prefix). The
     # inline payload (slice body + context) is the variable suffix sent on
     # stdin. Cold-context: --print starts a fresh session every call.
+    # LOOP_CLAUDE_PLAN_AUDIT_MODEL lets the user opt for a cheaper model
+    # (e.g. claude-sonnet-4-6) since the plan audit doesn't write code,
+    # only triages.
     claude --print \
+      --model "${LOOP_CLAUDE_PLAN_AUDIT_MODEL:-claude-opus-4-7}" \
+      --output-format json \
       --append-system-prompt "$(cat "$claude_prompt_file")" \
       --permission-mode acceptEdits \
       --allowed-tools "Read,Edit,Bash,Grep,Glob" <<EOF
@@ -138,7 +181,7 @@ with the appropriate \`[slice:${slice_id}][plan-approved|plan-revise|plan-reject
 DO NOT mirror to integration — the dispatcher mirrors deterministically
 after you exit.
 EOF
-  )
+  ) > "$claude_result_capture"
 }
 
 # ----------------------------------------------------------------------
@@ -180,9 +223,12 @@ run_codex_native() {
 # codex is unavailable or quota-throttled). This is the legacy fallback
 # prompt; for the new default path, use run_claude_native instead.
 run_codex_path_claude_fallback() {
+  local claude_result_capture="$LOOP_STATE_DIR/.claude_result_plan_audit_${slice_id}.json"
   (
     cd "$slice_worktree"
     claude --print \
+      --model "${LOOP_CLAUDE_PLAN_AUDIT_MODEL:-claude-opus-4-7}" \
+      --output-format json \
       --append-system-prompt "$(cat "$codex_prompt_file")
 ROLEPLAY (adversarial self-audit, Tier B): You are auditing a plan you did NOT write. Be ruthlessly skeptical. Find at least 2-3 concrete concerns or you have not done your job. Cold-context discipline: do NOT use any inherited conversation context." \
       --permission-mode acceptEdits \
@@ -197,7 +243,7 @@ with [slice:${slice_id}][plan-approved|plan-revise|plan-reject][fallback] tag.
 
 DO NOT mirror to integration — the dispatcher does that deterministically.
 EOF
-  )
+  ) > "$claude_result_capture"
 }
 
 # ----------------------------------------------------------------------
