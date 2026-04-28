@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:06:45Z
+updated: 2026-04-28T04:08:41Z
 ---
 
 ## Goal
@@ -50,6 +50,11 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
   - `SELECT` on `core.session_completeness` (the parity gate's deterministic session selector).
   - **No `MATERIALIZED VIEW` privilege is required** — the storage relation is a base table, not a `MATERIALIZED VIEW`. This explicitly supersedes the round-0 plan body, which framed the artifact as a matview. **No `REFRESH MATERIALIZED VIEW` is invoked anywhere in this slice.**
 - `psql` available on PATH for the gate commands below (same prerequisite as the precedent slices). The implementer must verify `psql --version` exits `0` before running gate command #1; the gate list assumes `psql` is the parity-execution tool. Gate #0 (`psql --version`) is the explicit PATH-availability check that satisfies round-1 audit's Low item.
+- Web-tooling prerequisites for gate command #4 (`npm --prefix web run build` / `typecheck` / `test:grading`). These match the precedent slices' implicit assumptions and are made explicit here per round-2 audit's Low item:
+  - `node` and `npm` available on PATH. `web/package.json` pins runtime dependencies for Next.js 15 / React 19 and dev dependencies for TypeScript 5.6 and `@types/node` 22; Node.js 20 LTS or newer (the version that ships with `@types/node` 22 typings) is required.
+  - `web/node_modules/` must be installed and current relative to `web/package.json` and `web/package-lock.json`. If absent or stale, run `npm --prefix web ci` once before gate #4. The slice does not modify `web/package.json` or `web/package-lock.json`, so a one-time install on a clean checkout is sufficient — gate #4 itself does not run `npm install`.
+  - The `next build` step compiles TypeScript and Next.js routes; `tsc --noEmit` (typecheck) reads from `web/tsconfig.json`; `node --test scripts/tests/*.test.mjs` (test:grading) runs the Node native test runner. None of these need network access at gate-run time, but the typecheck and build do read `web/src/lib/queries.ts` and `web/src/lib/deterministicSql.ts`, which reference `core.telemetry_lap_bridge` through the public view — so the migration in step 1 must have applied (gate #1) before gate #4 to guarantee the column signature the runtime expects is unchanged. (In practice the schema is unchanged because the facade preserves the view's column list verbatim, but the ordering keeps the gate dependency explicit.)
+  - **No `DATABASE_URL` is required for gate #4** — `npm run build`, `npm run typecheck`, and `npm run test:grading` are all DB-free. The scripts that hit Neon (`healthcheck:chat`, `healthcheck:grade`) are not invoked by this slice's gates.
 
 ## Steps
 1. Add `sql/019_telemetry_lap_bridge_mat.sql`, wrapped in a single `BEGIN; … COMMIT;` so partial application cannot leave the schema half-built. Contents in this order:
@@ -440,7 +445,7 @@ _None._
 _None._
 
 ### Low
-- [ ] Add the web-tooling prerequisites to `Required services / env` because gate #4 depends on `npm --prefix web ...` succeeding, but the plan currently documents only `DATABASE_URL` and `psql` requirements.
+- [x] Add the web-tooling prerequisites to `Required services / env` because gate #4 depends on `npm --prefix web ...` succeeding, but the plan currently documents only `DATABASE_URL` and `psql` requirements.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
