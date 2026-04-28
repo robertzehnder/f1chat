@@ -1,11 +1,11 @@
 ---
 slice_id: 05-template-cache-coverage-audit
 phase: 5
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28
+updated: 2026-04-28T09:29:21-04:00
 ---
 
 ## Goal
@@ -73,7 +73,40 @@ bash -c '
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/05-template-cache-coverage-audit`
+**Commits on this slice (after plan approval):**
+- `5322a20` — slice 05: template-cache coverage audit (32/32 templates documented)
+
+### Inventory & coverage
+- Extracted **32** distinct `templateKey: "..."` literals from `web/src/lib/deterministicSql.ts` (full list inside the audit doc).
+- No `web/src/lib/templates/` directory exists in this repo; the inline literals in `deterministicSql.ts` are the canonical inventory, as the approved plan stated.
+- The slice doc `diagnostic/notes/05-template-cache-coverage.md` contains one row per templateKey (32/32). `## Excluded` is intentionally empty — every template was analyzed.
+
+### Decisions / findings
+- **Headline:** No template currently short-circuits to a cached deterministic *response*. Every row in the coverage table is `cache-eligible = N` today.
+- `web/src/lib/resolverCache.ts` caches **resolver lookups only** (`sessions_for_resolution`, `drivers_for_resolution`, `sessions_from_search_lookup`, `drivers_from_identity_lookup`). It does not cache template SQL output.
+- `web/src/lib/chatRuntime.ts` has two prompt-specific resolver-skip fast paths (`coverage_prompt_fast_path` at line 1394, `abu_dhabi_2025_deterministic_fast_path` at line 1508). Both still hand SQL to `runReadOnlySql` in `web/src/app/api/chat/route.ts:461`, so even those three templates re-execute SQL on every request.
+- Three templates (`sessions_most_complete_downstream_coverage`, `max_leclerc_qualifying_improvement`, `abu_dhabi_weekend_smallest_spread_and_comparison`) are the only ones whose prompts already hit a runtime fast path; the audit doc marks them as resolver-skip-only and lists the same future-cache disposition as the others.
+- Per-template "future-Y / future-Y with TTL / future-N" disposition is recorded in the doc to drive subsequent template-cache slices.
+
+### Gate results (all from this worktree, this branch)
+
+| Gate | Command | Exit | Notes |
+| --- | --- | --- | --- |
+| build | `cd web && npm run build` | 0 | clean Next build (after `npm install` to populate `web/node_modules`). |
+| typecheck | `cd web && npm run typecheck` | 0 | `tsc --noEmit` clean. |
+| grading tests | `cd web && npm run test:grading` | 0 | 32 passed, 10 skipped (integration tests gated on `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`). |
+| slice coverage gate | inline `bash -c` block from slice file | 0 | "Coverage gate passed: all templateKeys documented." |
+
+### Self-check vs. acceptance criteria
+- [x] `diagnostic/notes/05-template-cache-coverage.md` contains a row for every distinct `templateKey: "..."` literal in `web/src/lib/deterministicSql.ts` (32/32). `## Excluded` is empty.
+- [x] Each row records cache-eligible (Y/N) and a reason when N.
+- [x] The coverage gate shell block exits 0 against the produced doc (verified above).
+
+### Files changed
+- `diagnostic/notes/05-template-cache-coverage.md` (new — only changed file expected by the slice).
+- `diagnostic/slices/05-template-cache-coverage-audit.md` (frontmatter + this completion note; metadata bookkeeping only, not subject to "Changed files expected").
 
 ## Audit verdict
 (filled by Codex)
