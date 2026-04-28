@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T17:30:00Z
+updated: 2026-04-28T04:44:05Z
 ---
 
 ## Goal
@@ -238,3 +238,19 @@ npm --prefix web run test:grading
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T04:35:20Z, so no stale-state note is needed this round.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace Q3 in gate #3 with an actual stint-window predicate or join shape that constrains a lap against `raw.stints.lap_start` / `lap_end`, so the plan verifies the access pattern named in the Goal and in Steps §1.3 instead of only re-testing the `(session_key, driver_number)` prefix of the index.
+- [ ] Add a dedicated gate assertion that proves `idx_raw_laps_session_driver_valid_partial` is usable on its own; the current Q2 check accepts either lap index, so gate #3 can exit `0` even if the partial index is invalid or never selected.
+
+### Medium
+- [ ] Correct `## Required services / env` to state the real privilege prerequisite for creating indexes on existing `raw.*` tables; `CREATE` on schema `raw` is not sufficient by itself for `CREATE INDEX CONCURRENTLY` on those tables.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` remains fresh enough to use without a stale-state note this round.
