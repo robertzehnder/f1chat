@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T18:11:37Z
+updated: 2026-04-28T19:05:00Z
 ---
 
 ## Goal
@@ -356,6 +356,22 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### High
 - [x] Make the "approval recorded before the Neon PATCH" claim actually auditable: record a mutation-time `patch_applied_at` timestamp (or equivalent apply-time artifact) and gate `APPROVAL_TS < patch_applied_at <= captured_at`, because comparing approval only to `06-cu-rightsize-after_2026-04-28.json`'s `captured_at` still allows the PATCH to happen before approval and be backfilled later.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 8)
+
+**Status: REVISE**
+
+### High
+- [ ] Fix gate `2b'` so the approval/mutation ordering check is time-safe when timestamps include optional fractional seconds: the current `awk` lexicographic comparisons on raw ISO-8601 strings can misorder `...00Z` versus `...00.1Z`, causing valid implementations to fail or invalid ones to pass.
 
 ### Medium
 - [ ] None.
