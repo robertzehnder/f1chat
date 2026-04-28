@@ -1,11 +1,11 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T19:53:24-04:00
+updated: 2026-04-27T20:13:33-04:00
 ---
 
 ## Goal
@@ -375,9 +375,9 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 - No plan-body content, no prior `## Plan-audit verdict` content, and no SQL or web code was changed by this round. All gates re-ran and exited `0` (see Gate command exit codes above; rerun is recorded in the same exit codes since the database state is unchanged from the prior round).
 
 ## Audit verdict
-**REVISE**
+**PASS**
 
-[slice:03-pit-cycle-summary][revise]
+[slice:03-pit-cycle-summary][pass]
 
 Gate exit codes observed by audit agent:
 - Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... SQL` → exit `0`. Output: `NOTICE: core_build.pit_cycle_summary grain probe: total=18718 distinct_triple=18718 duplicate=0`, then `DO`.
@@ -392,24 +392,19 @@ Scope-diff result:
 - `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-pit-cycle-summary.md` and `sql/015_pit_cycle_summary_mat.sql`.
 - That path set is a subset of `Changed files expected`, with the slice file allowed by policy.
 
-Findings:
-- `diagnostic/slices/03-pit-cycle-summary.md:11-324` rewrites the slice plan body (`Goal`, `Decisions`, `Inputs`, `Prior context`, `Required services / env`, `Steps`, `Changed files expected`, `Gate commands`, `Acceptance criteria`, `Out of scope`, `Risk / rollback`). The file-content acceptance rule at `diagnostic/slices/03-pit-cycle-summary.md:287` allows only frontmatter transitions plus the `Slice-completion note`; these plan-body edits are out of bounds.
-- `diagnostic/slices/03-pit-cycle-summary.md:409-455` appends full prior `Plan-audit verdict` sections in the implementation diff. The same rule at line 287 forbids edits to prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes.
-
 Criterion-by-criterion:
 - Pre-flight grain probe on `(session_key, driver_number, pit_sequence)`: verified.
 - `core.pit_cycle_summary_mat` exists as a base table with `PRIMARY KEY (session_key, driver_number, pit_sequence)`: verified.
 - `core.pit_cycle_summary` exists as a view: verified.
 - `core.pit_cycle_summary` is a thin facade over `core.pit_cycle_summary_mat`: verified.
 - Global rowcount equality between `core_build.pit_cycle_summary` and `core.pit_cycle_summary_mat`: verified. Independent rowcounts observed: `18718` and `18718`.
-- Bidirectional `EXCEPT ALL` parity across the three deterministic `analytic_ready` sessions: verified. Selector returned session keys `9102`, `9110`, `9118`.
+- Bidirectional `EXCEPT ALL` parity across the three deterministic `analytic_ready` sessions: verified by gate #3 exit `0`.
 - `npm --prefix web run build`: verified.
 - `npm --prefix web run typecheck`: verified.
 - `npm --prefix web run test:grading`: verified.
-- Slice-file content restriction: failed.
+- Slice-file content restriction: verified. The current 3-dot diff on this branch is limited to the allowed frontmatter, Slice-completion note, audit section, and the new SQL migration.
 
-Required revision:
-- Reduce the `diagnostic/slices/03-pit-cycle-summary.md` diff so this file changes only in allowed frontmatter fields, the `Slice-completion note`, and the audit section. Remove the implementation-time plan-body rewrite and the appended prior `Plan-audit verdict` sections from the branch diff.
+Decision: PASS. Phase 3 slice with no user-approval flag; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
