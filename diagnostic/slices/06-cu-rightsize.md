@@ -1,8 +1,8 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-28
@@ -29,14 +29,15 @@ Right-size the Neon production endpoint's autoscaling compute-unit window (`auto
 
 ## Decisions
 - Implementation surface is a **Neon-config-only** change applied through the Neon API; no application or repo code is modified. The only repo artifacts produced are the decision note and the before/after settings JSON. This is consistent with the auditor note in `_state.md` that non-code slices must gate against the configuration system itself, not `web/` build/test gates.
-- The chosen `min_cu` / `max_cu` values, the per-month cost delta estimate, and the latency budget that justifies them MUST be filled into `diagnostic/notes/06-cu-rightsize.md` before the gate is run; the gate asserts the live endpoint matches those values exactly.
+- The chosen `min_cu` / `max_cu` values, the chosen `suspend_timeout_seconds`, the per-month cost delta estimate, and the latency budget that justifies them MUST be filled into `diagnostic/notes/06-cu-rightsize.md` before the gate is run; the gate asserts the live endpoint AND the post-change artifact match those values exactly for every in-scope setting.
+- In-scope mutable settings for this slice are exactly: `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`. Per the `_state.md` lesson on config-only infra slices, gate live-system parity and artifact parity for **every** mutable setting the plan may change, not just the primary CU pair. If `suspend_timeout_seconds` is intentionally unchanged, the decision note must declare the retained value and the gate still asserts parity (note ↔ live ↔ after artifact).
 
 ## Steps
 1. Read `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json` and `diagnostic/artifacts/perf/01-baseline-snapshot_2026-04-26.json` to extract: peak concurrent connection count, p50 / p95 / p99 query latency, and which stages (resolver / template / DB) dominate. Record the extracted numbers verbatim in `diagnostic/notes/06-cu-rightsize.md` under an "Evidence" subsection so reviewers can audit the decision.
 2. Capture the current Neon endpoint settings into `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` via the Neon API (`GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`); record at minimum `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, `suspend_timeout_seconds`, and the timestamp.
-3. In `diagnostic/notes/06-cu-rightsize.md`, document: chosen `min_cu`, chosen `max_cu`, retained or changed `suspend_timeout_seconds`, the cost-per-month delta estimate (Neon list price × CU-hours), and the latency budget (e.g. "p95 ≤ X ms at observed peak load") that the new window must preserve.
-4. After user-approved sentinel, apply the new window via the Neon API (`PATCH /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`) and capture the post-apply endpoint payload into `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`.
-5. Run the smoke-test query against `DATABASE_URL` to confirm the endpoint is still routable post-resize, and record its wall-clock latency in the decision note.
+3. In `diagnostic/notes/06-cu-rightsize.md`, document on their own grep-able lines: `chosen_min_cu:`, `chosen_max_cu:`, `suspend_timeout_seconds:` (the retained or changed value), the cost-per-month delta estimate (Neon list price × CU-hours), and the latency budget (e.g. "p95 ≤ X ms at observed peak load") that the new window must preserve.
+4. After user-approved sentinel, apply the new window via the Neon API (`PATCH /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`) — patch `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` to the documented values — and capture the post-apply endpoint payload into `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`.
+5. Run the smoke-test query `psql "$DATABASE_URL" -At -c "SELECT 1"` post-resize. The gate (below) checks the command exits 0 and prints `1`; no latency recording is required, so the plan only promises verifiable outputs.
 
 ## Changed files expected
 - `diagnostic/notes/06-cu-rightsize.md` (new — the decision document, including Evidence + Cost/perf tradeoff sections)
@@ -63,18 +64,32 @@ grep -E '^chosen_max_cu:[[:space:]]*[0-9.]+' diagnostic/notes/06-cu-rightsize.md
 grep -E '^suspend_timeout_seconds:[[:space:]]*[0-9]+' diagnostic/notes/06-cu-rightsize.md
 grep -Eq '(Cost/perf tradeoff|cost_delta_usd_per_month)' diagnostic/notes/06-cu-rightsize.md
 
-# 3. Live Neon endpoint matches the documented chosen window (post-apply verification).
+# 3. Live Neon endpoint matches the documented chosen window for every in-scope mutable setting.
 LIVE=$(curl -fsS -H "Authorization: Bearer $NEON_API_KEY" \
   "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/endpoints/$NEON_ENDPOINT_ID")
 DOC_MIN=$(grep -E '^chosen_min_cu:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
 DOC_MAX=$(grep -E '^chosen_max_cu:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
-test "$(echo "$LIVE" | jq -r '.endpoint.autoscaling_limit_min_cu')" = "$DOC_MIN"
-test "$(echo "$LIVE" | jq -r '.endpoint.autoscaling_limit_max_cu')" = "$DOC_MAX"
+DOC_SUS=$(grep -E '^suspend_timeout_seconds:' diagnostic/notes/06-cu-rightsize.md | awk '{print $2}')
+LIVE_MIN=$(echo "$LIVE" | jq -r '.endpoint.autoscaling_limit_min_cu')
+LIVE_MAX=$(echo "$LIVE" | jq -r '.endpoint.autoscaling_limit_max_cu')
+LIVE_SUS=$(echo "$LIVE" | jq -r '.endpoint.suspend_timeout_seconds')
+test "$LIVE_MIN" = "$DOC_MIN"
+test "$LIVE_MAX" = "$DOC_MAX"
+test "$LIVE_SUS" = "$DOC_SUS"
 
-# 4. Post-change artifact exists and matches the live endpoint.
+# 4. Post-change artifact exists and matches BOTH the live endpoint AND the note for every in-scope setting.
 test -f diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json
-test "$(jq -r '.endpoint.autoscaling_limit_min_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)" = "$DOC_MIN"
-test "$(jq -r '.endpoint.autoscaling_limit_max_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)" = "$DOC_MAX"
+AFTER_MIN=$(jq -r '.endpoint.autoscaling_limit_min_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
+AFTER_MAX=$(jq -r '.endpoint.autoscaling_limit_max_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
+AFTER_SUS=$(jq -r '.endpoint.suspend_timeout_seconds' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
+# artifact ↔ live parity
+test "$AFTER_MIN" = "$LIVE_MIN"
+test "$AFTER_MAX" = "$LIVE_MAX"
+test "$AFTER_SUS" = "$LIVE_SUS"
+# artifact ↔ note parity
+test "$AFTER_MIN" = "$DOC_MIN"
+test "$AFTER_MAX" = "$DOC_MAX"
+test "$AFTER_SUS" = "$DOC_SUS"
 
 # 5. Endpoint is still routable from the application pooler URL after resize.
 psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
@@ -82,10 +97,10 @@ psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
 
 ## Acceptance criteria
 - [ ] `diagnostic/notes/06-cu-rightsize.md` declares `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, the per-month cost-delta estimate (USD), and the latency budget the chosen window must preserve.
-- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change.
-- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change and its `autoscaling_limit_min_cu` / `autoscaling_limit_max_cu` equal the values declared in the decision note.
-- [ ] A live `GET` of the production Neon endpoint at gate time returns `autoscaling_limit_min_cu` and `autoscaling_limit_max_cu` equal to the values declared in the decision note (no staging environment is involved).
-- [ ] `psql "$DATABASE_URL" -c "SELECT 1"` succeeds post-change, confirming the pooler still routes through the resized endpoint.
+- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change, including `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`.
+- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time.
+- [ ] A live `GET` of the production Neon endpoint at gate time returns `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal to the values declared in the decision note (no staging environment is involved).
+- [ ] `psql "$DATABASE_URL" -c "SELECT 1"` succeeds post-change (exits 0 and prints `1`), confirming the pooler still routes through the resized endpoint.
 
 ## Out of scope
 - Application code changes in `web/` (driver, pooling, retry strategy). If those are needed, raise a separate slice.
@@ -126,11 +141,11 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 - [ ] None.
 
 ### Medium
-- [ ] Make `suspend_timeout_seconds` auditable end-to-end: either declare it fixed/out of scope for this slice, or add gate and acceptance checks that compare the documented value, the live Neon endpoint, and the post-change artifact when it is allowed to change.
-- [ ] Fix gate 4 so it actually proves `06-cu-rightsize-after_2026-04-28.json` matches the live Neon endpoint, not just the note; compare the artifact fields directly to the `LIVE` payload for every in-scope setting.
+- [x] Make `suspend_timeout_seconds` auditable end-to-end: either declare it fixed/out of scope for this slice, or add gate and acceptance checks that compare the documented value, the live Neon endpoint, and the post-change artifact when it is allowed to change.
+- [x] Fix gate 4 so it actually proves `06-cu-rightsize-after_2026-04-28.json` matches the live Neon endpoint, not just the note; compare the artifact fields directly to the `LIVE` payload for every in-scope setting.
 
 ### Low
-- [ ] Add a measurable gate or acceptance check for the smoke-test wall-clock latency recorded in `diagnostic/notes/06-cu-rightsize.md`, or drop that recording requirement from step 5 so the plan only promises verifiable outputs.
+- [x] Add a measurable gate or acceptance check for the smoke-test wall-clock latency recorded in `diagnostic/notes/06-cu-rightsize.md`, or drop that recording requirement from step 5 so the plan only promises verifiable outputs.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
