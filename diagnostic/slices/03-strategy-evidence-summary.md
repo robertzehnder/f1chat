@@ -1,10 +1,10 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
-updated: 2026-04-27T20:50:00-04:00
+updated: 2026-04-27T20:54:28-04:00
 created: 2026-04-26
 ---
 
@@ -352,20 +352,26 @@ npm --prefix web run test:grading
 
 ## Audit verdict
 
-**REJECT**
+**REVISE**
 
-[slice:03-strategy-evidence-summary][reject]
+[slice:03-strategy-evidence-summary][revise]
 
 Gate exit codes observed by audit agent:
 - Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... core_build.strategy_evidence_summary grain probe ... SQL` -> exit `0`. NOTICE: `core_build.strategy_evidence_summary grain probe: total=18717 distinct_triple=18717 duplicate=0`.
 - Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/016_strategy_evidence_summary_mat.sql` -> exit `0`. Output included `BEGIN`, `CREATE TABLE`, `TRUNCATE TABLE`, `INSERT 0 18717`, `CREATE VIEW`, `COMMIT`.
 - Gate #2 facade/relkind/PK DO block -> exit `0`. Output: `DO`.
 - Gate #3 global-rowcount + three-session bidirectional `EXCEPT ALL` parity DO block -> exit `0`. Output: `DO`.
-- Gate #4 sequential web gates `npm --prefix web run build && npm --prefix web run typecheck && npm --prefix web run test:grading` -> exit `0`.
+- Gate #4a `npm --prefix web run build` -> exit `0`.
+- Gate #4b `npm --prefix web run typecheck` -> exit `0`.
+- Gate #4c `npm --prefix web run test:grading` -> exit `0` (`tests 31`, `pass 21`, `skip 10`, `fail 0`).
 
 Scope-diff result:
 - `git diff --name-only integration/perf-roadmap...HEAD` -> exit `0` and returned `diagnostic/_state.md`, `diagnostic/slices/03-strategy-evidence-summary.md`, `sql/016_strategy_evidence_summary_mat.sql`.
-- `diagnostic/_state.md:60` is out of scope. "Changed files expected" allows only `sql/016_strategy_evidence_summary_mat.sql` plus this slice file, and the audit policy only adds the slice file itself to the allow-list. Any extra path is REJECT for scope creep.
+- Scope passes. `diagnostic/_state.md` is explicitly listed under this slice's `Changed files expected`, so the prior in-file REJECT rationale was incorrect.
+
+Findings:
+- [medium] [sql/016_strategy_evidence_summary_mat.sql](/Users/robertzehnder/.openf1-loop-worktrees/03-strategy-evidence-summary/sql/016_strategy_evidence_summary_mat.sql:8) reintroduces the exact transitive-grain claim that the approved plan removed. The comment says the output triple is "unique by construction" because `core_build.pit_cycle_summary` has verified grain, but this slice's approved Decisions section explicitly narrowed the claim to an output-level assertion only because `ROW_NUMBER() OVER (PARTITION BY a.session_key, a.driver_number, a.pit_lap ...)` can collapse multiple input rows sharing `(session_key, driver_number, pit_lap)`. Rewrite the migration comment to match the approved rationale: uniqueness is established by gate #0's probe over `core_build.strategy_evidence_summary`, not inherited transitively from `core_build.pit_cycle_summary`.
+- [medium] The Slice-completion note's "Decisions executed verbatim from the approved plan" claim is inaccurate while the migration still contains that reverted transitive-grain rationale. Update the note after fixing the SQL comment.
 
 Criterion-by-criterion:
 - Pre-flight grain probe on `(session_key, driver_number, pit_sequence)`: pass (`0`).
@@ -375,12 +381,12 @@ Criterion-by-criterion:
 - Global rowcount equality between `core_build.strategy_evidence_summary` and `core.strategy_evidence_summary_mat`: pass (`0`).
 - Three-session bidirectional `EXCEPT ALL` parity: pass (`0`).
 - `npm --prefix web run build`: pass (`0`).
-- `npm --prefix web run typecheck`: pass (`0`) when run after build, matching the slice's sequential gate block.
-- `npm --prefix web run test:grading`: pass (`0`) with `21` pass, `10` skip, `0` fail.
-- File-scope criterion: fail. `git diff --name-only integration/perf-roadmap...HEAD` includes out-of-scope `diagnostic/_state.md`.
+- `npm --prefix web run typecheck`: pass (`0`).
+- `npm --prefix web run test:grading`: pass (`0`).
+- File-scope criterion: pass.
 
 Decision:
-- REJECT. The implementation is substantively green, but scope creep on `diagnostic/_state.md` blocks merge under the audit policy.
+- REVISE. The SQL implementation and gates are green, but the shipped migration text contradicts the approved grain rationale and the slice note overstates conformance.
 
 ## Plan-audit verdict (round 1)
 
