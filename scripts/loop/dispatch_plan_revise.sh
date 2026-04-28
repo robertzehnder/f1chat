@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 # scripts/loop/dispatch_plan_revise.sh
 # Phase: PLAN REVISE (between plan-audit rounds).
-# Claude reads the latest Codex audit's triaged action items from the slice
+# Claude reads the latest plan-audit's triaged action items from the slice
 # file and edits ONLY the slice file to resolve them, then flips status back
-# to pending_plan_audit so Codex can re-audit.
+# to pending_plan_audit so the matching auditor can re-audit.
+#
+# Two-tier audit context: the latest verdict may be from either claude-plan-
+# audit (cheap, iterative self-audit) OR codex-slice-audit (expensive final
+# gatekeeper). The reviser detects which one wrote the latest verdict by
+# looking for `**Auditor: claude-plan-audit ...**` in that section's header,
+# and sets owner accordingly so the slice returns to the SAME tier for re-
+# audit (rather than re-running an unnecessary claude self-audit when codex
+# is the one waiting on a fix).
 #
 # Item 2 (round-12): runs in slice's worktree on slice/<id> (uniform model);
 # dispatcher mirrors back to integration deterministically. Plan-iter cap
@@ -131,19 +139,22 @@ Branch: slice/${slice_id} (already checked out — do NOT switch branches)
 
 Steps:
 1. Read diagnostic/slices/${slice_id}.md. Find the latest \`## Plan-audit verdict (round N)\` section.
-2. For each \`- [ ]\` item under High / Medium / Low, edit the slice's body (Steps, Gate commands, Required services / env, Changed files expected, Acceptance criteria, etc.) to address it. Tick the box \`- [x]\` after you've made the corresponding edit. For Low items you choose to skip, leave \`- [ ]\` and append \`DEFER: <reason>\`.
-3. Notes section: read but do not act.
-4. Refresh frontmatter \`updated:\` timestamp; set \`status: pending_plan_audit\`, \`owner: codex\`.
-5. Commit on slice/${slice_id} with message tag \`[slice:${slice_id}][plan-revise]\`.
-6. Push.
+2. **Determine the auditor of the latest verdict** by inspecting that section's header:
+   - If it contains \`**Auditor: claude-plan-audit ...**\` → the latest verdict is from the **claude self-audit tier**. After your revise, the slice should go back to claude self-audit. Set the post-revise \`owner: claude\`.
+   - Otherwise (no \`Auditor:\` field, or it says codex / codex-slice-audit) → the latest verdict is from the **codex final-audit tier**. After your revise, the slice should go back to codex re-audit (NOT through claude self-audit again). Set the post-revise \`owner: codex\`.
+3. For each \`- [ ]\` item under High / Medium / Low, edit the slice's body (Steps, Gate commands, Required services / env, Changed files expected, Acceptance criteria, etc.) to address it. Tick the box \`- [x]\` after you've made the corresponding edit. For Low items you choose to skip, leave \`- [ ]\` and append \`DEFER: <reason>\`.
+4. Notes section: read but do not act.
+5. Refresh frontmatter \`updated:\` timestamp; set \`status: pending_plan_audit\` and \`owner\` per step 2.
+6. Commit on slice/${slice_id} with message tag \`[slice:${slice_id}][plan-revise]\`. Mention in the commit body which auditor your revise targets, e.g. "addresses claude-plan-audit round N items, hands back to claude" OR "addresses codex round N items, hands back to codex".
+7. Push.
 
 CRITICAL CONSTRAINTS:
 - Operate ONLY on slice/${slice_id} in this worktree.
 - Touch ONLY diagnostic/slices/${slice_id}.md.
 - Do NOT modify previous rounds' verdict text (other than ticking checkboxes).
-- Do NOT add new "Plan-audit verdict" sections — only Codex writes those.
+- Do NOT add new "Plan-audit verdict" sections — only the auditors (claude-plan-audit and codex-slice-audit) write those.
 - DO NOT mirror to integration — the dispatcher does that.
-- After commit + push, exit. The runner will re-dispatch Codex for round $((count + 1)).
+- After commit + push, exit. The runner will re-dispatch the matching auditor (per step 2) for round $((count + 1)).
 EOF
 )
 agent_rc=$?
