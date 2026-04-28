@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T09:20:00Z
+updated: 2026-04-28T10:00:00Z
 ---
 
 ## Goal
@@ -61,8 +61,12 @@ Add the schema-verified indexes from roadmap §4 Phase 4 to support common acces
 6. Capture command outputs into the slice-completion note.
 
 ## Changed files expected
+Files the implementer will add or edit during this slice:
 - `sql/020_perf_indexes.sql` (new — six `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements per Steps §1, no `BEGIN; … COMMIT;` wrapper).
 - `diagnostic/slices/04-perf-indexes-sql.md` (this file — frontmatter status/owner/timestamp transitions and the Slice-completion note only; no edits to the plan body or to any prior `## Plan-audit verdict` sections beyond ticking already-addressed checkboxes).
+
+Pre-existing branch modification (NOT added by the implementer; carried in from a prior loop step):
+- `diagnostic/_state.md` — an auditor-note commit already on `slice/04-perf-indexes-sql` (see commit `3d3eda2 [state-note] add auditor lesson for multi-index gates`). It will appear in `git diff --name-only integration/perf-roadmap...HEAD` but the implementer must NOT touch it during this slice.
 
 No `web/scripts/tests/perf-indexes.test.mjs` (removed from scope per Decisions — the EXPLAIN check ships as inline `psql` heredoc in gate #3, matching the Phase 3 materialization-slice pattern). No edits to `sql/00[1-9]_*.sql` or `sql/01[0-9]_*.sql`. No application code.
 
@@ -232,7 +236,7 @@ npm --prefix web run test:grading
 - [ ] `npm --prefix web run build` exits `0`.
 - [ ] `npm --prefix web run typecheck` exits `0`.
 - [ ] `npm --prefix web run test:grading` exits `0`.
-- [ ] The only files modified by this slice are `sql/020_perf_indexes.sql` (new) and `diagnostic/slices/04-perf-indexes-sql.md` (this slice file — frontmatter + Slice-completion note only). Verified via `git diff --name-only integration/perf-roadmap...HEAD`.
+- [ ] The set of files modified by this branch versus `integration/perf-roadmap` is exactly `sql/020_perf_indexes.sql` (new), `diagnostic/slices/04-perf-indexes-sql.md` (this slice file — frontmatter + Slice-completion note only), and `diagnostic/_state.md` (the pre-existing auditor-note commit already on `slice/04-perf-indexes-sql` — the implementer must NOT add or remove edits to this path). Verified via `git diff --name-only integration/perf-roadmap...HEAD`, which must produce exactly those three lines (and no others).
 
 ## Out of scope
 - Pre/post `EXPLAIN (ANALYZE, BUFFERS)` capture for the top-N slowest benchmark queries and the per-benchmark p50/p95 delta — owned by the sibling slice `04-explain-before-after`.
@@ -310,7 +314,7 @@ npm --prefix web run test:grading
 ### High
 
 ### Medium
-- [ ] Reconcile the changed-files scope with the branch's existing `diagnostic/_state.md` diff against `integration/perf-roadmap`; either allow that path in `## Changed files expected` and the final diff acceptance check, or redefine the verification so the implementer is not blocked by a prior auditor note commit already on this slice branch.
+- [x] Reconcile the changed-files scope with the branch's existing `diagnostic/_state.md` diff against `integration/perf-roadmap`; either allow that path in `## Changed files expected` and the final diff acceptance check, or redefine the verification so the implementer is not blocked by a prior auditor note commit already on this slice branch.
 
 ### Low
 
