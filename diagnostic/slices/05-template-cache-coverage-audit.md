@@ -1,7 +1,7 @@
 ---
 slice_id: 05-template-cache-coverage-audit
 phase: 5
-status: ready_to_merge
+status: done
 owner: codex
 user_approval_required: no
 created: 2026-04-26
