@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:00:00Z
+updated: 2026-04-28T18:02:29Z
 ---
 
 ## Goal
@@ -259,6 +259,22 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Low
 - [x] Make the final acceptance bullet match the gated smoke test exactly: it currently cites `psql "$DATABASE_URL" -c "SELECT 1"` even though the gate and step both require `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1`.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] Make the "approval recorded before the Neon PATCH" requirement auditable, or narrow the acceptance claim: as written, the gate only proves the sentinel line exists at gate time, so an implementer could patch first and add the approval line afterward without failing the plan.
+
+### Medium
+- [ ] Add a measurable gate/acceptance check for the required latency-budget rationale in step 3, or drop the requirement that the note state whether `latency_budget_p95_ms` equals `stages.execute_db.p95_ms`, equals `aggregate.post_p95_ms`, or is otherwise bounded by them; the current gate only verifies that some numeric `latency_budget_p95_ms` line exists.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
