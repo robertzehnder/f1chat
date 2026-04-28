@@ -76,7 +76,7 @@ Rollback: `git revert <commit>`.
 
 **Branch:** `slice/05-template-cache-coverage-audit`
 **Commits on this slice (after plan approval):**
-- (will be filled by the implementation commit, see git log on this branch)
+- `5322a20` — slice 05: template-cache coverage audit (32/32 templates documented)
 
 ### Inventory & coverage
 - Extracted **32** distinct `templateKey: "..."` literals from `web/src/lib/deterministicSql.ts` (full list inside the audit doc).
