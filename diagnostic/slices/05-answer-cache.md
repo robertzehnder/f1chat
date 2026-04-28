@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T19:30:00Z
+updated: 2026-04-28T20:45:00Z
 ---
 
 ## Goal
@@ -101,3 +101,18 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
 - `web/package.json:10` confirms `npm run test:grading` executes `scripts/tests/*.test.mjs`, so the proposed test file is covered by the existing gate command.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `contracts_hash` in the goal, Steps, and acceptance criteria with the actual canonical deterministic-template discriminator(s) already available in repo code, because `contracts_hash` does not exist outside this slice file and the cited prior-context note instead recommends `(templateKey, sessionKey, sortedDriverNumbers, year)` for most templates.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
+- `web/package.json` already depends on `lru-cache`, so no package-manifest changes are implied by this slice.
