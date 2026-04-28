@@ -1,15 +1,15 @@
 ---
 slice_id: 05-resolver-lru
 phase: 5
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T18:15:00Z
+updated: 2026-04-28T19:30:00Z
 ---
 
 ## Goal
-Add an LRU cache around the entity-resolver lookup functions in `web/src/lib/queries.ts` (driver/session resolution + identity-lookup queries) so repeated lookups within a chat turn avoid duplicate database round-trips.
+Add an LRU cache around the entity-resolver lookup functions in `web/src/lib/queries.ts` (driver/session resolution + identity-lookup queries) so repeated lookups — both within and across chat turns — avoid duplicate database round-trips. Cross-turn reuse is intentional; the cache is keyed so cross-context collisions cannot occur (see Decisions § Cache scoping), and turn-boundary invalidation is explicitly out of scope.
 
 ## Inputs
 - `web/src/lib/queries.ts` — owns the four lookup functions to be wrapped: `getSessionsForResolution` (line 348), `getDriversForResolution` (line 392), `getSessionsFromSearchLookup` (line 508), `getDriversFromIdentityLookup` (line 585).
@@ -26,13 +26,13 @@ Add an LRU cache around the entity-resolver lookup functions in `web/src/lib/que
 ## Decisions
 - **Module placement.** The new wrapper lives at `web/src/lib/resolverCache.ts` as a single file. There is no `web/src/lib/resolver/` directory in this repo, and creating one for one file would be premature scaffolding. The wrapper imports the four uncached functions from `./queries` and exports cached counterparts (`getSessionsForResolutionCached`, `getDriversForResolutionCached`, `getSessionsFromSearchLookupCached`, `getDriversFromIdentityLookupCached`).
 - **Cache scoping (key shape).** The cache key is composed of `(entity_type, year, sessionKey | "_no_session", query_key)`. `year` and `sessionKey` are derived from each call's existing argument shape (e.g., `getSessionsForResolution` already takes `year`; `getDriversForResolution`/`getDriversFromIdentityLookup` already take `sessionKey`) and are part of the key, so identical `query_key`s in different seasons or sessions cannot collide. When a call has no season or session pin, the literal sentinels `"_no_year"` / `"_no_session"` are used so unscoped lookups remain deterministic and never share a slot with scoped ones. `query_key` is a stable JSON serialization of the remaining arguments (e.g., `aliases`, `sessionName`, `includeFutureSessions`, `includePlaceholderSessions`, `limit`).
-- **Invalidation.** Entries expire by TTL (`RESOLVER_LRU_TTL_MS`) and by LRU eviction at `RESOLVER_LRU_MAX`. The wrapper exposes a `clear()` method that the chatRuntime entry point may call between independent chat turns or test cases; tests must exercise `clear()` to prove no leakage between turns. No write-through invalidation is needed because the resolver only reads from immutable upstream IDs within a season.
+- **Invalidation.** Entries expire by TTL (`RESOLVER_LRU_TTL_MS`) and by LRU eviction at `RESOLVER_LRU_MAX`. Cross-turn reuse is the design intent: the cache is process-scoped, not turn-scoped, and `chatRuntime` deliberately does NOT clear it on turn boundaries. The wrapper exposes a `clear()` method solely for test isolation (resetting state between unit-test cases) and as a manual escape hatch; it is not invoked from production code. Cross-context safety comes from the key shape, not from invalidation: same `query_key` under different `(year, sessionKey)` tuples occupies distinct slots. No write-through invalidation is needed because the resolver only reads from immutable upstream IDs within a season.
 
 ## Steps
 - [x] 1. Add a new module at `web/src/lib/resolverCache.ts` that imports `getSessionsForResolution`, `getDriversForResolution`, `getSessionsFromSearchLookup`, `getDriversFromIdentityLookup` from `./queries` and exports cached wrappers for each, backed by per-entity-type `lru-cache` instances keyed by `(entity_type, year, sessionKey | "_no_session", query_key)` per the Decisions section. Each wrapper preserves the original function signature so call sites are a drop-in swap.
 - [x] 2. Configure TTL and max-size via the env knobs declared in `Required services / env` (`RESOLVER_LRU_TTL_MS`, `RESOLVER_LRU_MAX`, `RESOLVER_LRU_DISABLED`), read once at module init in `web/src/lib/resolverCache.ts` with the defaults documented above.
 - [x] 3. Update `web/src/lib/chatRuntime.ts` to import the cached wrappers from `./resolverCache` instead of importing the originals from `./queries` (imports at lines 2-8), and replace the direct calls at lines 1617, 1624, 1732, 1735 with the cached wrappers. No other call sites in `chatRuntime.ts` invoke these four functions, so the swap is local to those four calls plus their import statements.
-- [x] 4. Add unit tests for hit, miss, eviction-by-max, TTL expiry, `clear()`, and cross-context isolation (same `query_key` in two different `(year, sessionKey)` contexts must not share a cache slot). Tests run under `web/scripts/tests/resolver-lru.test.mjs` and are wired into a dedicated `npm run test:resolver-lru` script in `web/package.json` so the gate can invoke them directly.
+- [x] 4. Add unit tests for hit, miss, eviction-by-max, TTL expiry, `clear()` as a test-isolation utility (post-clear lookup is a miss), and cross-context isolation (same `query_key` in two different `(year, sessionKey)` contexts must not share a cache slot). Tests do NOT assert any turn-boundary invalidation, since cross-turn reuse is intentional. Tests run under `web/scripts/tests/resolver-lru.test.mjs` and are wired into a dedicated `npm run test:resolver-lru` script in `web/package.json` so the gate can invoke them directly.
 
 ## Changed files expected
 - `web/src/lib/resolverCache.ts` (new)
@@ -54,7 +54,7 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `npm run test:resolver-lru` passes and includes explicit assertions for: a hit (second call with same key returns cached value without invoking the underlying resolver), a miss (cold key invokes the underlying resolver exactly once), eviction (insertion past `RESOLVER_LRU_MAX` evicts the oldest key), TTL expiry (entry returns a fresh resolver call after `RESOLVER_LRU_TTL_MS` elapses, simulated via fake timers), `clear()` (post-clear lookup is a miss), and cross-context isolation (same `query_key` under two distinct `(year, sessionKey)` tuples does not share a cache slot).
+- [ ] `npm run test:resolver-lru` passes and includes explicit assertions for: a hit (second call with same key returns cached value without invoking the underlying resolver), a miss (cold key invokes the underlying resolver exactly once), eviction (insertion past `RESOLVER_LRU_MAX` evicts the oldest key), TTL expiry (entry returns a fresh resolver call after `RESOLVER_LRU_TTL_MS` elapses, simulated via fake timers), `clear()` as a test-isolation utility (post-clear lookup is a miss), and cross-context isolation (same `query_key` under two distinct `(year, sessionKey)` tuples does not share a cache slot). Tests must not assert turn-boundary clearing — cross-turn reuse is the intended behavior.
 - [ ] `npm run build`, `npm run typecheck`, and `npm run test:grading` all pass.
 
 ## Out of scope
@@ -109,7 +109,7 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Resolve the turn-scope contradiction between `## Goal`, `## Decisions` invalidation, and Steps 1-4 by either adding the concrete `chatRuntime` turn-boundary `clear()` integration the plan currently claims may happen or removing the per-turn/no-leakage requirement from the plan and tests if cross-turn reuse is intentional.
+- [x] Resolve the turn-scope contradiction between `## Goal`, `## Decisions` invalidation, and Steps 1-4 by either adding the concrete `chatRuntime` turn-boundary `clear()` integration the plan currently claims may happen or removing the per-turn/no-leakage requirement from the plan and tests if cross-turn reuse is intentional.
 
 ### Low
 
