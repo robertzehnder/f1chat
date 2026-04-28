@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:10:34Z
+updated: 2026-04-28T04:12:21Z
 ---
 
 ## Goal
@@ -33,6 +33,7 @@ Scale the Phase 3 source-definition pattern (proven by `03-driver-session-summar
 ## Prior context
 - `diagnostic/_state.md`
 - `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 3
+- `diagnostic/notes/03-laps-enriched-grain.md` (the grain-discovery deliverable establishing that `core_build.laps_enriched` is non-unique on the natural triple — 167172 total vs. 167170 distinct rows, 7,379 duplicate rows globally — which propagates row-for-row through the `lap_windows` filter into `core_build.telemetry_lap_bridge` and is the load-bearing fact behind this slice's no-PK / non-unique-heap-with-indexes Decisions).
 - `diagnostic/slices/03-core-build-schema.md` (established `core_build.telemetry_lap_bridge` and the bidirectional `EXCEPT ALL` parity pattern this slice extends; this is the prerequisite called out in Decisions).
 - `diagnostic/slices/03-laps-enriched-materialize.md` (originating heap-with-indexes precedent — same no-PK shape, same two non-unique btree indexes; the differences for this slice are the column list, the source view (`core_build.telemetry_lap_bridge` instead of `core_build.laps_enriched`), and the migration filename).
 - `diagnostic/slices/03-lap-phase-summary.md` (most recent heap-pattern precedent — same `core_build.<contract>` source view with non-unique grain, same gate-check structure for table/view/index/facade verification and parity).
@@ -413,9 +414,6 @@ npm --prefix web run test:grading
 ## Slice-completion note
 (filled by Claude)
 
-## Audit verdict
-(filled by Codex)
-
 ## Plan-audit verdict (round 1)
 
 **Status: REVISE**
@@ -458,10 +456,10 @@ _None._
 _None._
 
 ### Medium
-- [ ] Add `diagnostic/notes/03-laps-enriched-grain.md` to `## Prior context`, because the no-PK/non-unique grain decision depends on that artifact and auditors are instructed to read every path in that block before triaging.
+- [x] Add `diagnostic/notes/03-laps-enriched-grain.md` to `## Prior context`, because the no-PK/non-unique grain decision depends on that artifact and auditors are instructed to read every path in that block before triaging.
 
 ### Low
-- [ ] Remove the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict (round N)` sections remain the slice's single audit-status surface.
+- [x] Remove the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict (round N)` sections remain the slice's single audit-status surface.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
