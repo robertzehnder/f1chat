@@ -31,13 +31,14 @@ prompt_file="$LOOP_MAIN_WORKTREE/scripts/loop/prompts/claude_plan_reviser.md"
 LOG="$LOOP_STATE_DIR/runner.log"
 counter_file="$LOOP_STATE_DIR/plan_iter_count_${slice_id}"
 
-# Plan-iteration cap. Tier C lowered default from 10 → 6 to bound codex
-# audit token spend on stuck slices. Historical data (loop_hardening_plan
-# 2026-04-26) argues cap=4 is too aggressive (some plans legitimately need
-# 7-9 rounds), so 6 trades some margin for token savings. Override via
-# LOOP_MAX_PLAN_ITERATIONS=N for slices that genuinely need more.
+# Plan-iteration cap. With the two-tier audit (cheap claude self-audit
+# upstream of an expensive codex final audit), per-iteration cost is
+# dominated by claude tokens, so the cap can be raised back to 10 without
+# the codex-quota pressure that motivated the Tier C reduction. Historical
+# data (loop_hardening_plan 2026-04-26) argues cap < 10 sometimes circuit-
+# breaks legitimately-iterating plans. Override via LOOP_MAX_PLAN_ITERATIONS=N.
 # At iteration MAX_ITERATIONS-1 the auditor may issue PASS-WITH-DEFERRED.
-MAX_ITERATIONS="${LOOP_MAX_PLAN_ITERATIONS:-6}"
+MAX_ITERATIONS="${LOOP_MAX_PLAN_ITERATIONS:-10}"
 
 [[ -f "$slice_file_main" ]]  || { echo "missing $slice_file_main"  >&2; exit 2; }
 [[ -f "$prompt_file" ]] || { echo "missing $prompt_file" >&2; exit 2; }

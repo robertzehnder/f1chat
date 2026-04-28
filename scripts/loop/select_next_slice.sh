@@ -41,13 +41,18 @@ while IFS= read -r sid; do
       continue
       ;;
     pending_plan_audit)
-      # Plan-audit phase: claude self-audits the plan iteratively to clear
-      # High/Medium findings before handing off. The dispatcher
-      # (dispatch_slice_audit.sh) selects the actual agent based on
-      # LOOP_PLAN_AUDIT_AGENT (default claude; set to "codex" for the legacy
-      # codex-driven plan audit). Codex remains the impl-audit agent and is
-      # only invoked once per slice (final adversarial check at awaiting_audit).
-      echo "$sid claude $status"
+      # Two-tier plan audit. The slice's owner frontmatter field selects
+      # the tier:
+      #   owner=claude → claude self-audit (cheap, iterative). On APPROVED
+      #                  the slice transitions to owner=codex for tier 2.
+      #   owner=codex  → codex final plan audit (external gatekeeper).
+      #                  On APPROVED the slice transitions to owner=claude
+      #                  status=pending so claude implements.
+      # Default to claude when owner is missing/unset, since new slices
+      # enter the loop in tier 1.
+      audit_owner="${owner:-claude}"
+      [[ "$audit_owner" == "codex" || "$audit_owner" == "claude" ]] || audit_owner="claude"
+      echo "$sid $audit_owner $status"
       exit 0
       ;;
     revising_plan)

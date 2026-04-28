@@ -502,13 +502,15 @@ while true; do
         || guard_rc=$?
       ;;
     claude:pending_plan_audit|codex:pending_plan_audit)
-      # Plan audit phase. After the redesign, claude is the default plan
-      # auditor; codex is opt-in via LOOP_PLAN_AUDIT_AGENT=codex. The
-      # dispatcher decides which agent to invoke. Both owner values are
-      # accepted to keep in-flight slices (with the older owner=codex)
-      # routable until they land or get re-audited under the new owner.
+      # Plan-audit phase, two-tier:
+      #   owner=claude → claude self-audit (cheap, iterative)
+      #   owner=codex  → codex final plan audit (external gatekeeper)
+      # The dispatcher receives owner as $2 and routes accordingly. Both
+      # owner values are accepted by this case match so a single status
+      # carries the slice through both audit tiers and through any in-
+      # flight legacy slices that still have owner=codex from prior runs.
       dispatch_with_guards "plan_audit" "$slice_id" \
-        run_with_timeout "$PLAN_AUDIT_TIMEOUT" "$LOOP_DIR/dispatch_slice_audit.sh" "$slice_id" \
+        run_with_timeout "$PLAN_AUDIT_TIMEOUT" "$LOOP_DIR/dispatch_slice_audit.sh" "$slice_id" "$owner" \
         || guard_rc=$?
       ;;
     claude:revising_plan)

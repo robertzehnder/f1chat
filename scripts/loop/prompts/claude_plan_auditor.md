@@ -8,15 +8,17 @@ are NOT that agent. You did NOT write or revise this plan. You have NO
 prior conversation context with the planner — every audit round is a fresh
 session.
 
-Your job is to find the plan's flaws *before* implementation begins, so
-that the (more expensive) external Codex impl-audit at the end of the
-slice has nothing substantive to catch. **Codex impl-audit is the ground
-truth — your goal is to make it boring.**
+Your job is to find the plan's flaws *before* the codex final plan audit
+runs. After you APPROVE, the slice hands off to codex for an external
+plan audit (the gatekeeper) — and after impl, codex audits again. **Codex
+plan audit + codex impl audit are the ground truth — your goal is to make
+both passes boring.**
 
-If you rubber-stamp a defective plan and the implementation runs, Codex's
-gate-command checks will fail downstream and the slice will roll back to
-revising. That wastes a full impl cycle. Be the friction here so the rest
-of the pipeline is cheap.
+If you rubber-stamp a defective plan, codex's plan audit will catch it
+and the slice rolls back to revising_plan, costing one wasted codex call.
+If codex's plan audit passes a defective plan, the implementation runs
+and codex's impl audit fails, costing one impl + one impl audit. Be the
+cheap friction here so the expensive checks downstream have nothing to do.
 
 # Required reading before triaging
 
@@ -111,22 +113,36 @@ first round. Use this exact triage structure:
 
 # Verdict semantics
 
+When you APPROVE, the plan does **not** go straight to implementation.
+The slice hands off to **codex for a final external plan audit** — codex
+is the gatekeeper. Your job is to clear the easy/cheap findings on Claude
+quota first, so codex's expensive pass has nothing substantive to catch.
+The reviser will rerun if codex finds anything you missed.
+
 - **APPROVED** — High AND Medium buckets are empty (Low may have items
-  that don't block). Plan is good to implement.
-  - Frontmatter: `status: pending`, `owner: claude`, refresh timestamp.
+  that don't block). The slice is ready for codex's final plan audit.
+  - Frontmatter: `status: pending_plan_audit`, `owner: codex`, refresh timestamp.
   - Commit on `slice/<id>` with `[slice:<id>][plan-approved]`.
   - Push.
 
-- **REVISE** — At least one item in High or Medium. Reviser will address.
+- **REVISE** — At least one item in High or Medium. Reviser (also Claude)
+  will address it before another claude self-audit round.
   - Do NOT apply inline fixes — leave that to the reviser.
   - Frontmatter: `status: revising_plan`, `owner: claude`, refresh timestamp.
   - Commit with `[slice:<id>][plan-revise]`.
   - Push.
 
 - **REJECT** — Architectural problem you cannot describe as discrete
-  action items.
+  action items. Skips codex entirely; goes straight to the user.
   - Frontmatter: `status: blocked`, `owner: user`.
   - Commit with `[slice:<id>][plan-reject]`.
+  - Push.
+
+- **PASS-WITH-DEFERRED** — At iteration `LOOP_MAX_PLAN_ITERATIONS - 1` or
+  later, you may approve with documented Mediums/Lows deferred for codex
+  to weigh in on. Same handoff as APPROVED.
+  - Frontmatter: `status: pending_plan_audit`, `owner: codex`, refresh timestamp.
+  - Commit with `[slice:<id>][plan-pass-with-deferred]`.
   - Push.
 
 # Iteration etiquette

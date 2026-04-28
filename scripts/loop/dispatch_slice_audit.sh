@@ -2,21 +2,30 @@
 # scripts/loop/dispatch_slice_audit.sh
 # Phase: PLAN AUDIT (before implementation).
 #
-# Redesign — plan audit is now CLAUDE-driven by default. Claude self-audits
-# the plan iteratively until High and Medium findings are clear, then hands
-# off to claude impl. Codex is invoked once per slice at impl-audit only,
-# reducing pressure on the Codex Plan quota.
+# Plan-audit dispatcher — two-tier model:
 #
-# Agent selection (precedence):
-#   1. LOOP_PLAN_AUDIT_AGENT="codex"          → codex (legacy / explicit opt-in)
-#                                                 (Tier B flags still apply
-#                                                  inside the codex branch:
-#                                                  LOOP_FORCE_CLAUDE_AUDIT and
-#                                                  LOOP_AUTO_CLAUDE_FALLBACK
-#                                                  override / fall-through to
-#                                                  claude.)
-#   2. (default) LOOP_PLAN_AUDIT_AGENT unset
-#                or LOOP_PLAN_AUDIT_AGENT="claude" → claude (new default).
+#   1. Claude self-audit phase (cheap, iterative): claude reviews + revises
+#      its own plan until all High/Medium findings clear. Runs on Claude
+#      quota, not Codex.
+#   2. Codex final plan audit (gatekeeper): once claude self-approves, the
+#      slice hands off to codex for an external check. If codex finds
+#      issues, the slice goes back through the claude reviser + self-audit
+#      loop. If codex approves, claude implements.
+#
+# This dispatcher serves BOTH phases. Routing is by the slice's `owner`
+# frontmatter field (passed as $2 by the runner):
+#
+#   owner=claude  → run_claude_native (claude self-audit)
+#   owner=codex   → run_codex_native  (codex final plan audit)
+#
+# `LOOP_PLAN_AUDIT_AGENT` env var, when set, overrides the owner-based
+# routing for force-mode testing:
+#   LOOP_PLAN_AUDIT_AGENT=claude  → always claude (skip codex final audit)
+#   LOOP_PLAN_AUDIT_AGENT=codex   → always codex (legacy codex-only flow)
+#
+# Tier B fallback flags apply only inside the codex branch:
+#   LOOP_FORCE_CLAUDE_AUDIT=1     → force claude even when routing to codex
+#   LOOP_AUTO_CLAUDE_FALLBACK=1   → fall back to claude on codex usage limit
 #
 # Workflow:
 #   - The plan auditor runs in the slice's worktree on slice/<id>.
@@ -25,7 +34,8 @@
 #   - The dispatcher mirrors the resulting slice file back to integration
 #     deterministically (independent of which agent ran).
 #
-# Usage: dispatch_slice_audit.sh <slice_id>
+# Usage: dispatch_slice_audit.sh <slice_id> [owner]
+#   owner defaults to the slice file's frontmatter owner if not provided.
 
 set -euo pipefail
 
@@ -42,10 +52,21 @@ source "$LOOP_MAIN_WORKTREE/scripts/loop/worktree_helpers.sh"
 source "$LOOP_MAIN_WORKTREE/scripts/loop/mirror_helper.sh"
 
 slice_id="${1:?slice_id required}"
+owner_arg="${2:-}"
 slice_file_main="$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md"
 claude_prompt_file="$LOOP_MAIN_WORKTREE/scripts/loop/prompts/claude_plan_auditor.md"
 codex_prompt_file="$LOOP_MAIN_WORKTREE/scripts/loop/prompts/codex_slice_auditor.md"
 LOG="$LOOP_STATE_DIR/runner.log"
+
+# Read the slice's owner from frontmatter as the fallback for $2.
+_read_slice_owner() {
+  awk '
+    /^---$/ { fm = !fm; if (!fm && seen) exit; seen = 1; next }
+    fm && $1 == "owner:" { sub(/^[^:]+: */, ""); print; exit }
+  ' "$slice_file_main"
+}
+[[ -z "$owner_arg" ]] && owner_arg=$(_read_slice_owner)
+[[ -z "$owner_arg" ]] && owner_arg="claude"
 
 [[ -f "$slice_file_main" ]] || { echo "missing $slice_file_main" >&2; exit 2; }
 [[ -f "$claude_prompt_file" ]] || { echo "missing $claude_prompt_file" >&2; exit 2; }
@@ -193,7 +214,22 @@ _codex_quota_active() {
 
 agent_rc=0
 agent_kind=""
-PLAN_AGENT="${LOOP_PLAN_AUDIT_AGENT:-claude}"
+
+# Resolve the routing decision:
+#   - LOOP_PLAN_AUDIT_AGENT explicitly set → forced override
+#   - else owner=codex     → codex final plan audit (gatekeeper)
+#   - else owner=claude    → claude self-audit (iterative)
+#   - else (unrecognized)  → claude (default)
+if [[ -n "${LOOP_PLAN_AUDIT_AGENT:-}" ]]; then
+  PLAN_AGENT="$LOOP_PLAN_AUDIT_AGENT"
+  echo "[$(date -Iseconds)] LOOP_PLAN_AUDIT_AGENT='$PLAN_AGENT' override applied (slice owner='$owner_arg')" >> "$LOG"
+elif [[ "$owner_arg" == "codex" ]]; then
+  PLAN_AGENT="codex"
+elif [[ "$owner_arg" == "claude" ]]; then
+  PLAN_AGENT="claude"
+else
+  PLAN_AGENT="claude"
+fi
 
 if [[ "$PLAN_AGENT" == "codex" ]]; then
   # Legacy / opt-in codex path. Tier B flags still respected here.
