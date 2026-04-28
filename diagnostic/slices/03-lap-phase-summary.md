@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-phase-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:45:00-04:00
+updated: 2026-04-27T23:08:17-04:00
 ---
 
 ## Goal
@@ -341,6 +341,22 @@ npm --prefix web run test:grading
 
 ### Medium
 - [x] Update `Required services / env` and `Changed files expected` so they match the corrected storage-plus-facade plan, including any additional SQL artifacts needed to create `core.lap_phase_summary_mat` and the public `core.lap_phase_summary` facade rather than only a standalone matview file.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T01:09:52Z, so no stale-state note is required for this round.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Strengthen gate command `#2` and the matching acceptance criteria so they prove each expected index is a non-unique `btree` on the exact declared column list, not only that the two expected index names exist; the current `pg_index` check would pass a unique or wrong-column index if it kept the expected names.
 
 ### Low
 - [ ] None.
