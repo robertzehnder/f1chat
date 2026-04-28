@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T23:30:00Z
+updated: 2026-04-28T23:59:00Z
 ---
 
 ## Goal
@@ -128,6 +128,21 @@ Rollback: `git revert <commit>`.
 - [x] Stop describing the cache value as the entire final response payload returned by `route.ts`, and update the hit-path acceptance criteria accordingly; `requestId`, `runtime`, and other per-request metadata must be regenerated on each hit instead of being replayed from the first request.
 
 ### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] Tighten Step 4 so the test seam must support dependency injection or an equivalent override hook for `runSql` and synthesis; call-count counters alone are insufficient because Step 5 requires deterministically forcing SQL failure / fallback branches to prove the success-gate skips cache writes.
+
+### Medium
+- [ ] Add a key-distinctness test and matching acceptance coverage for requests that differ only in `year`, because `year` is part of the declared cache key and the prior-context note calls it out as a required discriminator.
 
 ### Low
 
