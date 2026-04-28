@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:45:00Z
+updated: 2026-04-28T17:53:41Z
 ---
 
 ## Goal
@@ -189,6 +189,22 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Low
 - [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Resolve the contradiction between the Goal and the cited Inputs/Steps: either add a listed input artifact that actually exposes observed peak concurrent connections, or rewrite the goal/sizing rationale so this slice no longer claims the CU window is based on concurrency evidence that the plan explicitly says does not exist.
+
+### Medium
+- [ ] Make the cost-delta requirement auditable by naming the exact Neon pricing source or fixed unit-rate formula the implementer must use; as written, `cost-per-month delta estimate` can vary arbitrarily and the gate only proves that some number was written down.
+
+### Low
+- [ ] Tighten gate 2b so it proves the approval sentinel is recorded immediately under `## User approval` as the only approval line, instead of separately grepping for a heading and a matching token anywhere in the file.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
