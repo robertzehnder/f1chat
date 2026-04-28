@@ -1,7 +1,7 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: ready_to_merge
+status: done
 owner: codex
 user_approval_required: no
 updated: 2026-04-27T21:06:41-04:00
