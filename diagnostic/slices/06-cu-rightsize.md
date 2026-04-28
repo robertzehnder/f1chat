@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:05:00Z
+updated: 2026-04-28T20:15:00Z
 ---
 
 ## Goal
@@ -145,9 +145,14 @@ awk '
 #                           PATCH_APPLIED_AT so the implementer cannot supply an
 #                           arbitrary "apply time" decoupled from Neon's record.
 #   * AFTER_TS            = top-level `captured_at` (post-apply GET wall-clock).
-# ISO-8601 UTC strings ending in 'Z' sort lexicographically as chronologically.
+# ISO-8601 UTC strings ending in 'Z' do NOT sort lexicographically as
+# chronologically when fractional seconds are optionally present: e.g.
+# "2026-04-28T19:30:00Z" sorts AFTER "2026-04-28T19:30:00.1Z" because the
+# byte '.' (0x2E) is less than 'Z' (0x5A). The gate therefore normalizes
+# each timestamp to a canonical form (fractional seconds padded/truncated
+# to exactly 9 digits) before comparing, so string compare is chronological.
 # Asserts: APPROVAL_TS < PATCH_APPLIED_AT <= AFTER_TS, and
-#          PATCH_APPLIED_AT == ENDPOINT_UPDATED_AT.
+#          PATCH_APPLIED_AT == ENDPOINT_UPDATED_AT (raw, byte-for-byte).
 APPROVAL_TS=$(awk '
   /^##[[:space:]]+User approval[[:space:]]*$/ { in_section=1; next }
   in_section && /^[[:space:]]*$/ { next }
@@ -165,12 +170,37 @@ echo "$APPROVAL_TS"         | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-
 echo "$PATCH_APPLIED_AT"    | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
 echo "$ENDPOINT_UPDATED_AT" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
 echo "$AFTER_TS"            | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
-# patch_applied_at must equal Neon's endpoint.updated_at (anchors apply-time to Neon's record).
+# patch_applied_at must equal Neon's endpoint.updated_at byte-for-byte
+# (anchors apply-time to Neon's record). Both come from the same JSON artifact,
+# so the implementer is required to copy `endpoint.updated_at` verbatim.
 test "$PATCH_APPLIED_AT" = "$ENDPOINT_UPDATED_AT"
+# Normalize each timestamp by padding fractional seconds to exactly 9 digits,
+# so the subsequent string comparisons are chronologically correct regardless
+# of whether a given timestamp included a fractional component.
+#   "2026-04-28T19:30:00Z"           -> "2026-04-28T19:30:00.000000000Z"
+#   "2026-04-28T19:30:00.1Z"         -> "2026-04-28T19:30:00.100000000Z"
+#   "2026-04-28T19:30:00.123456789Z" -> "2026-04-28T19:30:00.123456789Z"
+norm_ts() {
+  awk -v ts="$1" 'BEGIN{
+    sub(/Z$/, "", ts)
+    n = index(ts, ".")
+    if (n == 0) {
+      print ts ".000000000Z"
+    } else {
+      base = substr(ts, 1, n-1)
+      frac = substr(ts, n+1)
+      frac = substr(frac "000000000", 1, 9)
+      print base "." frac "Z"
+    }
+  }'
+}
+APPROVAL_NORM=$(norm_ts "$APPROVAL_TS")
+PATCH_NORM=$(norm_ts    "$PATCH_APPLIED_AT")
+AFTER_NORM=$(norm_ts    "$AFTER_TS")
 # APPROVAL_TS strictly < patch_applied_at (approval recorded before the mutation).
-awk -v a="$APPROVAL_TS"      -v p="$PATCH_APPLIED_AT" 'BEGIN{ exit !(a < p) }'
+awk -v a="$APPROVAL_NORM" -v p="$PATCH_NORM" 'BEGIN{ exit !(a < p) }'
 # patch_applied_at <= captured_at (the GET cannot read a future updated_at).
-awk -v p="$PATCH_APPLIED_AT" -v c="$AFTER_TS"          'BEGIN{ exit !(p <= c) }'
+awk -v p="$PATCH_NORM"    -v c="$AFTER_NORM" 'BEGIN{ exit !(p <= c) }'
 
 # 2c. latency_budget_p95_ms basis is declared on a grep-able line, and the documented
 # numeric value matches the cited basis when re-derived from the perf input artifacts.
@@ -371,7 +401,7 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 **Status: REVISE**
 
 ### High
-- [ ] Fix gate `2b'` so the approval/mutation ordering check is time-safe when timestamps include optional fractional seconds: the current `awk` lexicographic comparisons on raw ISO-8601 strings can misorder `...00Z` versus `...00.1Z`, causing valid implementations to fail or invalid ones to pass.
+- [x] Fix gate `2b'` so the approval/mutation ordering check is time-safe when timestamps include optional fractional seconds: the current `awk` lexicographic comparisons on raw ISO-8601 strings can misorder `...00Z` versus `...00.1Z`, causing valid implementations to fail or invalid ones to pass.
 
 ### Medium
 - [ ] None.
