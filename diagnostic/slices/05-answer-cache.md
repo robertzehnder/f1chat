@@ -1,15 +1,15 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T20:45:00Z
+updated: 2026-04-28T21:30:00Z
 ---
 
 ## Goal
-Add an answer-level cache for deterministic-template requests: identical `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` tuples return the cached answer without re-running the deterministic SQL against Postgres and without invoking any downstream synthesis/LLM call.
+Add an answer-level cache for deterministic-template requests: identical `(templateKey, sessionKey, sortedDriverNumbers, year)` tuples return the cached answer without re-running the deterministic SQL against Postgres and without invoking any downstream synthesis/LLM call. (`year` is sourced from `runtime`'s extracted year — see `web/src/lib/chatRuntime.ts` `extractedYear`. The discriminator set matches the "Recommended cache-key design" in `diagnostic/notes/05-template-cache-coverage.md`; for the three templates whose inputs are baked into the `templateKey` itself — `canonical_id_lookup_abu_dhabi_2025_race`, `max_leclerc_qualifying_improvement`, `abu_dhabi_weekend_smallest_spread_and_comparison` — the trailing fields collapse to `undefined` and the key is effectively `templateKey` alone, which is the recommended behavior.)
 
 ## Inputs
 - `web/src/app/api/chat/route.ts` (live deterministic-template + `runReadOnlySql` call site, lines ~390–461; the cache boundary lives here)
@@ -24,7 +24,7 @@ Add an answer-level cache for deterministic-template requests: identical `(templ
 None at author time.
 
 ## Steps
-1. Build a normalizer that produces a stable cache key from `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` — these are the canonical inputs `buildDeterministicSqlTemplate` already branches on (see `diagnostic/notes/05-template-cache-coverage.md` "Recommended cache-key design"). Non-deterministic paths (no `templateKey`) bypass the cache entirely in this slice.
+1. Build a normalizer that produces a stable cache key from `(templateKey, sessionKey, sortedDriverNumbers, year)` — these are the canonical inputs `buildDeterministicSqlTemplate` already branches on plus the `year` discriminator that the prior-context note's "Recommended cache-key design" calls out (see `diagnostic/notes/05-template-cache-coverage.md`). `templateKey` comes from `deterministic.templateKey` in `route.ts` (~line 403), `sessionKey` from `pinnedSessionKey` (~line 376), `sortedDriverNumbers` from `runtime.resolution.selectedDriverNumbers` (numerically sorted), and `year` from the runtime's extracted year (see `web/src/lib/chatRuntime.ts` `extractedYear`; pass it through to `route.ts` if not already exposed on the runtime object — implementer confirms during Step 3). Non-deterministic paths (no `templateKey`) bypass the cache entirely in this slice. The normalizer must produce a deterministic string regardless of `selectedDriverNumbers` insertion order, and must handle `undefined` for any of `sessionKey`/`sortedDriverNumbers`/`year` (e.g., the three Abu-Dhabi-2025 / canonical-lookup templates whose inputs are baked into `templateKey` — for them the cache key collapses to `templateKey` plus `undefined` placeholders, which is the intended behavior).
 2. Use `lru-cache` with TTL=10min, max-size=500. The cache stores the **final response payload** that `route.ts` would otherwise return (answer text, sql preview, generationSource, model, generationNotes, etc.) so a hit can be served without re-running SQL or synthesis.
 3. Wire the cache into `web/src/app/api/chat/route.ts` such that the lookup/store boundary sits **after** deterministic-template selection (line ~400, where `selectedTemplateKey` and `pinnedSessionKey` are known) and **before** `runReadOnlySql` (line ~461). On a cache hit: emit `cache_hit: true` on the query trace, skip `executeSqlWithTrace` / `runReadOnlySql` entirely, skip any downstream synthesis/LLM step, and return the stored payload directly. On a miss: emit `cache_hit: false`, run the existing SQL + synthesis path, then store the final payload under the cache key before returning.
 4. Add gateable test seams that let a node-only test assert both side-effects are skipped on a hit:
@@ -33,7 +33,7 @@ None at author time.
 5. Tests in `web/scripts/tests/answer-cache.test.mjs` (run by `cd web && npm run test:grading`, which globs `scripts/tests/*.test.mjs` per `web/package.json:10`):
    - Hit/miss + side-effect skip: two identical deterministic requests → first miss, second hit; assert the SQL-executor spy recorded **exactly one** invocation and the synthesis spy recorded **at most one** invocation across both requests, and the second response payload deep-equals the first.
    - Trace assertion: capture emitted query-trace entries and assert the second call emits `cache_hit: true` while the first emits `cache_hit: false`.
-   - Hash-collision-safety: two requests with different `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` → both miss; SQL-executor spy records two invocations.
+   - Key-distinctness: two requests with different `(templateKey, sessionKey, sortedDriverNumbers, year)` tuples → both miss; SQL-executor spy records two invocations. (Cover at least two pairings: differing `sessionKey` and differing `sortedDriverNumbers`.)
    - TTL expiry: after advancing fake time past 10min, the same key re-misses; both the SQL-executor spy and (if present) the synthesis spy increment again.
    - Non-deterministic bypass: a request with no deterministic `templateKey` does **not** populate or read the cache (SQL spy increments on every call, no `cache_hit` field is emitted as `true`).
 
@@ -55,7 +55,7 @@ cd web && npm run test:grading
 
 ## Acceptance criteria
 - [ ] Two identical deterministic requests in succession: the test spies on the SQL executor (`runReadOnlySql`) and asserts it ran **exactly once** across both requests; the synthesis/LLM spy recorded **at most one** invocation across the pair; the second request's emitted trace contains `cache_hit: true` and returns a payload that deep-equals the first.
-- [ ] Different `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` tuples never collide on the cache key (both miss; SQL-executor spy increments twice).
+- [ ] Different `(templateKey, sessionKey, sortedDriverNumbers, year)` tuples never collide on the cache key (both miss; SQL-executor spy increments twice). At minimum, cover one pair that differs only in `sessionKey` and one pair that differs only in `sortedDriverNumbers`.
 - [ ] TTL expiry: after fake-time advance past 10min, the same key re-misses, the SQL-executor spy increments again, and the trace re-emits `cache_hit: false` then `cache_hit: true` on a follow-up identical call.
 - [ ] Non-deterministic requests (no `templateKey`) bypass the cache: SQL-executor spy increments on every call and no entry is written to or read from the cache.
 
@@ -107,7 +107,7 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace `contracts_hash` in the goal, Steps, and acceptance criteria with the actual canonical deterministic-template discriminator(s) already available in repo code, because `contracts_hash` does not exist outside this slice file and the cited prior-context note instead recommends `(templateKey, sessionKey, sortedDriverNumbers, year)` for most templates.
+- [x] Replace `contracts_hash` in the goal, Steps, and acceptance criteria with the actual canonical deterministic-template discriminator(s) already available in repo code, because `contracts_hash` does not exist outside this slice file and the cited prior-context note instead recommends `(templateKey, sessionKey, sortedDriverNumbers, year)` for most templates.
 
 ### Medium
 
