@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:12:21Z
+updated: 2026-04-28T04:13:55Z
 ---
 
 ## Goal
@@ -460,6 +460,22 @@ _None._
 
 ### Low
 - [x] Remove the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict (round N)` sections remain the slice's single audit-status surface.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+_None._
+
+### Medium
+- [ ] Add `sql/006_semantic_lap_layer.sql` and `sql/010_laps_enriched_mat.sql` to `## Prior context`, because Steps §1.1 relies on those artifacts for the declared `lap_start_ts` / `lap_end_ts` types and upstream column-type derivation, and auditors are required to read every path in that block before triaging.
+
+### Low
+_None._
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
