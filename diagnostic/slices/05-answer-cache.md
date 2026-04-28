@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T11:29:25-04:00
+updated: 2026-04-28T11:42:00-04:00
 ---
 
 ## Goal
@@ -111,19 +111,19 @@ Rollback: `git revert <commit>`.
 7. **Round-18 test harness:** Six of the nine tests now drive the **shipped `POST` handler exported from `route.ts`** rather than a hand-rolled simulator. Mechanism: `ts.transpileModule` reads `route.ts` and `answerCache.ts` source, the test rewrites only the route's heavy-import `from "..."` paths to local stub `.mjs` files (`next/server`, `@/lib/anthropic`, `@/lib/queries`, `@/lib/deterministicSql`, `@/lib/chatRuntime`, `@/lib/chatQuality`, `@/lib/answerSanity`, `@/lib/serverLog`, `@/lib/perfTrace`), keeps the **real** `@/lib/cache/answerCache` wired in, then constructs a `new Request(...)` with `debug.trace=true` and calls `route.POST(request)`. `cachedRunSql` / `cachedSynthesize` are intercepted via the existing DI seams (`__answerCacheTestHooks.runSql` / `__answerCacheTestHooks.synthesize`); `appendQueryTrace` emissions (cache_hit) are captured by reading the `serverLog.stub.mjs` `__getJsonLogCalls()` filtered to filename `chat_query_trace.jsonl`. This addresses the round-17 audit's REVISE on criterion 1 ("required proof that the shipped route skips `cachedRunSql`/`cachedSynthesize`, preserves the real response shape, and emits the real trace on hit") and criterion 5 ("real route's failure/fallback write bypass"). Tests 4, 8, 9 remain unit-level on `buildAnswerCacheKey` / `__answerCacheConfig` because they verify pure-function behavior of the cache module, not the route boundary.
 
 ## Audit verdict
-**REVISE**
+**PASS**
 
 - Gate #1 `cd web && npm run build` -> exit `0`
 - Gate #2 `cd web && npm run typecheck` -> exit `0`
 - Gate #3 `cd web && npm run test:grading` -> exit `0`
 - Scope diff -> PASS (`diagnostic/slices/05-answer-cache.md`, `web/scripts/tests/answer-cache.test.mjs`, `web/src/app/api/chat/route.ts`, `web/src/lib/cache/answerCache.ts`)
-- Criterion 1 -> FAIL. [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:115) defines a local `simulateChatRequest` harness instead of exercising the real cache boundary in [route.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/app/api/chat/route.ts:467), so the required proof that the shipped route skips `cachedRunSql`/`cachedSynthesize`, preserves the real response shape, and emits the real trace on hit is not verified.
-- Criterion 2 -> PASS. [web/src/lib/cache/answerCache.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/lib/cache/answerCache.ts:34) keys on `(templateKey, sessionKey, sortedDriverNumbers, year)`, and [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:337) covers distinct `sessionKey` / drivers / year pairings.
-- Criterion 3 -> PASS. [web/src/lib/cache/answerCache.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/lib/cache/answerCache.ts:63) enforces the 10-minute expiry, and [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:430) advances fake `Date` past TTL.
-- Criterion 4 -> PASS. [web/src/lib/cache/answerCache.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/lib/cache/answerCache.ts:40) returns `null` without a `templateKey`, and [route.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/app/api/chat/route.ts:463) only reads the cache when a key exists.
-- Criterion 5 -> FAIL. [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/app/api/chat/route.ts:840) has the intended `generationSource === "deterministic_template"` gate, but [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:115) validates only the simulator’s `shouldCache` branch, not the real route’s failure/fallback write bypass.
-- Decision -> REVISE
-- Rationale -> The implementation is in scope and the web gates pass, but the slice’s required behavioral proof is missing because the new tests validate a hand-rolled model of the route instead of the shipped route/cache wiring.
+- Criterion 1 -> PASS. [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:360) drives the shipped `POST` handler through the cache boundary in [route.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/app/api/chat/route.ts:453) and verifies SQL call count `1`, synthesis call count `<=1`, `cache_hit` false/true trace emission, deterministic-subset equality, regenerated metadata, and identical top-level response keys.
+- Criterion 2 -> PASS. [web/src/lib/cache/answerCache.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/lib/cache/answerCache.ts:34) keys on `(templateKey, sessionKey, sortedDriverNumbers, year)`, and [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:452) covers distinct `sessionKey` / drivers / year pairings via the real route.
+- Criterion 3 -> PASS. [web/src/lib/cache/answerCache.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/lib/cache/answerCache.ts:63) enforces the 10-minute expiry, and [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:562) advances fake `Date` past TTL and re-verifies miss then hit behavior through the real route.
+- Criterion 4 -> PASS. [web/src/lib/cache/answerCache.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/lib/cache/answerCache.ts:40) returns `null` without a `templateKey`, [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/app/api/chat/route.ts:463) only reads the cache when a key exists, and [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:610) shows repeated non-deterministic requests never emit `cache_hit: true`.
+- Criterion 5 -> PASS. [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/src/app/api/chat/route.ts:840) gates writes on `generationSource === "deterministic_template"`, and [web/scripts/tests/answer-cache.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/05-answer-cache/web/scripts/tests/answer-cache.test.mjs:662) exercises the shipped route’s deterministic-failure fallback path, confirms repeated misses while fallback is active, then confirms population and hit after deterministic success.
+- Decision -> PASS
+- Rationale -> Scope is clean, the declared web gates pass locally, and the route-backed tests now verify the shipped cache boundary and success-gate behavior instead of a hand-rolled simulator.
 
 ## Plan-audit verdict (round 1)
 
