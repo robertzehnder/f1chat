@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T18:06:03Z
+updated: 2026-04-28T18:07:53Z
 ---
 
 ## Goal
@@ -321,6 +321,22 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Medium
 - [x] Add a measurable gate/acceptance check for the required latency-budget rationale in step 3, or drop the requirement that the note state whether `latency_budget_p95_ms` equals `stages.execute_db.p95_ms`, equals `aggregate.post_p95_ms`, or is otherwise bounded by them; the current gate only verifies that some numeric `latency_budget_p95_ms` line exists.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-audit verdict (round 7)
+
+**Status: REVISE**
+
+### High
+- [ ] Make the "approval recorded before the Neon PATCH" claim actually auditable: record a mutation-time `patch_applied_at` timestamp (or equivalent apply-time artifact) and gate `APPROVAL_TS < patch_applied_at <= captured_at`, because comparing approval only to `06-cu-rightsize-after_2026-04-28.json`'s `captured_at` still allows the PATCH to happen before approval and be backfilled later.
+
+### Medium
+- [ ] None.
 
 ### Low
 - [ ] None.
