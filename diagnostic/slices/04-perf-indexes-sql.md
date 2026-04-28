@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:47:40Z
+updated: 2026-04-28T04:50:38Z
 ---
 
 ## Goal
@@ -279,3 +279,17 @@ npm --prefix web run test:grading
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` remains fresh enough to use without a stale-state note this round.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Add a dedicated assertion for `idx_raw_laps_session_include` or require `pg_index.indisvalid = true` for every declared index; as written, gate #2 accepts invalid indexes and gate #3 never requires `idx_raw_laps_session_include`, so this slice can pass with a broken declared index.
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T04:35:20Z, so no stale-state note is needed this round.
