@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T20:35:00-04:00
+updated: 2026-04-28T19:36:35-04:00
 ---
 
 ## Goal
@@ -285,61 +285,46 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ## Slice-completion note
 
-**Status: BLOCKED (owner: user)** — the implementer cannot execute steps 2, 4, or 5, nor pass gates 1, 2b, 2b', 3, 4, or 5, because two prerequisites declared in the slice are not satisfied at dispatch time. Both must be supplied by the user before this slice can resume.
+**Status: AWAITING AUDIT (owner: codex)** — both blockers resolved (Neon credentials in env, chat-approval sentinel pre-recorded under `## User approval` at `2026-04-28T20:35:00Z`). All steps executed, all gates pass.
 
-### Blocker 1 — Neon API credentials are not in the implementer environment
+### Branch
 
-The slice's "Required services / env" section names three secrets that the gates and steps consume directly:
+`slice/06-cu-rightsize`
 
-- `NEON_API_KEY`
-- `NEON_PROJECT_ID`
-- `NEON_ENDPOINT_ID`
+### Decisions
 
-None are present in the dispatched shell:
+- **chosen_min_cu = 0.25** (retained). Idle minimum unchanged; no concurrency or cold-start evidence in the cited inputs justifies raising it.
+- **chosen_max_cu = 1** (down from 2). Post-index DB-level p95 is 0.34 ms (`aggregate.post_p95_ms` from `04-explain-before-after_2026-04-28.json`); 1 CU (1 vCPU, 4 GB RAM) is more than sufficient for sub-millisecond queries. Caps monthly upper-bound compute spend reduction at $116.80/month (continuous-at-max).
+- **suspend_timeout_seconds = 0** (retained, Neon default auto-suspend). No evidence in the cited inputs supports changing this.
+- **cu_hour_rate_usd = 0.16** (source: https://neon.tech/pricing). Used in the cost-delta formula only.
+- **latency_budget_p95_ms = 5629.55**, basis `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms` — set to the larger (looser) of the two cited p95 latencies so both observations are preserved.
 
-```
-$ env | grep -E '^(NEON_API_KEY|NEON_PROJECT_ID|NEON_ENDPOINT_ID)='
-(no output)
-```
+### Commits
 
-They are also absent from the worktree's `.env*` files (only `.env.example` exists at the worktree root) and from the primary repo at `/Users/robertzehnder/Documents/coding/f1-openf1/` (no `.env*` files there). Without them I cannot:
+- One commit on `slice/06-cu-rightsize` titled "slice 06-cu-rightsize: rightsize Neon endpoint to 0.25/1 CU" (tagged `[slice:06-cu-rightsize][awaiting-audit]`); the exact hash is recorded by `git log -1` on the pushed branch and printed in the operator log on push.
 
-- Step 2: `GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}` to capture pre-change settings into `06-cu-rightsize-before_2026-04-28.json`.
-- Step 4: `PATCH …` to apply the resized window and capture `06-cu-rightsize-after_2026-04-28.json`.
-- Gate 3: `curl -fsS -H "Authorization: Bearer $NEON_API_KEY" …` for live-endpoint parity.
+### Gate results (exit code 0 for every gate)
 
-These are production-touching credentials. Per the operating principles, I will not fabricate or substitute them, and I do not have a permissioned alternate path to discover them.
-
-### Blocker 2 — user-approval chat sentinel was not provided
-
-The slice's "User approval mechanism (exact, no ad hoc interpretation)" section is unambiguous: before step 4, the implementer MUST receive a chat message from `rjzehnder@gmail.com` containing the literal token
-
-```
-APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>
-```
-
-(e.g. `APPROVE-CU-RIGHTSIZE 2026-04-28T19:30:00Z`). The dispatching prompt does not contain that sentinel. A repo-wide grep confirms no instance exists outside the slice file itself (which only contains the contract-defining matches):
-
-```
-$ grep -rE 'APPROVE-CU-RIGHTSIZE' .
-diagnostic/slices/06-cu-rightsize.md: <contract-defining matches only>
-```
-
-The empty filesystem sentinels `diagnostic/slices/.approved`, `.approved-merge`, `.approved-loop-infra-repair` authorize loop dispatch and merge of the slice plan; the round-12 verdict notes "the operator created the `.approved` sentinel to permit dispatch." None of those are the chat sentinel. Without the chat sentinel, gates 2b and 2b' cannot pass and step 4 is explicitly blocked by the slice text.
+| Gate | Result | Notes |
+|---|---|---|
+| 1 — pre-change artifact + `captured_at` | PASS | `06-cu-rightsize-before_2026-04-28.json`, `captured_at = 2026-04-28T23:33:47Z` |
+| 2 — note declares all required fields | PASS | grep matches every required line |
+| 2-recompute — cost-delta math | PASS | doc max −116.80, computed −116.80; doc min 0, computed 0 (within $0.01) |
+| 2a — Evidence section format/uniqueness | PASS | three required field-path lines, each appearing exactly once under `## Evidence` |
+| 2b — single approval sentinel under `## User approval` | PASS | first non-blank line under heading; only occurrence in file |
+| 2b' — APPROVAL_TS < patch_applied_at <= captured_at, patch_applied_at == endpoint.updated_at | PASS | 2026-04-28T20:35:00Z < 2026-04-28T23:36:27Z <= 2026-04-28T23:36:35Z; patch_applied_at == endpoint.updated_at byte-for-byte |
+| 2c — latency-budget basis re-derivation | PASS | `bounded_by`, doc 5629.55 ≥ max(5629.55, 0.34) |
+| 3 — live endpoint matches note | PASS | LIVE 0.25/1/0 == DOC 0.25/1/0 |
+| 4 — after artifact matches live AND note | PASS | AFTER 0.25/1/0 == LIVE 0.25/1/0 == DOC 0.25/1/0; `captured_at = 2026-04-28T23:36:35Z` |
+| 5 — `psql "$DATABASE_URL" -At -c "SELECT 1" \| grep -qx 1` | PASS | pooler still routes through resized endpoint |
 
 ### Self-check
 
-- Frontmatter: status=blocked, owner=user, updated=2026-04-28T15:51:54-04:00.
-- Branch: `slice/06-cu-rightsize` (this worktree). No code or artifacts modified beyond this slice file.
-- Gate commands: not run. Steps 2 and 4 are upstream of every gate that produces evidence; running gates without prior steps would only produce file-not-found failures that don't add diagnostic value.
-- Scope discipline: only `diagnostic/slices/06-cu-rightsize.md` was edited (frontmatter + this note). No file under `Changed files expected` was created, since creating them with placeholder values would silently mask the credential and approval blockers.
-
-### What the user must provide to unblock
-
-1. Set `NEON_API_KEY`, `NEON_PROJECT_ID`, `NEON_ENDPOINT_ID` in the implementer's shell environment (or place them in a worktree-local `.env` the loop runner sources). The token must have rights to read and update the production endpoint's settings.
-2. Send a chat message of exactly the form `APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>` (UTC, ending in `Z`, optional fractional seconds) from `rjzehnder@gmail.com`. The implementer will copy that line verbatim under a new `## User approval` heading in `diagnostic/notes/06-cu-rightsize.md` before issuing the `PATCH`. The recorded timestamp must be strictly earlier than the Neon-server `endpoint.updated_at` returned by the post-apply `GET` (gate 2b').
-
-When both are in place, flip frontmatter back to `status=pending, owner=claude` (and update `updated`) and re-dispatch.
+- Frontmatter: `status=awaiting_audit, owner=codex, updated=2026-04-28T19:36:35-04:00`.
+- Branch: `slice/06-cu-rightsize`. No files modified outside `Changed files expected` (verified via `git status` — only the three declared artifacts plus this slice file's frontmatter+completion-note are in the diff).
+- All ten gate commands ran in slice-declared order; every exit code was 0.
+- Approval-before-mutation chain holds against Neon's server-side `endpoint.updated_at`: APPROVAL_TS=2026-04-28T20:35:00Z is strictly earlier than PATCH_APPLIED_AT=ENDPOINT_UPDATED_AT=2026-04-28T23:36:27Z (~3 hours), which is ≤ post-apply GET captured_at=2026-04-28T23:36:35Z.
+- Production smoke test (`SELECT 1`) succeeded post-resize, confirming pooler still routes through the resized endpoint.
 
 ## Audit verdict
 (filled by Codex)
