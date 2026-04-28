@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T05:05:00Z
+updated: 2026-04-28T09:20:00Z
 ---
 
 ## Goal
@@ -297,6 +297,20 @@ npm --prefix web run test:grading
 - [x] Add a dedicated assertion for `idx_raw_laps_session_include` or require `pg_index.indisvalid = true` for every declared index; as written, gate #2 accepts invalid indexes and gate #3 never requires `idx_raw_laps_session_include`, so this slice can pass with a broken declared index.
 
 ### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T04:35:20Z, so no stale-state note is needed this round.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Reconcile the changed-files scope with the branch's existing `diagnostic/_state.md` diff against `integration/perf-roadmap`; either allow that path in `## Changed files expected` and the final diff acceptance check, or redefine the verification so the implementer is not blocked by a prior auditor note commit already on this slice branch.
 
 ### Low
 
