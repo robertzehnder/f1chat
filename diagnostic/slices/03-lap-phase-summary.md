@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-phase-summary
 phase: 3
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T23:14:30-04:00
+updated: 2026-04-27T23:23:08-04:00
 ---
 
 ## Goal
@@ -444,7 +444,38 @@ npm --prefix web run test:grading
 - **Out-of-scope items:** unchanged from plan (refresh helper / per-session ingest hook, additional indexes beyond the two declared, materialization of remaining hot contracts, refresh-strategy decision, runtime-path cutover) — all deferred to later Phase 3 slices, no work done in this slice.
 
 ## Audit verdict
-(filled by Codex)
+**REVISE**
+
+[slice:03-lap-phase-summary][revise]
+
+Gate exit codes observed:
+- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/017_lap_phase_summary_mat.sql` -> exit `0`
+- Gate #2 storage/view/index/facade DO block -> exit `0`
+- Gate #3 rowcount + 3-session bidirectional `EXCEPT ALL` parity DO block -> exit `0`
+- Gate #4a `npm --prefix web run build` -> exit `0`
+- Gate #4b `npm --prefix web run typecheck` -> exit `2`
+- Gate #4c `npm --prefix web run test:grading` -> exit `0`
+
+Scope-diff result:
+- `git diff --name-only integration/perf-roadmap...HEAD` -> `diagnostic/slices/03-lap-phase-summary.md`, `sql/017_lap_phase_summary_mat.sql` only; scope OK
+
+Criterion-by-criterion:
+- PASS: `core.lap_phase_summary_mat` exists as a base table with no primary key; gates #1-#2 exit `0`
+- PASS: `lap_phase_summary_mat_session_driver_lap_idx` exists exactly once as a non-unique btree on `(session_key, driver_number, lap_number)`; gate #2 exit `0`
+- PASS: `lap_phase_summary_mat_session_idx` exists exactly once as a non-unique btree on `(session_key)`; gate #2 exit `0`
+- PASS: `core.lap_phase_summary` exists as a view and is a thin facade over `core.lap_phase_summary_mat`; gate #2 exit `0`
+- PASS: global rowcount matches between `core_build.lap_phase_summary` and `core.lap_phase_summary_mat`; gate #3 exit `0`
+- PASS: bidirectional `EXCEPT ALL` parity is clean for the 3 deterministic `analytic_ready` sessions; gate #3 exit `0`
+- PASS: `npm --prefix web run build` exits `0`
+- FAIL: `npm --prefix web run typecheck` exits `2`; [web/tsconfig.json](/Users/robertzehnder/.openf1-loop-worktrees/03-lap-phase-summary/web/tsconfig.json:23) includes `.next/types/**/*.ts`, and `tsc` fails because generated files such as `web/.next/types/app/api/chat/route.ts` are missing in this worktree
+- PASS: `npm --prefix web run test:grading` exits `0`
+- PASS: diff stays within the allowed file set
+
+Decision:
+- REVISE
+
+Rationale:
+- Acceptance criterion "`npm --prefix web run typecheck` exits `0`" is not met. Fix the worktree's missing `.next/types` state or adjust the typecheck setup so the declared gate passes here.
 
 ## Plan-audit verdict (round 1)
 
