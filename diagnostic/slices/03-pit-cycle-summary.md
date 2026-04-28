@@ -1,7 +1,7 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: done
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
