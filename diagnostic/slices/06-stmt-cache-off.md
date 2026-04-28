@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T17:28:47Z
+updated: 2026-04-28T17:45:00Z
 ---
 
 ## Goal
@@ -108,7 +108,7 @@ test -s diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log
 
 ## Acceptance criteria
 - [ ] `web/src/lib/db.ts` `sql<T>()` helper invokes `pool.query` with a `QueryConfig` argument whose `name` property is `undefined` on every call, so no server-side prepared statement is registered. The helper's public signature remains `sql<T>(text: string, values?: unknown[])`.
-- [ ] `web/scripts/tests/db-stmt-cache.test.mjs` exists and its assertions pass under `cd web && npm run test:grading` (which is the only test harness defined by `web/package.json` and which already runs every `scripts/tests/*.test.mjs`). The test performs only source-level assertions — it reads `web/src/lib/db.ts` and `web/src/lib/queries.ts` as strings via `fs.readFileSync`, asserts the positive call shape `pool.query<…>({ … name: undefined … })` is present in the body of `sql<T>` in `db.ts`, and asserts the negative-lookahead regex `/\.query\([^)]*\bname\s*:\s*(?!undefined\b)/s` matches nothing in either file. No runtime import of TypeScript sources is performed and no new dev dependency (e.g. `tsx`) is introduced.
+- [ ] `web/scripts/tests/db-stmt-cache.test.mjs` exists and its assertions pass under `cd web && npm run test:grading` (which is the only test harness defined by `web/package.json` and which already runs every `scripts/tests/*.test.mjs`). The test performs only source-level assertions — it reads `web/src/lib/db.ts` and `web/src/lib/queries.ts` as strings via `fs.readFileSync`, asserts the positive call shape `pool.query<…>({ … name: undefined … })` is present in the body of `sql<T>` in `db.ts`, and asserts the negative-lookahead regex `/\.query\([^)]*\bname\s*:\s*(?!undefined\b)/s` matches nothing in either file. Scope of this bullet is the test file `web/scripts/tests/db-stmt-cache.test.mjs` itself: it performs no runtime import of TypeScript sources and pulls in no new dev dependency on its own (it runs under pure `node --test`). The `tsx` devDep added elsewhere in this slice — see acceptance bullet 6 — is used exclusively by the pooled-endpoint verifier `web/scripts/verify-stmt-cache-off.ts` and is not loaded by, imported from, or required for `db-stmt-cache.test.mjs`; that is not a contradiction with this bullet because this bullet is local to the test harness, not the slice as a whole.
 - [ ] `web/src/lib/__tests__/db.stmt-cache.types.ts` exists with a `// @ts-expect-error` line proving the public API of `sql()` rejects a `QueryConfig`. `npm run typecheck` exits 0 — i.e. the `@ts-expect-error` is consumed by exactly one expected error and not by zero (which would mean the signature accidentally widened) and not by more than one (which would mean an unrelated type error crept in).
 - [ ] All commands in `## Gate commands` exit 0, including the `! grep …` check that proves the pooled-endpoint log contains no `prepared statement` error. The pooled-endpoint verification gate runs under `set -o pipefail` (or equivalent) so a verifier failure cannot be masked by the `tee` pipeline, and is launched with every non-staging DB env key cleared via `env -u` so `createPool()` in `web/src/lib/db.ts` cannot resolve to a production-shaped url.
 - [ ] `diagnostic/artifacts/perf/06-stmt-cache-off_<YYYY-MM-DD>.log` is committed and is non-empty (`test -s` passes) — this is the proof that step 5 ran against a non-production pooled endpoint via the `web/scripts/verify-stmt-cache-off.ts` script, which imports `sql` (and `pool`) from `web/src/lib/db.ts` directly so the gate is exercising the slice's only behavioural change rather than a parallel `pg.Pool` re-implementation. Per `## Required services / env` the target may be either a Neon staging/preview-branch pooler URL OR the documented local PgBouncer-in-transaction-mode fallback. The slice-completion note must record which target was used.
@@ -223,7 +223,7 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 - [ ] None.
 
 ### Medium
-- [ ] Remove the contradiction between Acceptance criteria bullets 2 and 6 by making the test-only bullet explicitly local to `web/scripts/tests/db-stmt-cache.test.mjs` instead of stating that no new dev dependency such as `tsx` is introduced anywhere in the slice.
+- [x] Remove the contradiction between Acceptance criteria bullets 2 and 6 by making the test-only bullet explicitly local to `web/scripts/tests/db-stmt-cache.test.mjs` instead of stating that no new dev dependency such as `tsx` is introduced anywhere in the slice.
 
 ### Low
 - [ ] None.
