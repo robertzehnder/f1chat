@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T20:45:00Z
+updated: 2026-04-28T17:28:47Z
 ---
 
 ## Goal
@@ -208,6 +208,22 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 
 ### Medium
 - [x] If the verifier is updated to hit `sql()`/`db.ts`, specify the exact safe env wiring for that process (for example a one-shot `NEON_DATABASE_URL="$STAGING_NEON_DATABASE_URL"` mapping) so the helper reads the non-production pooled URL without relying on production credentials.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Remove the contradiction between Acceptance criteria bullets 2 and 6 by making the test-only bullet explicitly local to `web/scripts/tests/db-stmt-cache.test.mjs` instead of stating that no new dev dependency such as `tsx` is introduced anywhere in the slice.
 
 ### Low
 - [ ] None.
