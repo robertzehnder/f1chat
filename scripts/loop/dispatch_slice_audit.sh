@@ -49,6 +49,28 @@ with_repo_lock "dispatch_slice_audit:$slice_id:worktree-prep" \
 }
 slice_worktree=$(cat "$worktree_path_file")
 
+# Pre-load the slice file inline so the auditor doesn't burn tokens on tool
+# calls re-reading it (token-economy item #4).
+inline_payload=$(mktemp -t codex_plan_audit_inline.XXXXXX)
+trap 'rm -f "$worktree_path_file" "$inline_payload"' EXIT
+
+(
+  cd "$slice_worktree"
+  {
+    echo "### Slice file (diagnostic/slices/${slice_id}.md)"
+    echo
+    echo '```markdown'
+    cat "diagnostic/slices/${slice_id}.md"
+    echo '```'
+    echo
+    echo "### Audit context"
+    echo
+    echo "- slice_id: ${slice_id}"
+    echo "- worktree: ${slice_worktree}"
+    echo "- branch: slice/${slice_id} (already checked out)"
+  } > "$inline_payload"
+)
+
 run_codex_native() {
   (
     cd "$slice_worktree"
@@ -57,30 +79,16 @@ run_codex_native() {
       echo
       echo "---"
       echo
-      cat <<EOF
-You are the Codex SLICE-PLAN auditor. Slice file: diagnostic/slices/${slice_id}.md.
-
-You are running in a dedicated worktree at: ${slice_worktree}
-You are on branch slice/${slice_id} — do NOT switch branches.
-
-Audit the SLICE PLAN ONLY. Do NOT touch any other file.
-
-Steps:
-1. Read diagnostic/slices/${slice_id}.md carefully — frontmatter, Goal, Inputs, Required services / env, Steps, Changed files expected, Gate commands, Acceptance criteria, Out of scope.
-2. Look for plan bugs per your system prompt's audit principles.
-3. If you find fixable issues, edit the slice file directly. Keep the goal intact.
-4. Update frontmatter:
-   - PASS or PASS-WITH-FIXES → status=pending, owner=claude, refresh updated timestamp
-   - PASS-WITH-DEFERRED (only allowed at iteration ≥9 per round-12 cap of 10) → status=pending, owner=claude, document deferred Mediums/Lows
-   - REVISE (issues that need plan-revise) → status=revising_plan, owner=claude, append High/Medium/Low triage
-   - REJECT (architectural ambiguity) → status=blocked, owner=user, refresh updated timestamp; append a "Plan-audit verdict" section explaining the architectural issue
-5. Commit on slice/${slice_id} with message tag [slice:${slice_id}][plan-pass|plan-pass-with-fixes|plan-pass-with-deferred|plan-revise|plan-reject].
-6. Push slice/${slice_id}.
-
-DO NOT mirror to integration — the dispatcher does that deterministically.
-DO NOT run npm / web / build commands. The implementer audit later checks those.
-EOF
-    } | codex exec --sandbox danger-full-access -
+      cat "$inline_payload"
+    } | codex exec \
+        --sandbox danger-full-access \
+        --ignore-user-config \
+        -c "model=\"${CODEX_AUDIT_MODEL:-gpt-5.4}\"" \
+        -c "model_reasoning_effort=\"${CODEX_AUDIT_REASONING:-medium}\"" \
+        -c model_reasoning_summary=none \
+        -c model_verbosity=low \
+        -o "$LOOP_STATE_DIR/.last_msg_plan_${slice_id}.txt" \
+        -
   )
 }
 

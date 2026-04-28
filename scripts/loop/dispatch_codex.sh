@@ -48,6 +48,52 @@ with_repo_lock "dispatch_codex:$slice_id:worktree-prep" \
 }
 slice_worktree=$(cat "$worktree_path_file")
 
+# Pre-compute the diff and slice content so the auditor can answer scope and
+# diff-correctness questions without tool calls (token-economy item #4).
+# We cap the diff so a runaway slice can't blow the prompt budget.
+DIFF_LINE_CAP="${LOOP_AUDIT_DIFF_LINE_CAP:-4000}"
+SLICE_DIFF_WARN_LINES="${LOOP_SLICE_DIFF_WARN_LINES:-800}"
+SLICE_DIFF_WARN_FILES="${LOOP_SLICE_DIFF_WARN_FILES:-8}"
+
+# Build the inline diff/slice content into a temp file we'll cat on stdin.
+inline_payload=$(mktemp -t codex_audit_inline.XXXXXX)
+trap 'rm -f "$worktree_path_file" "$inline_payload"' EXIT
+
+(
+  cd "$slice_worktree"
+  diff_files=$(git diff --name-only integration/perf-roadmap...HEAD 2>/dev/null | wc -l | tr -d ' ')
+  diff_lines=$(git diff integration/perf-roadmap...HEAD 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$diff_files" -gt "$SLICE_DIFF_WARN_FILES" || "$diff_lines" -gt "$SLICE_DIFF_WARN_LINES" ]]; then
+    echo "[$(date -Iseconds)] dispatch_codex $slice_id WARN large slice: ${diff_files} files, ${diff_lines} diff lines (consider splitting; thresholds files=$SLICE_DIFF_WARN_FILES lines=$SLICE_DIFF_WARN_LINES)" >> "$LOG"
+  fi
+
+  {
+    echo "### Slice file (diagnostic/slices/${slice_id}.md)"
+    echo
+    echo '```markdown'
+    cat "diagnostic/slices/${slice_id}.md"
+    echo '```'
+    echo
+    echo "### Diff (integration/perf-roadmap...HEAD)"
+    echo
+    echo "Files changed: $diff_files. Diff total lines: $diff_lines (cap=$DIFF_LINE_CAP)."
+    echo
+    echo '```diff'
+    git diff integration/perf-roadmap...HEAD | head -n "$DIFF_LINE_CAP"
+    if [[ "$diff_lines" -gt "$DIFF_LINE_CAP" ]]; then
+      echo
+      echo "[diff truncated at $DIFF_LINE_CAP lines — re-run \`git diff\` yourself if you need more]"
+    fi
+    echo '```'
+    echo
+    echo "### Audit context"
+    echo
+    echo "- slice_id: ${slice_id}"
+    echo "- worktree: ${slice_worktree}"
+    echo "- branch: slice/${slice_id} (already checked out)"
+  } > "$inline_payload"
+)
+
 run_codex_native() {
   (
     cd "$slice_worktree"
@@ -56,31 +102,16 @@ run_codex_native() {
       echo
       echo "---"
       echo
-      cat <<EOF
-You are the Codex audit agent. Slice: diagnostic/slices/${slice_id}.md.
-
-You are running in a dedicated worktree at: ${slice_worktree}
-You are ALREADY on branch slice/${slice_id} — do NOT switch branches.
-
-Audit:
-1. Run every command in the slice's "Gate commands" block; record exit codes verbatim in the audit verdict.
-2. Verify only files listed under "Changed files expected" were modified. Use: git diff --name-only integration/perf-roadmap...HEAD
-3. Run each "Acceptance criteria" check.
-4. Write the slice's "Audit verdict" section with PASS, REVISE, or REJECT.
-5. Update frontmatter:
-   - PASS  → status=ready_to_merge; owner=user (Phase 0) or owner=codex (Phase 1+ post sign-off)
-   - REVISE → status=revising, owner=claude
-   - REJECT → status=blocked, owner=user
-6. Commit on slice/${slice_id} with message tag [slice:${slice_id}][pass|revise|reject].
-7. Push slice/${slice_id}.
-
-DO NOT mirror the slice file to integration. The dispatcher (this wrapper)
-mirrors deterministically AFTER you exit, regardless of your exit code.
-DO NOT touch any other worktree on disk.
-
-Be skeptical. Substantive correctness over cosmetic compliance.
-EOF
-    } | codex exec --sandbox danger-full-access -
+      cat "$inline_payload"
+    } | codex exec \
+        --sandbox danger-full-access \
+        --ignore-user-config \
+        -c "model=\"${CODEX_AUDIT_MODEL:-gpt-5.4}\"" \
+        -c "model_reasoning_effort=\"${CODEX_AUDIT_REASONING:-medium}\"" \
+        -c model_reasoning_summary=none \
+        -c model_verbosity=low \
+        -o "$LOOP_STATE_DIR/.last_msg_${slice_id}.txt" \
+        -
   )
 }
 
