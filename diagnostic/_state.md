@@ -58,3 +58,4 @@ _None._
 _No accumulated notes yet. Auditors may append single-line lessons here, max 10 entries._
 - Require every Phase 3 per-contract materialization slice to include DB apply/existence/parity gate commands, not only web gates (slice:03-strategy-evidence-summary).
 - For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
+- For config-only infra slices, gate live-system parity and artifact parity for every mutable setting the plan may change, not just the primary knob pair (slice:06-cu-rightsize).
