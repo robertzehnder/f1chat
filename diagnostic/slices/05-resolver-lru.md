@@ -1,11 +1,11 @@
 ---
 slice_id: 05-resolver-lru
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-28
 ---
 
 ## Goal
@@ -55,3 +55,20 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify how the cache is scoped and invalidated so entries cannot leak across seasons or sessions when the same `(entity_type, query_key)` appears in different contexts.
+
+### Medium
+- [ ] Align `Changed files expected` with the stated work by including every file Step 2 and the `web/src/lib/chatRuntime.ts` integration path will require, plus any package manifest updates if `lru-cache` is not already available.
+- [ ] Make the acceptance criteria testable from the listed gates by requiring the new resolver LRU test command to assert hit, miss, and eviction behavior directly instead of relying on a prose hit-ratio target.
+
+### Low
+- [ ] Name the env knobs introduced in Step 2 and where they are read so the implementer does not need to invent the configuration surface.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T12:53:01Z, so no stale-state note is required.
