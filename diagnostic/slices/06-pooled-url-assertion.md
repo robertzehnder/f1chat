@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T17:05:00Z
+updated: 2026-04-28T16:37:10Z
 ---
 
 ## Goal
@@ -104,3 +104,20 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
 - Repo context check: `web/package.json` already runs `node --test scripts/tests/*.test.mjs` for `test:grading`, so no extra test-runner wiring is needed for a new `*.test.mjs` file.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Make Step 4's staging commands deterministic under the documented `NEON_DATABASE_URL ?? DATABASE_URL` precedence by explicitly unsetting `NEON_DATABASE_URL` or by supplying the pooler/direct staging URL through the higher-precedence variable being asserted; otherwise an ambient `NEON_DATABASE_URL` can mask the `DATABASE_URL` under test and produce a false-pass artifact.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
+- Repo context check: [web/src/lib/db.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/src/lib/db.ts:17) resolves URLs via `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`, so verification must control both env vars, not only `DATABASE_URL`.
