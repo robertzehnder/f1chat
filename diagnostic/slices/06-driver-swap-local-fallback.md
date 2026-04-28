@@ -1,55 +1,104 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-28
 ---
 
 ## Goal
-When `DATABASE_URL` is missing or unreachable, fall back to a local SQLite snapshot (or PGlite) so dev can run without Neon connectivity. Production remains unchanged.
+When `DATABASE_URL` / `NEON_DATABASE_URL` is missing **or** a startup probe against the configured Neon pool fails, fall back to an in-process **PGlite** (`@electric-sql/pglite`) database seeded from a committed snapshot so dev can run without Neon connectivity. Production is unchanged: when `NODE_ENV === "production"` the fallback is refused regardless of any other env, and a missing URL is still a hard error.
 
 ## Inputs
-- `web/src/lib/db/driver.ts`
+- `web/src/lib/db.ts` (current `pg.Pool` driver — to be moved under `web/src/lib/db/driver.ts`)
 - `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 6
+- `web/scripts/tests/answer-cache.test.mjs` (existing `node --test` harness pattern to follow)
 
 ## Prior context
 - `diagnostic/_state.md`
 
+## Decisions (in response to round-1 plan-audit)
+- **Mechanism:** PGlite, not SQLite. Reason: existing call sites use the `pg.Pool` interface and Postgres SQL dialect against `core.*` / `contract.*` schemas; PGlite is a Postgres-compatible in-process WASM database with the same dialect, so call sites and SQL strings work unchanged. SQLite would require dialect translation across every contract query.
+- **Trigger model:** opt-in via `OPENF1_LOCAL_FALLBACK=1`. The fallback is never automatic, so a misconfigured prod deploy cannot silently serve snapshot data.
+- **Production guard:** `NODE_ENV === "production"` short-circuits the selection logic before it inspects `OPENF1_LOCAL_FALLBACK`; the variable is ignored in prod and enforced by a unit test.
+- **Verification surface:** all gates are repo-local. No staging / real-Neon connection is required to merge this slice — the audit's High #1 is addressed by exercising both the URL-missing path and the URL-unreachable path against an unroutable host (`127.0.0.1:1`) so the probe fails deterministically without external services.
+
 ## Required services / env
-Production `DATABASE_URL` (Neon pooler). For Neon-config slices, requires Neon API token or console access.
+- **Production (unchanged):** `NEON_DATABASE_URL` (or `DATABASE_URL`) pointing at the Neon pooler. SSL/timeout behavior in `web/src/lib/db.ts` is preserved verbatim by the move.
+- **Local fallback prerequisites:**
+  - `OPENF1_LOCAL_FALLBACK=1` — opt-in switch. Without it, behavior is identical to today.
+  - `OPENF1_LOCAL_SNAPSHOT_PATH` — optional; defaults to `web/data/local-fallback-snapshot.sql` resolved against the web cwd.
+  - `@electric-sql/pglite` added to `web/package.json` dependencies.
+  - The snapshot SQL file checked into the repo.
+- **Selection logic** (implemented in a single `chooseDriver()` function and asserted by the new test file):
+  1. `NODE_ENV === "production"` → require a URL; throw on missing; never use PGlite even if `OPENF1_LOCAL_FALLBACK=1`.
+  2. Else if no URL set **and** `OPENF1_LOCAL_FALLBACK=1` → boot PGlite from the snapshot.
+  3. Else if a URL is set → run a startup probe (`SELECT 1`, `connectionTimeoutMillis: 2000`). On success, use the existing `pg.Pool`. On failure, if `OPENF1_LOCAL_FALLBACK=1` → fall back to PGlite; otherwise re-throw the probe error so the dev surface remains identical to today.
+  4. Else (no URL, no opt-in) → throw the existing "Missing required environment variable" error.
 
 ## Steps
-1. Read the current implementation if any.
-2. Apply the change per the slice goal.
-3. Add tests / docs as appropriate.
-4. Verify against a real Neon connection.
+1. Move `web/src/lib/db.ts` → `web/src/lib/db/driver.ts` with `git mv` (no content change in this commit-step). Add a barrel `web/src/lib/db/index.ts` that re-exports `pool` and `sql` so every existing import (`from "@/lib/db"` or relative `"./db"`) keeps resolving.
+2. Add `@electric-sql/pglite` to `web/package.json` dependencies and run `npm install --no-audit --no-fund` from `web/` to refresh `package-lock.json`.
+3. In `driver.ts`, factor the existing pool construction into a private `tryNeonPool()` (current logic, untouched semantics) and add:
+   - `bootPglite(snapshotPath: string): Promise<PGlite>` — instantiates `new PGlite()`, runs the snapshot SQL via `db.exec(...)`, returns the instance.
+   - `chooseDriver(): Promise<{ kind: "neon"; pool: Pool } | { kind: "pglite"; db: PGlite }>` — implements the selection logic above; logs `[db] using local PGlite fallback (reason=<missing-url|probe-failed>)` once on the fallback path so a developer can see why.
+4. Replace the exported `pool`/`sql` with a thin shim: `sql<T>(text, values)` awaits a memoized `chooseDriver()` and dispatches to either `pool.query(...)` or `pglite.query(...)`, normalizing both `{ rows }` shapes to `T[]`. Keep `pool` as a deprecated re-export of the `pg.Pool` instance when present (and `undefined` otherwise) so the few call sites that touch it directly fail loudly under fallback rather than silently lying — search `web/src/` for `pool.query(` / `pool.connect(` and convert any survivors to `sql(...)` in this slice.
+5. Add `web/data/local-fallback-snapshot.sql` containing the minimum schema + seed needed for the chat runtime to answer something offline:
+   - `CREATE SCHEMA` for `raw`, `core`, `contract` (mirrors prod).
+   - One driver row, one session row, lookup tables (`compound_alias_lookup`, `metric_registry`, `valid_lap_policy`, `replay_contract_registry`).
+   - One row in each summary contract the resolver and grading tests touch.
+   - The file is human-readable SQL so a follow-up slice can regenerate it from `pg_dump`.
+6. Add `web/scripts/tests/driver-fallback.test.mjs` (`node --test`) with subtests, each in its own worker (`node:test` `t.test` + `import()` against a unique cache-busting query string, or one subtest per file invocation) so the module-level driver singleton resets:
+   - **Case A — URL missing, opt-in:** `DATABASE_URL=""`, `NEON_DATABASE_URL=""`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=test`. Import `sql`, run `SELECT 1 AS x`, assert `rows[0].x === 1`.
+   - **Case B — URL unreachable, opt-in:** `DATABASE_URL="postgres://invalid:invalid@127.0.0.1:1/none"`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=test`. Assert the probe fails, the fallback log line is emitted, and `SELECT 1` succeeds.
+   - **Case C — URL missing, opt-out:** `DATABASE_URL=""`, `NEON_DATABASE_URL=""`, `OPENF1_LOCAL_FALLBACK` unset, `NODE_ENV=test`. Importing `sql` and calling it must throw `Missing required environment variable: DB_HOST` (the same error today's code path raises).
+   - **Case D — production guard:** `DATABASE_URL=""`, `NEON_DATABASE_URL=""`, `OPENF1_LOCAL_FALLBACK=1`, `NODE_ENV=production`. Must throw the missing-URL error; the fallback must never engage.
+7. Add `web/docs/local-fallback.md` (~30 lines): when to set `OPENF1_LOCAL_FALLBACK=1`, where the snapshot lives, the production guard, and the command to run the test file standalone.
 
 ## Changed files expected
-- `web/src/lib/db/driver.ts`
-- `web/scripts/tests/driver-fallback.test.mjs`
+- `web/src/lib/db.ts` → moved to `web/src/lib/db/driver.ts` (and extended with selection logic + PGlite boot)
+- `web/src/lib/db/index.ts` (new barrel; re-exports `sql`, `pool`)
+- `web/package.json` (adds `@electric-sql/pglite`)
+- `web/package-lock.json` (regenerated by `npm install`)
+- `web/data/local-fallback-snapshot.sql` (new)
+- `web/scripts/tests/driver-fallback.test.mjs` (new)
+- `web/docs/local-fallback.md` (new)
+- Any `web/src/**` file currently calling `pool.query(...)` / `pool.connect(...)` directly is converted to `sql(...)` (expected: 0–2 sites; if the count exceeds 5, stop and re-plan).
 
 ## Artifact paths
-None.
+- `web/data/local-fallback-snapshot.sql` — committed snapshot consumed by `bootPglite` on the fallback path.
 
 ## Gate commands
+All gates are repo-local; no Neon credentials required.
 ```bash
+cd web && npm install --no-audit --no-fund
 cd web && npm run build
 cd web && npm run typecheck
 cd web && npm run test:grading
+cd web && node --test scripts/tests/driver-fallback.test.mjs
 ```
 
 ## Acceptance criteria
-- [ ] Change is implemented and tested per the goal.
-- [ ] Production-side behavior verified in the staging environment before merge.
+- [ ] `cd web && npm run build` succeeds.
+- [ ] `cd web && npm run typecheck` succeeds.
+- [ ] `cd web && npm run test:grading` passes (existing tests still green after the move + barrel).
+- [ ] `cd web && node --test scripts/tests/driver-fallback.test.mjs` passes all four cases (A: missing URL + opt-in → PGlite; B: unreachable URL + opt-in → PGlite; C: missing URL, opt-out → throws today's missing-env error; D: `NODE_ENV=production` ignores `OPENF1_LOCAL_FALLBACK` and throws).
+- [ ] Existing call sites that `import { sql, pool } from "@/lib/db"` continue to compile and resolve via the new barrel — verified by `npm run typecheck` succeeding without modifying any call site that uses only `sql`.
+- [ ] No new gate requires a real Neon connection or staging environment to merge.
 
 ## Out of scope
-- Anything outside the slice's declared scope.
+- Auto-regenerating the snapshot from prod data (follow-up slice).
+- Switching the production driver to `@neondatabase/serverless` (the roadmap §4 Phase 6 step 1 swap — separate slice).
+- Adding `web/src/app/api/health/route.ts` (roadmap §4 Phase 6 step 7 — separate slice).
+- Disabling Neon autosuspend / right-sizing CUs (roadmap §4 Phase 6 steps 5–6 — separate slices).
 
 ## Risk / rollback
-Production-touching. Require user-approved sentinel before merge. Rollback: `git revert` + Neon-config revert if applicable.
+- **Risk:** a misconfigured prod deploy sets `OPENF1_LOCAL_FALLBACK=1`, silently serving stale snapshot data. **Mitigation:** `chooseDriver()` short-circuits when `NODE_ENV === "production"` and the production-guard subtest (Case D) locks the behavior in.
+- **Risk:** PGlite WASM fails to initialize under the Next.js server runtime. **Mitigation:** the path is opt-in only; failures surface on first call (not at build time) and a developer sees the explicit fallback log line plus the underlying error.
+- **Risk:** the snapshot drifts from prod schema and silently masks contract changes during dev. **Mitigation:** the snapshot is human-readable SQL committed to the repo; schema drift surfaces as a noisy boot-time exec error rather than silent skew. A regeneration script is called out as a follow-up.
+- **Rollback:** `git revert` the slice commit. Behavior returns to today (URL required, no fallback). No DB-side change to revert.
 
 ## Slice-completion note
 (filled by Claude)
@@ -62,13 +111,13 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 **Status: REVISE**
 
 ### High
-- [ ] Replace the real-Neon/staging verification requirement with repo-local gates that prove both modes, because this slice's goal is a local fallback when Neon is missing or unreachable and the current plan cannot be completed in an isolated implementation pass.
-- [ ] Specify the fallback mechanism concretely by choosing SQLite snapshot or PGlite and naming every required code/config/artifact path, because `web/src/lib/db/driver.ts` alone does not provide the local data source the goal requires.
+- [x] Replace the real-Neon/staging verification requirement with repo-local gates that prove both modes, because this slice's goal is a local fallback when Neon is missing or unreachable and the current plan cannot be completed in an isolated implementation pass.
+- [x] Specify the fallback mechanism concretely by choosing SQLite snapshot or PGlite and naming every required code/config/artifact path, because `web/src/lib/db/driver.ts` alone does not provide the local data source the goal requires.
 
 ### Medium
-- [ ] Update `Required services / env` to describe the local fallback prerequisites and any selection logic instead of only Neon access, or narrow the goal so it no longer promises offline development.
-- [ ] Replace the acceptance criteria with command-testable checks that cover `DATABASE_URL` missing and primary-connection failure cases, rather than "implemented and tested per the goal" and "verified in the staging environment before merge."
-- [ ] Expand `Changed files expected` and `Artifact paths` to include the fallback snapshot/PGlite setup and any docs/config/test harness files the chosen approach necessarily touches.
+- [x] Update `Required services / env` to describe the local fallback prerequisites and any selection logic instead of only Neon access, or narrow the goal so it no longer promises offline development.
+- [x] Replace the acceptance criteria with command-testable checks that cover `DATABASE_URL` missing and primary-connection failure cases, rather than "implemented and tested per the goal" and "verified in the staging environment before merge."
+- [x] Expand `Changed files expected` and `Artifact paths` to include the fallback snapshot/PGlite setup and any docs/config/test harness files the chosen approach necessarily touches.
 
 ### Low
 
