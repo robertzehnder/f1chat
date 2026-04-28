@@ -1,10 +1,10 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
-updated: 2026-04-27T20:55:51-04:00
+updated: 2026-04-27T21:06:41-04:00
 created: 2026-04-26
 ---
 
@@ -355,9 +355,9 @@ npm --prefix web run test:grading
 
 ## Audit verdict
 
-**REVISE**
+**PASS**
 
-[slice:03-strategy-evidence-summary][revise]
+[slice:03-strategy-evidence-summary][pass]
 
 Gate exit codes observed by audit agent:
 - Gate #0 `psql "$DATABASE_URL" -At -v ON_ERROR_STOP=1 <<'SQL' ... core_build.strategy_evidence_summary grain probe ... SQL` -> exit `0`. NOTICE: `core_build.strategy_evidence_summary grain probe: total=18717 distinct_triple=18717 duplicate=0`.
@@ -370,17 +370,15 @@ Gate exit codes observed by audit agent:
 
 Scope-diff result:
 - `git diff --name-only integration/perf-roadmap...HEAD` -> exit `0` and returned `diagnostic/_state.md`, `diagnostic/slices/03-strategy-evidence-summary.md`, `sql/016_strategy_evidence_summary_mat.sql`.
-- Scope passes. `diagnostic/_state.md` is explicitly listed under this slice's `Changed files expected`, so the prior in-file REJECT rationale was incorrect.
+- Scope passes. All modified paths are within `Changed files expected`, and the slice file is implicitly in scope for the audit update.
 
 Findings:
-- [medium] [sql/016_strategy_evidence_summary_mat.sql](/Users/robertzehnder/.openf1-loop-worktrees/03-strategy-evidence-summary/sql/016_strategy_evidence_summary_mat.sql:8) reintroduces the exact transitive-grain claim that the approved plan removed. The comment says the output triple is "unique by construction" because `core_build.pit_cycle_summary` has verified grain, but this slice's approved Decisions section explicitly narrowed the claim to an output-level assertion only because `ROW_NUMBER() OVER (PARTITION BY a.session_key, a.driver_number, a.pit_lap ...)` can collapse multiple input rows sharing `(session_key, driver_number, pit_lap)`. Rewrite the migration comment to match the approved rationale: uniqueness is established by gate #0's probe over `core_build.strategy_evidence_summary`, not inherited transitively from `core_build.pit_cycle_summary`.
-- [medium] The Slice-completion note's "Decisions executed verbatim from the approved plan" claim is inaccurate while the migration still contains that reverted transitive-grain rationale. Update the note after fixing the SQL comment.
+- None.
 
 Criterion-by-criterion:
 - Pre-flight grain probe on `(session_key, driver_number, pit_sequence)`: pass (`0`).
-- `core.strategy_evidence_summary_mat` base table with `PRIMARY KEY (session_key, driver_number, pit_sequence)`: pass (`0` / `0`).
-- `core.strategy_evidence_summary` exists as a view: pass (`0`).
-- `core.strategy_evidence_summary` is a thin facade over `core.strategy_evidence_summary_mat`: pass (`0`).
+- [sql/016_strategy_evidence_summary_mat.sql](/Users/robertzehnder/.openf1-loop-worktrees/03-strategy-evidence-summary/sql/016_strategy_evidence_summary_mat.sql:20) creates `core.strategy_evidence_summary_mat` as a base table, and [sql/016_strategy_evidence_summary_mat.sql](/Users/robertzehnder/.openf1-loop-worktrees/03-strategy-evidence-summary/sql/016_strategy_evidence_summary_mat.sql:65) declares `PRIMARY KEY (session_key, driver_number, pit_sequence)`; gates #1 and #2 passed.
+- [sql/016_strategy_evidence_summary_mat.sql](/Users/robertzehnder/.openf1-loop-worktrees/03-strategy-evidence-summary/sql/016_strategy_evidence_summary_mat.sql:81) replaces `core.strategy_evidence_summary` with a facade view over `core.strategy_evidence_summary_mat`; gate #2 passed.
 - Global rowcount equality between `core_build.strategy_evidence_summary` and `core.strategy_evidence_summary_mat`: pass (`0`).
 - Three-session bidirectional `EXCEPT ALL` parity: pass (`0`).
 - `npm --prefix web run build`: pass (`0`).
@@ -389,7 +387,7 @@ Criterion-by-criterion:
 - File-scope criterion: pass.
 
 Decision:
-- REVISE. The SQL implementation and gates are green, but the shipped migration text contradicts the approved grain rationale and the slice note overstates conformance.
+- PASS. Phase 3 slice; frontmatter set to `status=ready_to_merge`, `owner=codex`.
 
 ## Plan-audit verdict (round 1)
 
