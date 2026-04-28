@@ -1,11 +1,11 @@
 ---
 slice_id: 04-explain-before-after
 phase: 4
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T18:30:00Z
+updated: 2026-04-28T18:50:00Z
 ---
 
 ## Goal
@@ -276,3 +276,23 @@ node web/scripts/perf-explain-validate.mjs "$ARTIFACT"
 ### Notes (informational only — no action)
 - Round-1 items are all ticked `[x]` in the round-1 verdict block; each is substantively addressed in the revised plan body.
 - `diagnostic/_state.md` is still current (2026-04-28T11:30:14Z); no stale-state note needed.
+
+## Plan-audit verdict (round 3)
+
+**Status: APPROVED**
+**Auditor: claude-plan-audit (round-3 forced-findings ratchet: not applicable)**
+
+### High
+_None._
+
+### Medium
+_None._
+
+### Low
+- [ ] The Goal paragraph describes the PRE/POST capture order as: drop → capture pre → re-apply → assert validity → post capture. The Decisions section and Steps §2 explicitly specify the opposite (POST first, then DROP, then PRE). The Goal paragraph's loose wording is misleading; consider aligning it with the Decisions section's "Capture POST first, then PRE" order to avoid confusion on re-read. Does not block implementation since Decisions and Steps are internally consistent and authoritative.
+
+### Notes (informational only — no action)
+- Round-2 High item (spawnSync cwd bug) is substantively addressed: Steps §2 now specifies `path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')` with `{ cwd: repoRoot }` passed to spawnSync.
+- Round-2 Medium item (validator threshold gap) is substantively addressed: Steps §3 now explicitly enumerates the three numeric/array threshold checks the validator must assert.
+- Round-2 Low item (`diagnostic/_state.md` in diff-check) is substantively addressed: both `## Changed files expected` and the acceptance criteria diff-check now include `diagnostic/_state.md` as a conditional auditor-note entry.
+- No generic protocol lesson warrants a `[state-note]` append to `_state.md` this round.
