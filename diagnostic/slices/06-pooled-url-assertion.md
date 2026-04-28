@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T18:35:00Z
+updated: 2026-04-28T16:50:33Z
 ---
 
 ## Goal
@@ -151,6 +151,22 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 
 ### High
 - [x] Make Steps 3 and 4 account for the existing `db.ts` module-load `createPool()` path, not only the new assertion, by specifying how the transpiled import avoids or safely tolerates pool initialization before the exported `assertPooledDatabaseUrl` is invoked.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] Add an automated precedence case proving `assertPooledDatabaseUrl` validates the same URL `createPool()` will use: when both `NEON_DATABASE_URL` and `DATABASE_URL` are set to conflicting values, the test must show the function honors `NEON_DATABASE_URL ?? DATABASE_URL` rather than validating only `DATABASE_URL`.
 
 ### Medium
 - [ ] None.
