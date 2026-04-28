@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T00:22:17-04:00
+updated: 2026-04-28T00:34:04-04:00
 ---
 
 ## Goal
@@ -544,3 +544,28 @@ _None._
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md:1` was read and its `last updated` timestamp (`2026-04-28T03:56:48Z`) is within 24 hours.
+
+## Audit verdict
+
+**PASS**
+
+[slice:03-telemetry-lap-bridge][pass]
+
+Gate #0 `psql --version` -> exit `0`.
+Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/019_telemetry_lap_bridge_mat.sql` -> exit `0`.
+Gate #2 relation/index/facade DO block -> exit `0`.
+Gate #3 parity DO block -> exit `0`.
+Gate #4 `npm --prefix web run build` -> exit `0`.
+Gate #5 `npm --prefix web run typecheck` -> exit `0`.
+Gate #6 `npm --prefix web run test:grading` -> exit `0`.
+
+Scope diff: `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/03-telemetry-lap-bridge.md` and `sql/019_telemetry_lap_bridge_mat.sql`; subset of allowed paths.
+
+Criterion: `core.telemetry_lap_bridge_mat` exists as a base table with no PK -> pass (`sql/019_telemetry_lap_bridge_mat.sql:13`, `sql/019_telemetry_lap_bridge_mat.sql:47`; gate #1/#2 exit `0`).
+Criterion: `core.telemetry_lap_bridge` exists as a facade view over the mat table -> pass (`sql/019_telemetry_lap_bridge_mat.sql:58`; gate #2 exit `0`).
+Criterion: `telemetry_lap_bridge_mat_session_driver_lap_idx` exists exactly once as non-unique btree on `(session_key, driver_number, lap_number)` -> pass (`sql/019_telemetry_lap_bridge_mat.sql:36`; gate #2 exit `0`).
+Criterion: `telemetry_lap_bridge_mat_session_idx` exists exactly once as non-unique btree on `(session_key)` -> pass (`sql/019_telemetry_lap_bridge_mat.sql:40`; gate #2 exit `0`).
+Criterion: global rowcount equality and bidirectional session-scoped `EXCEPT ALL` parity against `core_build.telemetry_lap_bridge` -> pass (gate #3 exit `0`).
+Criterion: web regression gates -> pass (build/typecheck/test all exit `0`).
+
+Decision: PASS. Ready to merge.
