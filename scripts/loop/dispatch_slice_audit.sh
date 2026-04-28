@@ -287,8 +287,11 @@ fi
 # Skip mirror on rc=42 (codex usage limit) — agent didn't modify the slice
 # file and a failed mirror would only generate misleading log noise.
 if [[ "$agent_rc" -ne 42 ]]; then
+  # pending_plan_audit is also a valid post-audit terminal state when the
+  # claude self-audit tier hands off to the codex final-audit tier
+  # (status stays pending_plan_audit, owner flips claude→codex).
   with_repo_lock "dispatch_slice_audit:$slice_id:mirror" \
-    mirror_slice_to_integration "$slice_id" "pending|revising_plan|blocked" \
+    mirror_slice_to_integration "$slice_id" "pending|revising_plan|blocked|pending_plan_audit" \
     || echo "[$stamp] dispatch_slice_audit $slice_id mirror returned non-zero" >> "$LOG"
 fi
 

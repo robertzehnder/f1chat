@@ -16,7 +16,12 @@ is_valid_terminal_transition() {
     plan_audit)
       [[ "$before" == "pending_plan_audit" ]] || return 1
       case "$after" in
-        pending|revising_plan|blocked) return 0 ;;
+        # pending_plan_audit -> pending_plan_audit is a valid handoff
+        # transition (claude self-audit APPROVED → owner=codex stays at
+        # pending_plan_audit but flips owner). The status string alone
+        # cannot prove the transition; dispatch_with_guards also reads
+        # the owner field to distinguish a real handoff from a no-op.
+        pending|revising_plan|blocked|pending_plan_audit) return 0 ;;
         *) return 1 ;;
       esac ;;
     plan_revise)

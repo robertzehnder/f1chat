@@ -378,8 +378,9 @@ dispatch_with_guards() {
     return 2
   fi
 
-  local status_before status_after
+  local status_before status_after owner_before owner_after
   status_before=$(read_slice_field "$sid" "status" 2>/dev/null || echo "")
+  owner_before=$(read_slice_field "$sid" "owner" 2>/dev/null || echo "")
 
   set +e
   "$@"
@@ -398,14 +399,26 @@ dispatch_with_guards() {
   fi
 
   status_after=$(read_slice_field "$sid" "status" 2>/dev/null || echo "")
+  owner_after=$(read_slice_field "$sid" "owner" 2>/dev/null || echo "")
 
-  if [[ -n "$status_before" && -n "$status_after" ]] \
+  # The plan-audit phase has a status-only-stays / owner-flips transition
+  # (claude self-audit APPROVED hands off to codex by flipping owner from
+  # claude→codex while keeping status=pending_plan_audit). Detect a real
+  # transition as: status changed OR owner changed at the same status.
+  local transitioned="false"
+  if [[ "$status_before" != "$status_after" ]]; then
+    transitioned="true"
+  elif [[ "$owner_before" != "$owner_after" ]]; then
+    transitioned="true"
+  fi
+
+  if [[ -n "$status_before" && -n "$status_after" && "$transitioned" == "true" ]] \
      && is_valid_terminal_transition "$dispatch_type" "$status_before" "$status_after"; then
     slice_fail_reset "$sid"
-    log "dispatch ok slice=$sid type=$dispatch_type ${status_before} → ${status_after} (rc=$rc)"
+    log "dispatch ok slice=$sid type=$dispatch_type ${status_before}/${owner_before} → ${status_after}/${owner_after} (rc=$rc)"
   else
     slice_fail_increment "$sid"
-    log "dispatch failed slice=$sid type=$dispatch_type rc=$rc before='$status_before' after='$status_after' consecutive_failures=$(slice_fail_count "$sid")"
+    log "dispatch failed slice=$sid type=$dispatch_type rc=$rc before='$status_before/$owner_before' after='$status_after/$owner_after' consecutive_failures=$(slice_fail_count "$sid")"
   fi
   return 0
 }
