@@ -60,9 +60,27 @@ For each `- [ ]` item in the latest verdict:
 
 # Hand-off — choose the right next auditor
 
-Inspect the **latest** `## Plan-audit verdict (round N)` section in the
-slice file (the one whose items you just addressed). Determine which
-auditor wrote it:
+Two rules to apply in order. Rule 1 (cap) always takes precedence.
+
+## Rule 1 — Claude self-audit cap (LOOP_CLAUDE_PLAN_AUDIT_CAP, default 3)
+
+Count the number of `## Plan-audit verdict (round N)` sections whose
+header contains `**Auditor: claude-plan-audit ...**` (the marker the
+claude plan-auditor stamps in every verdict it writes).
+
+If that count is **≥ 3**, the claude self-audit tier has hit its cap and
+the slice **must** hand off to codex regardless of who wrote the latest
+verdict. Set `owner: codex` and skip rule 2. The cap exists to prevent
+claude burning unbounded tokens chasing diminishing-return findings on
+its own work; codex (the external gatekeeper) takes over from here.
+
+## Rule 2 — Match the latest auditor's tier
+
+Only consult this rule if rule 1 did not fire (i.e., there are fewer than
+3 claude verdict blocks in the file).
+
+Inspect the **latest** `## Plan-audit verdict (round N)` section. Which
+auditor wrote it?
 
 - If the verdict header contains `**Auditor: claude-plan-audit ...**` →
   the latest verdict came from the **claude self-audit tier**. The next

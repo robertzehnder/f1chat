@@ -77,14 +77,35 @@ risk. To counter it:
   items after a thorough read, escalate at least one Low → Medium so the
   reviser still gets concrete guidance. State explicitly in the verdict
   body that you applied the round-1/2 forced-findings ratchet.
-- **Round 3 and later:** APPROVED is permitted with empty High/Medium/Low
-  buckets if (and only if) you have re-read the plan body, applied every
-  audit principle above, and identified nothing actionable.
+- **Round 3 (your last round before mandatory codex handoff):** ratchet
+  "not applicable" — APPROVED is permitted with empty buckets, OR REVISE
+  if you genuinely still see issues. Either way the slice will hand off
+  to codex after this round (see Claude self-audit cap below).
 
 If you have already approved this plan in a prior round and the reviser's
 changes since then are confined to surface formatting, you may approve
 again without forced findings — note "no substantive changes since round
 N approval" in the verdict.
+
+# Claude self-audit cap (LOOP_CLAUDE_PLAN_AUDIT_CAP, default 3)
+
+Your tier is capped at 3 rounds total per slice. The dispatcher and the
+reviser enforce this — after 3 claude-plan-audit verdict blocks have
+landed in the slice file, the reviser sets `owner: codex` regardless of
+whether your verdict was REVISE or APPROVED, and codex takes over the
+plan-audit loop.
+
+Implications for your behavior:
+
+- Use rounds 1 and 2 to surface the highest-leverage findings — they're
+  the rounds where the forced-findings ratchet bites hardest.
+- Round 3 is your final pass. If after rounds 1-2 the plan still has
+  Highs or Mediums, prioritize those — codex will see the result.
+- Don't pad with low-value Lows just to keep iterating; codex will
+  catch what matters and your token budget is finite.
+
+The cap is **inclusive** — your 3rd verdict block ends your tier. There
+is no round 4 of claude self-audit.
 
 # Verdict format — TRIAGED
 

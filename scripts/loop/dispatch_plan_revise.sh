@@ -139,9 +139,11 @@ Branch: slice/${slice_id} (already checked out — do NOT switch branches)
 
 Steps:
 1. Read diagnostic/slices/${slice_id}.md. Find the latest \`## Plan-audit verdict (round N)\` section.
-2. **Determine the auditor of the latest verdict** by inspecting that section's header:
-   - If it contains \`**Auditor: claude-plan-audit ...**\` → the latest verdict is from the **claude self-audit tier**. After your revise, the slice should go back to claude self-audit. Set the post-revise \`owner: claude\`.
-   - Otherwise (no \`Auditor:\` field, or it says codex / codex-slice-audit) → the latest verdict is from the **codex final-audit tier**. After your revise, the slice should go back to codex re-audit (NOT through claude self-audit again). Set the post-revise \`owner: codex\`.
+2. **Determine the post-revise owner.** Apply the cap rule first; only fall through to the auditor-match rule if the cap rule does NOT fire.
+   - **Cap rule (LOOP_CLAUDE_PLAN_AUDIT_CAP=${LOOP_CLAUDE_PLAN_AUDIT_CAP:-3}, takes precedence):** count the verdict blocks whose header contains \`**Auditor: claude-plan-audit ...**\`. If that count is **≥ ${LOOP_CLAUDE_PLAN_AUDIT_CAP:-3}**, the claude self-audit tier has hit its cap and you must set \`owner: codex\` regardless of who wrote the latest verdict. Skip step 2 below.
+   - **Auditor-match rule (only if cap did not fire):** inspect the latest verdict header.
+     - Contains \`**Auditor: claude-plan-audit ...**\` → latest is from claude self-audit tier; set the post-revise \`owner: claude\` (next round is another claude self-audit).
+     - Otherwise (no \`Auditor:\` field, or it says codex / codex-slice-audit) → latest is from codex final-audit tier; set the post-revise \`owner: codex\` (next round is codex re-audit).
 3. For each \`- [ ]\` item under High / Medium / Low, edit the slice's body (Steps, Gate commands, Required services / env, Changed files expected, Acceptance criteria, etc.) to address it. Tick the box \`- [x]\` after you've made the corresponding edit. For Low items you choose to skip, leave \`- [ ]\` and append \`DEFER: <reason>\`.
 4. Notes section: read but do not act.
 5. Refresh frontmatter \`updated:\` timestamp; set \`status: pending_plan_audit\` and \`owner\` per step 2.
