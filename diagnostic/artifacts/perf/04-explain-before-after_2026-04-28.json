@@ -1,6 +1,6 @@
 {
   "session_key": 9102,
-  "captured_at": "2026-04-28T11:55:49.511Z",
+  "captured_at": "2026-04-28T12:45:14.019Z",
   "queries": [
     {
       "id": "Q1",
@@ -25,7 +25,7 @@
               "Plan Rows": 1345,
               "Plan Width": 33,
               "Actual Startup Time": 0.002,
-              "Actual Total Time": 0.137,
+              "Actual Total Time": 0.13,
               "Actual Rows": 1310,
               "Actual Loops": 1,
               "Index Cond": "(session_key = 9102)",
@@ -57,10 +57,10 @@
             },
             "Planning Time": 0.013,
             "Triggers": [],
-            "Execution Time": 0.167
+            "Execution Time": 0.16
           }
         ],
-        "execution_time_ms": 0.167,
+        "execution_time_ms": 0.16,
         "total_cost": 1421.02
       },
       "post": {
@@ -78,8 +78,8 @@
               "Total Cost": 72.85,
               "Plan Rows": 1345,
               "Plan Width": 33,
-              "Actual Startup Time": 0.002,
-              "Actual Total Time": 0.092,
+              "Actual Startup Time": 0.004,
+              "Actual Total Time": 0.088,
               "Actual Rows": 1310,
               "Actual Loops": 1,
               "Index Cond": "(session_key = 9102)",
@@ -110,15 +110,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.014,
+            "Planning Time": 0.02,
             "Triggers": [],
-            "Execution Time": 0.121
+            "Execution Time": 0.118
           }
         ],
-        "execution_time_ms": 0.121,
+        "execution_time_ms": 0.118,
         "total_cost": 72.85
       },
-      "speedup": 1.38
+      "speedup": 1.36,
+      "cost_speedup": 19.51
     },
     {
       "id": "Q2",
@@ -140,8 +141,8 @@
               "Total Cost": 176.4,
               "Plan Rows": 1,
               "Plan Width": 8,
-              "Actual Startup Time": 0.014,
-              "Actual Total Time": 0.014,
+              "Actual Startup Time": 0.015,
+              "Actual Total Time": 0.015,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Shared Hit Blocks": 53,
@@ -168,8 +169,8 @@
                   "Total Cost": 176.22,
                   "Plan Rows": 70,
                   "Plan Width": 0,
-                  "Actual Startup Time": 0.001,
-                  "Actual Total Time": 0.012,
+                  "Actual Startup Time": 0.002,
+                  "Actual Total Time": 0.013,
                   "Actual Rows": 66,
                   "Actual Loops": 1,
                   "Index Cond": "((session_key = 9102) AND (driver_number = 1))",
@@ -201,12 +202,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.014,
+            "Planning Time": 0.017,
             "Triggers": [],
-            "Execution Time": 0.017
+            "Execution Time": 0.019
           }
         ],
-        "execution_time_ms": 0.017,
+        "execution_time_ms": 0.019,
         "total_cost": 176.4
       },
       "post": {
@@ -282,15 +283,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.02,
+            "Planning Time": 0.024,
             "Triggers": [],
-            "Execution Time": 0.01
+            "Execution Time": 0.011
           }
         ],
-        "execution_time_ms": 0.01,
+        "execution_time_ms": 0.011,
         "total_cost": 5.88
       },
-      "speedup": 1.7
+      "speedup": 1.73,
+      "cost_speedup": 30
     },
     {
       "id": "Q3",
@@ -314,8 +316,8 @@
               "Total Cost": 13.62,
               "Plan Rows": 1,
               "Plan Width": 5,
-              "Actual Startup Time": 0.001,
-              "Actual Total Time": 0.002,
+              "Actual Startup Time": 0.002,
+              "Actual Total Time": 0.003,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Index Cond": "((session_key = 9102) AND (driver_number = 1))",
@@ -345,12 +347,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.01,
+            "Planning Time": 0.013,
             "Triggers": [],
-            "Execution Time": 0.003
+            "Execution Time": 0.005
           }
         ],
-        "execution_time_ms": 0.003,
+        "execution_time_ms": 0.005,
         "total_cost": 13.62
       },
       "post": {
@@ -368,8 +370,8 @@
               "Total Cost": 4.33,
               "Plan Rows": 1,
               "Plan Width": 5,
-              "Actual Startup Time": 0.002,
-              "Actual Total Time": 0.002,
+              "Actual Startup Time": 0.003,
+              "Actual Total Time": 0.003,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Index Cond": "((session_key = 9102) AND (driver_number = 1) AND (lap_start <= 10) AND (lap_end >= 10))",
@@ -398,15 +400,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.014,
+            "Planning Time": 0.018,
             "Triggers": [],
-            "Execution Time": 0.004
+            "Execution Time": 0.006
           }
         ],
-        "execution_time_ms": 0.004,
+        "execution_time_ms": 0.006,
         "total_cost": 4.33
       },
-      "speedup": 0.75
+      "speedup": 0.83,
+      "cost_speedup": 3.15
     },
     {
       "id": "Q4",
@@ -459,12 +462,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.014,
+            "Planning Time": 0.017,
             "Triggers": [],
-            "Execution Time": 0.003
+            "Execution Time": 0.005
           }
         ],
-        "execution_time_ms": 0.003,
+        "execution_time_ms": 0.005,
         "total_cost": 8.31
       },
       "post": {
@@ -511,15 +514,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.014,
+            "Planning Time": 0.015,
             "Triggers": [],
-            "Execution Time": 0.003
+            "Execution Time": 0.004
           }
         ],
-        "execution_time_ms": 0.003,
+        "execution_time_ms": 0.004,
         "total_cost": 8.31
       },
-      "speedup": 1
+      "speedup": 1.25,
+      "cost_speedup": 1
     },
     {
       "id": "Q5",
@@ -539,8 +543,8 @@
               "Total Cost": 1196.8,
               "Plan Rows": 100,
               "Plan Width": 104,
-              "Actual Startup Time": 0.103,
-              "Actual Total Time": 0.109,
+              "Actual Startup Time": 0.105,
+              "Actual Total Time": 0.111,
               "Actual Rows": 100,
               "Actual Loops": 1,
               "Shared Hit Blocks": 233,
@@ -563,8 +567,8 @@
                   "Total Cost": 1197.79,
                   "Plan Rows": 498,
                   "Plan Width": 104,
-                  "Actual Startup Time": 0.103,
-                  "Actual Total Time": 0.105,
+                  "Actual Startup Time": 0.104,
+                  "Actual Total Time": 0.107,
                   "Actual Rows": 100,
                   "Actual Loops": 1,
                   "Sort Key": [
@@ -630,12 +634,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.013,
+            "Planning Time": 0.016,
             "Triggers": [],
-            "Execution Time": 0.113
+            "Execution Time": 0.116
           }
         ],
-        "execution_time_ms": 0.113,
+        "execution_time_ms": 0.116,
         "total_cost": 1196.8
       },
       "post": {
@@ -649,8 +653,8 @@
               "Total Cost": 234.37,
               "Plan Rows": 100,
               "Plan Width": 104,
-              "Actual Startup Time": 0.003,
-              "Actual Total Time": 0.012,
+              "Actual Startup Time": 0.002,
+              "Actual Total Time": 0.011,
               "Actual Rows": 100,
               "Actual Loops": 1,
               "Shared Hit Blocks": 7,
@@ -677,8 +681,8 @@
                   "Total Cost": 1165.51,
                   "Plan Rows": 498,
                   "Plan Width": 104,
-                  "Actual Startup Time": 0.003,
-                  "Actual Total Time": 0.008,
+                  "Actual Startup Time": 0.002,
+                  "Actual Total Time": 0.007,
                   "Actual Rows": 100,
                   "Actual Loops": 1,
                   "Index Cond": "(session_key = 9102)",
@@ -708,7 +712,7 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.015,
+            "Planning Time": 0.014,
             "Triggers": [],
             "Execution Time": 0.015
           }
@@ -716,7 +720,8 @@
         "execution_time_ms": 0.015,
         "total_cost": 234.37
       },
-      "speedup": 7.53
+      "speedup": 7.73,
+      "cost_speedup": 5.11
     },
     {
       "id": "Q6",
@@ -773,8 +778,8 @@
                   "Total Cost": 1421.02,
                   "Plan Rows": 1345,
                   "Plan Width": 12,
-                  "Actual Startup Time": 0.002,
-                  "Actual Total Time": 0.111,
+                  "Actual Startup Time": 0.003,
+                  "Actual Total Time": 0.112,
                   "Actual Rows": 1310,
                   "Actual Loops": 1,
                   "Index Cond": "(session_key = 9102)",
@@ -806,12 +811,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.021,
+            "Planning Time": 0.024,
             "Triggers": [],
-            "Execution Time": 0.202
+            "Execution Time": 0.206
           }
         ],
-        "execution_time_ms": 0.202,
+        "execution_time_ms": 0.206,
         "total_cost": 1428.32
       },
       "post": {
@@ -827,8 +832,8 @@
               "Total Cost": 1428.32,
               "Plan Rows": 46,
               "Plan Width": 12,
-              "Actual Startup Time": 0.2,
-              "Actual Total Time": 0.201,
+              "Actual Startup Time": 0.212,
+              "Actual Total Time": 0.213,
               "Actual Rows": 20,
               "Actual Loops": 1,
               "Group Key": [
@@ -863,7 +868,7 @@
                   "Plan Rows": 1345,
                   "Plan Width": 12,
                   "Actual Startup Time": 0.002,
-                  "Actual Total Time": 0.115,
+                  "Actual Total Time": 0.117,
                   "Actual Rows": 1310,
                   "Actual Loops": 1,
                   "Index Cond": "(session_key = 9102)",
@@ -895,15 +900,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.022,
+            "Planning Time": 0.021,
             "Triggers": [],
-            "Execution Time": 0.206
+            "Execution Time": 0.217
           }
         ],
-        "execution_time_ms": 0.206,
+        "execution_time_ms": 0.217,
         "total_cost": 1428.32
       },
-      "speedup": 0.98
+      "speedup": 0.95,
+      "cost_speedup": 1
     },
     {
       "id": "Q7",
@@ -925,8 +931,8 @@
               "Total Cost": 160.65,
               "Plan Rows": 56,
               "Plan Width": 17,
-              "Actual Startup Time": 0.016,
-              "Actual Total Time": 0.019,
+              "Actual Startup Time": 0.017,
+              "Actual Total Time": 0.021,
               "Actual Rows": 52,
               "Actual Loops": 1,
               "Group Key": [
@@ -992,12 +998,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.025,
+            "Planning Time": 0.014,
             "Triggers": [],
-            "Execution Time": 0.024
+            "Execution Time": 0.025
           }
         ],
-        "execution_time_ms": 0.024,
+        "execution_time_ms": 0.025,
         "total_cost": 160.65
       },
       "post": {
@@ -1081,15 +1087,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.017,
+            "Planning Time": 0.02,
             "Triggers": [],
-            "Execution Time": 0.018
+            "Execution Time": 0.019
           }
         ],
-        "execution_time_ms": 0.018,
+        "execution_time_ms": 0.019,
         "total_cost": 6.37
       },
-      "speedup": 1.33
+      "speedup": 1.32,
+      "cost_speedup": 25.22
     },
     {
       "id": "Q8",
@@ -1112,7 +1119,7 @@
               "Plan Rows": 32,
               "Plan Width": 12,
               "Actual Startup Time": 0.004,
-              "Actual Total Time": 0.009,
+              "Actual Total Time": 0.01,
               "Actual Rows": 20,
               "Actual Loops": 1,
               "Group Key": [
@@ -1174,12 +1181,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.012,
+            "Planning Time": 0.015,
             "Triggers": [],
-            "Execution Time": 0.012
+            "Execution Time": 0.014
           }
         ],
-        "execution_time_ms": 0.012,
+        "execution_time_ms": 0.014,
         "total_cost": 5.82
       },
       "post": {
@@ -1195,8 +1202,8 @@
               "Total Cost": 5.82,
               "Plan Rows": 32,
               "Plan Width": 12,
-              "Actual Startup Time": 0.003,
-              "Actual Total Time": 0.007,
+              "Actual Startup Time": 0.004,
+              "Actual Total Time": 0.009,
               "Actual Rows": 20,
               "Actual Loops": 1,
               "Group Key": [
@@ -1226,7 +1233,7 @@
                   "Total Cost": 5.23,
                   "Plan Rows": 54,
                   "Plan Width": 4,
-                  "Actual Startup Time": 0.002,
+                  "Actual Startup Time": 0.003,
                   "Actual Total Time": 0.004,
                   "Actual Rows": 43,
                   "Actual Loops": 1,
@@ -1258,15 +1265,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.013,
+            "Planning Time": 0.015,
             "Triggers": [],
-            "Execution Time": 0.01
+            "Execution Time": 0.012
           }
         ],
-        "execution_time_ms": 0.01,
+        "execution_time_ms": 0.012,
         "total_cost": 5.82
       },
-      "speedup": 1.2
+      "speedup": 1.17,
+      "cost_speedup": 1
     },
     {
       "id": "Q9",
@@ -1290,8 +1298,8 @@
               "Total Cost": 449.94,
               "Plan Rows": 166,
               "Plan Width": 16,
-              "Actual Startup Time": 0.056,
-              "Actual Total Time": 0.063,
+              "Actual Startup Time": 0.058,
+              "Actual Total Time": 0.065,
               "Actual Rows": 6,
               "Actual Loops": 1,
               "Index Cond": "((session_key = 9102) AND (date >= $0))",
@@ -1319,8 +1327,8 @@
                   "Total Cost": 26.39,
                   "Plan Rows": 1,
                   "Plan Width": 8,
-                  "Actual Startup Time": 0.054,
-                  "Actual Total Time": 0.054,
+                  "Actual Startup Time": 0.056,
+                  "Actual Total Time": 0.056,
                   "Actual Rows": 1,
                   "Actual Loops": 1,
                   "Shared Hit Blocks": 10,
@@ -1381,12 +1389,12 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.031,
+            "Planning Time": 0.027,
             "Triggers": [],
-            "Execution Time": 0.067
+            "Execution Time": 0.068
           }
         ],
-        "execution_time_ms": 0.067,
+        "execution_time_ms": 0.068,
         "total_cost": 449.94
       },
       "post": {
@@ -1404,8 +1412,8 @@
               "Total Cost": 408.69,
               "Plan Rows": 166,
               "Plan Width": 16,
-              "Actual Startup Time": 0.005,
-              "Actual Total Time": 0.005,
+              "Actual Startup Time": 0.006,
+              "Actual Total Time": 0.006,
               "Actual Rows": 6,
               "Actual Loops": 1,
               "Index Cond": "((session_key = 9102) AND (date >= $1))",
@@ -1431,7 +1439,7 @@
                   "Total Cost": 0.46,
                   "Plan Rows": 1,
                   "Plan Width": 8,
-                  "Actual Startup Time": 0.003,
+                  "Actual Startup Time": 0.004,
                   "Actual Total Time": 0.004,
                   "Actual Rows": 1,
                   "Actual Loops": 1,
@@ -1456,8 +1464,8 @@
                       "Total Cost": 0.45,
                       "Plan Rows": 1,
                       "Plan Width": 8,
-                      "Actual Startup Time": 0.003,
-                      "Actual Total Time": 0.003,
+                      "Actual Startup Time": 0.004,
+                      "Actual Total Time": 0.004,
                       "Actual Rows": 1,
                       "Actual Loops": 1,
                       "Shared Hit Blocks": 4,
@@ -1484,8 +1492,8 @@
                           "Total Cost": 14.36,
                           "Plan Rows": 497,
                           "Plan Width": 8,
-                          "Actual Startup Time": 0.003,
-                          "Actual Total Time": 0.003,
+                          "Actual Startup Time": 0.004,
+                          "Actual Total Time": 0.004,
                           "Actual Rows": 1,
                           "Actual Loops": 1,
                           "Index Cond": "((session_key = 9102) AND (date IS NOT NULL))",
@@ -1520,15 +1528,16 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.026,
+            "Planning Time": 0.032,
             "Triggers": [],
-            "Execution Time": 0.008
+            "Execution Time": 0.01
           }
         ],
-        "execution_time_ms": 0.008,
+        "execution_time_ms": 0.01,
         "total_cost": 408.69
       },
-      "speedup": 8.38
+      "speedup": 6.8,
+      "cost_speedup": 1.1
     },
     {
       "id": "Q10",
@@ -1550,7 +1559,7 @@
               "Total Cost": 1501.58,
               "Plan Rows": 46,
               "Plan Width": 12,
-              "Actual Startup Time": 0.192,
+              "Actual Startup Time": 0.189,
               "Actual Total Time": 0.306,
               "Actual Rows": 20,
               "Actual Loops": 1,
@@ -1577,8 +1586,125 @@
                   "Total Cost": 1494.28,
                   "Plan Rows": 1345,
                   "Plan Width": 12,
-                  "Actual Startup Time": 0.185,
-                  "Actual Total Time": 0.216,
+                  "Actual Startup Time": 0.182,
+                  "Actual Total Time": 0.213,
+                  "Actual Rows": 1310,
+                  "Actual Loops": 1,
+                  "Sort Key": [
+                    "driver_number"
+                  ],
+                  "Sort Method": "quicksort",
+                  "Sort Space Used": 100,
+                  "Sort Space Type": "Memory",
+                  "Shared Hit Blocks": 59,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0,
+                  "Plans": [
+                    {
+                      "Node Type": "Index Scan",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Scan Direction": "Forward",
+                      "Index Name": "idx_laps_session_key",
+                      "Relation Name": "laps",
+                      "Alias": "laps",
+                      "Startup Cost": 0.29,
+                      "Total Cost": 1421.02,
+                      "Plan Rows": 1345,
+                      "Plan Width": 12,
+                      "Actual Startup Time": 0.002,
+                      "Actual Total Time": 0.117,
+                      "Actual Rows": 1310,
+                      "Actual Loops": 1,
+                      "Index Cond": "(session_key = 9102)",
+                      "Rows Removed by Index Recheck": 0,
+                      "Filter": "(lap_duration IS NOT NULL)",
+                      "Rows Removed by Filter": 2,
+                      "Shared Hit Blocks": 59,
+                      "Shared Read Blocks": 0,
+                      "Shared Dirtied Blocks": 0,
+                      "Shared Written Blocks": 0,
+                      "Local Hit Blocks": 0,
+                      "Local Read Blocks": 0,
+                      "Local Dirtied Blocks": 0,
+                      "Local Written Blocks": 0,
+                      "Temp Read Blocks": 0,
+                      "Temp Written Blocks": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            "Planning": {
+              "Shared Hit Blocks": 0,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.018,
+            "Triggers": [],
+            "Execution Time": 0.309
+          }
+        ],
+        "execution_time_ms": 0.309,
+        "total_cost": 1501.58
+      },
+      "post": {
+        "plan_json": [
+          {
+            "Plan": {
+              "Node Type": "Aggregate",
+              "Strategy": "Sorted",
+              "Partial Mode": "Simple",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 1490.92,
+              "Total Cost": 1501.58,
+              "Plan Rows": 46,
+              "Plan Width": 12,
+              "Actual Startup Time": 0.191,
+              "Actual Total Time": 0.341,
+              "Actual Rows": 20,
+              "Actual Loops": 1,
+              "Group Key": [
+                "driver_number"
+              ],
+              "Shared Hit Blocks": 59,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Sort",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Startup Cost": 1490.92,
+                  "Total Cost": 1494.28,
+                  "Plan Rows": 1345,
+                  "Plan Width": 12,
+                  "Actual Startup Time": 0.184,
+                  "Actual Total Time": 0.234,
                   "Actual Rows": 1310,
                   "Actual Loops": 1,
                   "Sort Key": [
@@ -1646,143 +1772,31 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.02,
+            "Planning Time": 0.022,
             "Triggers": [],
-            "Execution Time": 0.31
+            "Execution Time": 0.344
           }
         ],
-        "execution_time_ms": 0.31,
+        "execution_time_ms": 0.344,
         "total_cost": 1501.58
       },
-      "post": {
-        "plan_json": [
-          {
-            "Plan": {
-              "Node Type": "Aggregate",
-              "Strategy": "Sorted",
-              "Partial Mode": "Simple",
-              "Parallel Aware": false,
-              "Async Capable": false,
-              "Startup Cost": 1490.92,
-              "Total Cost": 1501.58,
-              "Plan Rows": 46,
-              "Plan Width": 12,
-              "Actual Startup Time": 0.201,
-              "Actual Total Time": 0.315,
-              "Actual Rows": 20,
-              "Actual Loops": 1,
-              "Group Key": [
-                "driver_number"
-              ],
-              "Shared Hit Blocks": 59,
-              "Shared Read Blocks": 0,
-              "Shared Dirtied Blocks": 0,
-              "Shared Written Blocks": 0,
-              "Local Hit Blocks": 0,
-              "Local Read Blocks": 0,
-              "Local Dirtied Blocks": 0,
-              "Local Written Blocks": 0,
-              "Temp Read Blocks": 0,
-              "Temp Written Blocks": 0,
-              "Plans": [
-                {
-                  "Node Type": "Sort",
-                  "Parent Relationship": "Outer",
-                  "Parallel Aware": false,
-                  "Async Capable": false,
-                  "Startup Cost": 1490.92,
-                  "Total Cost": 1494.28,
-                  "Plan Rows": 1345,
-                  "Plan Width": 12,
-                  "Actual Startup Time": 0.194,
-                  "Actual Total Time": 0.224,
-                  "Actual Rows": 1310,
-                  "Actual Loops": 1,
-                  "Sort Key": [
-                    "driver_number"
-                  ],
-                  "Sort Method": "quicksort",
-                  "Sort Space Used": 100,
-                  "Sort Space Type": "Memory",
-                  "Shared Hit Blocks": 59,
-                  "Shared Read Blocks": 0,
-                  "Shared Dirtied Blocks": 0,
-                  "Shared Written Blocks": 0,
-                  "Local Hit Blocks": 0,
-                  "Local Read Blocks": 0,
-                  "Local Dirtied Blocks": 0,
-                  "Local Written Blocks": 0,
-                  "Temp Read Blocks": 0,
-                  "Temp Written Blocks": 0,
-                  "Plans": [
-                    {
-                      "Node Type": "Index Scan",
-                      "Parent Relationship": "Outer",
-                      "Parallel Aware": false,
-                      "Async Capable": false,
-                      "Scan Direction": "Forward",
-                      "Index Name": "idx_laps_session_key",
-                      "Relation Name": "laps",
-                      "Alias": "laps",
-                      "Startup Cost": 0.29,
-                      "Total Cost": 1421.02,
-                      "Plan Rows": 1345,
-                      "Plan Width": 12,
-                      "Actual Startup Time": 0.002,
-                      "Actual Total Time": 0.128,
-                      "Actual Rows": 1310,
-                      "Actual Loops": 1,
-                      "Index Cond": "(session_key = 9102)",
-                      "Rows Removed by Index Recheck": 0,
-                      "Filter": "(lap_duration IS NOT NULL)",
-                      "Rows Removed by Filter": 2,
-                      "Shared Hit Blocks": 59,
-                      "Shared Read Blocks": 0,
-                      "Shared Dirtied Blocks": 0,
-                      "Shared Written Blocks": 0,
-                      "Local Hit Blocks": 0,
-                      "Local Read Blocks": 0,
-                      "Local Dirtied Blocks": 0,
-                      "Local Written Blocks": 0,
-                      "Temp Read Blocks": 0,
-                      "Temp Written Blocks": 0
-                    }
-                  ]
-                }
-              ]
-            },
-            "Planning": {
-              "Shared Hit Blocks": 0,
-              "Shared Read Blocks": 0,
-              "Shared Dirtied Blocks": 0,
-              "Shared Written Blocks": 0,
-              "Local Hit Blocks": 0,
-              "Local Read Blocks": 0,
-              "Local Dirtied Blocks": 0,
-              "Local Written Blocks": 0,
-              "Temp Read Blocks": 0,
-              "Temp Written Blocks": 0
-            },
-            "Planning Time": 0.02,
-            "Triggers": [],
-            "Execution Time": 0.318
-          }
-        ],
-        "execution_time_ms": 0.318,
-        "total_cost": 1501.58
-      },
-      "speedup": 0.97
+      "speedup": 0.9,
+      "cost_speedup": 1
     }
   ],
   "aggregate": {
-    "pre_p50_ms": 0.02,
+    "pre_p50_ms": 0.03,
     "pre_p95_ms": 0.31,
     "post_p50_ms": 0.01,
-    "post_p95_ms": 0.32,
-    "net_p50_speedup": 2,
-    "net_p95_speedup": 0.97
+    "post_p95_ms": 0.34,
+    "net_p50_speedup": 3,
+    "net_p95_speedup": 0.91,
+    "pre_p50_cost": 176.4,
+    "pre_p95_cost": 1501.58,
+    "post_p50_cost": 8.31,
+    "post_p95_cost": 1501.58,
+    "net_p50_cost_speedup": 21.23,
+    "net_p95_cost_speedup": 1
   },
-  "regressions": [
-    "Q3"
-  ]
+  "regressions": []
 }

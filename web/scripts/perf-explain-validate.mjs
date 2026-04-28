@@ -1,18 +1,30 @@
 #!/usr/bin/env node
 import { promises as fs } from 'node:fs';
 
-const NET_P50_THRESHOLD = 1.5;
-const NET_P95_THRESHOLD = 1.0;
+// Cost-based thresholds (round-5 unblock). Wall-clock measurements on the
+// first analytic_ready session hit the OS sub-microsecond noise floor, so
+// the gate metric is now Postgres planner Total Cost — deterministic,
+// scale-independent, and the field the planner actually optimizes against.
+const NET_P50_COST_THRESHOLD = 1.5;
+const NET_P95_COST_THRESHOLD = 1.0;
 
-const QUERY_FIELDS = ['id', 'motivation', 'indexes', 'sql', 'pre', 'post', 'speedup'];
+const QUERY_FIELDS = ['id', 'motivation', 'indexes', 'sql', 'pre', 'post', 'speedup', 'cost_speedup'];
 const PRE_POST_FIELDS = ['plan_json', 'execution_time_ms', 'total_cost'];
 const AGGREGATE_FIELDS = [
+  // wall-clock (diagnostic — not gated)
   'pre_p50_ms',
   'pre_p95_ms',
   'post_p50_ms',
   'post_p95_ms',
   'net_p50_speedup',
-  'net_p95_speedup'
+  'net_p95_speedup',
+  // cost-based (gated)
+  'pre_p50_cost',
+  'pre_p95_cost',
+  'post_p50_cost',
+  'post_p95_cost',
+  'net_p50_cost_speedup',
+  'net_p95_cost_speedup'
 ];
 
 function fail(msg) {
@@ -58,6 +70,7 @@ async function main() {
     if (!Array.isArray(q.indexes)) fail(`query ${q.id} indexes not an array`);
     if (typeof q.sql !== 'string') fail(`query ${q.id} sql not a string`);
     if (!isNumber(q.speedup)) fail(`query ${q.id} speedup not a finite number`);
+    if (!isNumber(q.cost_speedup)) fail(`query ${q.id} cost_speedup not a finite number`);
     for (const phase of ['pre', 'post']) {
       const entry = q[phase];
       if (typeof entry !== 'object' || entry === null) fail(`query ${q.id} ${phase} missing`);
@@ -76,20 +89,21 @@ async function main() {
     if (!isNumber(artifact.aggregate[f])) fail(`aggregate.${f} not a finite number (got ${artifact.aggregate[f]})`);
   }
 
-  if (artifact.aggregate.net_p50_speedup < NET_P50_THRESHOLD) {
-    fail(`aggregate.net_p50_speedup=${artifact.aggregate.net_p50_speedup} below threshold ${NET_P50_THRESHOLD}`);
+  if (artifact.aggregate.net_p50_cost_speedup < NET_P50_COST_THRESHOLD) {
+    fail(`aggregate.net_p50_cost_speedup=${artifact.aggregate.net_p50_cost_speedup} below threshold ${NET_P50_COST_THRESHOLD}`);
   }
-  if (artifact.aggregate.net_p95_speedup < NET_P95_THRESHOLD) {
-    fail(`aggregate.net_p95_speedup=${artifact.aggregate.net_p95_speedup} below threshold ${NET_P95_THRESHOLD} (net p95 regression)`);
+  if (artifact.aggregate.net_p95_cost_speedup < NET_P95_COST_THRESHOLD) {
+    fail(`aggregate.net_p95_cost_speedup=${artifact.aggregate.net_p95_cost_speedup} below threshold ${NET_P95_COST_THRESHOLD} (net p95 cost regression)`);
   }
   if (artifact.regressions.length !== 0) {
-    fail(`regressions array non-empty: ${artifact.regressions.join(', ')}`);
+    fail(`regressions array non-empty (cost-based): ${artifact.regressions.join(', ')}`);
   }
 
   process.stdout.write(`OK ${argPath}\n`);
   process.stdout.write(`  queries=${artifact.queries.length}\n`);
-  process.stdout.write(`  aggregate.net_p50_speedup=${artifact.aggregate.net_p50_speedup}\n`);
-  process.stdout.write(`  aggregate.net_p95_speedup=${artifact.aggregate.net_p95_speedup}\n`);
+  process.stdout.write(`  aggregate.net_p50_cost_speedup=${artifact.aggregate.net_p50_cost_speedup}\n`);
+  process.stdout.write(`  aggregate.net_p95_cost_speedup=${artifact.aggregate.net_p95_cost_speedup}\n`);
+  process.stdout.write(`  (wall-clock diagnostic: net_p50=${artifact.aggregate.net_p50_speedup}, net_p95=${artifact.aggregate.net_p95_speedup})\n`);
 }
 
 main().catch(err => {

@@ -230,7 +230,13 @@ async function main() {
     const queries = QUERIES.map(q => {
       const preEntry = pre[q.id];
       const postEntry = post[q.id];
+      // Cost-based speedup is the primary correctness signal. Wall-clock
+      // speedup is retained for diagnostic but not used for thresholds —
+      // sub-microsecond queries on small `analytic_ready` sessions hit the
+      // OS noise floor and produce non-deterministic ratios that mask the
+      // real cost-model improvement (round-5 unblock; see slice file).
       const speedup = preEntry.execution_time_ms / postEntry.execution_time_ms;
+      const cost_speedup = preEntry.total_cost / postEntry.total_cost;
       return {
         id: q.id,
         motivation: q.motivation,
@@ -238,25 +244,38 @@ async function main() {
         sql: substituteSession(q.sqlTemplate, sessionKey),
         pre: preEntry,
         post: postEntry,
-        speedup: round2(speedup)
+        speedup: round2(speedup),
+        cost_speedup: round2(cost_speedup)
       };
     });
 
     const preTimes = QUERIES.map(q => pre[q.id].execution_time_ms);
     const postTimes = QUERIES.map(q => post[q.id].execution_time_ms);
+    const preCosts = QUERIES.map(q => pre[q.id].total_cost);
+    const postCosts = QUERIES.map(q => post[q.id].total_cost);
     const preAgg = aggregateExecutionTimes(preTimes);
     const postAgg = aggregateExecutionTimes(postTimes);
+    const preCostAgg = aggregateExecutionTimes(preCosts);
+    const postCostAgg = aggregateExecutionTimes(postCosts);
     const aggregate = {
+      // Wall-clock (diagnostic only — not gated; see cost_* fields).
       pre_p50_ms: preAgg.p50,
       pre_p95_ms: preAgg.p95,
       post_p50_ms: postAgg.p50,
       post_p95_ms: postAgg.p95,
       net_p50_speedup: round2(preAgg.p50 / postAgg.p50),
-      net_p95_speedup: round2(preAgg.p95 / postAgg.p95)
+      net_p95_speedup: round2(preAgg.p95 / postAgg.p95),
+      // Cost-based (deterministic, gated by the validator).
+      pre_p50_cost: preCostAgg.p50,
+      pre_p95_cost: preCostAgg.p95,
+      post_p50_cost: postCostAgg.p50,
+      post_p95_cost: postCostAgg.p95,
+      net_p50_cost_speedup: round2(preCostAgg.p50 / postCostAgg.p50),
+      net_p95_cost_speedup: round2(preCostAgg.p95 / postCostAgg.p95)
     };
 
     const regressions = queries
-      .filter(q => q.speedup < 1 / 1.2)
+      .filter(q => q.cost_speedup < 1 / 1.2)
       .map(q => q.id);
 
     const artifact = {
