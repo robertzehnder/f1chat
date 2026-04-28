@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T16:37:10Z
+updated: 2026-04-28T17:05:00Z
 ---
 
 ## Goal
@@ -31,9 +31,10 @@ Assert `DATABASE_URL` uses the Neon pooler connection string (port 6543 / `-pool
 3. Add an automated test at `web/scripts/tests/pooled-url-assertion.test.mjs` covering all four Acceptance-criteria cases. Follow the existing test pattern (see `web/scripts/tests/answer-cache.test.mjs`) and use the in-process `typescript` compiler to transpile `web/src/lib/db.ts` and import the exported `assertPooledDatabaseUrl` as a pure function with controlled `env` fixtures — do NOT rely on side-effectful module load, do NOT add a docs file.
 4. Pre-merge verification (staging, evidence required):
    - Add a runnable harness `web/scripts/verify-pooled-url.mjs` that uses the same in-process `typescript` transpile pattern as the test file to load `assertPooledDatabaseUrl` from `web/src/lib/db.ts`, then calls it with `process.env`. On success it must `console.log('OK: pooler url accepted')` and exit 0; on a thrown error it must let the error propagate (or `console.error` then `process.exit(1)`) so stderr surfaces the assertion message.
-   - Run with the staging Neon **pooler** URL: `cd web && NODE_ENV=production DATABASE_URL=<staging-pooler-url> node scripts/verify-pooled-url.mjs`. Expect exit 0 and stdout containing `OK: pooler url accepted`.
-   - Run with the staging Neon **direct** URL (port 5432, no `-pooler`): `cd web && NODE_ENV=production DATABASE_URL=<staging-direct-url> node scripts/verify-pooled-url.mjs`. Expect non-zero exit and stderr matching `/Neon pooler URL required/i`.
-   - Save the combined stdout+stderr of both invocations to `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` and reference that path in the implementation slice-completion note.
+   - Both staging invocations below MUST clear the higher-precedence `NEON_DATABASE_URL` for that single command (use `env -u NEON_DATABASE_URL`) so the `DATABASE_URL` under test is what `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")` resolves; otherwise an ambient `NEON_DATABASE_URL` (e.g. shell export, `.env.local`) would mask `DATABASE_URL` and could produce a false-pass artifact.
+   - Run with the staging Neon **pooler** URL: `cd web && env -u NEON_DATABASE_URL NODE_ENV=production DATABASE_URL=<staging-pooler-url> node scripts/verify-pooled-url.mjs`. Expect exit 0 and stdout containing `OK: pooler url accepted`.
+   - Run with the staging Neon **direct** URL (port 5432, no `-pooler`): `cd web && env -u NEON_DATABASE_URL NODE_ENV=production DATABASE_URL=<staging-direct-url> node scripts/verify-pooled-url.mjs`. Expect non-zero exit and stderr matching `/Neon pooler URL required/i`.
+   - Save the combined stdout+stderr of both invocations to `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` and reference that path in the implementation slice-completion note. The artifact must record that both invocations ran with `NEON_DATABASE_URL` unset (the `env -u NEON_DATABASE_URL` prefix in the captured command line is sufficient evidence).
 
 ## Changed files expected
 - `web/src/lib/db.ts` (add and invoke `assertPooledDatabaseUrl` at module load — this is the actual existing DB entrypoint; `web/src/lib/db/driver.ts` is not present in this repo)
@@ -113,7 +114,7 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 - [ ] None.
 
 ### Medium
-- [ ] Make Step 4's staging commands deterministic under the documented `NEON_DATABASE_URL ?? DATABASE_URL` precedence by explicitly unsetting `NEON_DATABASE_URL` or by supplying the pooler/direct staging URL through the higher-precedence variable being asserted; otherwise an ambient `NEON_DATABASE_URL` can mask the `DATABASE_URL` under test and produce a false-pass artifact.
+- [x] Make Step 4's staging commands deterministic under the documented `NEON_DATABASE_URL ?? DATABASE_URL` precedence by explicitly unsetting `NEON_DATABASE_URL` or by supplying the pooler/direct staging URL through the higher-precedence variable being asserted; otherwise an ambient `NEON_DATABASE_URL` can mask the `DATABASE_URL` under test and produce a false-pass artifact.
 
 ### Low
 - [ ] None.
