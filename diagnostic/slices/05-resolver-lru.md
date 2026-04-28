@@ -1,11 +1,11 @@
 ---
 slice_id: 05-resolver-lru
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T19:30:00Z
+updated: 2026-04-28T13:07:06Z
 ---
 
 ## Goal
@@ -110,6 +110,20 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Resolve the turn-scope contradiction between `## Goal`, `## Decisions` invalidation, and Steps 1-4 by either adding the concrete `chatRuntime` turn-boundary `clear()` integration the plan currently claims may happen or removing the per-turn/no-leakage requirement from the plan and tests if cross-turn reuse is intentional.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T12:53:01Z, so no stale-state note is required.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Add an explicit `RESOLVER_LRU_DISABLED="1"` acceptance-test case to `npm run test:resolver-lru` so the documented bypass/escape-hatch behavior from `Required services / env` and Step 2 is verified by the gates.
 
 ### Low
 
