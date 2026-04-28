@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:30:00Z
+updated: 2026-04-28T04:06:45Z
 ---
 
 ## Goal
@@ -425,6 +425,22 @@ npm --prefix web run test:grading
 
 ### Low
 - [x] Add `psql` availability to Required services / env once DB gate commands are included.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+_None._
+
+### Medium
+_None._
+
+### Low
+- [ ] Add the web-tooling prerequisites to `Required services / env` because gate #4 depends on `npm --prefix web ...` succeeding, but the plan currently documents only `DATABASE_URL` and `psql` requirements.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was read and its `last updated` timestamp is within 24 hours.
