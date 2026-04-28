@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T23:05:00Z
+updated: 2026-04-28T17:36:57Z
 ---
 
 ## Goal
@@ -248,6 +248,19 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 
 ### Low
 - [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 8)
+
+**Status: APPROVED**
+
+### High
+
+### Medium
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
