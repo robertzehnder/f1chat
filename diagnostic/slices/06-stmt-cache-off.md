@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T18:30:00Z
+updated: 2026-04-28T19:10:00Z
 ---
 
 ## Goal
@@ -149,6 +149,24 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 ### Medium
 - [x] Resolve the contradiction between `## Required services / env` and the final acceptance bullet: the plan explicitly allows a local PgBouncer fallback, but the acceptance criterion requires proof that verification ran against “a non-production pooled Neon endpoint”; either allow the documented local PgBouncer path in acceptance/gates or remove it from the permitted verification targets.
 - [x] Narrow or expand the scope so it matches the repo’s real DB call sites: the slice claims to prove “every `pool.query()` call” / “no code path passes a `name` field,” but `runReadOnlySql()` bypasses `sql()` and uses `pool.connect()` plus `client.query(...)` directly at [web/src/lib/queries.ts:789-806](/Users/robertzehnder/.openf1-loop-worktrees/06-stmt-cache-off/web/src/lib/queries.ts:789); either include direct `client.query` paths in the plan or limit the goal/acceptance to the `sql()` helper only.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace Step 3’s static-grep rule over `web/src/lib/db.ts` with a guard that permits the intended `pool.query({ text, values, name: undefined })` call, because the current `/\.query\([^)]*\bname\s*:/s` check would fail on the exact change Step 2 requires.
+- [ ] Rewrite Step 4’s `@ts-expect-error` example to use a call shape that is actually invalid today; `sql({ text: "SELECT 1", values: [], name: "foo" } as never as string)` is typed as `string`, so it does not prove `sql()` rejects `QueryConfig` and would make the planned typecheck gate fail for the wrong reason.
+- [ ] Replace Step 3’s “implementer picks whichever variant compiles” test-import fallback chain with one concrete strategy that works under the current harness (`node --test scripts/tests/*.test.mjs`); as written, the plan alternates between nonexistent `src/lib/db.js`, direct `.ts` import Node cannot perform unaided, and an optional `tsx` add-on that is neither part of the current scripts nor declared in `Changed files expected`.
+
+### Medium
+- [ ] Add the slice file itself to `Changed files expected` if the acceptance criteria continue to require the slice-completion note to record which pooled target was used.
 
 ### Low
 - [ ] None.
