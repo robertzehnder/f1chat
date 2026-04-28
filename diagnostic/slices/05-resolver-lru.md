@@ -1,11 +1,11 @@
 ---
 slice_id: 05-resolver-lru
 phase: 5
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T13:07:06Z
+updated: 2026-04-28T13:08:44Z
 ---
 
 ## Goal
@@ -32,7 +32,7 @@ Add an LRU cache around the entity-resolver lookup functions in `web/src/lib/que
 - [x] 1. Add a new module at `web/src/lib/resolverCache.ts` that imports `getSessionsForResolution`, `getDriversForResolution`, `getSessionsFromSearchLookup`, `getDriversFromIdentityLookup` from `./queries` and exports cached wrappers for each, backed by per-entity-type `lru-cache` instances keyed by `(entity_type, year, sessionKey | "_no_session", query_key)` per the Decisions section. Each wrapper preserves the original function signature so call sites are a drop-in swap.
 - [x] 2. Configure TTL and max-size via the env knobs declared in `Required services / env` (`RESOLVER_LRU_TTL_MS`, `RESOLVER_LRU_MAX`, `RESOLVER_LRU_DISABLED`), read once at module init in `web/src/lib/resolverCache.ts` with the defaults documented above.
 - [x] 3. Update `web/src/lib/chatRuntime.ts` to import the cached wrappers from `./resolverCache` instead of importing the originals from `./queries` (imports at lines 2-8), and replace the direct calls at lines 1617, 1624, 1732, 1735 with the cached wrappers. No other call sites in `chatRuntime.ts` invoke these four functions, so the swap is local to those four calls plus their import statements.
-- [x] 4. Add unit tests for hit, miss, eviction-by-max, TTL expiry, `clear()` as a test-isolation utility (post-clear lookup is a miss), and cross-context isolation (same `query_key` in two different `(year, sessionKey)` contexts must not share a cache slot). Tests do NOT assert any turn-boundary invalidation, since cross-turn reuse is intentional. Tests run under `web/scripts/tests/resolver-lru.test.mjs` and are wired into a dedicated `npm run test:resolver-lru` script in `web/package.json` so the gate can invoke them directly.
+- [x] 4. Add unit tests for hit, miss, eviction-by-max, TTL expiry, `clear()` as a test-isolation utility (post-clear lookup is a miss), cross-context isolation (same `query_key` in two different `(year, sessionKey)` contexts must not share a cache slot), and the `RESOLVER_LRU_DISABLED="1"` escape hatch (when the env knob is set, every cached-wrapper call must invoke the underlying resolver — i.e., two back-to-back calls with the same key produce two underlying invocations and no entry is retained). Tests do NOT assert any turn-boundary invalidation, since cross-turn reuse is intentional. Tests run under `web/scripts/tests/resolver-lru.test.mjs` and are wired into a dedicated `npm run test:resolver-lru` script in `web/package.json` so the gate can invoke them directly.
 
 ## Changed files expected
 - `web/src/lib/resolverCache.ts` (new)
@@ -54,7 +54,7 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `npm run test:resolver-lru` passes and includes explicit assertions for: a hit (second call with same key returns cached value without invoking the underlying resolver), a miss (cold key invokes the underlying resolver exactly once), eviction (insertion past `RESOLVER_LRU_MAX` evicts the oldest key), TTL expiry (entry returns a fresh resolver call after `RESOLVER_LRU_TTL_MS` elapses, simulated via fake timers), `clear()` as a test-isolation utility (post-clear lookup is a miss), and cross-context isolation (same `query_key` under two distinct `(year, sessionKey)` tuples does not share a cache slot). Tests must not assert turn-boundary clearing — cross-turn reuse is the intended behavior.
+- [ ] `npm run test:resolver-lru` passes and includes explicit assertions for: a hit (second call with same key returns cached value without invoking the underlying resolver), a miss (cold key invokes the underlying resolver exactly once), eviction (insertion past `RESOLVER_LRU_MAX` evicts the oldest key), TTL expiry (entry returns a fresh resolver call after `RESOLVER_LRU_TTL_MS` elapses, simulated via fake timers), `clear()` as a test-isolation utility (post-clear lookup is a miss), cross-context isolation (same `query_key` under two distinct `(year, sessionKey)` tuples does not share a cache slot), and the `RESOLVER_LRU_DISABLED="1"` escape hatch (with the env knob set, two consecutive cached-wrapper calls for the same key both invoke the underlying resolver and nothing is retained). Tests must not assert turn-boundary clearing — cross-turn reuse is the intended behavior.
 - [ ] `npm run build`, `npm run typecheck`, and `npm run test:grading` all pass.
 
 ## Out of scope
@@ -123,7 +123,7 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Add an explicit `RESOLVER_LRU_DISABLED="1"` acceptance-test case to `npm run test:resolver-lru` so the documented bypass/escape-hatch behavior from `Required services / env` and Step 2 is verified by the gates.
+- [x] Add an explicit `RESOLVER_LRU_DISABLED="1"` acceptance-test case to `npm run test:resolver-lru` so the documented bypass/escape-hatch behavior from `Required services / env` and Step 2 is verified by the gates.
 
 ### Low
 
