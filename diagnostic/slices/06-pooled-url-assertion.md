@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T16:50:33Z
+updated: 2026-04-28T17:05:00Z
 ---
 
 ## Goal
@@ -28,7 +28,8 @@ Assert `DATABASE_URL` uses the Neon pooler connection string (port 6543 / `-pool
 ## Steps
 1. Read the current implementation in `web/src/lib/db.ts` (the actual entrypoint in this repo — `web/src/lib/db/driver.ts` does not exist). Locate the `createPool` path that resolves a connection string from `NEON_DATABASE_URL` / `DATABASE_URL` (see `firstUrl` helper) and creates the `pg.Pool`.
 2. In `web/src/lib/db.ts`, add and export a pure function `assertPooledDatabaseUrl(env: NodeJS.ProcessEnv): void` that, when `env.NODE_ENV === 'production'`, parses the connection string returned by the same precedence used by `firstUrl` (i.e., `env.NEON_DATABASE_URL ?? env.DATABASE_URL`) and throws a descriptive `Error` if the host does not contain the substring `-pooler` OR the port (URL `port`, defaulting to 5432 when omitted) is not `6543`. The thrown message must include the offending host and port, contain the literal phrase `Neon pooler URL required` (so tests and staging verification can match it), and instruct the operator to switch to the Neon pooler URL. Then invoke `assertPooledDatabaseUrl(process.env)` once at module load — before `createPool()` runs — so the startup error fires when `db.ts` is first imported in production.
-3. Add an automated test at `web/scripts/tests/pooled-url-assertion.test.mjs` covering all four Acceptance-criteria cases. Follow the existing test pattern (see `web/scripts/tests/answer-cache.test.mjs`) and use the in-process `typescript` compiler to transpile `web/src/lib/db.ts` and import the exported `assertPooledDatabaseUrl` as a pure function with controlled `env` fixtures — do NOT rely on side-effectful module load, do NOT add a docs file.
+3. Add an automated test at `web/scripts/tests/pooled-url-assertion.test.mjs` covering all five Acceptance-criteria cases (the four shape cases plus the precedence case below). Follow the existing test pattern (see `web/scripts/tests/answer-cache.test.mjs`) and use the in-process `typescript` compiler to transpile `web/src/lib/db.ts` and import the exported `assertPooledDatabaseUrl` as a pure function with controlled `env` fixtures — do NOT rely on side-effectful module load, do NOT add a docs file.
+   - Precedence test case (required): include a dedicated assertion that proves `assertPooledDatabaseUrl` validates the same URL `createPool()` will use, i.e. it honors `firstUrl`'s precedence (`env.NEON_DATABASE_URL ?? env.DATABASE_URL`), not just `DATABASE_URL`. Build a fixture with `NODE_ENV='production'`, `NEON_DATABASE_URL=<valid Neon pooler URL>` (host containing `-pooler`, port `6543`), and a deliberately conflicting `DATABASE_URL=<direct URL with port 5432 and no -pooler>`; call `assertPooledDatabaseUrl(fixture)` and assert it does NOT throw — confirming `NEON_DATABASE_URL` was preferred. Add a second fixture with `NODE_ENV='production'`, `NEON_DATABASE_URL=<direct URL with port 5432 and no -pooler>`, and `DATABASE_URL=<valid Neon pooler URL>`; call `assertPooledDatabaseUrl(fixture)` and assert it THROWS with a message matching `/Neon pooler URL required/i` — confirming `DATABASE_URL` was NOT silently used to override `NEON_DATABASE_URL`. Both directions must be covered so a regression that flips precedence (or that validates only `DATABASE_URL`) fails the test.
    - Neutralize Step 2's module-load `assertPooledDatabaseUrl(process.env)` call before import: at the top of the test file (before requiring/importing the transpiled `db.ts`), explicitly set `process.env.NODE_ENV = 'test'` and `delete process.env.NEON_DATABASE_URL; delete process.env.DATABASE_URL;` so the module-level invocation is a no-op at import time and cannot throw or accidentally consume ambient env. Also `delete process.env.NEON_DB_HOST; delete process.env.DB_HOST;` (and the matching `_USER` / `_PASSWORD` / `_NAME` / `_PORT` siblings) so the module-load `pool = createPool()` path described below cannot accidentally pick up ambient Neon/local DB credentials from the developer's shell. Each test case must build its own plain-object env fixture (with the desired `NODE_ENV`, `NEON_DATABASE_URL`, and `DATABASE_URL` values) and call the imported `assertPooledDatabaseUrl(fixture)` directly — do NOT mutate `process.env` between cases, and do NOT let any assertion depend on the module-load call's behavior.
    - Module-load `pool = createPool()` interaction (line 88 of `web/src/lib/db.ts`): importing the transpiled module also runs `export const pool = globalForPool.__openf1Pool ?? createPool();`. Because the test sets `NODE_ENV=test` and clears every `*_DATABASE_URL` and `*_DB_HOST` variable above, `firstUrl` returns `undefined`, the `NEON_DB_HOST` branch is skipped, and `createPool()` falls through to the local `env("DB_HOST", "127.0.0.1")` path with built-in defaults (host `127.0.0.1`, port `5432`, user `openf1`, password `openf1_local_dev`, database `openf1`). `pg.Pool` construction is lazy and does NOT open a TCP connection — connections are only attempted on first `.query()` or `.connect()`, so this is safe. The test MUST NOT call `pool`, `sql`, `pool.query`, or `pool.connect`; it only imports `assertPooledDatabaseUrl` and exercises it against fixture env objects. Do not add an `afterAll`/`process.exit` `pool.end()` call either — leaving the unused pool object un-ended is fine because no clients were ever checked out.
 4. Pre-merge verification (staging, evidence required):
@@ -62,6 +63,7 @@ cd web && npm run test:grading
 - [ ] Same test file asserts that the function THROWS when `NODE_ENV=production` and the URL has `-pooler` host but port `5432` (mismatched), and again when the URL has port `6543` but host without `-pooler` (also mismatched).
 - [ ] Same test file asserts that the function does NOT throw when `NODE_ENV=production` and the URL is a valid Neon pooler URL (`-pooler` host AND port `6543`).
 - [ ] Same test file asserts that the function does NOT throw when `NODE_ENV !== 'production'` regardless of URL shape (covers `development`, `test`, and unset `NODE_ENV`).
+- [ ] Same test file asserts the precedence contract `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`: with `NODE_ENV='production'`, a fixture where `NEON_DATABASE_URL` is a valid pooler URL and `DATABASE_URL` is a conflicting direct URL must NOT throw; a fixture where `NEON_DATABASE_URL` is a direct URL and `DATABASE_URL` is a valid pooler URL MUST throw with a message matching `/Neon pooler URL required/i`. This proves the assertion validates the same URL `createPool()` will use rather than only `DATABASE_URL`.
 - [ ] Test file is wired into `cd web && npm run test:grading` so it executes in the gate command, and the gate exits 0 locally.
 - [ ] Staging verification artifact at `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` exists and contains both the success line (`OK: pooler url accepted`) and a non-zero-exit error message from the direct-URL invocation.
 
@@ -166,7 +168,7 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 **Status: REVISE**
 
 ### High
-- [ ] Add an automated precedence case proving `assertPooledDatabaseUrl` validates the same URL `createPool()` will use: when both `NEON_DATABASE_URL` and `DATABASE_URL` are set to conflicting values, the test must show the function honors `NEON_DATABASE_URL ?? DATABASE_URL` rather than validating only `DATABASE_URL`.
+- [x] Add an automated precedence case proving `assertPooledDatabaseUrl` validates the same URL `createPool()` will use: when both `NEON_DATABASE_URL` and `DATABASE_URL` are set to conflicting values, the test must show the function honors `NEON_DATABASE_URL ?? DATABASE_URL` rather than validating only `DATABASE_URL`.
 
 ### Medium
 - [ ] None.
