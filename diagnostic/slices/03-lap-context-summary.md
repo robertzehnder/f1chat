@@ -1,11 +1,11 @@
 ---
 slice_id: 03-lap-context-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T05:30:00-0400
+updated: 2026-04-27T23:43:20-0400
 ---
 
 ## Goal
@@ -330,3 +330,18 @@ npm --prefix web run test:grading
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current enough to use; no staleness note needed.
 - The build-before-typecheck gate ordering already matches the current auditor note.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Remove the stale `## Audit verdict` placeholder so the appended `## Plan-audit verdict (round N)` sections remain the slice's single audit-status surface.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current enough to use; no staleness note needed.
+- Every path listed under `## Prior context` resolved on disk.
