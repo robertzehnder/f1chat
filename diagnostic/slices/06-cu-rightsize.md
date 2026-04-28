@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T18:20:00Z
+updated: 2026-04-28T19:00:00Z
 ---
 
 ## Goal
@@ -52,7 +52,7 @@ Before step 4 may run, the implementer MUST:
    - `chosen_min_cu:` `<value>`
    - `chosen_max_cu:` `<value>`
    - `suspend_timeout_seconds:` `<retained or changed value>`
-   - `cu_hour_rate_usd:` `<rate>` — the per-CU-hour USD price taken from the project's current Neon billing plan. The decision note must record the source on a separate `cu_hour_rate_source:` line as either (a) the URL the rate was copied from (e.g. `https://neon.tech/pricing`) or (b) the path of a saved screenshot/JSON artifact under `diagnostic/artifacts/perf/` showing the rate at decision time. The rate MUST be a fixed constant in the note; it must not be left as a parameter for the implementer to vary at gate time.
+   - `cu_hour_rate_usd:` `<rate>` — the per-CU-hour USD price taken from the project's current Neon billing plan. The decision note must record the source on a separate `cu_hour_rate_source:` line as the public URL the rate was copied from (e.g. `https://neon.tech/pricing`); it must begin with `http://` or `https://`. Saved pricing artifacts are out of scope for this slice. The rate MUST be a fixed constant in the note; it must not be left as a parameter for the implementer to vary at gate time.
    - `cost_delta_usd_per_month_max:` `<value>` — computed as `(chosen_max_cu - prior_max_cu) * cu_hour_rate_usd * 730` (730 ≈ hours per average month, treated as an upper bound assuming the endpoint runs at `max_cu` continuously).
    - `cost_delta_usd_per_month_min:` `<value>` — computed as `(chosen_min_cu - prior_min_cu) * cu_hour_rate_usd * 730` (lower bound assuming the endpoint runs at `min_cu` continuously).
    - `latency_budget_p95_ms:` `<value>` — the p95 latency the resized window must preserve, derived from `stages.execute_db.p95_ms` (baseline) and `aggregate.post_p95_ms` (post-index floor). The note must state which of those two it equals or how it is bounded by them.
@@ -84,7 +84,7 @@ grep -E '^chosen_min_cu:[[:space:]]*[0-9.]+' diagnostic/notes/06-cu-rightsize.md
 grep -E '^chosen_max_cu:[[:space:]]*[0-9.]+' diagnostic/notes/06-cu-rightsize.md
 grep -E '^suspend_timeout_seconds:[[:space:]]*[0-9]+' diagnostic/notes/06-cu-rightsize.md
 grep -E '^cu_hour_rate_usd:[[:space:]]*[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
-grep -E '^cu_hour_rate_source:[[:space:]]*\S+' diagnostic/notes/06-cu-rightsize.md
+grep -E '^cu_hour_rate_source:[[:space:]]*https?://\S+' diagnostic/notes/06-cu-rightsize.md
 grep -E '^cost_delta_usd_per_month_max:[[:space:]]*-?[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
 grep -E '^cost_delta_usd_per_month_min:[[:space:]]*-?[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
 grep -E '^latency_budget_p95_ms:[[:space:]]*[0-9]+(\.[0-9]+)?' diagnostic/notes/06-cu-rightsize.md
@@ -157,13 +157,13 @@ psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
 ```
 
 ## Acceptance criteria
-- [ ] `diagnostic/notes/06-cu-rightsize.md` declares, on grep-able lines, `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, `cu_hour_rate_usd` (a fixed numeric constant), `cu_hour_rate_source` (URL or saved-artifact path), `cost_delta_usd_per_month_max`, `cost_delta_usd_per_month_min`, and `latency_budget_p95_ms`. The two `cost_delta_*` values equal `(chosen_*_cu − prior_*_cu) × cu_hour_rate_usd × 730` (within $0.01) where the `prior_*_cu` values are read from `06-cu-rightsize-before_2026-04-28.json`; the gate recomputes and asserts this.
+- [ ] `diagnostic/notes/06-cu-rightsize.md` declares, on grep-able lines, `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, `cu_hour_rate_usd` (a fixed numeric constant), `cu_hour_rate_source` (a public URL beginning with `http://` or `https://`), `cost_delta_usd_per_month_max`, `cost_delta_usd_per_month_min`, and `latency_budget_p95_ms`. The two `cost_delta_*` values equal `(chosen_*_cu − prior_*_cu) × cu_hour_rate_usd × 730` (within $0.01) where the `prior_*_cu` values are read from `06-cu-rightsize-before_2026-04-28.json`; the gate recomputes and asserts this.
 - [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## Evidence` section that records, at minimum, the `stages.total.p95_ms` and `stages.execute_db.p95_ms` values from `01-baseline-snapshot_2026-04-26.json` and the `aggregate.post_p95_ms` value from `04-explain-before-after_2026-04-28.json` as `<field path> = <value>` lines.
 - [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section whose first non-blank line under the heading matches `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, and that sentinel appears exactly once in the file. The line is copied verbatim from a chat message authored by the slice owner and was recorded **before** the Neon `PATCH` was issued.
 - [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change, including `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`.
 - [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time.
 - [ ] A live `GET` of the production Neon endpoint at gate time returns `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal to the values declared in the decision note (no staging environment is involved).
-- [ ] `psql "$DATABASE_URL" -c "SELECT 1"` succeeds post-change (exits 0 and prints `1`), confirming the pooler still routes through the resized endpoint.
+- [ ] `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` succeeds post-change (the pipeline exits 0, confirming `psql` printed exactly `1`), confirming the pooler still routes through the resized endpoint.
 
 ## Out of scope
 - Application code changes in `web/` (driver, pooling, retry strategy). If those are needed, raise a separate slice.
@@ -255,10 +255,10 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 - [ ] None.
 
 ### Medium
-- [ ] Either require `cu_hour_rate_source` to be a URL only, or add the optional saved pricing artifact path under `diagnostic/artifacts/perf/` to `Changed files expected` and `Artifact paths`; the current plan allows an extra artifact that is outside the declared slice scope.
+- [x] Either require `cu_hour_rate_source` to be a URL only, or add the optional saved pricing artifact path under `diagnostic/artifacts/perf/` to `Changed files expected` and `Artifact paths`; the current plan allows an extra artifact that is outside the declared slice scope.
 
 ### Low
-- [ ] Make the final acceptance bullet match the gated smoke test exactly: it currently cites `psql "$DATABASE_URL" -c "SELECT 1"` even though the gate and step both require `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1`.
+- [x] Make the final acceptance bullet match the gated smoke test exactly: it currently cites `psql "$DATABASE_URL" -c "SELECT 1"` even though the gate and step both require `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
