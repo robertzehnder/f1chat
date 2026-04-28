@@ -35,7 +35,8 @@ if [[ -z "$billing_source" ]]; then
     claude|claude-revise|claude-repair|codex|codex-native|\
     codex-claude-fallback|codex-slice-audit|codex-slice-audit-claude-fallback|\
     codex-fallback-on-quota|codex-fallback-forced|\
-    codex-slice-audit-fallback-on-quota|codex-slice-audit-fallback-forced)
+    codex-slice-audit-fallback-on-quota|codex-slice-audit-fallback-forced|\
+    claude-plan-audit|claude-plan-audit-codex-fallback)
       billing_source="plan" ;;
     *)
       billing_source="plan" ;;  # conservative default
@@ -53,6 +54,9 @@ if [[ -z "$model" ]]; then
     claude)              model="${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}" ;;
     claude-revise)       model="${LOOP_CLAUDE_REVISE_MODEL:-claude-opus-4-7}" ;;
     claude-repair)       model="${LOOP_CLAUDE_REPAIR_MODEL:-claude-opus-4-7}" ;;
+    claude-plan-audit)   model="${LOOP_CLAUDE_PLAN_AUDIT_MODEL:-claude-opus-4-7}" ;;
+    claude-plan-audit-codex-fallback)
+                         model="${CODEX_AUDIT_MODEL:-gpt-5.4}" ;;
     codex|codex-native|codex-slice-audit)  model="${CODEX_AUDIT_MODEL:-gpt-5.4}" ;;
     codex-claude-fallback|\
     codex-slice-audit-claude-fallback|\

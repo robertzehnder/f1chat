@@ -501,7 +501,12 @@ while true; do
         run_with_timeout "$DISPATCH_TIMEOUT" "$LOOP_DIR/dispatch_claude.sh" "$slice_id" \
         || guard_rc=$?
       ;;
-    codex:pending_plan_audit)
+    claude:pending_plan_audit|codex:pending_plan_audit)
+      # Plan audit phase. After the redesign, claude is the default plan
+      # auditor; codex is opt-in via LOOP_PLAN_AUDIT_AGENT=codex. The
+      # dispatcher decides which agent to invoke. Both owner values are
+      # accepted to keep in-flight slices (with the older owner=codex)
+      # routable until they land or get re-audited under the new owner.
       dispatch_with_guards "plan_audit" "$slice_id" \
         run_with_timeout "$PLAN_AUDIT_TIMEOUT" "$LOOP_DIR/dispatch_slice_audit.sh" "$slice_id" \
         || guard_rc=$?

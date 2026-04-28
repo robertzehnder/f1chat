@@ -41,9 +41,13 @@ while IFS= read -r sid; do
       continue
       ;;
     pending_plan_audit)
-      # Plan-audit phase: Codex reviews the slice file for plan bugs before
-      # any implementation work runs.
-      echo "$sid codex $status"
+      # Plan-audit phase: claude self-audits the plan iteratively to clear
+      # High/Medium findings before handing off. The dispatcher
+      # (dispatch_slice_audit.sh) selects the actual agent based on
+      # LOOP_PLAN_AUDIT_AGENT (default claude; set to "codex" for the legacy
+      # codex-driven plan audit). Codex remains the impl-audit agent and is
+      # only invoked once per slice (final adversarial check at awaiting_audit).
+      echo "$sid claude $status"
       exit 0
       ;;
     revising_plan)
