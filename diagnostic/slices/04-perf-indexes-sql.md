@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-28
 ---
 
 ## Goal
@@ -55,3 +55,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the web-only gate list with DB-backed gate commands that actually validate this slice's acceptance criteria, including applying/parsing `sql/perf_indexes.sql` against the target database and running the EXPLAIN checks for the indexed query shapes.
+- [ ] Add the missing artifact or exact source for the "representative queries from the catalog" so the EXPLAIN step and acceptance criteria are reproducible instead of relying on an undefined catalog.
+
+### Medium
+- [ ] Fix the `## Prior context` block because `diagnostic/artifacts/perf/01-baseline-snapshot-v2_2026-04-26.json` does not exist in the worktree.
+- [ ] Reconcile `## Steps` with `## Changed files expected` by explicitly planning the test artifact under `web/scripts/tests/perf-indexes.test.mjs` or removing it from expected changes if the slice is SQL-only.
+
+### Low
+- [ ] Clarify the required DB state for `CREATE INDEX CONCURRENTLY`, including that the gate must run outside a transaction against a database where the target tables already exist.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-28T04:35:20Z, so no stale-state note is needed this round.
