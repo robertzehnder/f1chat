@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   generateSqlWithAnthropic,
-  repairSqlWithAnthropic,
-  synthesizeAnswerWithAnthropic
+  repairSqlWithAnthropic
 } from "@/lib/anthropic";
 import { buildHeuristicSql, runReadOnlySql } from "@/lib/queries";
 import { buildDeterministicSqlTemplate } from "@/lib/deterministicSql";
@@ -11,6 +10,14 @@ import { assessChatQuality } from "@/lib/chatQuality";
 import { applyAnswerSanityGuards, buildStructuredSummaryFromRows } from "@/lib/answerSanity";
 import { appendJsonLog, logServer } from "@/lib/serverLog";
 import { startSpan, flushTrace, type Span, type SpanRecord } from "@/lib/perfTrace";
+import {
+  buildAnswerCacheKey,
+  cachedRunSql,
+  cachedSynthesize,
+  getAnswerCacheEntry,
+  setAnswerCacheEntry,
+  type AnswerCacheSubset
+} from "@/lib/cache/answerCache";
 
 export const dynamic = "force-dynamic";
 
@@ -443,6 +450,114 @@ export async function POST(request: Request) {
       modelForTrace = model ?? null;
       const runtimeForTrace = runtime;
 
+      const sortedDriverNumbersForCache = [...runtime.resolution.selectedDriverNumbers]
+        .filter((n) => Number.isFinite(n))
+        .map((n) => Math.trunc(n))
+        .sort((a, b) => a - b);
+      const answerCacheKey = buildAnswerCacheKey({
+        templateKey: selectedTemplateKey,
+        sessionKey: pinnedSessionKey,
+        sortedDriverNumbers: sortedDriverNumbersForCache,
+        year: runtime.resolution.extracted.year
+      });
+      const cachedAnswer: AnswerCacheSubset | undefined = answerCacheKey
+        ? getAnswerCacheEntry(answerCacheKey)
+        : undefined;
+
+      if (cachedAnswer) {
+        const hitResult = {
+          sql: cachedAnswer.result.sql,
+          rows: cachedAnswer.result.rows,
+          rowCount: cachedAnswer.result.rowCount,
+          truncated: cachedAnswer.result.truncated,
+          elapsedMs: 0
+        };
+        generatedSqlForTrace = cachedAnswer.sql;
+        generationSourceForTrace = cachedAnswer.generationSource;
+        modelForTrace = cachedAnswer.model ?? null;
+
+        await logServer("INFO", "chat_query_success", {
+          requestId,
+          generationSource: cachedAnswer.generationSource,
+          model: cachedAnswer.model ?? null,
+          questionType: runtime.questionType,
+          resolutionStatus: runtime.resolution.status,
+          selectedSessionKey: runtime.resolution.selectedSession?.sessionKey ?? null,
+          rowCount: hitResult.rowCount,
+          elapsedMs: hitResult.elapsedMs,
+          adequacyGrade: cachedAnswer.adequacyGrade,
+          hasAnswerReasoning: Boolean(cachedAnswer.answerReasoning),
+          sessionPinKey: sessionPinKeyForTrace,
+          sessionPinNote: sessionPinNoteForTrace,
+          totalRequestMs: Date.now() - startedAt,
+          cache_hit: true
+        });
+        await appendJsonLog("chat_transcript.jsonl", {
+          requestId,
+          question: message,
+          answer: cachedAnswer.answer,
+          answerReasoning: cachedAnswer.answerReasoning ?? null,
+          adequacyGrade: cachedAnswer.adequacyGrade,
+          adequacyReason: cachedAnswer.adequacyReason,
+          responseGrade: cachedAnswer.responseGrade,
+          gradeReason: cachedAnswer.gradeReason,
+          generationSource: cachedAnswer.generationSource,
+          model: cachedAnswer.model ?? null,
+          sql: cachedAnswer.sql,
+          result: {
+            rowCount: hitResult.rowCount,
+            elapsedMs: hitResult.elapsedMs,
+            truncated: hitResult.truncated
+          },
+          runtime,
+          cache_hit: true
+        });
+        await appendQueryTrace({
+          status: "success",
+          cache_hit: true,
+          timeout: false,
+          error: null,
+          questionType: runtime.questionType,
+          resolutionStatus: runtime.resolution.status,
+          resolvedSessionKey:
+            runtime.resolution.selectedSession?.sessionKey ?? resolvedContext.sessionKey ?? null,
+          resolvedDriverNumbers: runtime.resolution.selectedDriverNumbers,
+          sessionCandidates: runtime.resolution.sessionCandidates.slice(0, 5).map((candidate) => ({
+            sessionKey: candidate.sessionKey,
+            score: candidate.score,
+            matchedOn: candidate.matchedOn
+          })),
+          queryPath: cachedAnswer.generationSource,
+          templateKey: selectedTemplateKey,
+          generationSource: cachedAnswer.generationSource,
+          model: cachedAnswer.model ?? null,
+          sql: cachedAnswer.sql,
+          sqlElapsedMs: hitResult.elapsedMs,
+          rowCount: hitResult.rowCount,
+          sessionPinKey: sessionPinKeyForTrace,
+          sessionPinNote: sessionPinNoteForTrace,
+          totalRequestMs: Date.now() - startedAt,
+          runtimeMs: runtime.durationMs,
+          autoResolutionNote: autoResolutionNoteForTrace
+        });
+
+        return NextResponse.json({
+          requestId,
+          answer: cachedAnswer.answer,
+          answerReasoning: cachedAnswer.answerReasoning,
+          adequacyGrade: cachedAnswer.adequacyGrade,
+          adequacyReason: cachedAnswer.adequacyReason,
+          responseGrade: cachedAnswer.responseGrade,
+          gradeReason: cachedAnswer.gradeReason,
+          generationSource: cachedAnswer.generationSource,
+          model: cachedAnswer.model,
+          generationNotes: cachedAnswer.generationNotes,
+          sql: cachedAnswer.sql,
+          result: hitResult,
+          runtime
+        });
+      }
+
       const executeSqlWithTrace = async (sql: string, queryPath: string, attemptLabel: string) => {
         sqlAttemptCount += 1;
         const enforcedSessionSql = enforcePinnedSessionKeyInSql(sql, pinnedSessionKey);
@@ -458,7 +573,7 @@ export async function POST(request: Request) {
         const sqlStartedAt = Date.now();
         const execDbSpan = startTrackedSpan(startSpan("execute_db"));
         try {
-          const executed = await runReadOnlySql(sqlToExecute, { preview: true });
+          const executed = await cachedRunSql(sqlToExecute, { preview: true });
           endTrackedSpan(execDbSpan);
           generatedSqlForTrace = executed.sql;
           lastSqlElapsedMsForTrace = executed.elapsedMs ?? Date.now() - sqlStartedAt;
@@ -601,7 +716,7 @@ export async function POST(request: Request) {
       if (result.rowCount > 0) {
         const synthSpan = startTrackedSpan(startSpan("synthesize_llm"));
         try {
-          const synthesis = await synthesizeAnswerWithAnthropic({
+          const synthesis = await cachedSynthesize({
             question: message,
             sql: result.sql,
             rows: result.rows,
@@ -692,6 +807,7 @@ export async function POST(request: Request) {
       });
       await appendQueryTrace({
         status: "success",
+        cache_hit: false,
         timeout: false,
         error: null,
         questionType: runtime.questionType,
@@ -717,6 +833,31 @@ export async function POST(request: Request) {
         autoResolutionNote: autoResolutionNoteForTrace
       });
 
+      const finalGenerationNotes = [generationNotes, sessionPinNoteForTrace]
+        .filter(Boolean)
+        .join(" | ");
+
+      if (answerCacheKey && generationSource === "deterministic_template") {
+        setAnswerCacheEntry(answerCacheKey, {
+          answer,
+          answerReasoning,
+          adequacyGrade: quality.grade,
+          adequacyReason: quality.reason,
+          responseGrade: quality.grade,
+          gradeReason: quality.reason,
+          generationSource,
+          model,
+          generationNotes: finalGenerationNotes,
+          sql: result.sql,
+          result: {
+            sql: result.sql,
+            rows: result.rows,
+            rowCount: result.rowCount,
+            truncated: result.truncated
+          }
+        });
+      }
+
       return NextResponse.json({
         requestId,
         answer,
@@ -727,7 +868,7 @@ export async function POST(request: Request) {
         gradeReason: quality.reason,
         generationSource,
         model,
-        generationNotes: [generationNotes, sessionPinNoteForTrace].filter(Boolean).join(" | "),
+        generationNotes: finalGenerationNotes,
         sql: result.sql,
         result,
         runtime

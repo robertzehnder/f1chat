@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T16:05:00Z
+updated: 2026-04-28T11:14:21-04:00
 ---
 
 ## Goal
@@ -68,7 +68,46 @@ cd web && npm run test:grading
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/05-answer-cache`
+
+**Changed files (matches "Changed files expected"):**
+- `web/src/lib/cache/answerCache.ts` (new) — normalizer (`buildAnswerCacheKey`), `lru-cache` instance (TTL=10min, max=500), `getAnswerCacheEntry` / `setAnswerCacheEntry`, orchestrator `runDeterministicAnswerWithCache`, DI seams `cachedRunSql` / `cachedSynthesize`, `__answerCacheTestHooks` (with `runSql` / `synthesize` overrides + per-injection call counters), `__resetAnswerCacheForTests`, `__answerCacheConfig`. Manual `expiresAt` TTL pattern (mirrors `resolverCache.ts`) so `t.mock.timers.enable({apis:["Date"]})` drives expiry.
+- `web/src/app/api/chat/route.ts` — added cache lookup/store boundary between deterministic-template selection (`selectedTemplateKey` known at the existing `if (deterministic) { ... }` block) and `runReadOnlySql` (now invoked via `cachedRunSql`). On hit: emits `cache_hit:true` on the success trace + transcript log + server log, skips `executeSqlWithTrace` and synthesis entirely, regenerates per-request metadata (`requestId`, `runtime`, `result.elapsedMs`=0). On miss: emits `cache_hit:false`, runs the existing path, then conditionally writes the cached subset only when `generationSource === "deterministic_template"` (the explicit success-gate predicate) — heuristic-fallback / repaired / non-template paths never write. Synthesis call now goes through `cachedSynthesize`.
+- `web/src/lib/chatRuntime.ts` — UNCHANGED. `extractedYear` is already exposed on `runtime.resolution.extracted.year` (per `chatRuntime.ts:113`); no helper needed to be hoisted there.
+- `web/scripts/tests/answer-cache.test.mjs` (new) — 9 node-test cases covering Step 5 acceptance criteria.
+
+**Cache-key inputs (per slice and prior-context note):**
+`(templateKey, sessionKey, sortedDriverNumbers, year)`. `sortedDriverNumbers` is numerically sorted inside the normalizer (test 4 proves order-insensitivity). `year` is sourced from `runtime.resolution.extracted.year`. For the three baked-input templates (`canonical_id_lookup_abu_dhabi_2025_race`, `max_leclerc_qualifying_improvement`, `abu_dhabi_weekend_smallest_spread_and_comparison`) the trailing fields collapse to placeholder segments (`_no_session`, `_no_drivers`, `_no_year`), reducing the key to effectively `templateKey` (test 8 verifies stability).
+
+**Cached deterministic-derived subset (full success-payload field set, per round-16/17 audit):**
+`answer`, `answerReasoning`, `adequacyGrade`, `adequacyReason`, `responseGrade`, `gradeReason`, `generationSource`, `model`, post-merge `generationNotes` (already joined with `sessionPinNoteForTrace`), executed `sql` (post-session-pin rewrite), and the deterministic portions of `result` (`sql`, `rows`, `rowCount`, `truncated` — `elapsedMs` deliberately excluded). On a hit, `result.elapsedMs` is reset to 0 (never replayed) and `requestId` / `runtime` are regenerated freshly. The set of top-level response keys is identical between miss and hit.
+
+**Success-gate predicate:** `answerCacheKey && generationSource === "deterministic_template"`. This is checked exactly once, immediately before `setAnswerCacheEntry`, after the response has been finalized (post-synthesis, post-sanity, post-quality). If the deterministic SQL throws → control flips `generationSource` to `heuristic_after_template_failure` before reaching the cache write, so the gate fails and no entry is written. Test 7 drives both branches deterministically via the injected `runSql` stub.
+
+**Self-check vs. acceptance criteria (all enumerated; tests cited):**
+- ✅ Two identical deterministic requests: SQL spy = 1, synthesis spy ≤ 1, second response's deterministic-derived subset deep-equals first, per-request metadata differs (requestId, runtime, timestamp, elapsedMs), top-level key sets identical, second request's trace emits `cache_hit:true`. → `answer-cache.test.mjs` test 1.
+- ✅ Trace assertion (`cache_hit:false` then `cache_hit:true` on identical follow-up). → test 2.
+- ✅ Key distinctness for three pairings (only-`sessionKey`-differs, only-`sortedDriverNumbers`-differs, only-`year`-differs); SQL spy increments twice per pairing. → test 3.
+- ✅ Order-insensitivity bonus (proves the normalizer sorts driver numbers). → test 4.
+- ✅ TTL expiry past 10min: re-miss, SQL spy re-increments, trace re-emits `cache_hit:false`, follow-up identical re-hits. Uses `t.mock.timers.enable({apis:["Date"]})`. → test 5.
+- ✅ Non-deterministic bypass (no `templateKey`): SQL spy increments every call, no `cache_hit:true` emitted, `buildAnswerCacheKey` returns `null`. → test 6.
+- ✅ Failed-deterministic / fallback bypass on writes: throwing `runSql` + heuristic fallback path → no entry written → follow-up still misses → subsequent deterministic-success populates → next identical hits. → test 7.
+- ✅ Templates with baked inputs: `templateKey`-only inputs produce a stable, recognizable key with placeholder segments. → test 8.
+- ✅ TTL=10min, max=500 exposed via `__answerCacheConfig`. → test 9.
+
+**Gate command exit codes (run from `web/`):**
+- `npm run build` — exit 0 (Next.js compile + lint + page collect succeed; route `/api/chat` size unchanged; full output saved to `/tmp/build.log` during run)
+- `npm run typecheck` — exit 0 (`tsc --noEmit` clean)
+- `npm run test:grading` — exit 0 (51 tests: 41 pass, 10 skipped integration tests requiring `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`. New `answer-cache.test.mjs`: 9/9 pass)
+
+**Decisions / notes for auditor:**
+1. Manual `{value, expiresAt}` TTL pattern (vs. `LRUCache.ttl` option) because `t.mock.timers` mocks `Date.now()` but not `LRUCache`'s internal `performance.now()` — the resolverCache slice landed on the same approach for the same reason.
+2. The DI seams (`cachedRunSql` / `cachedSynthesize`) are *thin wrappers* used by both route.ts (production) and the test simulator (test). They increment `__answerCacheTestHooks.runSqlCallCount` / `synthesizeCallCount` on every invocation regardless of override; tests rely on `mod.__answerCacheTestHooks.runSql = ...` to substitute throwing / canned implementations.
+3. Hit-path `result.elapsedMs = 0` (not `undefined`) because the response shape contract requires `elapsedMs` to be a number — tests assert `firstMeta.elapsedMs !== secondMeta.elapsedMs` to prove it's regenerated.
+4. The cached `generationNotes` is the *post-merge* form (`generationNotes | sessionPinNoteForTrace`) — same string the route returns to the client on a miss — so hit-path response field-parity is preserved without per-request reconstruction. Cache key includes `sessionKey`, so the session-pin context is the same between miss and hit by construction.
+5. `selectedDriverNumbers` is numerically sorted in route.ts before being passed into `buildAnswerCacheKey`; the normalizer also sorts defensively (test 4) so `runtime.resolution.selectedDriverNumbers` ordering cannot affect key stability.
+6. Cache lookup runs after `pinnedSessionKey` is computed and after `selectedTemplateKey` is set (~ route.ts:457), and before any call to `cachedRunSql` (i.e. before `executeSqlWithTrace` is even defined as a closure). The miss path falls through to the existing executeSqlWithTrace + synthesis + sanity flow unchanged.
 
 ## Audit verdict
 (filled by Codex)
