@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T21:34:00Z
+updated: 2026-04-28T22:05:00Z
 ---
 
 ## Goal
@@ -47,6 +47,7 @@ Assert `DATABASE_URL` uses the Neon pooler connection string (port 6543 / `-pool
 - `web/src/lib/db.ts` (add and invoke `assertPooledDatabaseUrl` at module load — this is the actual existing DB entrypoint; `web/src/lib/db/driver.ts` is not present in this repo)
 - `web/scripts/tests/pooled-url-assertion.test.mjs` (new unit test)
 - `web/scripts/verify-pooled-url.mjs` (new staging-verification harness used by Step 4)
+- `diagnostic/slices/06-pooled-url-assertion.md` (implementer fills in the `Slice-completion note` section with a reference to the staging artifact path produced by Step 4)
 
 ## Artifact paths
 - `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` — combined stdout/stderr of the two staging `node scripts/verify-pooled-url.mjs` invocations (pooler URL and direct URL) from Steps §4.
@@ -190,7 +191,7 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 - [ ] None.
 
 ### Low
-- [ ] Add `diagnostic/slices/06-pooled-url-assertion.md` to `Changed files expected`, because Step 4 requires the implementer to reference the staging artifact path in the slice-completion note and therefore the slice file itself will be edited.
+- [x] Add `diagnostic/slices/06-pooled-url-assertion.md` to `Changed files expected`, because Step 4 requires the implementer to reference the staging artifact path in the slice-completion note and therefore the slice file itself will be edited.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
