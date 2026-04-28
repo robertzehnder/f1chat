@@ -1,11 +1,11 @@
 ---
 slice_id: 03-telemetry-lap-bridge
 phase: 3
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T04:21:24Z
+updated: 2026-04-28T00:22:17-04:00
 ---
 
 ## Goal
@@ -414,7 +414,38 @@ npm --prefix web run test:grading
   ```
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/03-telemetry-lap-bridge` (forked from `integration/perf-roadmap`).
+
+**Files changed (vs. `integration/perf-roadmap`):**
+- `sql/019_telemetry_lap_bridge_mat.sql` (new — single `BEGIN; … COMMIT;` transaction containing `CREATE TABLE IF NOT EXISTS core.telemetry_lap_bridge_mat (…)` with 19 columns and **no** `PRIMARY KEY`, `CREATE INDEX IF NOT EXISTS telemetry_lap_bridge_mat_session_driver_lap_idx ON core.telemetry_lap_bridge_mat (session_key, driver_number, lap_number)`, `CREATE INDEX IF NOT EXISTS telemetry_lap_bridge_mat_session_idx ON core.telemetry_lap_bridge_mat (session_key)`, `TRUNCATE core.telemetry_lap_bridge_mat;`, `INSERT INTO core.telemetry_lap_bridge_mat SELECT * FROM core_build.telemetry_lap_bridge`, and `CREATE OR REPLACE VIEW core.telemetry_lap_bridge AS SELECT * FROM core.telemetry_lap_bridge_mat`).
+- `diagnostic/slices/03-telemetry-lap-bridge.md` (this file — frontmatter `status` → `awaiting_audit`, `owner` → `codex`, `updated` → `2026-04-28T00:22:17-04:00`; this Slice-completion note filled in. No edits to plan body or to prior `## Plan-audit verdict` sections beyond ticking boxes already addressed by previous revise rounds.)
+
+`git diff --name-only integration/perf-roadmap...HEAD` will show exactly these two paths — no `.parity.sql`, no `.ts`, no `.mjs`, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-8]_*.sql`, no application code.
+
+**Decisions exercised at implementation time:** all decisions documented under `## Decisions` were applied verbatim. Specifically:
+- The storage relation is a **base table** (`relkind = 'r'`), not a `MATERIALIZED VIEW`. No `REFRESH MATERIALIZED VIEW` is invoked.
+- The table has **no `PRIMARY KEY`**; the inherited grain from `core_build.laps_enriched` is non-unique per `diagnostic/notes/03-laps-enriched-grain.md`. The two declared indexes are both non-unique btrees.
+- The 19-column projection mirrors `core.telemetry_lap_bridge` (defined at `sql/007_semantic_summary_contracts.sql:792` ff.) exactly in name, type, and ordering, so `CREATE OR REPLACE VIEW core.telemetry_lap_bridge AS SELECT * FROM core.telemetry_lap_bridge_mat` is dependency-safe.
+- Initial population uses `TRUNCATE` + `INSERT … SELECT * FROM core_build.telemetry_lap_bridge`; per-session refresh helper and ingest hook are explicitly out of scope.
+
+**Gate command results (all exit 0):**
+
+0. `psql --version` — exit `0` (`psql (PostgreSQL) 15.14 (Homebrew)`).
+1. `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/019_telemetry_lap_bridge_mat.sql` — exit `0`. Output: `BEGIN / CREATE TABLE / CREATE INDEX / CREATE INDEX / TRUNCATE TABLE / INSERT 0 166715 / CREATE VIEW / COMMIT`. Initial population materialized **166,715 rows**.
+2. Inline DO block (storage relation kind, public relation kind, no-PK assertion, both indexes' existence/non-uniqueness/btree-ness/exact column lists, and the facade `pg_depend`-via-`pg_rewrite` assertion that `core.telemetry_lap_bridge` references **only** `core.telemetry_lap_bridge_mat` within `core` / `core_build` / `raw`) — exit `0`. The DO block printed `DO` (no `RAISE EXCEPTION` fired).
+3. Inline DO block (deterministic 3-session selector against `core.session_completeness` `analytic_ready`, global rowcount equality `core_build.telemetry_lap_bridge` == `core.telemetry_lap_bridge_mat`, bidirectional `EXCEPT ALL` parity per session) — exit `0`. The DO block printed `DO`; no parity drift, no rowcount mismatch, the 3-session guard did not trigger.
+4. Web gates:
+   - `npm --prefix web ci` (one-time install per `## Required services / env`) — exit `0`.
+   - `npm --prefix web run build` — exit `0` (Next.js `✓ Generating static pages (4/4)`, all routes compiled).
+   - `npm --prefix web run typecheck` — exit `0` (`tsc --noEmit` clean).
+   - `npm --prefix web run test:grading` — exit `0` (`tests 31, pass 21, fail 0, skipped 10`; the 10 skipped subtests are integration-suite gates that opt-in via `OPENF1_RUN_CHAT_INTEGRATION_TESTS=1`, unchanged by this slice).
+
+**Self-check results:**
+- Acceptance-criteria checklist: every item is now satisfied by a gate that exits `0`. Specifically: (a) `core.telemetry_lap_bridge_mat` exists as a base table with no PK (gates #1+#2), (b) `core.telemetry_lap_bridge` exists as a view (gate #2), (c) `telemetry_lap_bridge_mat_session_driver_lap_idx` and `telemetry_lap_bridge_mat_session_idx` each exist exactly once as non-unique btrees with the declared column lists in the declared order (gate #2), (d) the public view's `pg_depend`-via-`pg_rewrite` set within `core` / `core_build` / `raw` is exactly `[core.telemetry_lap_bridge_mat]` — proving the facade swap and ruling out the original aggregating body lingering (gate #2), (e) global rowcount equality between `core_build.telemetry_lap_bridge` and `core.telemetry_lap_bridge_mat` (gate #3), (f) bidirectional `EXCEPT ALL` parity is `0` for the deterministic 3 `analytic_ready` sessions (gate #3), (g) the three web gates are green (gate #4), and (h) only the two expected files were modified (verifiable via `git diff --name-only integration/perf-roadmap...HEAD`).
+- No scope alarms: the only files changed by this slice are the two listed in `## Changed files expected`. No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-8]_*.sql`, no application code.
+
+**Branch hygiene:** branched from `integration/perf-roadmap`; the slice's awaiting-audit commit is tagged `[slice:03-telemetry-lap-bridge][awaiting-audit]`; the branch is pushed to `origin/slice/03-telemetry-lap-bridge` for the auditor to pull. `integration/perf-roadmap` and `main` were not touched.
 
 ## Plan-audit verdict (round 1)
 
