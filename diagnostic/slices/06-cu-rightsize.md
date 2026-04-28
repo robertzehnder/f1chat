@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T20:15:00Z
+updated: 2026-04-28T20:45:00Z
 ---
 
 ## Goal
@@ -46,7 +46,7 @@ Before step 4 may run, the implementer MUST:
    - From `04-explain-before-after.json`:
      - `aggregate.post_p95_ms` — post-index DB latency floor the new CU window must preserve; also feeds the latency-budget derivation in step 3.
    Per-stage `count`/`p50_ms`/`max_ms` fields, additional stage `p95_ms` values (`stages.resolve_db`, `stages.sqlgen_llm`, `stages.synthesize_llm`, `stages.template_match`, etc.), and the pre-index/p50 fields from the explain artifact are not required by this slice and should not be cited as evidence (citing them invites unaudited claims about which stage dominates or how pre-index latency compares — neither is in scope here).
-   Record each of the three required fields under a `## Evidence` heading in `diagnostic/notes/06-cu-rightsize.md` as `<field path> = <value>` (one line each). The gate below greps for the `## Evidence` heading and for the literal field-path strings `stages.total.p95_ms`, `stages.execute_db.p95_ms`, and `aggregate.post_p95_ms` to verify evidence capture happened.
+   Record each of the three required fields under a `## Evidence` heading in `diagnostic/notes/06-cu-rightsize.md`, one per line, in the exact form `<field path> = <numeric value>` — e.g. `stages.total.p95_ms = 1234.5`. Each of the three required field-path lines MUST appear exactly once inside the `## Evidence` section (the section ends at the next `## ` heading); occurrences elsewhere in the note do not satisfy the gate. Gate 2a (below) parses the section and asserts each required field-path line is present in that exact format and only once.
 2. Capture the current Neon endpoint settings into `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` via the Neon API (`GET /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`); record at minimum `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, `suspend_timeout_seconds`, and a top-level `captured_at` field set to the ISO-8601 UTC timestamp at which the `GET` was issued (e.g. `"captured_at":"2026-04-28T19:25:00Z"`).
 3. In `diagnostic/notes/06-cu-rightsize.md`, document on their own grep-able lines:
    - `chosen_min_cu:` `<value>`
@@ -116,11 +116,20 @@ EXP_DELTA_MIN=$(echo "($CHOSEN_MIN - $PRIOR_MIN) * $RATE * 730" | bc -l)
 awk -v a="$DOC_DELTA_MAX" -v b="$EXP_DELTA_MAX" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<0.01)}'
 awk -v a="$DOC_DELTA_MIN" -v b="$EXP_DELTA_MIN" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<0.01)}'
 
-# 2a. Evidence capture from the listed perf inputs is recorded under a "## Evidence" heading.
-grep -Eq '^##[[:space:]]+Evidence' diagnostic/notes/06-cu-rightsize.md
-grep -Fq 'stages.total.p95_ms' diagnostic/notes/06-cu-rightsize.md
-grep -Fq 'stages.execute_db.p95_ms' diagnostic/notes/06-cu-rightsize.md
-grep -Fq 'aggregate.post_p95_ms' diagnostic/notes/06-cu-rightsize.md
+# 2a. Evidence capture from the listed perf inputs is recorded UNDER the "## Evidence"
+# heading in the declared `<field path> = <numeric value>` format, one line per required
+# field, each appearing exactly once inside the section (the section ends at the next
+# `## ` heading). Lines that look like the right field paths but appear outside the
+# `## Evidence` section, or under it but not in the required format, do NOT satisfy
+# this gate. The numeric value must be an unsigned decimal (integer or float).
+awk '
+  /^##[[:space:]]+Evidence[[:space:]]*$/  { in_section=1; next }
+  /^##[[:space:]]/                          { if (in_section) in_section=0 }
+  in_section && /^stages\.total\.p95_ms[[:space:]]*=[[:space:]]*[0-9]+(\.[0-9]+)?[[:space:]]*$/      { total++ }
+  in_section && /^stages\.execute_db\.p95_ms[[:space:]]*=[[:space:]]*[0-9]+(\.[0-9]+)?[[:space:]]*$/ { execdb++ }
+  in_section && /^aggregate\.post_p95_ms[[:space:]]*=[[:space:]]*[0-9]+(\.[0-9]+)?[[:space:]]*$/      { post++ }
+  END { exit !(total==1 && execdb==1 && post==1) }
+' diagnostic/notes/06-cu-rightsize.md
 
 # 2b. User approval sentinel is recorded as the FIRST non-blank line under "## User approval"
 # AND is the only APPROVE-CU-RIGHTSIZE line in the file. This blocks the alternative of
@@ -259,7 +268,7 @@ psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
 
 ## Acceptance criteria
 - [ ] `diagnostic/notes/06-cu-rightsize.md` declares, on grep-able lines, `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, `cu_hour_rate_usd` (a fixed numeric constant), `cu_hour_rate_source` (a public URL beginning with `http://` or `https://`), `cost_delta_usd_per_month_max`, `cost_delta_usd_per_month_min`, `latency_budget_p95_ms`, and `latency_budget_p95_ms_basis` (exactly one of `equals stages.execute_db.p95_ms`, `equals aggregate.post_p95_ms`, or `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms`). The two `cost_delta_*` values equal `(chosen_*_cu − prior_*_cu) × cu_hour_rate_usd × 730` (within $0.01) where the `prior_*_cu` values are read from `06-cu-rightsize-before_2026-04-28.json`, and `latency_budget_p95_ms` matches `latency_budget_p95_ms_basis` when re-derived from the perf input artifacts (within ±0.01 ms for `equals …`, or ≥ `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)` for `bounded_by …`); the gate recomputes and asserts both.
-- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## Evidence` section that records, at minimum, the `stages.total.p95_ms` and `stages.execute_db.p95_ms` values from `01-baseline-snapshot_2026-04-26.json` and the `aggregate.post_p95_ms` value from `04-explain-before-after_2026-04-28.json` as `<field path> = <value>` lines.
+- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## Evidence` section that records the `stages.total.p95_ms` and `stages.execute_db.p95_ms` values from `01-baseline-snapshot_2026-04-26.json` and the `aggregate.post_p95_ms` value from `04-explain-before-after_2026-04-28.json`. Each required field-path line MUST appear inside the `## Evidence` section in the exact form `<field path> = <numeric value>` (one line each, exactly once per field; the section ends at the next `## ` heading). Gate 2a parses the section and enforces this format-and-uniqueness contract.
 - [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section whose first non-blank line under the heading matches `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, and that sentinel appears exactly once in the file. The recorded approval timestamp is strictly earlier than the **Neon-server mutation timestamp** `patch_applied_at` recorded in `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`, where `patch_applied_at` MUST equal `endpoint.updated_at` from the same artifact (the timestamp Neon set when it processed the `PATCH`); the gate asserts the chain `APPROVAL_TS < patch_applied_at <= captured_at` and the parity `patch_applied_at == endpoint.updated_at`. This is the audit signal that approval was recorded before the Neon mutation was applied, not backfilled against a later post-apply capture.
 - [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change, including `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`, plus a top-level `captured_at` field set to the ISO-8601 UTC timestamp of the pre-change `GET`.
 - [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time. It also includes top-level `captured_at` (ISO-8601 UTC, the post-apply `GET` wall-clock) and `patch_applied_at` (ISO-8601 UTC) fields, where `patch_applied_at` equals `endpoint.updated_at` in the same artifact (the Neon-server mutation timestamp), and the chain `APPROVAL_TS < patch_applied_at <= captured_at` holds.
@@ -436,7 +445,7 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 - [ ] None.
 
 ### Medium
-- [ ] Tighten gate `2a` so it verifies the three required evidence lines are recorded in the declared `<field path> = <value>` format under `## Evidence`, not merely that the field-path strings appear somewhere in the note.
+- [x] Tighten gate `2a` so it verifies the three required evidence lines are recorded in the declared `<field path> = <value>` format under `## Evidence`, not merely that the field-path strings appear somewhere in the note.
 
 ### Low
 - [ ] None.
