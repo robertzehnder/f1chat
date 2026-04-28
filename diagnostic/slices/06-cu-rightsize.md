@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T18:07:53Z
+updated: 2026-04-28T18:11:37Z
 ---
 
 ## Goal
@@ -62,7 +62,11 @@ Before step 4 may run, the implementer MUST:
      - `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms` (used when the budget is set to the larger — i.e., looser — of the two values, so it preserves both)
      The gate (2c below) re-derives `stages.execute_db.p95_ms` from `01-baseline-snapshot_2026-04-26.json` and `aggregate.post_p95_ms` from `04-explain-before-after_2026-04-28.json` and asserts: for `equals X`, `latency_budget_p95_ms` matches `X` within ±0.01 ms; for `bounded_by …`, `latency_budget_p95_ms` ≥ `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)`.
    The `prior_min_cu` / `prior_max_cu` values used in the cost formulas MUST equal the values captured in `06-cu-rightsize-before_2026-04-28.json` (gate 4 enforces parity below by recomputing the deltas).
-4. **Only after** the user-approval sentinel line (see "User approval mechanism" in Required services / env) is recorded under `## User approval` in `diagnostic/notes/06-cu-rightsize.md`, apply the new window via the Neon API (`PATCH /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`) — patch `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` to the documented values — and capture the post-apply endpoint payload into `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`. The post-change artifact MUST include a top-level `captured_at` field set to the ISO-8601 UTC timestamp at which the post-apply `GET` was issued. Gate 2b' (below) asserts the approval sentinel's timestamp is strictly **earlier** than `captured_at`, which is the audit signal that approval was recorded before the `PATCH` rather than backfilled afterward.
+4. **Only after** the user-approval sentinel line (see "User approval mechanism" in Required services / env) is recorded under `## User approval` in `diagnostic/notes/06-cu-rightsize.md`, apply the new window via the Neon API (`PATCH /projects/{NEON_PROJECT_ID}/endpoints/{NEON_ENDPOINT_ID}`) — patch `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` to the documented values — and capture the post-apply endpoint payload into `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`. The post-change artifact MUST include all of the following top-level fields:
+   - The full Neon endpoint payload under `.endpoint`, which includes `endpoint.updated_at` (the Neon-server mutation timestamp set when the `PATCH` was processed).
+   - `patch_applied_at` — set to `endpoint.updated_at` returned by the post-apply `GET`. This is the **mutation-time** timestamp from Neon's server clock, not the implementer's wall clock; it cannot be backfilled because gate 2b' asserts `patch_applied_at == endpoint.updated_at` byte-for-byte.
+   - `captured_at` — the ISO-8601 UTC timestamp at which the post-apply `GET` was issued.
+   Gate 2b' (below) asserts the chain `APPROVAL_TS < patch_applied_at <= captured_at`. The `patch_applied_at <= captured_at` bound is structural (the GET cannot read a `updated_at` later than the GET itself), but is gated explicitly so that an artifact constructed from inconsistent sources fails. The `APPROVAL_TS < patch_applied_at` bound is the audit signal that user approval was recorded **before** Neon applied the mutation, not backfilled afterward against a later post-apply capture.
 5. Run the smoke-test query `psql "$DATABASE_URL" -At -c "SELECT 1"` post-resize. The gate (below) checks the command exits 0 and prints `1`; no latency recording is required, so the plan only promises verifiable outputs.
 
 ## Changed files expected
@@ -132,23 +136,41 @@ awk '
   END { exit !found }
 ' diagnostic/notes/06-cu-rightsize.md
 
-# 2b'. Approval timestamp is strictly EARLIER than the post-change artifact's capture
-# timestamp. ISO-8601 UTC strings sort lexicographically when both end in 'Z', so a
-# string compare is equivalent to a chronological compare. This is the audit signal
-# that approval was recorded before the Neon PATCH, not backfilled afterward.
+# 2b'. Approval recorded BEFORE the Neon PATCH, anchored to a Neon-server
+# mutation timestamp (not just the post-apply GET wall-clock).
+#   * APPROVAL_TS         = chat-recorded approval timestamp (under `## User approval`).
+#   * PATCH_APPLIED_AT    = top-level `patch_applied_at` from the post-change artifact.
+#   * ENDPOINT_UPDATED_AT = `endpoint.updated_at` from the same artifact (Neon's
+#                           server-side mutation timestamp). Required to equal
+#                           PATCH_APPLIED_AT so the implementer cannot supply an
+#                           arbitrary "apply time" decoupled from Neon's record.
+#   * AFTER_TS            = top-level `captured_at` (post-apply GET wall-clock).
+# ISO-8601 UTC strings ending in 'Z' sort lexicographically as chronologically.
+# Asserts: APPROVAL_TS < PATCH_APPLIED_AT <= AFTER_TS, and
+#          PATCH_APPLIED_AT == ENDPOINT_UPDATED_AT.
 APPROVAL_TS=$(awk '
   /^##[[:space:]]+User approval[[:space:]]*$/ { in_section=1; next }
   in_section && /^[[:space:]]*$/ { next }
   in_section && /^APPROVE-CU-RIGHTSIZE[[:space:]]+/ { print $2; exit }
 ' diagnostic/notes/06-cu-rightsize.md)
-AFTER_TS=$(jq -r '.captured_at' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
+PATCH_APPLIED_AT=$(jq -r '.patch_applied_at'      diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
+ENDPOINT_UPDATED_AT=$(jq -r '.endpoint.updated_at' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
+AFTER_TS=$(jq -r '.captured_at'                    diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
 test -n "$APPROVAL_TS"
-test -n "$AFTER_TS" && test "$AFTER_TS" != "null"
-# Both must be ISO-8601 UTC ending in 'Z'.
-echo "$APPROVAL_TS" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
-echo "$AFTER_TS"    | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
-# Strict less-than: approval recorded before the post-apply GET.
-awk -v a="$APPROVAL_TS" -v b="$AFTER_TS" 'BEGIN{ exit !(a < b) }'
+test -n "$PATCH_APPLIED_AT"    && test "$PATCH_APPLIED_AT"    != "null"
+test -n "$ENDPOINT_UPDATED_AT" && test "$ENDPOINT_UPDATED_AT" != "null"
+test -n "$AFTER_TS"            && test "$AFTER_TS"            != "null"
+# All four must be ISO-8601 UTC ending in 'Z'.
+echo "$APPROVAL_TS"         | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
+echo "$PATCH_APPLIED_AT"    | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
+echo "$ENDPOINT_UPDATED_AT" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
+echo "$AFTER_TS"            | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
+# patch_applied_at must equal Neon's endpoint.updated_at (anchors apply-time to Neon's record).
+test "$PATCH_APPLIED_AT" = "$ENDPOINT_UPDATED_AT"
+# APPROVAL_TS strictly < patch_applied_at (approval recorded before the mutation).
+awk -v a="$APPROVAL_TS"      -v p="$PATCH_APPLIED_AT" 'BEGIN{ exit !(a < p) }'
+# patch_applied_at <= captured_at (the GET cannot read a future updated_at).
+awk -v p="$PATCH_APPLIED_AT" -v c="$AFTER_TS"          'BEGIN{ exit !(p <= c) }'
 
 # 2c. latency_budget_p95_ms basis is declared on a grep-able line, and the documented
 # numeric value matches the cited basis when re-derived from the perf input artifacts.
@@ -208,9 +230,9 @@ psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1
 ## Acceptance criteria
 - [ ] `diagnostic/notes/06-cu-rightsize.md` declares, on grep-able lines, `chosen_min_cu`, `chosen_max_cu`, `suspend_timeout_seconds`, `cu_hour_rate_usd` (a fixed numeric constant), `cu_hour_rate_source` (a public URL beginning with `http://` or `https://`), `cost_delta_usd_per_month_max`, `cost_delta_usd_per_month_min`, `latency_budget_p95_ms`, and `latency_budget_p95_ms_basis` (exactly one of `equals stages.execute_db.p95_ms`, `equals aggregate.post_p95_ms`, or `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms`). The two `cost_delta_*` values equal `(chosen_*_cu − prior_*_cu) × cu_hour_rate_usd × 730` (within $0.01) where the `prior_*_cu` values are read from `06-cu-rightsize-before_2026-04-28.json`, and `latency_budget_p95_ms` matches `latency_budget_p95_ms_basis` when re-derived from the perf input artifacts (within ±0.01 ms for `equals …`, or ≥ `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)` for `bounded_by …`); the gate recomputes and asserts both.
 - [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## Evidence` section that records, at minimum, the `stages.total.p95_ms` and `stages.execute_db.p95_ms` values from `01-baseline-snapshot_2026-04-26.json` and the `aggregate.post_p95_ms` value from `04-explain-before-after_2026-04-28.json` as `<field path> = <value>` lines.
-- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section whose first non-blank line under the heading matches `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, and that sentinel appears exactly once in the file. The recorded approval timestamp is strictly earlier than the `captured_at` field of `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` (which the gate asserts via lexicographic compare on the two ISO-8601 UTC strings); this is the audit signal that the approval was recorded before the Neon `PATCH` rather than backfilled afterward.
+- [ ] `diagnostic/notes/06-cu-rightsize.md` contains a `## User approval` section whose first non-blank line under the heading matches `^APPROVE-CU-RIGHTSIZE <ISO-8601 UTC timestamp>$`, and that sentinel appears exactly once in the file. The recorded approval timestamp is strictly earlier than the **Neon-server mutation timestamp** `patch_applied_at` recorded in `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json`, where `patch_applied_at` MUST equal `endpoint.updated_at` from the same artifact (the timestamp Neon set when it processed the `PATCH`); the gate asserts the chain `APPROVAL_TS < patch_applied_at <= captured_at` and the parity `patch_applied_at == endpoint.updated_at`. This is the audit signal that approval was recorded before the Neon mutation was applied, not backfilled against a later post-apply capture.
 - [ ] `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` captures the production Neon endpoint settings as they existed before the change, including `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds`, plus a top-level `captured_at` field set to the ISO-8601 UTC timestamp of the pre-change `GET`.
-- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time. It also includes a top-level `captured_at` field (ISO-8601 UTC) that is strictly later than the recorded approval timestamp.
+- [ ] `diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` captures the production Neon endpoint settings after the change; its `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal the values declared in the decision note **and** equal the values returned by a live `GET` of the production Neon endpoint at gate time. It also includes top-level `captured_at` (ISO-8601 UTC, the post-apply `GET` wall-clock) and `patch_applied_at` (ISO-8601 UTC) fields, where `patch_applied_at` equals `endpoint.updated_at` in the same artifact (the Neon-server mutation timestamp), and the chain `APPROVAL_TS < patch_applied_at <= captured_at` holds.
 - [ ] A live `GET` of the production Neon endpoint at gate time returns `autoscaling_limit_min_cu`, `autoscaling_limit_max_cu`, and `suspend_timeout_seconds` equal to the values declared in the decision note (no staging environment is involved).
 - [ ] `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` succeeds post-change (the pipeline exits 0, confirming `psql` printed exactly `1`), confirming the pooler still routes through the resized endpoint.
 
@@ -333,7 +355,7 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 **Status: REVISE**
 
 ### High
-- [ ] Make the "approval recorded before the Neon PATCH" claim actually auditable: record a mutation-time `patch_applied_at` timestamp (or equivalent apply-time artifact) and gate `APPROVAL_TS < patch_applied_at <= captured_at`, because comparing approval only to `06-cu-rightsize-after_2026-04-28.json`'s `captured_at` still allows the PATCH to happen before approval and be backfilled later.
+- [x] Make the "approval recorded before the Neon PATCH" claim actually auditable: record a mutation-time `patch_applied_at` timestamp (or equivalent apply-time artifact) and gate `APPROVAL_TS < patch_applied_at <= captured_at`, because comparing approval only to `06-cu-rightsize-after_2026-04-28.json`'s `captured_at` still allows the PATCH to happen before approval and be backfilled later.
 
 ### Medium
 - [ ] None.
