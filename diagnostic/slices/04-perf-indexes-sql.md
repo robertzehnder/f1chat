@@ -261,7 +261,8 @@ npm --prefix web run test:grading
 
 - Branch: `slice/04-perf-indexes-sql`
 - Implementation commits on top of approved-plan tip `eb39a4d`:
-  - `<filled-on-commit>` — `sql/020_perf_indexes.sql` (six `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements per Steps §1) and this Slice-completion note.
+  - `f2865d1` — `sql/020_perf_indexes.sql` (six `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements per Steps §1) and this Slice-completion note (initial blocker write-up; commit-hash placeholder still present in this commit's note body).
+  - `<amend-or-followup-commit>` — back-fills `f2865d1` into the bullet above. Implementer added this follow-up amend so the recorded hash matches the commit it describes; either the amend hash or `f2865d1` is sufficient to reproduce the diff.
 
 ### Gate exit codes
 
