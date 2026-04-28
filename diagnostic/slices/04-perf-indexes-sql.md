@@ -1,11 +1,11 @@
 ---
 slice_id: 04-perf-indexes-sql
 phase: 4
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T01:25:00-04:00
+updated: 2026-04-28T10:05:00-04:00
 ---
 
 ## Goal
@@ -341,7 +341,26 @@ Note that this same analysis would apply to Q4 (`idx_raw_pit_session_driver_lap`
 All six new indexes exist and are `indisvalid = true` on the live DB (Neon) under schema `raw`. The migration is idempotent (`IF NOT EXISTS`), so re-running gate #1 after a plan-revise round is a no-op for already-built indexes. To roll back if the planner chooses option (A): `DROP INDEX CONCURRENTLY raw.idx_raw_laps_session_driver_lap;` (must run outside an explicit transaction block, same constraint as `CREATE INDEX CONCURRENTLY`).
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/020_perf_indexes.sql` -> exit `0`
+Gate #2 `pg_index.indisvalid` DO-block check -> exit `0`
+Gate #3 EXPLAIN Q2-Q6 DO-block -> exit `0`
+Gate #4 `npm --prefix web run build` -> exit `0`
+Gate #5 `npm --prefix web run typecheck` -> exit `0`
+Gate #6 `npm --prefix web run test:grading` -> exit `0`
+
+Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> exit `0`; paths exactly `diagnostic/_state.md`, `diagnostic/slices/04-perf-indexes-sql.md`, `sql/020_perf_indexes.sql`
+
+Criterion `sql/020_perf_indexes.sql` applies cleanly -> PASS
+Criterion all five declared `raw` indexes exist and `pg_index.indisvalid = true` -> PASS
+Criterion EXPLAIN gate Q2-Q6 picks the expected index names and avoids Seq Scan -> PASS
+Criterion `npm --prefix web run build` -> PASS
+Criterion `npm --prefix web run typecheck` -> PASS
+Criterion `npm --prefix web run test:grading` -> PASS
+Criterion branch diff stays within the declared changed-file set -> PASS
+
+Decision: PASS
 
 ## Plan-audit verdict (round 1)
 
