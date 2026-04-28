@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T22:05:00Z
+updated: 2026-04-28T22:20:00Z
 ---
 
 ## Goal
@@ -192,6 +192,22 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 
 ### Low
 - [x] Add `diagnostic/slices/06-pooled-url-assertion.md` to `Changed files expected`, because Step 4 requires the implementer to reference the staging artifact path in the slice-completion note and therefore the slice file itself will be edited.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
+
+## Plan-audit verdict (round 8)
+
+**Status: APPROVED**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
