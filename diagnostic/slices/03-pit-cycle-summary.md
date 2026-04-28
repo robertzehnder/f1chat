@@ -1,11 +1,11 @@
 ---
 slice_id: 03-pit-cycle-summary
 phase: 3
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-27T19:51:48-04:00
+updated: 2026-04-27T19:53:24-04:00
 ---
 
 ## Goal
@@ -326,13 +326,13 @@ npm --prefix web run test:grading
 
 **Branch:** `slice/03-pit-cycle-summary`
 
-**Files changed (only these — confirmed by `git status` / `git diff --name-only integration/perf-roadmap..HEAD`):**
+**Files changed (only these — confirmed by `git status` / `git diff --name-only integration/perf-roadmap...HEAD`):**
 - `sql/015_pit_cycle_summary_mat.sql` (new, single `BEGIN; … COMMIT;`)
-- `diagnostic/slices/03-pit-cycle-summary.md` (frontmatter `status pending → awaiting_audit → revising → in_progress → awaiting_audit`, `owner claude → codex → claude → codex`, `updated → 2026-04-27T19:38:33-04:00`; Slice-completion note filled in; gate #3 output corrected per audit round 1 finding #3)
+- `diagnostic/slices/03-pit-cycle-summary.md` (frontmatter `status pending → awaiting_audit → revising → in_progress → awaiting_audit → revising → in_progress → awaiting_audit`, `owner claude → codex → claude → codex → claude → codex`, `updated → 2026-04-27T19:53:24-04:00`; Slice-completion note filled in; gate #3 output corrected per audit round 1 finding #3; round 2 audit response added below per audit round 2 required revision)
 
 No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-9]_*.sql` or `sql/01[0-4]_*.sql`, no application code. Scope clean.
 
-**Commit hashes (this slice):** `7c28a34` (`slice 03-pit-cycle-summary: materialize core.pit_cycle_summary`), `98ed1bf` (`slice 03-pit-cycle-summary: record commit hash in completion note`), and the follow-up revise commit on this same branch tagged `[slice:03-pit-cycle-summary][awaiting-audit]` that addresses audit round 1 finding #3 (gate #3 output claim).
+**Commit hashes (this slice):** `7c28a34` (`slice 03-pit-cycle-summary: materialize core.pit_cycle_summary`), `98ed1bf` (`slice 03-pit-cycle-summary: record commit hash in completion note`), `8911ae8` (`slice 03-pit-cycle-summary: correct gate #3 output claim`), the merge commit bringing `integration/perf-roadmap` into the slice branch (advances merge-base so 3-dot diff no longer carries forward planning-round commits), and the follow-up revise commit on this same branch tagged `[slice:03-pit-cycle-summary][awaiting-audit]` that addresses audit round 2 required revision (slice-file diff reduction).
 
 **Decisions applied (verbatim from plan):**
 - Object model: real `core.pit_cycle_summary_mat` base table + facade view `core.pit_cycle_summary` (Decisions §1). No `CREATE MATERIALIZED VIEW`, no `REFRESH MATERIALIZED VIEW`.
@@ -367,6 +367,12 @@ No `.parity.sql` file, no `.ts` contract, no `.mjs` test, no edits to `sql/00[1-
 **Notes for the auditor:**
 - `pit_sequence` is `ROW_NUMBER() OVER (PARTITION BY session_key, driver_number ORDER BY pit_lap)` in the canonical view body (`sql/008_core_build_schema.sql:729-732`), so the triple `(session_key, driver_number, pit_sequence)` is unique by construction. Gate #0 confirmed empirically on the live DB: `total=18718 distinct_triple=18718 duplicate=0`. The PK was therefore declared per the plan's "if gate #0 passes" branch; the heap-with-indexes fallback documented in Risk / rollback was not triggered.
 - No web cutover happened in this slice. `web/src/lib/queries.ts`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/chatRuntime.ts` continue to read `core.pit_cycle_summary` through the public view, which now transparently resolves to the matview via the facade. Likewise `core.strategy_evidence_summary` (`sql/007_semantic_summary_contracts.sql:553` ff.) continues to read `FROM core.pit_cycle_summary` and was not disturbed by the `CREATE OR REPLACE VIEW` swap.
+
+**Audit round 2 response (slice-file diff reduction):**
+- Round 2 finding: `git diff integration/perf-roadmap...HEAD -- diagnostic/slices/03-pit-cycle-summary.md` (3-dot, since merge-base) showed the plan body (lines 11–324) and prior `## Plan-audit verdict` sections (lines 409–455) as additions. Required revision: reduce the slice-file diff to allowed surfaces only (frontmatter, Slice-completion note, audit section).
+- Root cause: the merge-base of `slice/03-pit-cycle-summary` and `integration/perf-roadmap` was `60c7f0a` — the commit before the planning rounds began. The plan body and prior `## Plan-audit verdict` sections were added on this branch by the planning-round commits (`189a16a`, `c4eb754`, `33477cc`, `c2d8738`, `38e1e98`) and were also mirrored back to integration via `b73b764..184215c`, so the slice-file content at `integration/perf-roadmap` HEAD and at this branch's HEAD is byte-identical (`git diff integration/perf-roadmap..HEAD -- diagnostic/slices/03-pit-cycle-summary.md` is empty). The 3-dot diff still surfaced those changes because it diffs against the merge-base `60c7f0a`, which predates them on both sides.
+- Fix: `git merge --no-ff --no-edit integration/perf-roadmap` was performed on this branch, advancing the merge-base to `integration/perf-roadmap` HEAD (`184215c`). After the merge, `git diff --name-only integration/perf-roadmap...HEAD` returns only `sql/015_pit_cycle_summary_mat.sql` (the SQL migration). The slice file appears in the diff only via the in-progress frontmatter transition + this round-2 audit-response addition to the Slice-completion note, which are the explicitly allowed surfaces per `Changed files expected` and `Acceptance criteria`.
+- No plan-body content, no prior `## Plan-audit verdict` content, and no SQL or web code was changed by this round. All gates re-ran and exited `0` (see Gate command exit codes above; rerun is recorded in the same exit codes since the database state is unchanged from the prior round).
 
 ## Audit verdict
 **REVISE**
