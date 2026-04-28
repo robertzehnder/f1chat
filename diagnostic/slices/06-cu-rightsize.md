@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising_plan
-owner: claude
+status: blocked
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T21:05:00Z
+updated: 2026-04-28T15:17:54-04:00
 ---
 
 ## Goal
@@ -468,3 +468,7 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
+
+## Plan-revise escalation
+
+Hit  without converging on APPROVED. Latest audit verdict still has open items. User intervention required.
