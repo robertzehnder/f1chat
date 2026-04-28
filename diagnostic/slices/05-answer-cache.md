@@ -1,11 +1,11 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T15:11:03Z
+updated: 2026-04-28T16:05:00Z
 ---
 
 ## Goal
@@ -306,3 +306,17 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-28T13:39:03Z, so the loop context is fresh.
 - `web/src/app/api/chat/route.ts` currently returns deterministic success fields beyond the plan's cached subset, including `answerReasoning`, `sql`, and `result`; the slice needs to state whether those are cached or deterministically recomputed on hit.
+
+## Plan-audit verdict (round 17)
+
+**Status: APPROVED**
+
+### High
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` remains fresh at 2026-04-28T13:39:03Z.
+- Round-16 scope is addressed: the plan now classifies the full deterministic-success payload, including `answerReasoning`, top-level `sql`, and the deterministic portions of `result`, and requires hit-path field parity with regenerated per-request metadata.
