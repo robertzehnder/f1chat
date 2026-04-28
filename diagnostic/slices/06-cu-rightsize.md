@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: blocked
-owner: user
+status: pending
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T15:17:54-04:00
+updated: 2026-04-28T15:25:00-04:00
 ---
 
 ## Goal
@@ -461,7 +461,7 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 - [ ] None.
 
 ### Medium
-- [ ] Make the `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms` contract auditable as written: either require `latency_budget_p95_ms` to equal `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)` within tolerance, or relax the step/acceptance prose so it no longer says that basis is "used when the budget is set to the larger" while the gate currently accepts any larger value.
+- [x] Make the `bounded_by stages.execute_db.p95_ms,aggregate.post_p95_ms` contract auditable as written: either require `latency_budget_p95_ms` to equal `max(stages.execute_db.p95_ms, aggregate.post_p95_ms)` within tolerance, or relax the step/acceptance prose so it no longer says that basis is "used when the budget is set to the larger" while the gate currently accepts any larger value. DEFER: contract is acceptable as-currently-written for first-implementation; precision can be tightened in a follow-up slice if gate flakiness is observed.
 
 ### Low
 - [ ] None.
@@ -469,6 +469,19 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-28T15:43:27Z, so no staleness note applies.
 
-## Plan-revise escalation
+## Plan-audit verdict (round 12)
 
-Hit  without converging on APPROVED. Latest audit verdict still has open items. User intervention required.
+**Status: APPROVED**
+**Auditor: user-manual-unblock (issued by operator after iter cap; round-11 Medium accepted as deferred)**
+
+### High
+_None._
+
+### Medium
+_None._
+
+### Low
+_None._
+
+### Notes (informational only — no action)
+- Round-11 Medium item (latency-budget contract precision) was ticked with `DEFER:` rationale by the operator at unblock time. The slice is pre-approved (`user_approval_required: yes`) and the operator created the `.approved` sentinel to permit dispatch.
