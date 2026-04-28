@@ -1,17 +1,18 @@
 ---
 slice_id: 05-answer-cache
 phase: 5
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-28T18:00:00Z
+updated: 2026-04-28T19:30:00Z
 ---
 
 ## Goal
-Add an answer-level cache: identical (template, normalized inputs) tuples return the cached answer without hitting the LLM.
+Add an answer-level cache for deterministic-template requests: identical `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` tuples return the cached answer without re-running the deterministic SQL against Postgres and without invoking any downstream synthesis/LLM call.
 
 ## Inputs
+- `web/src/app/api/chat/route.ts` (live deterministic-template + `runReadOnlySql` call site, lines ~390–461; the cache boundary lives here)
 - `web/src/lib/chatRuntime.ts`
 - `web/src/lib/cache/` (if exists)
 
@@ -23,19 +24,23 @@ Add an answer-level cache: identical (template, normalized inputs) tuples return
 None at author time.
 
 ## Steps
-1. Build a normalizer that produces a stable cache key from `(template_id, normalized_question_inputs, contracts_hash)`.
-2. Use `lru-cache` with TTL=10min, max-size=500.
-3. Wire into the synthesis path so a cache hit returns the stored answer without invoking the LLM/synthesis call. Emit a structured `cache_hit: true | false` trace field on every synthesis-path invocation (hit short-circuits before the LLM call; miss logs `cache_hit: false`, runs synthesis, then stores).
-4. Add a test seam to the synthesis module: export a counter (or injectable `synthesize` dependency) that the answer-cache test can spy on to assert the underlying LLM/synthesis function executed exactly once across two identical requests.
-5. Tests in `web/scripts/tests/answer-cache.test.mjs`:
-   - Hit/miss: two identical `(template, inputs, contracts_hash)` calls → first miss, second hit; assert the spy/counter from Step 4 records exactly **one** synthesis invocation and the second response equals the first.
-   - Trace assertion: capture emitted log/trace entries and assert the second call emits `cache_hit: true` (the first emits `cache_hit: false`).
-   - Hash-collision-safety: different inputs → different keys, both miss, spy/counter records two synthesis invocations.
-   - TTL expiry: after advancing fake time past 10min the same key re-misses and the spy/counter increments.
+1. Build a normalizer that produces a stable cache key from `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` — these are the canonical inputs `buildDeterministicSqlTemplate` already branches on (see `diagnostic/notes/05-template-cache-coverage.md` "Recommended cache-key design"). Non-deterministic paths (no `templateKey`) bypass the cache entirely in this slice.
+2. Use `lru-cache` with TTL=10min, max-size=500. The cache stores the **final response payload** that `route.ts` would otherwise return (answer text, sql preview, generationSource, model, generationNotes, etc.) so a hit can be served without re-running SQL or synthesis.
+3. Wire the cache into `web/src/app/api/chat/route.ts` such that the lookup/store boundary sits **after** deterministic-template selection (line ~400, where `selectedTemplateKey` and `pinnedSessionKey` are known) and **before** `runReadOnlySql` (line ~461). On a cache hit: emit `cache_hit: true` on the query trace, skip `executeSqlWithTrace` / `runReadOnlySql` entirely, skip any downstream synthesis/LLM step, and return the stored payload directly. On a miss: emit `cache_hit: false`, run the existing SQL + synthesis path, then store the final payload under the cache key before returning.
+4. Add gateable test seams that let a node-only test assert both side-effects are skipped on a hit:
+   - Export an injectable `runSql` dependency (default = `runReadOnlySql`) and an injectable `synthesize` dependency (default = the current synthesis call) from the cache wiring module, **or** export monotonically-increasing call-count counters for both, so the test can spy on each. The seam must allow asserting: SQL executor invoked exactly once across two identical deterministic requests, and synthesis/LLM invoked at most once across the same pair.
+   - Export the answer-cache module's `lru-cache` instance (or a `__resetForTests()` helper) so the test can isolate its state.
+5. Tests in `web/scripts/tests/answer-cache.test.mjs` (run by `cd web && npm run test:grading`, which globs `scripts/tests/*.test.mjs` per `web/package.json:10`):
+   - Hit/miss + side-effect skip: two identical deterministic requests → first miss, second hit; assert the SQL-executor spy recorded **exactly one** invocation and the synthesis spy recorded **at most one** invocation across both requests, and the second response payload deep-equals the first.
+   - Trace assertion: capture emitted query-trace entries and assert the second call emits `cache_hit: true` while the first emits `cache_hit: false`.
+   - Hash-collision-safety: two requests with different `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` → both miss; SQL-executor spy records two invocations.
+   - TTL expiry: after advancing fake time past 10min, the same key re-misses; both the SQL-executor spy and (if present) the synthesis spy increment again.
+   - Non-deterministic bypass: a request with no deterministic `templateKey` does **not** populate or read the cache (SQL spy increments on every call, no `cache_hit` field is emitted as `true`).
 
 ## Changed files expected
-- `web/src/lib/cache/answerCache.ts`
-- `web/src/lib/chatRuntime.ts` (or whichever module owns the synthesis call site — implementer confirms during Step 3; both the cache wiring and the test seam from Step 4 live here unless a smaller module is extracted)
+- `web/src/lib/cache/answerCache.ts` (new — normalizer, lru-cache instance, `__resetForTests`)
+- `web/src/app/api/chat/route.ts` (cache lookup/store boundary inserted between deterministic-template selection and `runReadOnlySql`; injectable `runSql` / `synthesize` seams or counter exports added here)
+- `web/src/lib/chatRuntime.ts` (only if the cache boundary is extracted into a helper that lives here; otherwise unchanged — implementer confirms during Step 3)
 - `web/scripts/tests/answer-cache.test.mjs`
 
 ## Artifact paths
@@ -49,9 +54,10 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] Two identical questions in succession: the test spies on the synthesis/LLM call and asserts it ran **exactly once** across both requests; the second request's emitted trace contains `cache_hit: true` and returns the same payload as the first.
-- [ ] Different questions never collide on the cache key (both miss; synthesis spy increments twice).
-- [ ] TTL expiry: after fake-time advance past 10min, the same key re-misses and synthesis is invoked again (spy/counter increments).
+- [ ] Two identical deterministic requests in succession: the test spies on the SQL executor (`runReadOnlySql`) and asserts it ran **exactly once** across both requests; the synthesis/LLM spy recorded **at most one** invocation across the pair; the second request's emitted trace contains `cache_hit: true` and returns a payload that deep-equals the first.
+- [ ] Different `(templateKey, sessionKey, sortedDriverNumbers, contracts_hash)` tuples never collide on the cache key (both miss; SQL-executor spy increments twice).
+- [ ] TTL expiry: after fake-time advance past 10min, the same key re-misses, the SQL-executor spy increments again, and the trace re-emits `cache_hit: false` then `cache_hit: true` on a follow-up identical call.
+- [ ] Non-deterministic requests (no `templateKey`) bypass the cache: SQL-executor spy increments on every call and no entry is written to or read from the cache.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -85,10 +91,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Move the cache lookup/store boundary ahead of `runReadOnlySql` for deterministic-template requests, and add a gateable assertion that the second identical request skips both SQL execution and synthesis; the current “synthesis-path” wording would still allow the database work to run on every hit and misses the answer-cache goal described in the prior-context audit.
+- [x] Move the cache lookup/store boundary ahead of `runReadOnlySql` for deterministic-template requests, and add a gateable assertion that the second identical request skips both SQL execution and synthesis; the current “synthesis-path” wording would still allow the database work to run on every hit and misses the answer-cache goal described in the prior-context audit.
 
 ### Medium
-- [ ] Update `## Inputs` and `## Changed files expected` to include `web/src/app/api/chat/route.ts` (or explicitly name the extracted module that owns the synthesis/answer-cache boundary), because the live synthesis call site is not in `web/src/lib/chatRuntime.ts`.
+- [x] Update `## Inputs` and `## Changed files expected` to include `web/src/app/api/chat/route.ts` (or explicitly name the extracted module that owns the synthesis/answer-cache boundary), because the live synthesis call site is not in `web/src/lib/chatRuntime.ts`.
 
 ### Low
 
