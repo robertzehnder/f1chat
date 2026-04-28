@@ -1,10 +1,10 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
-updated: 2026-04-27T20:54:28-04:00
+updated: 2026-04-27T20:55:51-04:00
 created: 2026-04-26
 ---
 
@@ -319,14 +319,17 @@ npm --prefix web run test:grading
 ## Slice-completion note
 
 - **Branch:** `slice/03-strategy-evidence-summary` (off `integration/perf-roadmap`).
-- **Implementation commit:** filled at commit time (this slice ships a single commit on top of the round-2 plan-approved commit `1425c08`).
+- **Implementation commits:** `bd740d7` (initial round-3 implementation on top of plan-approved `9b82a63`) + this slice's revise commit (the most recent `[slice:03-strategy-evidence-summary][awaiting-audit]`-tagged commit on `slice/03-strategy-evidence-summary`) addressing the round-1 implementation-audit REVISE on the migration's grain-rationale comment.
+- **Revise scope:** rewrote the header comment in `sql/016_strategy_evidence_summary_mat.sql` so it asserts `(session_key, driver_number, pit_sequence)` uniqueness as an output-level property of `core_build.strategy_evidence_summary` established by gate #0's pre-flight probe — and explicitly states that the property is NOT inherited transitively from `core_build.pit_cycle_summary` because the canonical view's `ROW_NUMBER() OVER (PARTITION BY a.session_key, a.driver_number, a.pit_lap …)` + `rival_rank = 1` filter can collapse multiple input rows sharing `(session_key, driver_number, pit_lap)`. The PK and bulk-INSERT semantics are unchanged; the comment now matches the approved Decisions section verbatim. No SQL DDL, no DML, no other files touched.
 - **Files changed (matches "Changed files expected" exactly — verified `git diff --name-only integration/perf-roadmap...HEAD`):**
-  - `sql/016_strategy_evidence_summary_mat.sql` (new)
+  - `sql/016_strategy_evidence_summary_mat.sql` (new — header comment revised in this round)
   - `diagnostic/slices/03-strategy-evidence-summary.md` (frontmatter status/owner/timestamp transitions and this Slice-completion note only)
+  - `diagnostic/_state.md` (single-line auditor note appended in a prior round; unchanged in this revise)
 - **Decisions executed verbatim from the approved plan:**
   - Real `CREATE TABLE core.strategy_evidence_summary_mat` (NOT `CREATE MATERIALIZED VIEW`), with explicit 44-column declaration mirroring `core.strategy_evidence_summary` at `sql/007_semantic_summary_contracts.sql:553` ff. and `PRIMARY KEY (session_key, driver_number, pit_sequence)`.
   - `TRUNCATE` + `INSERT INTO core.strategy_evidence_summary_mat SELECT * FROM core_build.strategy_evidence_summary` for idempotent population.
   - Public view swapped via `CREATE OR REPLACE VIEW core.strategy_evidence_summary AS SELECT * FROM core.strategy_evidence_summary_mat` (not `DROP VIEW … CREATE VIEW`), inside the same `BEGIN; … COMMIT;` transaction.
+  - Grain rationale matches the approved plan: uniqueness on `(session_key, driver_number, pit_sequence)` is asserted at the output level only, established by gate #0's probe over `core_build.strategy_evidence_summary`, NOT inherited transitively from `core_build.pit_cycle_summary` (per the approved Decisions section's round-3 narrowing). Both the migration header comment and this note now state the rationale identically.
   - No TypeScript contract (`web/src/lib/contracts/strategyEvidenceSummary.ts`), no `.mjs` parity script (`web/scripts/tests/parity-strategy-evidence.test.mjs`), no edits to `sql/00[1-9]_*.sql` or `sql/01[0-5]_*.sql`, no application code, no `.parity.sql` file — parity check runs as inline `psql` heredoc in gate command #3.
 - **Gate results (run order matches the slice's "Gate commands" block — all exit 0):**
   - Gate #0 (pre-flight grain probe over `core_build.strategy_evidence_summary` on `(session_key, driver_number, pit_sequence)`): exit `0`. NOTICE: `total=18717 distinct_triple=18717 duplicate=0`.
