@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T17:05:00Z
+updated: 2026-04-28T16:40:54Z
 ---
 
 ## Goal
@@ -122,3 +122,19 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
 - Repo context check: [web/src/lib/db.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/src/lib/db.ts:17) resolves URLs via `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`, so verification must control both env vars, not only `DATABASE_URL`.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Make Steps 3 and 4 explicit about neutralizing `db.ts` import-time side effects when loading `assertPooledDatabaseUrl`, because Step 2 also requires `assertPooledDatabaseUrl(process.env)` to run at module load and the current test/harness instructions can throw before the exported function is invoked or accidentally depend on ambient env.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` last updated `2026-04-28T15:43:27Z`, so no staleness note applies.
