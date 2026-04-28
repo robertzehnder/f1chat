@@ -1,10 +1,10 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
-updated: 2026-04-27T20:35:52-04:00
+updated: 2026-04-27T20:37:34-04:00
 created: 2026-04-26
 ---
 
@@ -391,6 +391,19 @@ npm --prefix web run test:grading
 
 ### Medium
 - [x] Correct the PK/grain rationale so it does not claim `core_build.strategy_evidence_summary` inherits per-pit-event `(session_key, driver_number, pit_sequence)` grain transitively from `core_build.pit_cycle_summary` without qualification: because the canonical view ranks rivals with `ROW_NUMBER() OVER (PARTITION BY a.session_key, a.driver_number, a.pit_lap ...)` and filters `rival_rank = 1`, duplicate `pit_lap` rows inside a driver-session would collapse before materialization. Either add an explicit prerequisite/probe proving `core_build.pit_cycle_summary` is unique on `(session_key, driver_number, pit_lap)`, or restate the PK as an output-level uniqueness assertion only and remove the stronger inherited-grain claim.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current enough to use; no stale-state note is needed for this round.
+
+## Plan-audit verdict (round 4)
+
+**Status: APPROVED**
+
+### High
+
+### Medium
 
 ### Low
 
