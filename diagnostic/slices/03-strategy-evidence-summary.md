@@ -1,11 +1,11 @@
 ---
 slice_id: 03-strategy-evidence-summary
 phase: 3
-status: revising_plan
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
+updated: 2026-04-27T20:26:44-04:00
 created: 2026-04-26
-updated: 2026-04-27T20:55:00-04:00
 ---
 
 ## Goal
