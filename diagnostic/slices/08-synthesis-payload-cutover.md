@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T23:30:00Z
+updated: 2026-04-29T22:48:09Z
 ---
 
 ## Goal
@@ -217,6 +217,24 @@ Rollback: `git revert <commit>`. The grep drift gates make accidental re-introdu
 
 ### Medium
 - [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
+- Prior-context paths `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json` and `diagnostic/slices/08-fact-contract-shape.md` both exist.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] Fix Step 7 and Acceptance criterion #3 so `contractName` is sourced from an actual semantic contract/table identifier on the synthesis path, not `runtime.questionType`; `FactContract.contractName` was defined in `diagnostic/slices/08-fact-contract-shape.md` as the contract identifier (for example `core.laps_enriched`), and using values like `aggregate_analysis` would break the stated contract-shaped Runtime payload.
+
+### Medium
+- [ ] Reconcile Step 5 with the Goal and Acceptance criterion #5 by preserving the existing `Rows (sample):` prompt text exactly or explicitly allowing that drift; the current live prompt in `web/src/lib/anthropic.ts:122-134` uses `JSON.stringify(input.rows.slice(0, 25))`, but the plan now specifies `JSON.stringify(input.contract.rows.slice(0, 25), null, 2)`, which changes the prompt text outside the Runtime block.
+- [ ] Add an acceptance proof for the “only prompt-text change is the Runtime block” claim: require the extracted builder to keep the existing synthesis instructions/static prefix and non-Runtime dynamic blocks byte-for-byte compatible with the current prompt, or narrow the Goal to permit additional prompt drift.
 
 ### Low
 - [ ] None.
