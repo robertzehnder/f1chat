@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -256,6 +256,20 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Amend Step 3 and/or Step 6 to require that `ChatWorkspace.tsx` inserts the placeholder assistant message into `patchActiveConversation(...messages...)` before `consumeChatStream(...)` begins, or add a deterministic gate for that ordering; otherwise the current `onDelta` shape can still patch `c.messages.map(...)` against a message that is not yet in state, so the plan can pass its static wiring test without any progressive UI update (`web/src/components/chat/ChatWorkspace.tsx:160`, `web/src/components/chat/ChatWorkspace.tsx:183-218`).
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` is current at `2026-04-29T18:25:29Z`; `sed -n '1,220p' diagnostic/_state.md` exited `0`.
+
+## Plan-audit verdict (round 11)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify route and test behavior for every `/api/chat` branch after `ChatWorkspace.tsx` starts sending `Accept: text/event-stream` on all requests: clarification / completeness-blocked / cache-hit / validation-error / other non-LLM exits must return SSE `final` or `error` frames (or the client must explicitly fall back before calling `consumeChatStream`), and add at least one deterministic gate for a zero-delta success or early-return path so the helper never receives plain JSON on a valid SSE-opted request (`web/src/components/chat/ChatWorkspace.tsx:183`, `web/src/app/api/chat/route.ts:174`, `web/src/app/api/chat/route.ts:180`, `web/src/app/api/chat/route.ts:288`, `web/src/app/api/chat/route.ts:358`, `web/src/app/api/chat/route.ts:550`).
+
+### Medium
 
 ### Low
 
