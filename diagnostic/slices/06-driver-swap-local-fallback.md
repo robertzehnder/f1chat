@@ -129,7 +129,7 @@ round-3 revise commit that replaces the `Promise.race` probe with a real
 - Round-1 hash-recording follow-up: `6ac862b`
 - Round-2 revise commit: `2dcddec55da5e911f57559d7e65c87b29fd3ca6d`
 - Round-2 hash-recording follow-up: `6692934`
-- Round-3 revise commit (this commit): see this commit's SHA on the branch tip.
+- Round-3 revise commit (this commit): `8bdd1952b438d08c431c41032bacdb801897da04`
 
 **Decisions made during implementation:**
 
