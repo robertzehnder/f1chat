@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T23:05:00-04:00
+updated: 2026-04-28T23:23:52-04:00
 ---
 
 ## Goal
@@ -80,25 +80,28 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 
 **Commits (this branch, atop the plan-approved commit `403662e`):**
 - `31beb0f` — feat(db): assert Neon pooler DATABASE_URL in production startup. Adds `assertPooledDatabaseUrl` to `web/src/lib/db.ts`, the test file, the staging-verification harness, and the staging artifact.
-- (this commit) — fill in slice-completion note.
+- `20fc5d3` — fill in initial slice-completion note (round-1 audit revision).
+- `8beeb06` — flip awaiting_audit; codex re-audits under artifact-paths allow-list.
+- (this commit) — round-2 audit revision: drop the `NEXT_PHASE` bypass so the production import-time assertion is unconditional, refresh staging artifact, and update this note.
 
 **Files changed (matches `Changed files expected`):**
-- `web/src/lib/db.ts` — added/exports `assertPooledDatabaseUrl(env)` and invokes it at module load before `createPool()` runs.
-- `web/scripts/tests/pooled-url-assertion.test.mjs` — new unit test, 7 cases covering all 5 acceptance criteria + both directions of the precedence contract.
-- `web/scripts/verify-pooled-url.mjs` — new staging-verification harness for Step 4.
-- `diagnostic/slices/06-pooled-url-assertion.md` — frontmatter set to `status=awaiting_audit, owner=codex` and this slice-completion note.
+- `web/src/lib/db.ts` — exports `assertPooledDatabaseUrl(env)` and now invokes it unconditionally at module load before `createPool()` runs (the prior `NEXT_PHASE !== 'phase-production-build'` guard has been removed per round-2 audit).
+- `web/scripts/tests/pooled-url-assertion.test.mjs` — unit test, 7 cases covering all 5 acceptance criteria + both directions of the precedence contract (unchanged this revision).
+- `web/scripts/verify-pooled-url.mjs` — staging-verification harness for Step 4 (unchanged this revision).
+- `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` — refreshed to reflect the unconditional module-load assertion (direct-URL stack-trace site is now `db.mjs:101`, the unconditional invocation site).
+- `diagnostic/slices/06-pooled-url-assertion.md` — frontmatter set to `status=awaiting_audit, owner=codex` and this updated slice-completion note.
 
-**Artifact:** `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` — combined stdout/stderr of both `node scripts/verify-pooled-url.mjs` invocations (pooler URL and direct URL), with `env -u NEON_DATABASE_URL` documented in each captured command line. Pooler-URL invocation: `OK: pooler url accepted` / exit 0. Direct-URL invocation: `Error: Neon pooler URL required in production: got host='ep-foo-bar.us-east-2.aws.neon.tech' port='5432'.` / exit 1.
+**Artifact:** `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` — combined stdout/stderr of both `node scripts/verify-pooled-url.mjs` invocations (pooler URL and direct URL), with `env -u NEON_DATABASE_URL` documented in each captured command line. Pooler-URL invocation: `OK: pooler url accepted` / exit 0. Direct-URL invocation: `Error: Neon pooler URL required in production: got host='ep-foo-bar.us-east-2.aws.neon.tech' port='5432'.` / exit 1. The direct-URL throw now originates at module-load `db.mjs:101` (the unconditional `assertPooledDatabaseUrl(process.env)` call) — earlier than `verify-pooled-url.mjs:37` — confirming the round-2 fix.
 
 **Gate-command exit codes (from `cd web && ...`):**
+- `npm run build` → exit `0` (run with `env -u DATABASE_URL -u NEON_DATABASE_URL` — see decision #2 below)
 - `npm run typecheck` → exit `0`
 - `npm run test:grading` → exit `0` (58 subtests: 48 pass, 0 fail, 10 skipped — including the 7 new `pooled-url-assertion` cases)
-- `npm run build` → exit `0`
 
 **Decisions / non-obvious notes for the auditor:**
-1. `assertPooledDatabaseUrl` is a pure function over `env: NodeJS.ProcessEnv`. Both the test and the staging harness invoke it directly with controlled env fixtures / `process.env`, never relying on side-effectful module load. The test file neutralizes the module-load `assertPooledDatabaseUrl(process.env)` call by setting `NODE_ENV='test'` and `delete`-ing `NEON_DATABASE_URL`/`DATABASE_URL`/`NEON_DB_*`/`DB_*` before importing the transpiled `db.ts`.
-2. The module-load invocation in `db.ts` is gated by `process.env.NEXT_PHASE !== 'phase-production-build'`. Reason: `next build` sets `NODE_ENV=production` while collecting page data, which would otherwise consume the developer's local `DATABASE_URL` (e.g. the `127.0.0.1:5433` URL exported in this environment) and break the build gate. The guard is at the module-load invocation site, not inside the pure function — the function's contract for the test fixtures (and for the harness, which is not run via `next build`) is unchanged. The assertion still fires at production runtime (`next start`, `scripts/verify-pooled-url.mjs`).
-3. The harness writes its transpiled `db.mjs` under `web/scripts/.tmp-verify-pooled-url-*` (instead of `os.tmpdir()`) so Node's resolver walks up to `web/node_modules` and finds the real `pg` package; `pg.Pool` construction is lazy so this is safe and no TCP connection is opened. The harness never calls `pool.query`, `pool.connect`, or `pool.end`. Per Step 4's "module-load interaction note", the direct-URL invocation's throw originates from the module-load `assertPooledDatabaseUrl(process.env)` call (visible in the artifact stack trace at `db.mjs:107`, before the harness re-invokes the exported function).
+1. `assertPooledDatabaseUrl` is a pure function over `env: NodeJS.ProcessEnv`. Both the test and the staging harness invoke it directly with controlled env fixtures / `process.env`, never relying on side-effectful module load. The test file neutralizes the module-load `assertPooledDatabaseUrl(process.env)` call by setting `NODE_ENV='test'` and `delete`-ing `NEON_DATABASE_URL`/`DATABASE_URL`/`NEON_DB_*`/`DB_*` before importing the transpiled `db.ts`, so the unconditional module-load invocation is a no-op at import time and cannot consume ambient env.
+2. **Round-2 fix — removed the `NEXT_PHASE` bypass.** The previous revision wrapped the module-load call with `if (process.env.NEXT_PHASE !== "phase-production-build")` so `next build` (which forces `NODE_ENV=production` while collecting page data) would not consume the developer's ambient non-pooler `DATABASE_URL`. The round-1 auditor flagged this as a Step-2 contract violation: the import-time assertion must be unconditional in production. The bypass has been removed entirely; `assertPooledDatabaseUrl(process.env)` now always runs at module load. **Implication for the build gate:** `cd web && npm run build` is run under `env -u DATABASE_URL -u NEON_DATABASE_URL` so the build does not pick up a developer's ambient non-pooler URL (with both vars unset, `firstUrl` returns `undefined` and the assertion early-returns; `createPool` then falls back to the lazy local `DB_HOST` defaults — no TCP connection at construction time). This matches a clean CI/production-build environment, where DATABASE_URL is either unset (build phase) or already a Neon pooler URL.
+3. The harness writes its transpiled `db.mjs` under `web/scripts/.tmp-verify-pooled-url-*` (instead of `os.tmpdir()`) so Node's resolver walks up to `web/node_modules` and finds the real `pg` package; `pg.Pool` construction is lazy so this is safe and no TCP connection is opened. The harness never calls `pool.query`, `pool.connect`, or `pool.end`. Per Step 4's "module-load interaction note", the direct-URL invocation's throw originates from the module-load `assertPooledDatabaseUrl(process.env)` call (visible in the artifact stack trace at `db.mjs:101`, before the harness re-invokes the exported function at `verify-pooled-url.mjs:37`).
 4. Both staging invocations use `env -u NEON_DATABASE_URL` per Step 4 to defeat any ambient higher-precedence variable that would mask `DATABASE_URL`.
 
 **Self-check vs. acceptance criteria:**
