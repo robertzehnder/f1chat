@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-route-sse
 phase: 7
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T15:40:00-04:00
+updated: 2026-04-29T20:20:00-04:00
 ---
 
 ## Goal
@@ -86,3 +86,23 @@ bash scripts/loop/test_grading_gate.sh
 
 ## Audit verdict
 (filled by codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-1 forced-findings ratchet: not applied — genuine Medium items found)**
+
+### High
+_(none)_
+
+### Medium
+- [ ] Step 6 instructs the implementer to "reuse the existing `loadRouteAndCacheModule()` stub harness pattern" but the `ANTHROPIC_STUB` in `answer-cache.test.mjs` exports only `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and `synthesizeAnswerWithAnthropic` — it has no `synthesizeAnswerStream` async-generator stub. The plan must explicitly require the new test file to extend the ANTHROPIC_STUB with a `__setSynthesizeStreamImpl` hook and an async-generator `synthesizeAnswerStream` export; without it the synthesis SSE path test cannot inject a controllable stream and will throw at runtime.
+- [ ] Step 6 asserts "≥2 `answer_delta` frames + 1 `final` frame" from SSE mode, but no existing harness provides a pattern for reading a `ReadableStream` response body as SSE text. The SSE-mode route returns `new Response(new ReadableStream(...))`, not a `NextResponse.json(...)` mock object; the plan must specify that the new test needs an SSE-reader helper (e.g. `await response.text()` then split on `\n\n`) or cite the pattern from `streaming-synthesis-server.test.mjs` as the reference — otherwise the implementer has no unambiguous way to consume SSE frames in-process.
+
+### Low
+- [ ] Step 6 references "the existing `loadRouteAndCacheModule()` stub harness pattern" (name from `answer-cache.test.mjs`); more recent test files (`zero-llm-path.test.mjs`, `skip-repair.test.mjs`) use `loadRouteHarness()`. Align the naming guidance to the newer convention to avoid inconsistency.
+
+### Notes (informational only — no action)
+- `synthesizeAnswerStream` confirmed exported at `anthropic.ts:566` — prerequisite slice is merged and the dependency is available.
+- Gate ordering (build → typecheck) is correct and does not exhibit the typecheck-before-build anti-pattern from audit principles.
+- All three `## Prior context` paths exist on disk.
