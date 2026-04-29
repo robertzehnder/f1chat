@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T15:30:00Z
+updated: 2026-04-29T20:10:00Z
 ---
 
 ## Goal
@@ -214,3 +214,19 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T14:33:39Z, so no stale-state note is required.
 - The existing gate now correctly catches stale keys removed from the registry; the remaining gap is source-side additions or renames not mirrored into `DETERMINISTIC_KEYS`.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify how the route-level tests avoid a real Postgres dependency: either add the exact seam that stubs `runReadOnlySql`/DB results for deterministic requests and the negative control, or move a local DB service requirement into `## Required services / env` and the gate assumptions; as written, Step 4 still executes deterministic SQL before the zero-LLM assertion, so `Required services / env: None` is not implementable.
+
+### Medium
+- None.
+
+### Low
+- None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T14:33:39Z, so no stale-state note is required.
