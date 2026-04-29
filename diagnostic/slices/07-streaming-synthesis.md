@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: revising_plan
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29
+updated: 2026-04-29T15:33:02-04:00
 ---
 
 ## Goal
@@ -275,3 +275,7 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md:1` is current at `2026-04-29T18:25:29Z`; `sed -n '1,220p' diagnostic/_state.md` exited `0`.
+
+## Plan-revise escalation
+
+Hit  without converging on APPROVED. Latest audit verdict still has open items. User intervention required.
