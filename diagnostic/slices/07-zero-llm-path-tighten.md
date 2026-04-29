@@ -1,7 +1,7 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-26
@@ -103,3 +103,21 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T14:33:39Z, so no stale-state note is required.
 - `npm run test:grading` covers `scripts/tests/*.test.mjs` (`web/package.json:8`), so the named test file pattern is compatible with the current gate.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — genuine High found)**
+
+### High
+- [ ] Fix the eligibility drift gate: the loop body `if grep -qE "templateKey: \"$k\"" "$src"; then :; fi` has no `else` clause, so a key present in the test file but absent from `deterministicSql.ts` is silently ignored; `$missing` is declared but never set to `1` and never checked, so the gate always exits `0` regardless of drift. Replace with: `if ! grep -qE "templateKey: \"$k\"" "$src"; then echo "Missing templateKey: $k" >&2; missing=1; fi` inside the loop, followed by `[ "$missing" -eq 0 ] || exit 1` after it. Also scope the grep on the test file to templateKey values only (e.g. `grep -oP '(?<=")[a-z_0-9]+(?=")' "$test_file"` filtered by context, or use the DETERMINISTIC_KEYS constant directly) to avoid false-positive matches on non-key quoted strings.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- All three round-1 Medium items are resolved: Phase 5 audit path is now in `## Prior context`, dev-only assertion acceptance criteria and test step are present, and `## Out of scope` explicitly names the read-only files.
+- Round-1 High bucket was empty; the only new finding is the broken drift gate introduced in the revision.
