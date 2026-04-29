@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -228,3 +228,18 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md:1` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
+
+## Plan-audit verdict (round 9)
+
+**Status: REVISE**
+
+### High
+- [ ] Repoint Step 2 and Step 4's planned streaming test seam to the module that actually owns answer synthesis today, or explicitly expand scope to move that ownership first; the live route still builds streamed answer text via `cachedSynthesize(...)` in `web/src/app/api/chat/route.ts:743`, while `web/src/lib/chatRuntime.ts` currently exposes runtime resolution/planning only, so the proposed `chatRuntime` streaming iterator / `__setSynthesisStreamImpl` hook is attached to the wrong module.
+
+### Medium
+- [ ] Align the Step 3 / Step 6 wiring constraint with the actual owning message-update path in `web/src/components/chat/ChatWorkspace.tsx:125` and `web/src/components/chat/ChatWorkspace.tsx:160`; the current file mutates assistant messages through `setStore(...)` / `patchActiveConversation(...)`, not a `setMessages(...)` setter, so the hard-coded `setMessages` AST gate currently requires an unscoped state-shape refactor instead of deterministically gating the live streaming update path.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` is current at `2026-04-29T18:25:29Z`; `sed -n '1,220p' diagnostic/_state.md` exited `0`.
