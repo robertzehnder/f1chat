@@ -1,8 +1,8 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: ready_to_merge
-owner: user
+status: done
+owner: -
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-29T09:21:00-04:00
