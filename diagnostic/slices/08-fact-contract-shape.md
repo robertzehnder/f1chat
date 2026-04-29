@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:10:00Z
+updated: 2026-04-29T22:35:00Z
 ---
 
 ## Goal
@@ -58,20 +58,51 @@ None at author time.
    5. and cleans the temp directory in a `finally`/`after` hook via `rm(dir, { recursive: true, force: true })`.
    
    Concretely: the test file imports `ts from "typescript"` (already a dev-dependency, no new deps), resolves `web/src/lib/contracts/factContract.ts` from `import.meta.url` (`path.resolve(__dirname, "..", "..", "src/lib/contracts/factContract.ts")`), and exposes the transpiled `serializeRowsToFactContract` to the assertions above. No new harness, runner, or `package.json` script is added — the test stays compatible with `node --test scripts/tests/*.test.mjs` exactly as the sibling tests do. A `.ts` loader (`tsx`, `ts-node`, `--experimental-loader`, etc.) is intentionally NOT introduced.
-5. Add a type-level gate: create `web/src/lib/contracts/factContract.type-test.ts` that imports `FactContractGrain` and asserts it is structurally equal to the exact union `"session" | "lap" | "stint" | "driver" | "meeting" | "other"` using an equality helper, e.g.:
+5. Add a type-level gate: create `web/src/lib/contracts/factContract.type-test.ts` that imports `FactContractGrain`, `FactContractRow`, and the `serializeRowsToFactContract` helper, and asserts THREE classes of compile-time invariants. The file must be inside the `web/` TypeScript project so all three classes are type-checked by `npm run typecheck`; it exports nothing of value at runtime and exists solely as a compile-time gate.
+
+   **(a) `FactContractGrain` exact-union equality.** Use an `Expect<Equal<...>>` helper to assert structural set-equality with the canonical union:
    ```ts
-   import type { FactContractGrain } from "./factContract";
+   import type { FactContractGrain, FactContractRow } from "./factContract";
+   import { serializeRowsToFactContract } from "./factContract";
+
    type Equal<A, B> =
      (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
    type Expect<T extends true> = T;
    type _GrainExact = Expect<Equal<FactContractGrain, "session" | "lap" | "stint" | "driver" | "meeting" | "other">>;
    ```
-   This file must be inside the `web/` TypeScript project so it is type-checked by `npm run typecheck`. The `Equal` helper compares unions structurally (set-equality), not by source-text ordering, so the regressions it actually detects are: (a) **widening** — e.g., changing the type to `string` or adding a new member like `"weekend"`; (b) **narrowing** — removing a member such as `"other"`; (c) **member substitution** — replacing `"meeting"` with `"event"`; (d) **export removal** — the import itself fails to resolve. It does **NOT** detect a pure source-order reorder (e.g., listing `"lap" | "session" | ...`) because TypeScript unions are unordered at the type level — and that is acceptable, because the union's *behavior* is identical under reorder; consumers exhaustively switch on members, not on declaration position. The file exports nothing of value at runtime; it exists solely as a compile-time gate.
+   The `Equal` helper compares unions structurally (set-equality), not by source-text ordering, so the regressions it actually detects are: (i) **widening** — e.g., changing the type to `string` or adding a new member like `"weekend"`; (ii) **narrowing** — removing a member such as `"other"`; (iii) **member substitution** — replacing `"meeting"` with `"event"`; (iv) **export removal** — the import itself fails to resolve. It does **NOT** detect a pure source-order reorder (e.g., listing `"lap" | "session" | ...`) because TypeScript unions are unordered at the type level — and that is acceptable, because the union's *behavior* is identical under reorder; consumers exhaustively switch on members, not on declaration position.
+
+   **(b) `FactContractRow` rejects non-JSON-serializable value kinds.** Use `@ts-expect-error` directives so each forbidden value-kind is required to produce a typecheck error (an unused `@ts-expect-error` is itself an error, so the assertion is symmetric — it fires if the row type is widened or the directive becomes vacuous):
+   ```ts
+   // @ts-expect-error — bigint is not assignable to FactContractValue
+   const _badBigint: FactContractRow = { v: 1n };
+   // @ts-expect-error — undefined is not assignable to FactContractValue
+   const _badUndefined: FactContractRow = { v: undefined };
+   // @ts-expect-error — function values are not assignable to FactContractValue
+   const _badFunction: FactContractRow = { v: () => 0 };
+   // @ts-expect-error — symbol is not assignable to FactContractValue
+   const _badSymbol: FactContractRow = { v: Symbol("x") };
+   ```
+
+   **(c) Nested readonly surfaces reject mutation.** Construct a `serializeRowsToFactContract` result and assert the type-level readonly contract on `keys` (`Readonly<Record<...>>` — readonly index signature) and `rows` (`ReadonlyArray<FactContractRow>` — no `push`):
+   ```ts
+   const _result = serializeRowsToFactContract({
+     contractName: "core.test",
+     grain: "session",
+     keys: { session_key: 1 },
+     rows: [{ a: 1 }],
+   });
+   // @ts-expect-error — keys entries are readonly via Readonly<Record<string, ...>>
+   _result.keys.session_key = 2;
+   // @ts-expect-error — rows is ReadonlyArray<FactContractRow>; push is not in its interface
+   _result.rows.push({ a: 2 });
+   ```
+   These two `@ts-expect-error` directives are the deterministic typecheck surface that backs the `keys`/`rows` readonly claims in the acceptance criteria — if either field is widened (e.g., `keys` retyped to bare `Record<...>`, or `rows` retyped to `Array<...>`), the directive becomes vacuous and `npm run typecheck` fails.
 6. Do NOT wire into synthesis or validators here. The cutover lives in `08-synthesis-payload-cutover`; validator wiring lives in `08-validators-*`. Any cross-module import of `factContract.ts` outside its own test files (the runtime test in `web/scripts/tests/` and the type-level gate in `web/src/lib/contracts/`) is out of scope for this slice.
 
 ## Changed files expected
 - `web/src/lib/contracts/factContract.ts` (new — `FactContract` type, `FactContractGrain` union, `FactContractScalar`/`FactContractValue`/`FactContractRow` JSON-serializable row types, `SemanticContractSerializer` interface, `serializeRowsToFactContract` helper)
-- `web/src/lib/contracts/factContract.type-test.ts` (new — compile-time type-equality gate for `FactContractGrain`; covered by `npm run typecheck`)
+- `web/src/lib/contracts/factContract.type-test.ts` (new — compile-time gate covering: (a) `FactContractGrain` exact-union equality via `Expect<Equal<...>>`; (b) `FactContractRow` rejection of `bigint`/`undefined`/function/`symbol` row values via `@ts-expect-error`; (c) nested readonly mutation rejection on `_result.keys.session_key = ...` and `_result.rows.push(...)` via `@ts-expect-error`; covered by `npm run typecheck`)
 - `web/scripts/tests/fact-contract-shape.test.mjs` (new — runtime unit tests for the helper and top-level-freeze invariant)
 
 ## Artifact paths
@@ -85,10 +116,10 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, and `FactContractRow` are exported from `web/src/lib/contracts/factContract.ts`, and the `rows` field on `FactContract` is typed `ReadonlyArray<FactContractRow>` (NOT `ReadonlyArray<Record<string, unknown>>`), so a row property whose value type is `bigint`, `undefined`, a function, or a `symbol` fails `npm run typecheck`. Class-instance rejection is intentionally NOT asserted (TypeScript structural typing makes a type-level prohibition impossible; that surface is owned by a later runtime validator in `08-validators-*`).
-- [ ] `serializeRowsToFactContract` returns an object whose `rowCount` equals `rows.length` for both empty and non-empty inputs, and the returned object satisfies `Object.isFrozen(result) === true` at the top level (the helper does NOT deep-freeze nested `keys`/`rows`/`coverage.warnings`; this scope is documented in the helper's JSDoc). Type-level immutability of those nested fields is asserted by their declared types — `keys: Readonly<Record<string, string | number | null>>`, `rows: ReadonlyArray<FactContractRow>` (rows themselves use `readonly [key: string]` index signatures), `coverage.warnings: ReadonlyArray<string>` — so a typed reassignment such as `result.keys.session_key = 1` or `result.rows.push(...)` fails `npm run typecheck`.
+- [ ] `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, and `FactContractRow` are exported from `web/src/lib/contracts/factContract.ts`, and the `rows` field on `FactContract` is typed `ReadonlyArray<FactContractRow>` (NOT `ReadonlyArray<Record<string, unknown>>`). The deterministic typecheck surface for this claim is `factContract.type-test.ts` Step 5(b): four `@ts-expect-error` directives that require `bigint`, `undefined`, function, and `symbol` row values to fail to assign to `FactContractRow`; if `FactContractRow` is widened, those directives become vacuous and `npm run typecheck` fails. Class-instance rejection is intentionally NOT asserted (TypeScript structural typing makes a type-level prohibition impossible; that surface is owned by a later runtime validator in `08-validators-*`).
+- [ ] `serializeRowsToFactContract` returns an object whose `rowCount` equals `rows.length` for both empty and non-empty inputs, and the returned object satisfies `Object.isFrozen(result) === true` at the top level (the helper does NOT deep-freeze nested `keys`/`rows`/`coverage.warnings`; this scope is documented in the helper's JSDoc). Type-level immutability of those nested fields is asserted by their declared types — `keys: Readonly<Record<string, string | number | null>>`, `rows: ReadonlyArray<FactContractRow>` (rows themselves use `readonly [key: string]` index signatures), `coverage.warnings: ReadonlyArray<string>`. The deterministic typecheck surface for this claim is `factContract.type-test.ts` Step 5(c): two `@ts-expect-error` directives that require `_result.keys.session_key = 2` (readonly index signature) and `_result.rows.push({ a: 2 })` (no `push` on `ReadonlyArray`) to fail; if either field is widened (e.g., `keys` retyped to bare `Record<...>` or `rows` retyped to `Array<...>`), the directive becomes vacuous and `npm run typecheck` fails.
 - [ ] `cd web && npm run test:grading` discovers and passes `fact-contract-shape.test.mjs`. The test loads `web/src/lib/contracts/factContract.ts` via the in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern used by sibling tests such as `cache-control-markers.test.mjs` (no new dev-dependency, no `.ts` loader, no change to the `node --test scripts/tests/*.test.mjs` runner contract); the temp directory is removed in a `finally`/`after` hook.
-- [ ] `cd web && npm run typecheck` passes with no new errors and **fails deterministically** if `FactContractGrain` is widened (added member or broadened to `string`), narrowed (member removed), member-substituted (e.g., `"meeting"` → `"event"`), or its export removed — proven by the `Expect<Equal<FactContractGrain, ...>>` assertion in `web/src/lib/contracts/factContract.type-test.ts`. Pure source-order reordering of the union members is intentionally NOT a regression (TypeScript unions are unordered at the type level; behavior is identical) and is therefore not asserted.
+- [ ] `cd web && npm run typecheck` passes with no new errors and **fails deterministically** when any of the three invariant classes in `web/src/lib/contracts/factContract.type-test.ts` is violated: (a) `FactContractGrain` is widened (added member or broadened to `string`), narrowed (member removed), member-substituted (e.g., `"meeting"` → `"event"`), or its export removed — proven by the `Expect<Equal<FactContractGrain, ...>>` assertion (pure source-order reordering of union members is intentionally NOT a regression, since TS unions are unordered, and is therefore not asserted); (b) `FactContractRow` is widened to admit `bigint`/`undefined`/function/`symbol` row values — proven by the four `@ts-expect-error` directives on row literals in Step 5(b); (c) `FactContract.keys` is widened from `Readonly<Record<...>>` to bare `Record<...>` or `FactContract.rows` is widened from `ReadonlyArray<...>` to `Array<...>` — proven by the two `@ts-expect-error` directives in Step 5(c) on `_result.keys.session_key = 2` and `_result.rows.push(...)`.
 - [ ] No imports of `factContract.ts` are added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts` in this slice (cutover is deferred to `08-synthesis-payload-cutover`).
 
 ## Out of scope
@@ -188,7 +219,7 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Add a compile-time gate file or extend `web/src/lib/contracts/factContract.type-test.ts` so `npm run typecheck` deterministically exercises the core contract claims for `FactContractRow` and nested readonly surfaces: assert that `bigint`, `undefined`, function, and `symbol` row values are rejected, and that writes like `result.keys.session_key = 1` / `result.rows.push(...)` fail, because the current plan’s acceptance criteria require those failures but no planned file actually triggers them.
+- [x] Add a compile-time gate file or extend `web/src/lib/contracts/factContract.type-test.ts` so `npm run typecheck` deterministically exercises the core contract claims for `FactContractRow` and nested readonly surfaces: assert that `bigint`, `undefined`, function, and `symbol` row values are rejected, and that writes like `result.keys.session_key = 1` / `result.rows.push(...)` fail, because the current plan’s acceptance criteria require those failures but no planned file actually triggers them. (Resolved by extending Step 5 with classes (b) and (c): four `@ts-expect-error` directives on `FactContractRow` literals carrying `bigint`/`undefined`/function/`symbol` values, and two `@ts-expect-error` directives on `_result.keys.session_key = 2` and `_result.rows.push({ a: 2 })`. The two matching acceptance criteria were rewritten to point at those specific directives as the deterministic typecheck surface, and the typecheck-pass acceptance criterion was rewritten to enumerate all three invariant classes in `factContract.type-test.ts`. The `Changed files expected` description for the type-test file was updated to enumerate the three gate classes.)
 
 ### Medium
 
