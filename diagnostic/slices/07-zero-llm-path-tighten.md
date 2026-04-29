@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T15:30:00Z
+updated: 2026-04-29T15:06:53Z
 ---
 
 ## Goal
@@ -251,3 +251,20 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` read cleanly (`sed -n '1,260p' diagnostic/_state.md` exit 0) and is still fresh at 2026-04-29T14:33:39Z.
 - `diagnostic/notes/05-template-cache-coverage.md` exists and was readable (`sed -n '1,260p' diagnostic/notes/05-template-cache-coverage.md` exit 0).
+
+## Plan-audit verdict (round 8)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Fix the helper-unit-test plan so it is executable: `web/src/lib/chatRuntime.ts` imports `@/lib/queries`, `@/lib/resolverCache`, and `@/lib/perfTrace`, so “transpile `chatRuntime.ts` directly and import the resulting module from disk” will fail unless the slice also specifies the required import rewrites/stubs (or moves `assertNoLlmForDeterministic` to a dependency-light module that the test can import without alias rewriting).
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is still fresh at 2026-04-29T14:33:39Z, so no stale-state note is required.
+- Prior context was readable: `sed -n '1,260p' diagnostic/_state.md` exit `0`; `sed -n '1,260p' diagnostic/notes/05-template-cache-coverage.md` exit `0`.
