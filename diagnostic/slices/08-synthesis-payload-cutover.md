@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T23:05:00Z
+updated: 2026-04-29T18:54:41-04:00
 ---
 
 ## Goal
@@ -140,8 +140,84 @@ cd web && ! grep -nE "from ['\"]@/lib/" src/lib/synthesis/buildSynthesisPrompt.t
 ## Risk / rollback
 Rollback: `git revert <commit>`. The grep drift gates make accidental re-introduction of contract-class imports detectable in any future slice.
 
+## Decisions
+
+### Step 1 inventory (synthesis-prompt input fields)
+
+The synthesis prompt is built by exactly one function on the synthesis path:
+- `buildSynthesisPromptParts(input: AnswerSynthesisInput)` in `web/src/lib/anthropic.ts:119` (live before this slice; `AnswerSynthesisInput` is declared at `web/src/lib/anthropic.ts:32`).
+- It is wrapped by `buildSynthesisRequestParams` (same file, line 149) for the system+messages structure used by `synthesizeAnswerWithAnthropic` (line 475) and `synthesizeAnswerStream` (line 566).
+
+`web/src/lib/chatRuntime.ts` does NOT contain any synthesis-prompt code or `synthesize*` references (`grep -n "synthesize\|Synthesis"` returns zero matches). The Step 1 expectation that the prompt builder might live in chatRuntime.ts was disproved by the inventory; the cutover edits are confined to anthropic.ts (the prompt builder) and route.ts (the call sites at lines 858 and 882). This finding is recorded in-tree per Step 1's audit-trail requirement.
+
+Per-field sourcing in the legacy shape `{ question, sql, rows, rowCount, runtime }`:
+- `Question:` block ← `input.question` ← `route.ts:859, :883` `message: string`
+- `SQL:` block ← `input.sql` ← `route.ts:860, :884` `result.sql: string`
+- `Row count:` block ← `input.rowCount` ← `route.ts:862, :886` `result.rowCount: number`
+- `Rows (sample):` block ← `JSON.stringify(input.rows.slice(0, 25))` ← `route.ts:861, :885` `result.rows: Record<string, unknown>[]`
+- `Runtime:` block ← `JSON.stringify(input.runtime ?? {})` over `{ questionType, grain, resolvedEntities, completenessWarnings }` ← `route.ts:863-868, :887-892` derived from `runtime.questionType`, `runtime.grain.grain`, `runtime.queryPlan.resolved_entities`, `runtime.completeness.warnings`.
+
+### Step 2 finding: zero contract-class imports on the synthesis path
+
+`grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/chatRuntime.ts src/lib/anthropic.ts` returned zero matches at the start of implementation. There were no contract-class imports to remove from the synthesis path, so Step 4 was a no-op (the drift gates lock this state in for any future regression). This matches the round-4 audit Notes ("the current repo state already has zero `lib/contracts/` imports on those two files").
+
+### Step 7 sourcing decisions (FactContract construction in route.ts)
+
+- `contractName` ← `runtime.queryPlan.primary_tables[0] ?? "unknown_contract"`. The fallback is reachable in production only for runtime fast-path / non-SQL flows that do not reach the synthesis call (the synthesis path requires `result.rowCount > 0`, which itself requires a successful SQL execution, which requires a non-empty `primary_tables`). Test fixtures have been updated to include `primary_tables: ["core.laps_enriched"]` on `makeFakeRuntime` builders so the synthesis branch exercises the typical-path expression rather than the fallback.
+- `grain` ← `mapToFactContractGrain(runtime.grain.grain)`. Mapping table:
+  - `"session"` → `"session"`
+  - `"lap"` → `"lap"`
+  - `"stint"` → `"stint"`
+  - `"driver_session"` → `"driver"`
+  - `"event"`, `"telemetry_point"`, `"telemetry_window"` → `"other"`
+- `keys` ← `filterScalarKeys(runtime.queryPlan.resolved_entities)` — narrows to `Record<string, string | number | null>`. Array-valued fields in `resolved_entities` (notably `driver_numbers: number[]`) are dropped because `FactContract.keys` is typed `Readonly<Record<string, string | number | null>>` per `web/src/lib/contracts/factContract.ts:21`.
+- `rows` ← `result.rows as ReadonlyArray<FactContractRow>` — the runtime shape of `result.rows` (`Record<string, unknown>[]` from `runReadOnlySql`) is structurally compatible with `FactContract`'s `ReadonlyArray<FactContractRow>` at runtime, but the `unknown` value type is wider than `FactContractValue` so a tsc-permitted cast is required at the boundary. The cast is the only narrowing in the cutover; everything downstream typechecks against `FactContract`.
+- `coverage.warnings` ← `runtime.completeness.warnings` only when non-empty; the `coverage` field is omitted entirely otherwise so `Object.prototype.hasOwnProperty.call(contract, 'coverage')` distinguishes "no warnings" from "empty warnings array". Matches the spread pattern in `serializeRowsToFactContract` per `web/src/lib/contracts/factContract.ts:43`.
+
+### Out-of-scope test maintenance (justification)
+
+The slice's `Changed files expected` lists the new dep-light module, the new grading test, plus `chatRuntime.ts`/`anthropic.ts`/`route.ts`. As a natural consequence of changing `AnswerSynthesisInput`'s shape and adding a new runtime import to `anthropic.ts` (`import { buildSynthesisPrompt } from "@/lib/synthesis/buildSynthesisPrompt"`), the following pre-existing tests that transpile-and-import `anthropic.ts` or `route.ts` had to be updated to (a) use the new `{ question, sql, contract }` shape and (b) write a `factContract.stub.mjs` (or transpile the new buildSynthesisPrompt module) alongside the transpiled fixture so dynamic-import resolves:
+
+- `web/scripts/tests/prompt-prefix-split.test.mjs`
+- `web/scripts/tests/cache-control-markers.test.mjs`
+- `web/scripts/tests/cache-benchmark.test.mjs` (skipped unless `OPENF1_RUN_CACHE_BENCHMARK=1`, but updated for shape consistency)
+- `web/scripts/tests/streaming-synthesis-server.test.mjs`
+- `web/scripts/tests/streaming-synthesis-route.test.mjs`
+- `web/scripts/tests/answer-cache.test.mjs`
+- `web/scripts/tests/skip-repair.test.mjs`
+- `web/scripts/tests/zero-llm-path.test.mjs`
+
+The last three (`answer-cache`, `skip-repair`, `zero-llm-path`) additionally had a pre-existing `synthesizeAnswerStream`-stub gap (the route.ts loader's `ANTHROPIC_STUB` block only exported `generate`/`repair`/`synthesize` but not `synthesizeAnswerStream`, even though slice 07-streaming-synthesis-server added a runtime import of `synthesizeAnswerStream` to route.ts). These three test files' `ANTHROPIC_STUB` blocks were extended with the missing `__setSynthesizeStreamImpl` setter and `synthesizeAnswerStream` async-generator (mirroring the pattern that already existed in `streaming-synthesis-route.test.mjs`). This brings the repo-wide `npm run test:grading` from 14 pre-existing failures down to 3 (the remaining 3 are `Case A`/`Case B`/`Case E` in `driver-fallback.test.mjs`, all environment-flake — local PGlite engine fails after the expected probe-failed log line, with the same exit code 1 on `integration/perf-roadmap` worktree under identical Node + npm conditions).
+
+These edits are strictly scoped to test scaffolding (stub modules + fixture shapes); no production-code path is altered beyond the four files in `Changed files expected`.
+
 ## Slice-completion note
-(filled by Claude)
+
+Branch: `slice/08-synthesis-payload-cutover`. Implemented on top of plan-approved commit `09ba761`.
+
+### Implementation summary
+- Created `web/src/lib/synthesis/buildSynthesisPrompt.ts` exporting `buildSynthesisPrompt(input: { question: string; sql: string; contract: FactContract }): { staticPrefix: string; dynamicSuffix: string }`. The module imports only `import type { FactContract } from "@/lib/contracts/factContract"`; no runtime imports of any `@/lib/*` module. The `dynamicSuffix` template matches the live `web/src/lib/anthropic.ts:124-141` byte-for-byte outside the `Runtime:` block; the `Runtime:` block body is `JSON.stringify({ contractName, grain, keys, coverage: contract.coverage ?? null })`.
+- Rewired `web/src/lib/anthropic.ts`: `AnswerSynthesisInput` is now `{ question: string; sql: string; contract: FactContract }`. `buildSynthesisPromptParts` delegates to the new module via `buildSynthesisPrompt(input)`. Removed the inlined `buildAnswerSynthesisPrompt()` and the legacy `runtime` field from `AnswerSynthesisInput`.
+- Rewired `web/src/app/api/chat/route.ts`: imported `serializeRowsToFactContract`, `FactContract`, `FactContractGrain`, `FactContractRow` from `@/lib/contracts/factContract`. Added module-local helpers `mapToFactContractGrain`, `filterScalarKeys`, `buildSynthesisContract`. Both synthesis call sites (`synthesizeAnswerStream` at the streaming branch and `cachedSynthesize` at the non-streaming branch) now construct a `FactContract` value via `serializeRowsToFactContract` and pass `{ question, sql, contract }` to the synthesizer.
+- Added `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs` mirroring the `fact-contract-shape.test.mjs` pattern. Three tests assert (a) byte-for-byte equality of `dynamicSuffix` against a hand-constructed expected string, (b) byte-for-byte equality of `staticPrefix` against an inline copy of the live `buildAnswerSynthesisPrompt()` text, (c) the `Runtime:` block body is the four-key FactContract-derived object in fixed order, plus negative assertions that `questionType`, `resolvedEntities`, and `completenessWarnings` are absent from the Runtime block, plus a `coverage:null` serialization edge case.
+
+### Gate exit codes (run from `web/`)
+- `npm run build` → 0
+- `npm run typecheck` → 0
+- `npm run test:grading` → 1 (3 pre-existing `driver-fallback.test.mjs` PGlite environment failures unchanged from `integration/perf-roadmap` baseline; my new test and all slice-affected tests pass; net +0 regressions, net −11 fixed pre-existing failures via stub maintenance documented in `Decisions`)
+- `! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/chatRuntime.ts | grep -vE "lib/contracts/factContract"` → 0
+- `! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/anthropic.ts | grep -vE "lib/contracts/factContract"` → 0
+- `! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/synthesis/buildSynthesisPrompt.ts | grep -vE "lib/contracts/factContract"` → 0
+- `! grep -nE "from ['\"]@/lib/" src/lib/synthesis/buildSynthesisPrompt.ts | grep -vE "@/lib/contracts/factContract"` → 0
+
+### Self-check (Acceptance criteria 1–6, plus #7 caveat)
+1. ✓ `chatRuntime.ts` and `anthropic.ts` import nothing from `web/src/lib/contracts/` other than the FactContract type. Both drift-gate pipelines exit 0.
+2. ✓ `web/src/lib/synthesis/buildSynthesisPrompt.ts` exists, exports a function whose `input` parameter is statically typed `{ question: string; sql: string; contract: FactContract }` (the `contract` field type is the `FactContract` type from `@/lib/contracts/factContract`), and the module's only `@/lib/*` import is the FactContract type. Both the contracts drift gate and the dep-light gate exit 0.
+3. ✓ `route.ts` constructs the FactContract via `serializeRowsToFactContract` at both synthesis call sites; `contractName` is sourced from `runtime.queryPlan.primary_tables[0]` (with a `"unknown_contract"` literal fallback when empty) — never from `runtime.questionType`. No call site passes the legacy `{ rows, rowCount, runtime }` shape into the synthesizer.
+4. ✓ Because `buildSynthesisPrompt`'s typed signature requires `contract: FactContract`, `npm run typecheck` (exit 0) is the deterministic, tsc-checked proof that no caller still passes the legacy payload as the row-payload field. The earlier round-3 Medium #1 / round-4 High concerns are resolved: a legacy caller fails at compile time, not at runtime.
+5. ✓ The new `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs` transpiles ONLY `web/src/lib/synthesis/buildSynthesisPrompt.ts` via `ts.transpileModule`, dynamic-imports the result, and asserts (a) byte-for-byte `dynamicSuffix` equality, (b) byte-for-byte `staticPrefix` equality, (c) the four-key Runtime-block JSON in fixed order, and (d) the legacy runtime keys are absent. All three subtests pass.
+6. ✓ `npm run build` and `npm run typecheck` both exit 0.
+7. ⚠ `npm run test:grading` exits 1 due to 3 pre-existing PGlite environment failures (`Case A` / `Case B` / `Case E` in `driver-fallback.test.mjs`). These same 3 tests fail on `integration/perf-roadmap` with the identical exit code under the same Node + npm + worktree state, so this slice introduces no regression. The slice fixed 11 pre-existing failures (the `synthesizeAnswerStream` stub gap in answer-cache/skip-repair/zero-llm-path tests) as a direct consequence of touching those test files for the new `factContract.stub.mjs` plumbing — see `Decisions / Out-of-scope test maintenance` for justification.
 
 ## Audit verdict
 (filled by Codex)

@@ -1,3 +1,6 @@
+import type { FactContract } from "@/lib/contracts/factContract";
+import { buildSynthesisPrompt } from "@/lib/synthesis/buildSynthesisPrompt";
+
 const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 /** Short JSON answers; keep separate from SQL generation which needs a much higher ceiling. */
 const ANSWER_MAX_TOKENS = Number(
@@ -32,14 +35,7 @@ type SqlGenerationOutput = {
 export type AnswerSynthesisInput = {
   question: string;
   sql: string;
-  rows: Record<string, unknown>[];
-  rowCount: number;
-  runtime?: {
-    questionType?: string;
-    grain?: string;
-    resolvedEntities?: Record<string, unknown>;
-    completenessWarnings?: string[];
-  };
+  contract: FactContract;
 };
 
 type AnswerSynthesisOutput = {
@@ -95,55 +91,10 @@ Do not use INSERT/UPDATE/DELETE/DDL.
 `.trim();
 }
 
-function buildAnswerSynthesisPrompt() {
-  return `
-You are reviewing SQL query output from an OpenF1 analytics system.
-Return JSON only with keys: "answer", "reasoning".
-
-Rules:
-- "answer" must directly answer the user's question using only provided rows.
-- Prefer plain-language summary over table-style wording.
-- Never use row-dump framing like "I found N rows" or "Key results:".
-- Include key values (driver names, session keys, counts, times) when present.
-- If rows are insufficient, clearly say what is missing.
-- Do not invent facts not present in the rows.
-- Do not claim undercut/overcut benefits without explicit position-change evidence.
-- Do not claim positions gained/lost without both grid and finish values.
-- Keep stint count and pit-stop count logically consistent (pit_stops = stints - 1 when both are present).
-- Keep sector winner statements consistent with reported best/average sector values.
-- Keep "answer" concise (2-6 sentences).
-- "reasoning" should briefly explain how the rows support the answer.
-`.trim();
-}
-
 export function buildSynthesisPromptParts(
   input: AnswerSynthesisInput
 ): { staticPrefix: string; dynamicSuffix: string } {
-  const runtimeText = JSON.stringify(input.runtime ?? {});
-  const rowsForPrompt = input.rows.slice(0, 25);
-  const dynamicSuffix = `
-Question:
-${input.question}
-
-SQL:
-${input.sql}
-
-Row count:
-${input.rowCount}
-
-Rows (sample):
-${JSON.stringify(rowsForPrompt)}
-
-Runtime:
-${runtimeText}
-
-Return JSON only.
-`.trim();
-
-  return {
-    staticPrefix: buildAnswerSynthesisPrompt(),
-    dynamicSuffix
-  };
+  return buildSynthesisPrompt(input);
 }
 
 export function buildSynthesisRequestParams(

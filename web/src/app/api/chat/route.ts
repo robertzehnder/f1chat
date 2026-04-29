@@ -20,6 +20,55 @@ import {
   type AnswerCacheSubset
 } from "@/lib/cache/answerCache";
 import { assertNoLlmForDeterministic } from "@/lib/zeroLlmGuard";
+import {
+  serializeRowsToFactContract,
+  type FactContract,
+  type FactContractGrain,
+  type FactContractRow
+} from "@/lib/contracts/factContract";
+
+function mapToFactContractGrain(grain: ChatRuntimeResult["grain"]["grain"]): FactContractGrain {
+  switch (grain) {
+    case "session":
+      return "session";
+    case "lap":
+      return "lap";
+    case "stint":
+      return "stint";
+    case "driver_session":
+      return "driver";
+    default:
+      return "other";
+  }
+}
+
+function filterScalarKeys(
+  entities: ChatRuntimeResult["queryPlan"]["resolved_entities"]
+): Record<string, string | number | null> {
+  const out: Record<string, string | number | null> = {};
+  for (const [k, v] of Object.entries(entities)) {
+    if (v === null || typeof v === "string" || typeof v === "number") {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+function buildSynthesisContract(args: {
+  runtime: ChatRuntimeResult;
+  rows: Record<string, unknown>[];
+}): FactContract {
+  const { runtime, rows } = args;
+  return serializeRowsToFactContract({
+    contractName: runtime.queryPlan.primary_tables[0] ?? "unknown_contract",
+    grain: mapToFactContractGrain(runtime.grain.grain),
+    keys: filterScalarKeys(runtime.queryPlan.resolved_entities),
+    rows: rows as ReadonlyArray<FactContractRow>,
+    ...(runtime.completeness.warnings.length > 0
+      ? { coverage: { warnings: runtime.completeness.warnings } }
+      : {})
+  });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -855,17 +904,11 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
               if (ctx.sseRequested) {
                 let streamedAnswer = "";
                 let streamedReasoning: string | undefined;
+                const contract = buildSynthesisContract({ runtime, rows: result.rows });
                 for await (const chunk of synthesizeAnswerStream({
                   question: message,
                   sql: result.sql,
-                  rows: result.rows,
-                  rowCount: result.rowCount,
-                  runtime: {
-                    questionType: runtime.questionType,
-                    grain: runtime.grain.grain,
-                    resolvedEntities: runtime.queryPlan.resolved_entities,
-                    completenessWarnings: runtime.completeness.warnings
-                  }
+                  contract
                 })) {
                   if (chunk.kind === "answer_delta") {
                     ctx.emitDelta("answer_delta", chunk.text);
@@ -879,17 +922,11 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 synthAnswer = streamedAnswer;
                 synthReasoning = streamedReasoning;
               } else {
+                const contract = buildSynthesisContract({ runtime, rows: result.rows });
                 const synthesis = await cachedSynthesize({
                   question: message,
                   sql: result.sql,
-                  rows: result.rows,
-                  rowCount: result.rowCount,
-                  runtime: {
-                    questionType: runtime.questionType,
-                    grain: runtime.grain.grain,
-                    resolvedEntities: runtime.queryPlan.resolved_entities,
-                    completenessWarnings: runtime.completeness.warnings
-                  }
+                  contract
                 });
                 synthAnswer = synthesis.answer;
                 synthReasoning = synthesis.reasoning;

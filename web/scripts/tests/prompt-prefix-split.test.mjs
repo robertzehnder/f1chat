@@ -10,8 +10,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const webRoot = path.resolve(__dirname, "..", "..");
 const anthropicSourcePath = path.resolve(webRoot, "src/lib/anthropic.ts");
+const buildSynthesisPromptSourcePath = path.resolve(
+  webRoot,
+  "src/lib/synthesis/buildSynthesisPrompt.ts"
+);
 
 async function transpileAndImportAnthropic() {
+  const dir = await mkdtemp(path.join(tmpdir(), "openf1-anthropic-"));
+
+  const buildSynthesisSource = await readFile(buildSynthesisPromptSourcePath, "utf8");
+  const buildSynthesisOut = ts.transpileModule(buildSynthesisSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true
+    }
+  });
+  await writeFile(path.join(dir, "buildSynthesisPrompt.mjs"), buildSynthesisOut.outputText, "utf8");
+
   const sourceText = await readFile(anthropicSourcePath, "utf8");
   const transpiled = ts.transpileModule(sourceText, {
     compilerOptions: {
@@ -20,9 +36,12 @@ async function transpileAndImportAnthropic() {
       esModuleInterop: true
     }
   });
-  const dir = await mkdtemp(path.join(tmpdir(), "openf1-anthropic-"));
+  const rewritten = transpiled.outputText.replace(
+    /@\/lib\/synthesis\/buildSynthesisPrompt/g,
+    "./buildSynthesisPrompt.mjs"
+  );
   const outFile = path.join(dir, "anthropic.mjs");
-  await writeFile(outFile, transpiled.outputText, "utf8");
+  await writeFile(outFile, rewritten, "utf8");
   const mod = await import(outFile);
   return { mod, dir };
 }
@@ -50,17 +69,25 @@ test("buildSynthesisPromptParts returns a byte-identical staticPrefix and per-in
     const inputA = {
       question: "Who won the 2024 Monaco Grand Prix?",
       sql: "SELECT driver_number FROM core.sessions WHERE session_key = 1",
-      rows: [{ driver_number: 16 }],
-      rowCount: 1,
-      runtime: { questionType: "race-winner", grain: "session" }
+      contract: {
+        contractName: "core.sessions",
+        grain: "session",
+        keys: { session_key: 1 },
+        rows: [{ driver_number: 16 }],
+        rowCount: 1
+      }
     };
 
     const inputB = {
       question: "Average lap time for VER in Bahrain Q3?",
       sql: "SELECT AVG(lap_duration) FROM core.laps_enriched WHERE session_key = 7 AND driver_number = 1",
-      rows: [{ avg: 91.234 }, { avg: 90.5 }],
-      rowCount: 2,
-      runtime: { questionType: "lap-pace", grain: "lap" }
+      contract: {
+        contractName: "core.laps_enriched",
+        grain: "lap",
+        keys: { session_key: 7, driver_number: 1 },
+        rows: [{ avg: 91.234 }, { avg: 90.5 }],
+        rowCount: 2
+      }
     };
 
     const partsA = buildSynthesisPromptParts(inputA);

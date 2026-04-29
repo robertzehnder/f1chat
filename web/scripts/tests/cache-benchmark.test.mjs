@@ -59,7 +59,24 @@ Driver substitution events arise when a primary entrant cannot participate in a 
 
 The OpenF1 warehouse is designed for ad hoc analyst questions answered by composing semantic contracts rather than by querying raw timing data directly. The semantic contracts encode race-day knowledge such as clean-lap classification, qualifying simulation detection, safety-car adjustment, tire degradation modeling, fuel correction, downforce index inference, and driver substitution disambiguation. Analysts who consistently route questions through the semantic contracts get answers that are stable, defensible, and consistent with FIA-official records, while analysts who bypass the semantic layer routinely produce results that drift away from broadcast statistics and require manual reconciliation. The static prefix of the answer-synthesis prompt encodes this preference so that the language model defaults to the semantic layer when generating an answer.`;
 
+const buildSynthesisPromptSourcePath = path.resolve(
+  webRoot,
+  "src/lib/synthesis/buildSynthesisPrompt.ts"
+);
+
 async function transpileAndImportAnthropic() {
+  const dir = await mkdtemp(path.join(tmpdir(), "openf1-anthropic-"));
+
+  const buildSynthesisSource = await readFile(buildSynthesisPromptSourcePath, "utf8");
+  const buildSynthesisOut = ts.transpileModule(buildSynthesisSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true
+    }
+  });
+  await writeFile(path.join(dir, "buildSynthesisPrompt.mjs"), buildSynthesisOut.outputText, "utf8");
+
   const sourceText = await readFile(anthropicSourcePath, "utf8");
   const transpiled = ts.transpileModule(sourceText, {
     compilerOptions: {
@@ -68,9 +85,12 @@ async function transpileAndImportAnthropic() {
       esModuleInterop: true
     }
   });
-  const dir = await mkdtemp(path.join(tmpdir(), "openf1-anthropic-"));
+  const rewritten = transpiled.outputText.replace(
+    /@\/lib\/synthesis\/buildSynthesisPrompt/g,
+    "./buildSynthesisPrompt.mjs"
+  );
   const outFile = path.join(dir, "anthropic.mjs");
-  await writeFile(outFile, transpiled.outputText, "utf8");
+  await writeFile(outFile, rewritten, "utf8");
   const mod = await import(outFile);
   return { mod, dir };
 }
@@ -125,9 +145,13 @@ test("cache-hit benchmark records a warm cache_read on the Anthropic Messages AP
     const input = {
       question: "Who won the 2024 Monaco Grand Prix?",
       sql: "SELECT driver_number FROM core.sessions WHERE session_key = 1",
-      rows: [{ driver_number: 16 }],
-      rowCount: 1,
-      runtime: { questionType: "race-winner", grain: "session" }
+      contract: {
+        contractName: "core.sessions",
+        grain: "session",
+        keys: { session_key: 1 },
+        rows: [{ driver_number: 16 }],
+        rowCount: 1
+      }
     };
     const productionParams = buildSynthesisRequestParams(input);
     const productionSystem = productionParams.system;
