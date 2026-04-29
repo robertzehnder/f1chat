@@ -1,11 +1,11 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T17:18:56Z
+updated: 2026-04-29T17:20:17Z
 ---
 
 ## Goal
@@ -163,6 +163,22 @@ Rollback: `git revert <commit>` (single commit removes the new test file).
 
 ### Medium
 - [x] Replace the final scope-proof acceptance criterion’s `git diff --name-only main...HEAD` with the loop’s required diff base `git diff --name-only integration/perf-roadmap...HEAD`, so the slice proves file scope against the branch the dispatcher mirrors from.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T17:02:57Z, so the auditor context is current.
+
+## Plan-audit verdict (round 4)
+
+**Status: APPROVED**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] None.
 
 ### Low
 - [ ] None.
