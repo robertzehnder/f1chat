@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:05:00Z
+updated: 2026-04-29T21:47:49Z
 ---
 
 ## Goal
@@ -168,3 +168,17 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
 - `web/package.json` defines `test:grading` as `node --test scripts/tests/*.test.mjs`, so any runtime test in this harness must be self-sufficient about TS loading.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Amend Step 1/Step 3 and the matching acceptance text so the `keys` mutability contract is internally consistent: either make `keys` a readonly map type as part of `FactContract`, or stop claiming `Record<string, string | number | null>` conveys immutability for nested `keys` data when the helper only applies a top-level `Object.freeze`.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
