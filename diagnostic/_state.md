@@ -56,7 +56,6 @@ _None._
 ## Notes for auditors
 
 _No accumulated notes yet. Auditors may append single-line lessons here, max 10 entries._
-- Require every Phase 3 per-contract materialization slice to include DB apply/existence/parity gate commands, not only web gates (slice:03-strategy-evidence-summary).
 - For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
 - For `web/src/lib/db.ts` slices, verify all existing env-configuration branches (`*_DATABASE_URL`, `NEON_DB_HOST`, `DB_*`) before accepting “behavior unchanged” claims or fallback semantics (slice:06-driver-swap-local-fallback).
 - Drift-check bash gates must have an explicit `else` clause (or negated `if !`) that sets a flag and a post-loop exit; an `if … then :; fi` without else silently passes on missing keys (slice:07-zero-llm-path-tighten).
@@ -66,3 +65,4 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - For async route-harness tests that temporarily set `NODE_ENV`, require the helper to await the callback (or inline `try/finally` around awaited work); a synchronous wrapper resets env before later repair/fallback awaits execute (slice:07-skip-repair-on-deterministic).
 - When a slice changes `/api/*` transport or media type, require the plan to name every existing consumer that must migrate or the explicit compatibility path for legacy structured callers (slice:07-streaming-synthesis).
 - When a slice claims progressive UI streaming, require a deterministic gate over the owning UI state-update path, not only over a helper parser callback contract (slice:07-streaming-synthesis).
+- For SSE/streaming slices, require one gate that observes pre-terminal bytes before stream close and one gate that splits a logical frame across multiple `ReadableStream` reads; frame-count-only or whole-frame fixtures do not prove real streaming semantics (slice:07-streaming-synthesis).
