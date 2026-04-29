@@ -1,15 +1,15 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T20:05:00Z
+updated: 2026-04-29T22:00:00Z
 ---
 
 ## Goal
-Audit and tighten the deterministic-only path: questions that resolve fully via the deterministic SQL template registry + answer-cache short-circuit must NOT call any LLM (neither SQL generation, nor repair, nor answer synthesis). Add an assertion that throws in dev (`NODE_ENV !== "production"`) if a deterministic-eligible request reaches the LLM path, and lock the behavior in with tests.
+Audit and tighten the deterministic-only path: questions that resolve fully via the deterministic SQL template registry must NOT call any LLM **in any environment** — neither SQL generation, nor repair, nor answer synthesis (`cachedSynthesize`). Today the cold deterministic path still invokes `cachedSynthesize` after deterministic SQL execution succeeds (`web/src/app/api/chat/route.ts:719`); only the warm answer-cache-hit short-circuit (`web/src/app/api/chat/route.ts:467`) is currently zero-LLM. This slice (a) makes the production deterministic branch bypass `cachedSynthesize` and synthesize the answer deterministically via the existing row-structured `buildFallbackAnswer` helper (`web/src/app/api/chat/route.ts:68`), (b) adds a dev-only runtime assertion (`NODE_ENV !== "production"`) that throws if a deterministic-eligible request reaches an LLM transport, and (c) locks the behavior in with tests covering cold deterministic, warm (answer-cache-hit) deterministic, an LLM-required negative control, the dev-throw, and the production no-throw.
 
 ## Inputs
 - `web/src/lib/deterministicSql.ts` — canonical template registry (per Phase 5 audit; no `web/src/lib/templates/` directory exists).
@@ -27,18 +27,28 @@ None at author time. Tests must work with `NODE_ENV=test` and without an `ANTHRO
 
 ## Steps
 1. Enumerate deterministic-eligible templates from `diagnostic/notes/05-template-cache-coverage.md` (the 32-row coverage table) and cross-check against the `templateKey: "..."` literals in `web/src/lib/deterministicSql.ts`. Codify this list in the test file as a single exported constant **named exactly `DETERMINISTIC_KEYS`** (e.g. `export const DETERMINISTIC_KEYS = ["...", ...];`) so the drift gate (see `## Gate commands`) can scope its extraction to that block and so future drift is caught.
-2. Add a dev-only runtime assertion at each LLM call site reachable from a deterministic-eligible request. Implementation: a helper in `web/src/lib/chatRuntime.ts` (e.g. `assertNoLlmForDeterministic({ generationSource, templateKey })`) that throws `Error("zero-llm-path violation: ...")` when `process.env.NODE_ENV !== "production"` and `(generationSource === "deterministic_template" || answer-cache hit) && an LLM transport is about to be invoked`. Wire calls in `web/src/app/api/chat/route.ts` immediately before `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and the synthesis path so any future regression that re-enters an LLM call from the deterministic branch trips the assertion.
-3. Add tests in `web/scripts/tests/zero-llm-path.test.mjs` that:
-   - For each deterministic-eligible template (from step 1), drive the chat route with a representative prompt and a stubbed `web/src/lib/anthropic.ts` whose three exports (`generateSqlWithAnthropic`, `repairSqlWithAnthropic`, `synthesizeAnswerWithAnthropic`) increment a counter and reject. Assert the counter is `0`.
-   - Drive at least one LLM-required prompt (no template match) and assert the counter is `> 0`, i.e. the gate is not over-broad.
-   - Drive one deterministic-eligible prompt with `NODE_ENV=development` and a deliberately wired LLM stub return to confirm the dev assertion throws (proves the assertion exists, not just that the happy path stays quiet).
+2. **Production change — bypass `cachedSynthesize` for deterministic-template requests.** In `web/src/app/api/chat/route.ts`, replace the unconditional `cachedSynthesize` call inside the `if (result.rowCount > 0) { ... }` block (around `web/src/app/api/chat/route.ts:716`–`746`) with a branch:
+   - When `generationSource === "deterministic_template"`, set `answer = buildFallbackAnswer({ question: message, rowCount: result.rowCount, rows: result.rows, caveatText })` and leave `answerReasoning` undefined; do NOT enter the `synthSpan`/`cachedSynthesize` block. This is unconditional (production AND non-production) — the goal is no LLM call, ever, on the deterministic branch.
+   - For all other `generationSource` values, retain today's `cachedSynthesize` path unchanged.
+   - Rationale (reuse `buildFallbackAnswer`): the helper already exists in the same file (`web/src/app/api/chat/route.ts:68`) and produces a row-structured deterministic answer via `buildStructuredSummaryFromRows`; introducing a new formatter would expand scope. Capture this choice in a new `## Decisions` section.
+3. **Dev-only assertion.** Add a helper in `web/src/lib/chatRuntime.ts` (e.g. `assertNoLlmForDeterministic({ generationSource, templateKey, callSite })`) that throws `Error("zero-llm-path violation: ...")` when `process.env.NODE_ENV !== "production"` and `(generationSource === "deterministic_template" || answer-cache hit) && an LLM transport is about to be invoked`. Wire calls in `web/src/app/api/chat/route.ts` immediately before `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and the (now non-deterministic-only) `cachedSynthesize` call so any future regression that re-enters an LLM call from the deterministic branch trips the assertion. The assertion is a belt-and-braces guard on top of step 2's structural change: step 2 prevents the call in production; the dev assertion catches future regressions during development.
+4. Add tests in `web/scripts/tests/zero-llm-path.test.mjs` that:
+   - **Cold deterministic, all 32 templates** — for each `DETERMINISTIC_KEYS` entry, drive the chat route under `NODE_ENV=production` with a representative prompt and a stubbed `web/src/lib/anthropic.ts` whose three exports (`generateSqlWithAnthropic`, `repairSqlWithAnthropic`, `synthesizeAnswerWithAnthropic`) each increment a shared counter and reject. Reset the answer cache before each iteration (call `clearAnswerCache()` or equivalent reset) so the request actually exercises the cold path. Assert the counter is exactly `0` after each request — this directly verifies step 2's synthesis bypass.
+   - **Warm answer-cache-hit deterministic** — pick at least one deterministic template, perform the cold request (or seed `setAnswerCacheEntry` with a representative entry whose `answerCacheKey` matches `buildAnswerCacheKey({ templateKey, sessionKey, sortedDriverNumbers, year })`), then issue a second request with identical inputs and assert the counter remains `0`. This guards the existing answer-cache short-circuit and addresses the codex round-4 medium directly.
+   - **LLM-required negative control** — drive at least one prompt that does NOT match any template (`buildDeterministicSqlTemplate` returns null) and assert the counter is `> 0`, i.e. the gate is not over-broad and the LLM stubs are actually wired.
+   - **Dev-throw** — drive one deterministic-eligible prompt with `NODE_ENV=development` and force-bypass the production synthesis-skip (e.g. by wiring the assertion call site to invoke an LLM stub or by injecting a regression where step 2's branch is short-circuited via a test seam) to confirm the runtime throws an error containing `"zero-llm-path"`.
+   - **Production no-throw** — under `NODE_ENV=production`, attempt the same forced-violation scenario as the dev-throw test and assert that no error is thrown (the assertion is dev-only by design).
 
 ## Changed files expected
-- `web/src/lib/chatRuntime.ts` (assertion helper).
-- `web/src/app/api/chat/route.ts` (call the helper before each LLM call site; no behavior change in production).
+- `web/src/lib/chatRuntime.ts` (dev-only assertion helper).
+- `web/src/app/api/chat/route.ts` (i) bypass `cachedSynthesize` when `generationSource === "deterministic_template"` and use `buildFallbackAnswer` instead — production behavior change; (ii) call the dev-only assertion helper before each remaining LLM call site.
 - `web/scripts/tests/zero-llm-path.test.mjs` (new test file).
 
 Out of scope for this slice (read-only inputs): `web/src/lib/deterministicSql.ts`, `web/src/lib/anthropic.ts`, `web/src/lib/cache/answerCache.ts`. Eligibility is sourced from the Phase 5 audit doc, not redefined here.
+
+## Decisions
+- **Use `buildFallbackAnswer` (already in `web/src/app/api/chat/route.ts:68`) for the deterministic-branch answer formatting** rather than introducing a new formatter or a `buildDeterministicAnswer` module. Rationale: the helper already produces a row-structured deterministic answer via `buildStructuredSummaryFromRows` and is the existing fallback when synthesis fails; reusing it keeps the diff minimal and avoids expanding scope into a new abstraction. If grading shows the deterministic answers regress vs. cached synthesized answers, that is a Phase 8 concern, not in scope here (the Phase 5 answer-cache slice already established that warm deterministic requests serve `buildFallbackAnswer`-style cached entries acceptably).
+- **The synthesis bypass is unconditional (production AND non-production)**, not gated on `NODE_ENV`. The dev-only assertion is a separate, additional guard: step 2's structural change prevents the call in all environments; step 3's assertion catches future regressions during development if someone re-introduces a code path that reaches an LLM transport from the deterministic branch.
 
 ## Artifact paths
 None.
@@ -83,10 +93,11 @@ bash -c '
 ```
 
 ## Acceptance criteria
-- [ ] Deterministic test cases produce zero LLM API calls (assert via mock/spy on `web/src/lib/anthropic.ts` exports). Counter must be exactly `0` across all deterministic-eligible templates listed in step 1.
-- [ ] Existing LLM-required cases still work — at least one non-template prompt drives the LLM stub and the counter is `> 0`.
-- [ ] Dev-only assertion is directly verified: a test sets `NODE_ENV=development`, forces a deterministic-eligible path to invoke the LLM stub, and confirms the runtime throws an error containing `"zero-llm-path"`.
-- [ ] Production guard: the same forced violation under `NODE_ENV=production` does NOT throw (the assertion is dev-only, by design — verified by an additional test case).
+- [ ] **Cold deterministic, production-mode, zero LLM** — under `NODE_ENV=production` with a freshly-cleared answer cache, a request whose `generationSource === "deterministic_template"` produces zero calls to any of `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, `synthesizeAnswerWithAnthropic`. Counter must be exactly `0` across all `DETERMINISTIC_KEYS` entries. (Directly validates step 2's `cachedSynthesize` bypass — addresses round-4 High.)
+- [ ] **Warm answer-cache-hit, zero LLM** — a repeated deterministic request (or a seeded answer-cache entry under the matching `buildAnswerCacheKey(...)` key) serves the cached answer with the counter remaining `0`. (Validates the existing answer-cache short-circuit — addresses round-4 Medium.)
+- [ ] **LLM-required negative control** — at least one non-template prompt drives the LLM stub and the counter is `> 0`, proving the gate is not over-broad.
+- [ ] **Dev-only assertion verified** — a test sets `NODE_ENV=development`, forces a deterministic-eligible path to reach an LLM stub (via a test seam that bypasses step 2's branch), and confirms the runtime throws an error containing `"zero-llm-path"`.
+- [ ] **Production no-throw** — the same forced violation under `NODE_ENV=production` does NOT throw (the assertion is dev-only by design).
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -162,10 +173,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Add an explicit implementation step and acceptance criterion that bypasses `cachedSynthesize` for deterministic-template requests in production, not just a dev-only assertion before LLM transport; as written, the plan still leaves cold deterministic requests calling Anthropic answer synthesis after successful deterministic SQL execution (`web/src/app/api/chat/route.ts:409`, `web/src/app/api/chat/route.ts:719`), so it cannot satisfy the goal that deterministic-only requests must not call any LLM.
+- [x] Add an explicit implementation step and acceptance criterion that bypasses `cachedSynthesize` for deterministic-template requests in production, not just a dev-only assertion before LLM transport; as written, the plan still leaves cold deterministic requests calling Anthropic answer synthesis after successful deterministic SQL execution (`web/src/app/api/chat/route.ts:409`, `web/src/app/api/chat/route.ts:719`), so it cannot satisfy the goal that deterministic-only requests must not call any LLM.
 
 ### Medium
-- [ ] Add a dedicated answer-cache-hit test/acceptance check by repeating a deterministic request (or seeding the cache) and asserting the cached-return path makes zero Anthropic calls; the current tests can miss the slice’s stated answer-cache short-circuit scope even though that is today’s only existing zero-LLM return path (`web/src/app/api/chat/route.ts:463`).
+- [x] Add a dedicated answer-cache-hit test/acceptance check by repeating a deterministic request (or seeding the cache) and asserting the cached-return path makes zero Anthropic calls; the current tests can miss the slice’s stated answer-cache short-circuit scope even though that is today’s only existing zero-LLM return path (`web/src/app/api/chat/route.ts:463`).
 
 ### Low
 - [ ] None.
