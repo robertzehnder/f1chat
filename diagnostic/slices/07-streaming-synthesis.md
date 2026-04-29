@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -162,3 +162,17 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md:1` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
 - `diagnostic/_state.md:44-54` still requires transport-change slices to enumerate legacy consumers and progressive-UI slices to gate the owning state-update path; this revision satisfies those protocol notes.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Either add a deterministic gate over `ChatWorkspace.tsx`'s actual `onDelta` state-update wiring, or narrow Step 3 / the Goal so the slice no longer claims the client progressively renders streamed assistant text; the current plan still requires `ChatWorkspace.tsx` to push cumulative text into React state, but the only gate remains the helper-level callback contract (`diagnostic/slices/07-streaming-synthesis.md:39`, `diagnostic/slices/07-streaming-synthesis.md:41`, `diagnostic/slices/07-streaming-synthesis.md:43`, `diagnostic/slices/07-streaming-synthesis.md:57`).
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
