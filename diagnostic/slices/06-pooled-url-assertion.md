@@ -1,8 +1,8 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-29T00:15:00-04:00
@@ -116,23 +116,20 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 - [x] Staging artifact `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` exists and contains both `OK: pooler url accepted` and the non-zero-exit `Neon pooler URL required` error from the direct-URL invocation.
 
 ## Audit verdict
-**REJECT**
+**PASS**
 
-- Gate #1 `cd web && npm run build` -> exit `1`
-- Gate #1 context -> `Collecting page data ...` `Error: Neon pooler URL required in production: got host='127.0.0.1' port='5433'.` `Build error occurred` (`web/src/lib/db.ts:50`, `web/src/lib/db.ts:118`)
-- Gate #2 `cd web && npm run typecheck` -> exit `2`
-- Gate #2 context -> `error TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/.next/types/app/api/admin/perf-summary/route.ts' not found.` `Matched by include pattern '.next/types/**/*.ts' in '/Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/tsconfig.json'`
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
 - Gate #3 `cd web && npm run test:grading` -> exit `0`
-- Scope diff -> FAIL: `diagnostic/_state.md:61`, `diagnostic/_state.md:62`, and `diagnostic/_state.md:63` append three notes; the implicit allow-list permits only a single-line append in `## Notes for auditors`.
+- Scope diff -> PASS: `diagnostic/_state.md`, `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt`, `diagnostic/slices/06-pooled-url-assertion.md`, `web/scripts/tests/pooled-url-assertion.test.mjs`, `web/scripts/verify-pooled-url.mjs`, and `web/src/lib/db.ts` are all in scope via `Changed files expected`, `Artifact paths`, or the `_state.md` append-only allow-list; `_state.md:61`, `_state.md:62`, and `_state.md:63` are single-line appends and the section remains under the 10-entry cap.
 - Criterion 1 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:79`)
 - Criterion 2 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:87`, `web/scripts/tests/pooled-url-assertion.test.mjs:99`)
 - Criterion 3 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:108`)
 - Criterion 4 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:115`)
-- Criterion 5 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:129`, `web/scripts/tests/pooled-url-assertion.test.mjs:140`; `web/src/lib/db.ts:31`, `web/src/lib/db.ts:80`)
-- Criterion 6 -> FAIL: `web/scripts/tests/pooled-url-assertion.test.mjs` is wired into `npm run test:grading` and executes there, but the local gate block does not pass because `build` exits `1` and `typecheck` exits `2`.
-- Criterion 7 -> PASS (`diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:15`, `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:27`; independent reruns: pooler command exit `0`, direct-URL command exit `1`)
-- Decision -> REJECT
-- Rationale -> The branch is out of scope under the `diagnostic/_state.md` single-line allow-list, and the declared gate block still fails locally.
+- Criterion 5 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:129`, `web/scripts/tests/pooled-url-assertion.test.mjs:140`; `web/src/lib/db.ts:27`, `web/src/lib/db.ts:44`, `web/src/lib/db.ts:93`)
+- Criterion 6 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:18`; Gate #3 exit `0`)
+- Criterion 7 -> PASS (`diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:13`, `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:15`, `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:21`, `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:27`; independent reruns: pooler command exit `0`, direct-URL command exit `1`)
+- Decision -> PASS
 
 ## Plan-audit verdict (round 1)
 
