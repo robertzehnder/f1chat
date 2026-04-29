@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T23:59:00Z
+updated: 2026-04-29T18:05:00-04:00
 ---
 
 ## Goal
@@ -131,7 +131,35 @@ cd web && npm run test:grading
 New, additive module with no callers. Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/08-fact-contract-shape`
+**Implementation commit:** `86f3ab4d4f84174ea7de36f658cde141cfe38c11`
+
+### Files added (matches `Changed files expected`)
+- `web/src/lib/contracts/factContract.ts` — `FactContractGrain`, `FactContractScalar`, `FactContractValue`, `FactContractRow`, `FactContract`, `SemanticContractSerializer<TInput>`, and `serializeRowsToFactContract` (top-level `Object.freeze`, `rowCount = rows.length`, conditional spread for optional `coverage`).
+- `web/src/lib/contracts/factContract.type-test.ts` — compile-time gate covering: (a) `FactContractGrain` exact-union equality via `Expect<Equal<...>>`; (b) four `@ts-expect-error` directives on `FactContractRow` literals carrying `bigint` / `undefined` / function / `symbol` row values; (c) two `@ts-expect-error` directives on `_result.keys.session_key = 2` and `_result.rows.push({ a: 2 })` proving the readonly contract on `keys` and `rows`.
+- `web/scripts/tests/fact-contract-shape.test.mjs` — four runtime cases (empty-rows `rowCount === 0`, non-empty `rowCount === rows.length`, top-level `Object.isFrozen` + `result.rowCount = 999` no-op/throw, `coverage` omission/presence). Loads `factContract.ts` via the in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern from `cache-control-markers.test.mjs`; cleans temp dir in a `finally` block. No new dev-dependency.
+
+### Decisions / non-obvious choices
+- `coverage` is added to the returned object via a conditional spread so that `Object.prototype.hasOwnProperty.call(result, "coverage") === false` when not provided (the runtime test asserts this).
+- The return value of `serializeRowsToFactContract` is wrapped in `Object.freeze` *only* at the top level, matching the JSDoc comment and Step 3 immutability scope.
+- The type-test file declares `_badBigint` / `_badUndefined` / `_badFunction` / `_badSymbol` and `_result` as plain `const`s with leading underscore. `tsconfig.json` does **not** set `noUnusedLocals`, so these constants do not produce unused-local errors; the four `@ts-expect-error` directives in (b) and the two in (c) are the only typecheck signals.
+- The file ends with `export {};` so that under `isolatedModules` it parses unambiguously as a module.
+
+### Gate command results
+
+| Gate | Exit | Notes |
+|---|---:|---|
+| `cd web && npm run build` | 0 | Next.js production build succeeded. |
+| `cd web && npm run typecheck` | 0 | `tsc --noEmit` clean across the whole `web/` project, including `factContract.type-test.ts` (six `@ts-expect-error` directives all consumed; `Expect<Equal<...>>` resolves to `true`). |
+| `cd web && npm run test:grading` | 1 | The new `fact-contract-shape.test.mjs` is **discovered and all four cases pass** (`ok 20` … `ok 23` in the run output). However, the aggregate suite exits non-zero due to **14 pre-existing failures unrelated to this slice's `Changed files expected`**, in `answer-cache.test.mjs`, `driver-fallback.test.mjs`, `skip-repair.test.mjs`, and `zero-llm-path.test.mjs` (e.g. `"./anthropic.stub.mjs" does not provide an export named 'synthesizeAnswerStream'`). Verified independent of this slice via `git stash -u` on the same worktree: bare `slice/08-fact-contract-shape@d5521d9` runs **74 pass / 14 fail / 10 skip / 98 total**; with this slice's three new files **78 pass / 14 fail / 10 skip / 102 total** — same 14 failures, +4 new passing tests, no new failures introduced. The failing test files are not in this slice's `Changed files expected` and remediating them would change the slice intent, so this is flagged for auditor attention. |
+
+### Acceptance-criteria self-check
+- [x] `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, `FactContractRow` exported from `web/src/lib/contracts/factContract.ts`; `rows` is `ReadonlyArray<FactContractRow>` (not `ReadonlyArray<Record<string, unknown>>`). Backed by Step 5(b)'s four `@ts-expect-error` directives, all consumed by `npm run typecheck` (exit 0).
+- [x] `serializeRowsToFactContract` returns `rowCount === rows.length` for both empty and non-empty inputs and the returned object satisfies `Object.isFrozen(result) === true` at the top level. Backed by `fact-contract-shape.test.mjs` (cases 1, 2, and 3) and Step 5(c)'s two `@ts-expect-error` directives on nested readonly surfaces.
+- [x] `cd web && npm run test:grading` discovers and passes `fact-contract-shape.test.mjs` (`ok 20`–`ok 23`); the test uses the prescribed in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern with `rm(dir, { recursive: true, force: true })` cleanup in a `finally`. The aggregate suite's exit code is 1 due to pre-existing, slice-external failures (see Gate-command-results note); this slice introduces no new failures.
+- [x] `cd web && npm run typecheck` passes (exit 0). All three invariant classes in `factContract.type-test.ts` are exercised: (a) `Expect<Equal<FactContractGrain, ...>>`; (b) four `@ts-expect-error` directives on `FactContractRow` literals; (c) two `@ts-expect-error` directives on `_result.keys.session_key = 2` and `_result.rows.push(...)`.
+- [x] No imports of `factContract.ts` were added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts`. Verified: `git diff integration/perf-roadmap..HEAD -- web/src/lib/chatRuntime.ts web/src/lib/anthropic.ts` shows no diff.
 
 ## Audit verdict
 (filled by Codex)
