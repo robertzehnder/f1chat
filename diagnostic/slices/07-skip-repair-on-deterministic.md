@@ -1,11 +1,11 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T17:06:14Z
+updated: 2026-04-29T17:08:11Z
 ---
 
 ## Goal
@@ -75,3 +75,20 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T17:02:57Z, so the auditor context is current.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite the slice around the real owner of the parse/repair flow: `web/src/lib/chatRuntime.ts` does not contain the named JSON-repair path, while the actual parse helpers are in `web/src/lib/anthropic.ts` and the only LLM repair call site in this flow is `web/src/app/api/chat/route.ts`.
+- [ ] Reconcile the goal with the current codebase before re-audit: the plan describes an LLM-based JSON-repair pass on clean JSON, but the present code path locally parses model JSON and only invokes `repairSqlWithAnthropic(...)` after SQL execution fails.
+
+### Medium
+- [ ] Update `Inputs`, `Steps`, `Changed files expected`, and the new test strategy to match the corrected owner module(s); the current Node `--test` plan cannot prove the stated behavior against `chatRuntime.ts`.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- Repo check: `rg -n "repairSqlWithAnthropic|JSON.parse" web/src` shows the parse helpers in `web/src/lib/anthropic.ts` and the LLM repair call site in `web/src/app/api/chat/route.ts`, not in `web/src/lib/chatRuntime.ts`.
