@@ -661,6 +661,49 @@ test("synthesis path — SSE emits >=2 answer_delta + 1 final; non-SSE JSON iden
 });
 
 // ---------------------------------------------------------------------------
+// Transient-DB-unavailable branch — runReadOnlySql throws a startup/recovery
+// error that isTransientDatabaseAvailabilityError() recognizes. Caller-visible
+// final-response branch (status 200, generationSource =
+// runtime_transient_db_unavailable) — must emit a single SSE final frame whose
+// data equals the non-SSE JSON body.
+// ---------------------------------------------------------------------------
+test("transient-db-unavailable branch — non-SSE JSON body matches SSE single final frame", async () => {
+  await withRoute(async (loaded) => {
+    const setup = (l) => {
+      l.deterministic.__setBuildDeterministicSqlTemplateImpl(() => ({
+        templateKey: "fastest_lap_by_driver",
+        sql: "SELECT 1 AS stub FROM core.sessions WHERE session_key = 9839"
+      }));
+      l.chatRuntime.__setBuildChatRuntimeImpl(async () => makeFakeRuntime());
+      // Throw a recognizable transient-DB error on every SQL call. The
+      // template-path retry falls back to the heuristic SQL, which also
+      // throws, so the error propagates to the outer transient-DB catch.
+      l.queries.__setRunReadOnlySqlImpl(async () => {
+        throw new Error("the database system is starting up");
+      });
+    };
+
+    resetAll(loaded);
+    setup(loaded);
+    const json = await withNodeEnv("production", () => postJson(loaded));
+    assert.equal(json.status, 200);
+    assert.equal(json.body.generationSource, "runtime_transient_db_unavailable");
+    assert.equal(json.body.model, null);
+    assert.equal(json.body.sql, "-- query not executed (database temporarily unavailable)");
+
+    resetAll(loaded);
+    setup(loaded);
+    const sse = await withNodeEnv("production", () => postSse(loaded));
+    const finalFrame = expectSingleFinalFrame(sse.frames);
+    assert.equal(finalFrame.data.generationSource, "runtime_transient_db_unavailable");
+    assert.equal(finalFrame.data.model, null);
+    assert.equal(finalFrame.data.sql, "-- query not executed (database temporarily unavailable)");
+    assert.deepEqual(normalize(finalFrame.data), normalize(json.body));
+    assert.match(sse.contentType ?? "", /text\/event-stream/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Error path — generic catch (e.g. runtime build throws)
 // ---------------------------------------------------------------------------
 test("error path — non-SSE returns HTTP 4xx JSON; SSE emits error frame (no final)", async () => {
