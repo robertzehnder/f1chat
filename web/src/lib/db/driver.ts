@@ -53,8 +53,7 @@ function createPool(): Pool {
   if (databaseUrl) {
     return new Pool({
       connectionString: databaseUrl,
-      ...base,
-      connectionTimeoutMillis: 2_000
+      ...base
     });
   }
 
@@ -72,8 +71,7 @@ function createPool(): Pool {
       user,
       password,
       ssl: sslForHost(neonHost),
-      ...base,
-      connectionTimeoutMillis: 2_000
+      ...base
     });
   }
 
@@ -85,8 +83,7 @@ function createPool(): Pool {
     user: env("DB_USER", "openf1"),
     password: env("DB_PASSWORD", "openf1_local_dev"),
     ssl: sslForHost(host),
-    ...base,
-    connectionTimeoutMillis: 2_000
+    ...base
   });
 }
 
@@ -142,7 +139,16 @@ export function chooseDriver(): Promise<Driver> {
 }
 
 function probeNeon(target: Pool): Promise<unknown> {
-  return target.query("SELECT 1");
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error("probe exceeded 2000ms budget"));
+    }, 2_000);
+  });
+  const probe = target.query("SELECT 1");
+  return Promise.race([probe, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 function acquireNeonClient(target: Pool) {
