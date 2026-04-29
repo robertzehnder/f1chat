@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:00:00Z
+updated: 2026-04-29T14:53:13Z
 ---
 
 ## Goal
@@ -184,3 +184,20 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T14:33:39Z, so no stale-state note is required.
 - The existing plan’s dev-only assertion work is still useful, but it is not a substitute for changing the production deterministic branch to avoid synthesis LLM calls.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Fix the eligibility drift gate to check the inverse set as well: after extracting `DETERMINISTIC_KEYS`, also fail if any `templateKey: "..."` literal in `web/src/lib/deterministicSql.ts` is absent from that constant, because the current gate only proves `test -> registry` and would silently miss newly added or renamed deterministic templates despite Step 1 and the acceptance criteria claiming full 32-template coverage.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T14:33:39Z, so no stale-state note is required.
+- The existing gate now correctly catches stale keys removed from the registry; the remaining gap is source-side additions or renames not mirrored into `DETERMINISTIC_KEYS`.
