@@ -1,11 +1,11 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: revising
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T13:21:11-04:00
+updated: 2026-04-29T13:34:06-04:00
 ---
 
 ## Goal
@@ -154,6 +154,59 @@ Rollback: `git revert <commit>` (single commit removes the new test file).
 - [x] `npm run test:grading` reports `skip-repair.test.mjs > dev-throw — assertNoLlmForDeterministic blocks repairSqlWithAnthropic callSite under NODE_ENV=development` as `ok` with the required assertions — confirmed (subtest #69).
 - [x] All three subtests appear in the `npm run test:grading` summary output — confirmed; the `node --test scripts/tests/*.test.mjs` glob picked up the new file (subtests numbered 67, 68, 69 within the 75-subtest run).
 - [x] `git diff --name-only integration/perf-roadmap...HEAD` lists only `web/scripts/tests/skip-repair.test.mjs` and this slice file (`diagnostic/slices/07-skip-repair-on-deterministic.md`) — confirmed at commit time.
+
+## Blocked diagnosis (round 2 — after re-running gates 2026-04-29T13:34:06-04:00)
+
+This slice is set `status=blocked, owner=user` because the only outstanding auditor objection — `npm run test:grading` exits non-zero — cannot be resolved within this slice's declared scope.
+
+### Re-run results in this worktree
+
+Re-ran all three gates from `/Users/robertzehnder/.openf1-loop-worktrees/07-skip-repair-on-deterministic/web` on 2026-04-29 with no code changes since the previous `awaiting-audit` commit `bcef68f`:
+
+1. `npm run build` → exit `0`.
+2. `npm run typecheck` → exit `0`.
+3. `npm run test:grading` → exit `1`. 75 subtests; 62 pass, 3 fail, 10 skipped.
+
+The three failing subtests are unchanged from the previous audit:
+
+- `not ok 14 - Case A: DB_*-branch probe-failure + opt-in engages PGlite` (`web/scripts/tests/driver-fallback.test.mjs:223`)
+- `not ok 15 - Case B: DATABASE_URL unreachable + opt-in engages PGlite` (`web/scripts/tests/driver-fallback.test.mjs:247`)
+- `not ok 18 - Case E: NEON_DB_HOST unreachable + opt-in engages PGlite` (`web/scripts/tests/driver-fallback.test.mjs:306`)
+
+Each fails with the same kernel-level error: `Error: connect ECONNREFUSED 127.0.0.1:1` thrown from `pg-pool/index.js:45` after the route already logged `[db] using local PGlite fallback (reason=probe-failed)`. The fallback log line is emitted by the slice-06 code path in `web/src/lib/db.ts`, then the same path immediately attempts a network connection that this environment cannot satisfy.
+
+### Why this slice cannot fix it
+
+The failing tests are NOT in the slice's scope:
+
+- The slice's `Changed files expected` lists exactly one path: `web/scripts/tests/skip-repair.test.mjs`.
+- The slice's `Out of scope` section explicitly states: *"Editing any production module (`web/src/**`)."*
+- `git diff --name-only integration/perf-roadmap...HEAD` confirms only three paths changed by this slice: `diagnostic/_state.md` (append-only auditor note), `diagnostic/slices/07-skip-repair-on-deterministic.md` (this file), and `web/scripts/tests/skip-repair.test.mjs` (the new test).
+- The failing test file `web/scripts/tests/driver-fallback.test.mjs` was added by `slice/06-driver-swap-local-fallback` (merged 2026-04-28; commit `205c23b`). The PGlite fallback runtime it exercises lives in `web/src/lib/db.ts`. Any fix must edit `web/src/lib/db.ts` (or the pglite/pg-pool boundary code), which is `web/src/**` and therefore out of scope.
+
+### Independent reproduction on `integration/perf-roadmap`
+
+Reproduced against the integration base from `/Users/robertzehnder/Documents/coding/f1/openf1` (currently checked out at `7d381d8`, the integration HEAD): `npm run test:grading` exits `1` with the same three Case A / Case B / Case E failures. (The integration worktree had a stale `node_modules` and additionally surfaced unrelated `Cannot find package 'lru-cache'` / `Cannot find package '@electric-sql/pglite'` resolution errors — the latter is the same fallback path: PGlite is being required despite not being installed in that worktree. After `npm install` the resolution errors would clear, leaving only the same Case A / B / E network failures.) These three are pre-existing on `integration/perf-roadmap`; this slice did not introduce them.
+
+### Auditor accepted everything else
+
+The previous `## Audit verdict` (immediately below) explicitly recorded:
+
+- Scope diff → **PASS**.
+- All four acceptance criteria → **PASS**, including the three new subtests `ok 67` / `ok 68` / `ok 69` and the "no out-of-scope code changes" criterion.
+- The only stated rationale for REVISE: *"the required grading gate still exits non-zero in this environment; re-audit only after `npm run test:grading` is green end-to-end."*
+
+That rationale conflicts with the slice's `Out of scope` clause: making the gate green requires fixing slice-06 code that this slice cannot touch.
+
+### Action requested from user
+
+Please decide one of:
+
+1. **Permit a follow-up scope expansion** — e.g. opening a separate slice (suggested id: `slice/07-driver-fallback-pglite-fix` or merging into Phase 6 backlog) that fixes `web/src/lib/db.ts` so Case A / B / E pass, then re-run this slice's audit unchanged. This is the loop's normal pattern (one bug → one slice).
+2. **Authorize the auditor to merge this slice on the existing evidence** — three new subtests pass, scope is clean, gate failures are documented as pre-existing and out-of-scope. Update the auditor instructions if a per-slice exception is acceptable.
+3. **Mark Case A / B / E as environment-skipped** in `web/scripts/tests/driver-fallback.test.mjs` (e.g. `t.skip()` when a probe sentinel cannot bind) — this would also be a separate slice, since editing `driver-fallback.test.mjs` is outside this slice's `Changed files expected`.
+
+No further action will be taken in this slice until the user replies. The branch `slice/07-skip-repair-on-deterministic` is pushed and reflects the same content the auditor reviewed; only the slice frontmatter (`status: blocked`, `owner: user`) and this diagnosis section are updated in the new commit.
 
 ## Audit verdict
 **REVISE**
