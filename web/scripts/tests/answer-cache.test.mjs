@@ -124,6 +124,17 @@ export async function flushTrace(requestId, records) {
 }
 `;
 
+const ZERO_LLM_GUARD_STUB = `
+export function assertNoLlmForDeterministic(args) {
+  if (process.env.NODE_ENV === "production") return;
+  if (args.generationSource !== "deterministic_template") return;
+  throw new Error(
+    "zero-llm-path violation: callSite=" + args.callSite +
+    " templateKey=" + (args.templateKey == null ? "<unknown>" : args.templateKey)
+  );
+}
+`;
+
 async function loadRouteAndCacheModule() {
   const dir = await mkdtemp(path.join(__dirname, ".tmp-answer-cache-"));
 
@@ -152,7 +163,8 @@ async function loadRouteAndCacheModule() {
     .replace(/from\s+["']@\/lib\/chatQuality["']/g, `from "./chatQuality.stub.mjs"`)
     .replace(/from\s+["']@\/lib\/answerSanity["']/g, `from "./answerSanity.stub.mjs"`)
     .replace(/from\s+["']@\/lib\/serverLog["']/g, `from "./serverLog.stub.mjs"`)
-    .replace(/from\s+["']@\/lib\/perfTrace["']/g, `from "./perfTrace.stub.mjs"`);
+    .replace(/from\s+["']@\/lib\/perfTrace["']/g, `from "./perfTrace.stub.mjs"`)
+    .replace(/from\s+["']@\/lib\/zeroLlmGuard["']/g, `from "./zeroLlmGuard.stub.mjs"`);
   const routeTranspiled = ts.transpileModule(routeStubbed, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -170,6 +182,7 @@ async function loadRouteAndCacheModule() {
   await writeFile(path.join(dir, "answerSanity.stub.mjs"), ANSWER_SANITY_STUB, "utf8");
   await writeFile(path.join(dir, "serverLog.stub.mjs"), SERVER_LOG_STUB, "utf8");
   await writeFile(path.join(dir, "perfTrace.stub.mjs"), PERF_TRACE_STUB, "utf8");
+  await writeFile(path.join(dir, "zeroLlmGuard.stub.mjs"), ZERO_LLM_GUARD_STUB, "utf8");
   await writeFile(path.join(dir, "answerCache.mjs"), answerCacheTranspiled.outputText, "utf8");
   await writeFile(path.join(dir, "route.mjs"), routeTranspiled.outputText, "utf8");
 
@@ -596,7 +609,11 @@ test("TTL expiry via real route: same key re-misses after fake-time advance past
         "post-TTL request must re-emit cache_hit=false through the real route's appendQueryTrace"
       );
       assert.equal(runSqlCalls, 2, "post-TTL miss must re-invoke the SQL spy");
-      assert.ok(synthCalls >= 2, "post-TTL miss must re-invoke synthesize at least once more");
+      assert.equal(
+        synthCalls,
+        0,
+        "deterministic_template path bypasses cachedSynthesize unconditionally (slice 07-zero-llm-path-tighten)"
+      );
 
       // follow-up identical → hit again
       const followUp = await postChat(loaded);

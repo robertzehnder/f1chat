@@ -59,3 +59,6 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - Require every Phase 3 per-contract materialization slice to include DB apply/existence/parity gate commands, not only web gates (slice:03-strategy-evidence-summary).
 - For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
 - For `web/src/lib/db.ts` slices, verify all existing env-configuration branches (`*_DATABASE_URL`, `NEON_DB_HOST`, `DB_*`) before accepting “behavior unchanged” claims or fallback semantics (slice:06-driver-swap-local-fallback).
+- Drift-check bash gates must have an explicit `else` clause (or negated `if !`) that sets a flag and a post-loop exit; an `if … then :; fi` without else silently passes on missing keys (slice:07-zero-llm-path-tighten).
+- Two-way drift gates must compare both expected->source and source->expected sets; checking only one direction misses newly added or renamed source keys (slice:07-zero-llm-path-tighten).
+- When a plan proposes direct transpilation/import of a TS module in a Node test, require explicit rewrites or stubs for every `@/lib/*` dependency; transpile-only is not self-contained (slice:07-zero-llm-path-tighten).
