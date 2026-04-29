@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T23:15:00Z
+updated: 2026-04-29T22:36:39Z
 ---
 
 ## Goal
@@ -151,3 +151,21 @@ Rollback: `git revert <commit>`. The grep drift gates make accidental re-introdu
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
 - Prior-context paths `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json` and `diagnostic/slices/08-fact-contract-shape.md` both exist.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Reconcile Step 5 / Step 6 / Acceptance with the current synthesis prompt surface: `web/src/lib/anthropic.ts:32` and `web/src/lib/anthropic.ts:119` still require `question` and `sql`, but `web/src/lib/contracts/factContract.ts:18` does not define either field, so `buildSynthesisPrompt(input: FactContract)` cannot replace `buildSynthesisPromptParts(input: AnswerSynthesisInput)` as written unless the slice explicitly preserves `question`/`sql` in a wrapper or intentionally changes the prompt contents.
+
+### Medium
+- [ ] Specify where the first `FactContract` value on the synthesis path is constructed and how `contractName`, `grain`, `keys`, and optional `coverage` are sourced, because the current route call site at `web/src/app/api/chat/route.ts:882` still passes `{ question, sql, rows, rowCount, runtime }` and the repo has no existing synthesis-path caller of `serializeRowsToFactContract` from `web/src/lib/contracts/factContract.ts:30`.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
+- Prior-context paths `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json` and `diagnostic/slices/08-fact-contract-shape.md` both exist.
+- `rg -n "from ['\\\"][^'\\\"]*lib/contracts/|import type .*factContract|serializeRowsToFactContract" web/src/lib/chatRuntime.ts web/src/lib/anthropic.ts` exited `1`; the current repo state shows no existing `lib/contracts` imports on those two files, so the slice’s proof needs to focus on the payload-producing cutover, not only import removal.
