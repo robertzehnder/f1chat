@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -147,3 +147,18 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
 - `cd web && npm run build` before `cd web && npm run typecheck` still matches the current auditor note for web slices.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Align `Changed files expected` with the allowed Step 4 harness implementation, or constrain Step 4 to avoid shared fixture edits; the plan currently allows copying the existing stubs or sharing them via a new/existing `web/scripts/tests/fixtures/` helper, but only lists the two new `*.test.mjs` files as in-scope test changes (`diagnostic/slices/07-streaming-synthesis.md:36`, `diagnostic/slices/07-streaming-synthesis.md:44`, `diagnostic/slices/07-streaming-synthesis.md:49`).
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
+- `diagnostic/_state.md:44-54` still requires transport-change slices to enumerate legacy consumers and progressive-UI slices to gate the owning state-update path; this revision satisfies those protocol notes.
