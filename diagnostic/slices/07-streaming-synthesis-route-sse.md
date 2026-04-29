@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-route-sse
 phase: 7
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T16:40:40-04:00
+updated: 2026-04-29T20:20:00-04:00
 ---
 
 ## Goal
@@ -188,20 +188,18 @@ bash scripts/loop/test_grading_gate.sh
 - [x] Only the three files in `## Changed files expected` were modified.
 
 ## Audit verdict
-**REVISE**
+**PASS**
 
 - Gate #1 `cd web && npm run build` -> exit `0`
 - Gate #2 `cd web && npm run typecheck` -> exit `0`
 - Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
-- Scope diff -> PASS: `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/_state.md`, `diagnostic/slices/07-streaming-synthesis-route-sse.md`, `web/scripts/tests/streaming-synthesis-route.test.mjs`, `web/src/app/api/chat/route.ts`; `_state.md` is an in-scope append-only auditor note and the rest match declared scope.
-- AC-1 PASS: `web/src/app/api/chat/route.ts:198-229` branches on `Accept: text/event-stream` before dispatch; non-SSE requests still render `NextResponse.json(outcome.payload, { status: outcome.status })`.
-- AC-2 PASS: `web/src/app/api/chat/route.ts:858-876` switches on `chunk.kind`, emits `answer_delta` / `reasoning_delta`, and `web/scripts/tests/streaming-synthesis-route.test.mjs:576-660` verifies `>=2` answer deltas plus one `final` whose normalized payload matches the JSON path.
-- AC-3 FAIL: `web/src/app/api/chat/route.ts:1100-1113` still has a distinct non-LLM `runtime_transient_db_unavailable` return path, but `web/scripts/tests/streaming-synthesis-route.test.mjs:394-719` never exercises it in either SSE or JSON mode, and the slice-completion note at `diagnostic/slices/07-streaming-synthesis-route-sse.md:119-132` claims “covers every exit branch” without a line-cited transient-DB entry. Add SSE/JSON parity coverage for this branch and update the note.
-- AC-4 PASS: `web/src/app/api/chat/route.ts:221-229,1165-1179` emits SSE `error` frames for thrown errors while keeping non-SSE HTTP 400 JSON; `web/scripts/tests/streaming-synthesis-route.test.mjs:666-691` verifies that behavior.
-- AC-5 FAIL: `cd web && node --test scripts/tests/streaming-synthesis-route.test.mjs` -> exit `0`, but the file does not cover every route branch required by the slice because the transient-DB final branch is missing.
+- Scope diff -> PASS: `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/_state.md`, `diagnostic/slices/07-streaming-synthesis-route-sse.md`, `web/scripts/tests/streaming-synthesis-route.test.mjs`, `web/src/app/api/chat/route.ts`; `_state.md` is an in-scope append-only auditor-note addition and the remaining paths match declared scope.
+- AC-1 PASS: `web/src/app/api/chat/route.ts:198-225` branches on `Accept: text/event-stream` before dispatch; non-SSE requests still render `NextResponse.json(outcome.payload, { status: outcome.status })`.
+- AC-2 PASS: `web/src/app/api/chat/route.ts:855-880` switches on `chunk.kind`, emits `answer_delta` / `reasoning_delta`, and `web/scripts/tests/streaming-synthesis-route.test.mjs:576-660` verifies `>=2` answer deltas plus one `final` whose normalized payload matches the non-SSE JSON branch.
+- AC-3 PASS: every non-LLM exit branch returns a single `final` payload via the shared SSE dispatcher (`web/src/app/api/chat/route.ts:221-225`) and is covered in both modes by `web/scripts/tests/streaming-synthesis-route.test.mjs:394-570,670-704`; the slice-completion inventory now cites validation, clarification, completeness-blocked, answer-cache hit, deterministic-template, and transient-DB branches at `diagnostic/slices/07-streaming-synthesis-route-sse.md:119-142`.
+- AC-4 PASS: thrown-error handling emits SSE `error` frames at `web/src/app/api/chat/route.ts:221-229` and preserves HTTP 400 JSON with `asError` sourced from `web/src/app/api/chat/route.ts:1165-1179`; verified by `web/scripts/tests/streaming-synthesis-route.test.mjs:709-734`.
+- AC-5 PASS: `cd web && node --test scripts/tests/streaming-synthesis-route.test.mjs` -> exit `0`; the file covers Accept gating, synthesis, all enumerated non-LLM branches, and the error path (`web/scripts/tests/streaming-synthesis-route.test.mjs:394-760`).
 - AC-6 PASS: all 3 declared gates exited `0`.
-
-Transient database unavailability is a caller-visible non-LLM final-response branch; without a parity test, the slice has not verified that SSE-opted clients never receive a non-SSE response on that path.
 
 ## Plan-audit verdict (round 1)
 
