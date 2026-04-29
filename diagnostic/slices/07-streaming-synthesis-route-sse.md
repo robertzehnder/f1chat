@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-route-sse
 phase: 7
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T16:39:27-04:00
+updated: 2026-04-29T16:40:40-04:00
 ---
 
 ## Goal
@@ -95,7 +95,7 @@ bash scripts/loop/test_grading_gate.sh
 
 **Branch:** `slice/07-streaming-synthesis-route-sse` (pushed to origin)
 **Implementer:** claude
-**Implementation commit:** `dea59cd` (parent: `73efb8e` plan-approved)
+**Implementation commits:** `dea59cd` (initial impl, parent: `73efb8e` plan-approved); `3e4b64a` (revise round — adds transient-DB-unavailable SSE/JSON parity test per audit AC-3/AC-5 finding).
 
 ### What changed
 
@@ -127,7 +127,17 @@ bash scripts/loop/test_grading_gate.sh
   - synthesis (LLM) — `web/src/app/api/chat/route.ts:786-862` (asserts
     >=2 `answer_delta` + 1 `final`; non-SSE body deep-equals SSE final-frame
     data modulo per-call dynamic fields `requestId` / `runtime.durationMs`)
-  - error path — generic catch at `web/src/app/api/chat/route.ts:982-1012`
+  - transient-DB-unavailable — `web/src/app/api/chat/route.ts:1048-1113`
+    (caller-visible non-LLM final-response branch; test drives
+    `runReadOnlySql` to throw `"the database system is starting up"`,
+    which `isTransientDatabaseAvailabilityError` at
+    `web/src/app/api/chat/route.ts:110-119` recognizes; deterministic-template
+    retry falls back to heuristic SQL which also throws, propagating to the
+    transient-DB outer catch. Asserts SSE emits exactly 1 `final` frame whose
+    data deep-equals the non-SSE JSON body — `generationSource =
+    "runtime_transient_db_unavailable"`, `model = null`, `sql =
+    "-- query not executed (database temporarily unavailable)"`.)
+  - error path — generic catch at `web/src/app/api/chat/route.ts:1116-1179`
     (asserts `error` frame for SSE; HTTP 400 + JSON for non-SSE)
   - Accept-header gating — confirms the branching key is `Accept`, not body
 - ANTHROPIC_STUB extended (step 6a): added `state.synthesizeStream`,
