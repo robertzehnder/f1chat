@@ -125,7 +125,8 @@ the implementation-audit feedback on `connectionTimeoutMillis`.
 
 - Implementation commit (code + new files): `01f60e74ae1f74b506d5434ab229948c99097c08`
 - Hash-recording follow-up: `6ac862b`
-- Round-2 revise commit (this commit): see this commit's SHA on the branch tip.
+- Round-2 revise commit: `2dcddec55da5e911f57559d7e65c87b29fd3ca6d`
+- Hash-recording follow-up (this commit): see this commit's SHA on the branch tip.
 
 **Decisions made during implementation:**
 
