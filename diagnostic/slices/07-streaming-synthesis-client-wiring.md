@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-client-wiring
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T22:32:00-04:00
+updated: 2026-04-29T17:10:39-04:00
 ---
 
 ## Goal
@@ -172,3 +172,22 @@ _(none)_
 - All prior-context paths verified to exist on disk.
 - Gate ordering (build → typecheck → test_grading_gate.sh) is non-standard but not incorrect for a Next.js project.
 - `SendChatMessageDeps` signature uses a comment placeholder for `setResolved`/`setComposerCtx`; implementer can derive these from Step 3 and `ChatWorkspace.tsx` — not a blocking gap.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+_(none)_
+
+### Medium
+- [ ] Add a deterministic gate for the live `ChatWorkspace.tsx` wiring, not just the extracted helpers: assert the submit path delegates to `sendChatMessage(...)` (or otherwise prove the old inline `/api/chat` send block is gone) so the slice cannot pass with `consumeChatStream.ts` / `sendChatMessage.ts` tested in isolation while the real component never opts into the SSE path.
+- [ ] Resolve the Step-2/Step-4 harness contradiction around runtime helper imports: either require `sendChatMessage.ts` to receive any response-mapping/finalization helpers via deps so the tmpdir test remains self-contained, or update the test plan to stub those value imports explicitly; the current “no `@/lib/*` stubs are needed” claim is only true if `sendChatMessage.ts` avoids runtime imports beyond `./consumeChatStream`, which the plan does not currently guarantee.
+
+### Low
+_(none)_
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current enough for audit use (`last updated: 2026-04-29T20:51:50Z`), so no staleness note applies.
+- All `## Prior context` paths listed in the slice exist.
+- Gate ordering satisfies the current auditor note: build precedes typecheck.
