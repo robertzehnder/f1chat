@@ -95,7 +95,7 @@ bash scripts/loop/test_grading_gate.sh
 
 **Branch:** `slice/07-streaming-synthesis-route-sse` (pushed to origin)
 **Implementer:** claude
-**Implementation commits:** `dea59cd` (parent: `73efb8e` plan-approved) + revise round (this commit) adding transient-DB-unavailable parity coverage per audit AC-3/AC-5 finding.
+**Implementation commits:** `dea59cd` (initial impl, parent: `73efb8e` plan-approved); `3e4b64a` (revise round — adds transient-DB-unavailable SSE/JSON parity test per audit AC-3/AC-5 finding).
 
 ### What changed
 
