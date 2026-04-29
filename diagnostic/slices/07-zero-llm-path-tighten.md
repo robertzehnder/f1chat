@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T20:30:00Z
+updated: 2026-04-29T15:01:35Z
 ---
 
 ## Goal
@@ -231,3 +231,21 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T14:33:39Z, so no stale-state note is required.
+
+## Plan-audit verdict (round 7)
+
+**Status: REVISE**
+
+### High
+- [ ] Add an explicit seam for the dev-throw proof, or narrow that acceptance item to a direct unit test of the new helper: once step 2 removes the deterministic branch’s `cachedSynthesize` call, no deterministic request can still reach any route-level LLM call site, so the current route-level “force-bypass” test is not implementable from the declared diff alone (`web/src/app/api/chat/route.ts:417`, `web/src/app/api/chat/route.ts:652`, `web/src/app/api/chat/route.ts:719`, `web/src/lib/cache/answerCache.ts:104`).
+
+### Medium
+- [ ] Specify that the transpiled `chatRuntime.stub.mjs` must also export the new assertion helper, or move that helper to a non-stubbed module; step 4 rewrites the route’s `@/lib/chatRuntime` import to a local stub, and the existing harness stub currently exports only `buildChatRuntime`, so the planned import expansion otherwise breaks the test harness before the new assertions run (`web/scripts/tests/answer-cache.test.mjs:68`, `web/scripts/tests/answer-cache.test.mjs:146`).
+- [ ] Tighten the assertion scope wording for cache hits: with the planned call sites immediately before `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and `cachedSynthesize`, a warm answer-cache hit never invokes the helper, so the current “`generationSource === "deterministic_template" || answer-cache hit`” condition is not actionable unless the plan also defines the exact cache-hit signal and hook point.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` read cleanly (`sed -n '1,260p' diagnostic/_state.md` exit 0) and is still fresh at 2026-04-29T14:33:39Z.
+- `diagnostic/notes/05-template-cache-coverage.md` exists and was readable (`sed -n '1,260p' diagnostic/notes/05-template-cache-coverage.md` exit 0).
