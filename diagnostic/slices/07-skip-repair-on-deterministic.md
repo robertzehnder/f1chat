@@ -1,11 +1,11 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T18:00:00Z
+updated: 2026-04-29T17:15:16Z
 ---
 
 ## Goal
@@ -129,3 +129,19 @@ Rollback: `git revert <commit>` (single commit removes the new test file).
 
 ### Notes (informational only — no action)
 - Repo check: `rg -n "repairSqlWithAnthropic|JSON.parse" web/src` shows the parse helpers in `web/src/lib/anthropic.ts` and the LLM repair call site in `web/src/app/api/chat/route.ts`, not in `web/src/lib/chatRuntime.ts`.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Make the planned route tests hold `NODE_ENV=production` across the awaited `postChat(...)` work by using an async-aware env wrapper (or inline `try/finally` around an awaited call); the cited `withNodeEnv("production", () => postChat(loaded))` shape resets `NODE_ENV` before the later SQL-repair / heuristic-fallback awaits execute, so it does not reliably exercise the intended production-only branch.
+
+### Medium
+- [ ] Replace the final scope-proof acceptance criterion’s `git diff --name-only main...HEAD` with the loop’s required diff base `git diff --name-only integration/perf-roadmap...HEAD`, so the slice proves file scope against the branch the dispatcher mirrors from.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T17:02:57Z, so the auditor context is current.
