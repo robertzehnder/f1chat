@@ -2,10 +2,10 @@
 slice_id: 07-streaming-synthesis-server
 phase: 7
 status: pending_plan_audit
-owner: claude
+owner: codex
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T21:35:00-04:00
+updated: 2026-04-29T21:55:00-04:00
 ---
 
 ## Goal
@@ -123,3 +123,21 @@ bash scripts/loop/test_grading_gate.sh
 - All round-1 items (both Mediums and both Lows) are marked `[x]` and the revised plan text addresses them correctly: stub surface is enumerated, Risk/Step 3 inconsistency resolved, auto-glob note added, delta ordering specified.
 - `AnswerSynthesisOutput` is not exported from `anthropic.ts`; the new `StreamChunk` type will be the only exported streaming contract surface — this is fine as long as `model` is included.
 - `DEFAULT_ANTHROPIC_MODEL` reads `process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6"` (line 1); it is not exported, confirming the cross-slice gap.
+
+## Plan-audit verdict (round 3)
+
+**Status: APPROVED**
+**Auditor: claude-plan-audit (round-3 forced-findings ratchet: not applicable)**
+
+### High
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- All round-2 items marked `[x]` and correctly resolved: `StreamChunk.final` now carries `model: string` and `rawText: string` matching `AnswerSynthesisOutput`; `usage?: object` removed; AC-1 reworded to reference `synthesizeAnswerWithAnthropic` in `anthropic.ts`.
+- Plan is internally consistent: Goal, Steps, Changed files, Acceptance criteria, and Out of scope are all aligned.
+- Stub surface fully enumerated (`ANTHROPIC_API_KEY` env + `globalThis.fetch`; no SDK, no `@/lib/*` rewrites); non-regression subtest covers the `synthesizeAnswerWithAnthropic` path; malformed-JSON subtest covers the error path.
+- Gate order (`build` → `typecheck` → `test_grading_gate.sh`) matches `_state.md` convention.
+- No substantive issues remain; handing off to codex final plan audit.
