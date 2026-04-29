@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:35:00Z
+updated: 2026-04-29T23:59:00Z
 ---
 
 ## Goal
@@ -220,6 +220,19 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 
 ### High
 - [x] Add a compile-time gate file or extend `web/src/lib/contracts/factContract.type-test.ts` so `npm run typecheck` deterministically exercises the core contract claims for `FactContractRow` and nested readonly surfaces: assert that `bigint`, `undefined`, function, and `symbol` row values are rejected, and that writes like `result.keys.session_key = 1` / `result.rows.push(...)` fail, because the current plan’s acceptance criteria require those failures but no planned file actually triggers them. (Resolved by extending Step 5 with classes (b) and (c): four `@ts-expect-error` directives on `FactContractRow` literals carrying `bigint`/`undefined`/function/`symbol` values, and two `@ts-expect-error` directives on `_result.keys.session_key = 2` and `_result.rows.push({ a: 2 })`. The two matching acceptance criteria were rewritten to point at those specific directives as the deterministic typecheck surface, and the typecheck-pass acceptance criterion was rewritten to enumerate all three invariant classes in `factContract.type-test.ts`. The `Changed files expected` description for the type-test file was updated to enumerate the three gate classes.)
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 7)
+
+**Status: APPROVED**
+
+### High
 
 ### Medium
 
