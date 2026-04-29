@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-route-sse
 phase: 7
-status: revising_plan
+status: pending_plan_audit
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T20:20:00-04:00
+updated: 2026-04-29T20:45:00-04:00
 ---
 
 ## Goal
@@ -46,7 +46,12 @@ Wire the streaming primitive added by `07-streaming-synthesis-server` into the `
    - Synthesis path: asserts ≥2 `answer_delta` frames + 1 `final` frame in SSE mode; asserts identical JSON body in non-SSE mode.
    - Each non-LLM branch: asserts exactly 1 `final` frame in SSE mode whose data equals the non-SSE mode's JSON body.
    - Error path: asserts `error` frame is emitted for SSE; asserts HTTP 4xx/5xx with JSON body for non-SSE.
-   Reuse the existing `loadRouteAndCacheModule()` stub harness pattern.
+   Reuse the `loadRouteHarness()` stub-harness pattern (the convention used by recent test files such as `web/scripts/tests/zero-llm-path.test.mjs` and `web/scripts/tests/skip-repair.test.mjs`; older `loadRouteAndCacheModule()` in `answer-cache.test.mjs` is the same pattern under an older name — the new test should adopt the newer name).
+6a. **Extend the in-process ANTHROPIC_STUB** so the route's new `synthesizeAnswerStream` import resolves under the harness. The existing stub in `zero-llm-path.test.mjs` / `skip-repair.test.mjs` exports only `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and `synthesizeAnswerWithAnthropic`; the route under test will additionally `import { synthesizeAnswerStream } from "../../lib/anthropic"`. The new test's stub MUST add:
+   - A `state.synthesizeStream` slot, a `__setSynthesizeStreamImpl(fn)` test hook, and reset both in `__resetAnthropic()`.
+   - An `export async function* synthesizeAnswerStream(input)` async-generator wrapper that, when configured, yields whatever the test-supplied async iterable / generator yields (so a test can drive controllable `answer_delta`, `reasoning_delta`, and `final` chunks); when not configured, throws `"anthropic stub: synthesizeAnswerStream not configured"`.
+   Without these additions, the SSE synthesis test cannot inject a deterministic stream and the route import will throw at load time.
+6b. **SSE-reader helper pattern** for the test. The SSE-mode handler returns `new Response(new ReadableStream(...))` with `Content-Type: text/event-stream`, NOT a `NextResponse.json(...)` mock. The test MUST consume the stream by either (a) `const text = await response.text()` then splitting on the SSE record terminator `\n\n` and parsing each block's `event:` / `data:` lines, or (b) iterating the response body's reader (`response.body.getReader()`) and decoding chunks as in `web/scripts/tests/streaming-synthesis-server.test.mjs`. The test file should declare a small `parseSseFrames(text)` helper that returns `[{event, data}, ...]` and use it for every SSE assertion; pick (a) if the route's stream completes synchronously in tests (the simpler path), (b) only if intermediate chunk timing must be observed.
 
 ## Changed files expected
 - `web/src/app/api/chat/route.ts` (additive: SSE frame helper, conditional branch on `Accept: text/event-stream`, per-branch SSE/JSON parity).
@@ -96,11 +101,11 @@ bash scripts/loop/test_grading_gate.sh
 _(none)_
 
 ### Medium
-- [ ] Step 6 instructs the implementer to "reuse the existing `loadRouteAndCacheModule()` stub harness pattern" but the `ANTHROPIC_STUB` in `answer-cache.test.mjs` exports only `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and `synthesizeAnswerWithAnthropic` — it has no `synthesizeAnswerStream` async-generator stub. The plan must explicitly require the new test file to extend the ANTHROPIC_STUB with a `__setSynthesizeStreamImpl` hook and an async-generator `synthesizeAnswerStream` export; without it the synthesis SSE path test cannot inject a controllable stream and will throw at runtime.
-- [ ] Step 6 asserts "≥2 `answer_delta` frames + 1 `final` frame" from SSE mode, but no existing harness provides a pattern for reading a `ReadableStream` response body as SSE text. The SSE-mode route returns `new Response(new ReadableStream(...))`, not a `NextResponse.json(...)` mock object; the plan must specify that the new test needs an SSE-reader helper (e.g. `await response.text()` then split on `\n\n`) or cite the pattern from `streaming-synthesis-server.test.mjs` as the reference — otherwise the implementer has no unambiguous way to consume SSE frames in-process.
+- [x] Step 6 instructs the implementer to "reuse the existing `loadRouteAndCacheModule()` stub harness pattern" but the `ANTHROPIC_STUB` in `answer-cache.test.mjs` exports only `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and `synthesizeAnswerWithAnthropic` — it has no `synthesizeAnswerStream` async-generator stub. The plan must explicitly require the new test file to extend the ANTHROPIC_STUB with a `__setSynthesizeStreamImpl` hook and an async-generator `synthesizeAnswerStream` export; without it the synthesis SSE path test cannot inject a controllable stream and will throw at runtime.
+- [x] Step 6 asserts "≥2 `answer_delta` frames + 1 `final` frame" from SSE mode, but no existing harness provides a pattern for reading a `ReadableStream` response body as SSE text. The SSE-mode route returns `new Response(new ReadableStream(...))`, not a `NextResponse.json(...)` mock object; the plan must specify that the new test needs an SSE-reader helper (e.g. `await response.text()` then split on `\n\n`) or cite the pattern from `streaming-synthesis-server.test.mjs` as the reference — otherwise the implementer has no unambiguous way to consume SSE frames in-process.
 
 ### Low
-- [ ] Step 6 references "the existing `loadRouteAndCacheModule()` stub harness pattern" (name from `answer-cache.test.mjs`); more recent test files (`zero-llm-path.test.mjs`, `skip-repair.test.mjs`) use `loadRouteHarness()`. Align the naming guidance to the newer convention to avoid inconsistency.
+- [x] Step 6 references "the existing `loadRouteAndCacheModule()` stub harness pattern" (name from `answer-cache.test.mjs`); more recent test files (`zero-llm-path.test.mjs`, `skip-repair.test.mjs`) use `loadRouteHarness()`. Align the naming guidance to the newer convention to avoid inconsistency.
 
 ### Notes (informational only — no action)
 - `synthesizeAnswerStream` confirmed exported at `anthropic.ts:566` — prerequisite slice is merged and the dependency is available.
