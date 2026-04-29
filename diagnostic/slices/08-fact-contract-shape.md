@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T18:07:46-04:00
+updated: 2026-04-29T18:09:21-04:00
 ---
 
 ## Goal
@@ -112,13 +112,15 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+cd web && node --test scripts/tests/fact-contract-shape.test.mjs
 ```
+
+> Gate #3 is intentionally scoped to the slice's own test file. The repo-wide `npm run test:grading` runner currently exits non-zero on pre-existing, slice-external failures (`answer-cache.test.mjs`, `driver-fallback.test.mjs`, `skip-repair.test.mjs`, `zero-llm-path.test.mjs` — missing `synthesizeAnswerStream` export from `anthropic.stub.mjs` and `ECONNREFUSED 127.0.0.1:1`). Per the auditor note in `diagnostic/_state.md` ("require an isolated green gate or repair the shared failures first"), and because those four files are not in this slice's `Changed files expected`, this slice runs the isolated gate. The runner contract is unchanged: the new test file is still discoverable by `node --test scripts/tests/*.test.mjs` once the shared failures are resolved in a later slice.
 
 ## Acceptance criteria
 - [ ] `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, and `FactContractRow` are exported from `web/src/lib/contracts/factContract.ts`, and the `rows` field on `FactContract` is typed `ReadonlyArray<FactContractRow>` (NOT `ReadonlyArray<Record<string, unknown>>`). The deterministic typecheck surface for this claim is `factContract.type-test.ts` Step 5(b): four `@ts-expect-error` directives that require `bigint`, `undefined`, function, and `symbol` row values to fail to assign to `FactContractRow`; if `FactContractRow` is widened, those directives become vacuous and `npm run typecheck` fails. Class-instance rejection is intentionally NOT asserted (TypeScript structural typing makes a type-level prohibition impossible; that surface is owned by a later runtime validator in `08-validators-*`).
 - [ ] `serializeRowsToFactContract` returns an object whose `rowCount` equals `rows.length` for both empty and non-empty inputs, and the returned object satisfies `Object.isFrozen(result) === true` at the top level (the helper does NOT deep-freeze nested `keys`/`rows`/`coverage.warnings`; this scope is documented in the helper's JSDoc). Type-level immutability of those nested fields is asserted by their declared types — `keys: Readonly<Record<string, string | number | null>>`, `rows: ReadonlyArray<FactContractRow>` (rows themselves use `readonly [key: string]` index signatures), `coverage.warnings: ReadonlyArray<string>`. The deterministic typecheck surface for this claim is `factContract.type-test.ts` Step 5(c): two `@ts-expect-error` directives that require `_result.keys.session_key = 2` (readonly index signature) and `_result.rows.push({ a: 2 })` (no `push` on `ReadonlyArray`) to fail; if either field is widened (e.g., `keys` retyped to bare `Record<...>` or `rows` retyped to `Array<...>`), the directive becomes vacuous and `npm run typecheck` fails.
-- [ ] `cd web && npm run test:grading` discovers and passes `fact-contract-shape.test.mjs`. The test loads `web/src/lib/contracts/factContract.ts` via the in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern used by sibling tests such as `cache-control-markers.test.mjs` (no new dev-dependency, no `.ts` loader, no change to the `node --test scripts/tests/*.test.mjs` runner contract); the temp directory is removed in a `finally`/`after` hook.
+- [ ] `cd web && node --test scripts/tests/fact-contract-shape.test.mjs` exits zero with all four runtime cases passing. The test loads `web/src/lib/contracts/factContract.ts` via the in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern used by sibling tests such as `cache-control-markers.test.mjs` (no new dev-dependency, no `.ts` loader, no change to the `node --test scripts/tests/*.test.mjs` runner contract); the temp directory is removed in a `finally`/`after` hook. Repo-wide `npm run test:grading` is intentionally **not** asserted here because the runner currently exits non-zero on slice-external failures outside this slice's `Changed files expected`; the isolated gate is the deterministic surface this slice owns.
 - [ ] `cd web && npm run typecheck` passes with no new errors and **fails deterministically** when any of the three invariant classes in `web/src/lib/contracts/factContract.type-test.ts` is violated: (a) `FactContractGrain` is widened (added member or broadened to `string`), narrowed (member removed), member-substituted (e.g., `"meeting"` → `"event"`), or its export removed — proven by the `Expect<Equal<FactContractGrain, ...>>` assertion (pure source-order reordering of union members is intentionally NOT a regression, since TS unions are unordered, and is therefore not asserted); (b) `FactContractRow` is widened to admit `bigint`/`undefined`/function/`symbol` row values — proven by the four `@ts-expect-error` directives on row literals in Step 5(b); (c) `FactContract.keys` is widened from `Readonly<Record<...>>` to bare `Record<...>` or `FactContract.rows` is widened from `ReadonlyArray<...>` to `Array<...>` — proven by the two `@ts-expect-error` directives in Step 5(c) on `_result.keys.session_key = 2` and `_result.rows.push(...)`.
 - [ ] No imports of `factContract.ts` are added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts` in this slice (cutover is deferred to `08-synthesis-payload-cutover`).
 
@@ -133,7 +135,13 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 ## Slice-completion note
 
 **Branch:** `slice/08-fact-contract-shape`
-**Implementation commit:** `86f3ab4d4f84174ea7de36f658cde141cfe38c11`
+**Implementation commits:**
+- `86f3ab4d4f84174ea7de36f658cde141cfe38c11` — initial implementation (FactContract type, serializer, type-level + runtime gates).
+- `13717f4` — gate #3 narrowed to isolated `node --test scripts/tests/fact-contract-shape.test.mjs` per the `_state.md` auditor note (L68); no implementation file changed.
+
+### Revise round (round 1) — what changed
+- Gate #3 in this slice was updated from `cd web && npm run test:grading` to `cd web && node --test scripts/tests/fact-contract-shape.test.mjs`. Rationale: the previous round's audit returned REVISE because `npm run test:grading` exited `1` on slice-external failures (`answer-cache.test.mjs`, `driver-fallback.test.mjs`, `skip-repair.test.mjs`, `zero-llm-path.test.mjs` — missing `synthesizeAnswerStream` export from `anthropic.stub.mjs` and `ECONNREFUSED 127.0.0.1:1`). Those four files are not in this slice's `Changed files expected`; remediating them would change slice intent. Per the auditor note appended to `diagnostic/_state.md` after round 0 ("require an isolated green gate or repair the shared failures first"), this slice now declares the isolated gate. The matching acceptance criterion (#3) and a one-paragraph rationale below the `Gate commands` block were updated to reference the isolated gate explicitly.
+- No implementation file (`factContract.ts`, `factContract.type-test.ts`, `fact-contract-shape.test.mjs`) was modified in this revise round; the three files from `86f3ab4` are byte-identical.
 
 ### Files added (matches `Changed files expected`)
 - `web/src/lib/contracts/factContract.ts` — `FactContractGrain`, `FactContractScalar`, `FactContractValue`, `FactContractRow`, `FactContract`, `SemanticContractSerializer<TInput>`, and `serializeRowsToFactContract` (top-level `Object.freeze`, `rowCount = rows.length`, conditional spread for optional `coverage`).
@@ -145,6 +153,7 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 - The return value of `serializeRowsToFactContract` is wrapped in `Object.freeze` *only* at the top level, matching the JSDoc comment and Step 3 immutability scope.
 - The type-test file declares `_badBigint` / `_badUndefined` / `_badFunction` / `_badSymbol` and `_result` as plain `const`s with leading underscore. `tsconfig.json` does **not** set `noUnusedLocals`, so these constants do not produce unused-local errors; the four `@ts-expect-error` directives in (b) and the two in (c) are the only typecheck signals.
 - The file ends with `export {};` so that under `isolatedModules` it parses unambiguously as a module.
+- Gate #3 is scoped to the slice's own test file (`node --test scripts/tests/fact-contract-shape.test.mjs`) rather than the repo-wide `npm run test:grading`. The runner contract is unchanged: the new test file is still discoverable by `node --test scripts/tests/*.test.mjs` once the four pre-existing slice-external failures (out of scope here) are resolved by a later slice. See the rationale paragraph below the `Gate commands` block.
 
 ### Gate command results
 
@@ -152,12 +161,12 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 |---|---:|---|
 | `cd web && npm run build` | 0 | Next.js production build succeeded. |
 | `cd web && npm run typecheck` | 0 | `tsc --noEmit` clean across the whole `web/` project, including `factContract.type-test.ts` (six `@ts-expect-error` directives all consumed; `Expect<Equal<...>>` resolves to `true`). |
-| `cd web && npm run test:grading` | 1 | The new `fact-contract-shape.test.mjs` is **discovered and all four cases pass** (`ok 20` … `ok 23` in the run output). However, the aggregate suite exits non-zero due to **14 pre-existing failures unrelated to this slice's `Changed files expected`**, in `answer-cache.test.mjs`, `driver-fallback.test.mjs`, `skip-repair.test.mjs`, and `zero-llm-path.test.mjs` (e.g. `"./anthropic.stub.mjs" does not provide an export named 'synthesizeAnswerStream'`). Verified independent of this slice via `git stash -u` on the same worktree: bare `slice/08-fact-contract-shape@d5521d9` runs **74 pass / 14 fail / 10 skip / 98 total**; with this slice's three new files **78 pass / 14 fail / 10 skip / 102 total** — same 14 failures, +4 new passing tests, no new failures introduced. The failing test files are not in this slice's `Changed files expected` and remediating them would change the slice intent, so this is flagged for auditor attention. |
+| `cd web && node --test scripts/tests/fact-contract-shape.test.mjs` | 0 | All four runtime cases pass (`ok 1`–`ok 4`; `# tests 4 / # pass 4 / # fail 0`). The test loads `factContract.ts` via the in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern with `rm(dir, { recursive: true, force: true })` cleanup in `finally`. |
 
 ### Acceptance-criteria self-check
 - [x] `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, `FactContractRow` exported from `web/src/lib/contracts/factContract.ts`; `rows` is `ReadonlyArray<FactContractRow>` (not `ReadonlyArray<Record<string, unknown>>`). Backed by Step 5(b)'s four `@ts-expect-error` directives, all consumed by `npm run typecheck` (exit 0).
 - [x] `serializeRowsToFactContract` returns `rowCount === rows.length` for both empty and non-empty inputs and the returned object satisfies `Object.isFrozen(result) === true` at the top level. Backed by `fact-contract-shape.test.mjs` (cases 1, 2, and 3) and Step 5(c)'s two `@ts-expect-error` directives on nested readonly surfaces.
-- [x] `cd web && npm run test:grading` discovers and passes `fact-contract-shape.test.mjs` (`ok 20`–`ok 23`); the test uses the prescribed in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern with `rm(dir, { recursive: true, force: true })` cleanup in a `finally`. The aggregate suite's exit code is 1 due to pre-existing, slice-external failures (see Gate-command-results note); this slice introduces no new failures.
+- [x] `cd web && node --test scripts/tests/fact-contract-shape.test.mjs` exits zero with all four runtime cases passing; the test uses the prescribed in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern with `rm(dir, { recursive: true, force: true })` cleanup in a `finally`. The runner contract (`node --test scripts/tests/*.test.mjs`) is unchanged.
 - [x] `cd web && npm run typecheck` passes (exit 0). All three invariant classes in `factContract.type-test.ts` are exercised: (a) `Expect<Equal<FactContractGrain, ...>>`; (b) four `@ts-expect-error` directives on `FactContractRow` literals; (c) two `@ts-expect-error` directives on `_result.keys.session_key = 2` and `_result.rows.push(...)`.
 - [x] No imports of `factContract.ts` were added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts`. Verified: `git diff integration/perf-roadmap..HEAD -- web/src/lib/chatRuntime.ts web/src/lib/anthropic.ts` shows no diff.
 
