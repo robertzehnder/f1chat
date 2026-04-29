@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-29T13:21:23Z
+# Project state — last updated: 2026-04-29T14:33:39Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -14,7 +14,7 @@ accumulated context the loop carries between slices._
 | 3 | 13 | 13 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 4 | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 6 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
+| 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 7 | 3 | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 |
@@ -33,11 +33,12 @@ accumulated context the loop carries between slices._
 
 ## Latest perf baseline
 
-- File: `diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json`
-- (could not parse stages from diagnostic/artifacts/perf/04-explain-before-after_2026-04-28.json)
+- File: `diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json`
+- (could not parse stages from diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json)
 
 ## Recent slice merges (last 10)
 
+- `cfe2972` merge: 06-cu-rightsize [pass] — 2026-04-29
 - `731300a` merge: 06-stmt-cache-off [pass] — 2026-04-29
 - `0616c01` merge: 06-pooled-url-assertion [pass] — 2026-04-29
 - `205c23b` merge: 06-driver-swap-local-fallback [pass] — 2026-04-28
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `07da581` merge: 04-explain-before-after [pass] — 2026-04-28
 - `34f2c00` merge: 04-perf-indexes-sql [pass] — 2026-04-28
 - `6c36218` merge: 03-telemetry-lap-bridge [pass] — 2026-04-28
-- `6aeef39` merge: 03-lap-context-summary [pass] — 2026-04-27
 
 ## Open architectural decisions
 
