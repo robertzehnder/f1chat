@@ -1,8 +1,8 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -37,13 +37,23 @@ None at author time.
    - `coverage?: { warnings: ReadonlyArray<string> }` — optional completeness warnings carried alongside rows.
    Export both `FactContract` and `FactContractGrain`.
 2. In the same file, export a `SemanticContractSerializer<TInput>` interface: `(input: TInput) => FactContract`. Keep the file dependency-free of `chatRuntime.ts` and `anthropic.ts` so either side can import without circular deps.
-3. Implement and export `serializeRowsToFactContract(input: { contractName: string; grain: FactContractGrain; keys: Record<string, string | number | null>; rows: ReadonlyArray<Record<string, unknown>>; coverage?: { warnings: ReadonlyArray<string> } }): FactContract`. The helper sets `rowCount = input.rows.length` and returns the result via `Object.freeze` (shallow) so callers cannot mutate the canonical shape.
-4. Add `web/scripts/tests/fact-contract-shape.test.mjs` covering: (a) `serializeRowsToFactContract` returns `rowCount === 0` for empty rows; (b) `rowCount === rows.length` for non-empty rows; (c) the returned object is frozen at the top level (`Object.isFrozen` is true); (d) `coverage` is omitted when not provided and present when provided; (e) `grain` only accepts the declared union (the test asserts that a known-good value compiles via the runner's existing TS-aware path, OR — if the test runner is plain `.mjs` — checks the value is one of the documented strings at runtime). The test file follows the discovery convention used by sibling `web/scripts/tests/*.test.mjs` files so `npm run test:grading` picks it up.
-5. Do NOT wire into synthesis or validators here. The cutover lives in `08-synthesis-payload-cutover`; validator wiring lives in `08-validators-*`. Any cross-module import of `factContract.ts` outside its own test file is out of scope for this slice.
+3. Implement and export `serializeRowsToFactContract(input: { contractName: string; grain: FactContractGrain; keys: Record<string, string | number | null>; rows: ReadonlyArray<Record<string, unknown>>; coverage?: { warnings: ReadonlyArray<string> } }): FactContract`. The helper sets `rowCount = input.rows.length` and wraps the result in `Object.freeze` (top-level only — this guards against reassignment of the returned object's own properties such as `rowCount` or `contractName`; it does **NOT** recursively freeze `keys`, `rows`, or `coverage.warnings`, whose immutability is conveyed at the type level via `ReadonlyArray<...>` and `Record<string, ...>` and is the caller's responsibility at runtime). Document this limitation in a one-line JSDoc above the helper so consumers in later slices do not assume deep immutability.
+4. Add `web/scripts/tests/fact-contract-shape.test.mjs` covering the runtime behavior of `serializeRowsToFactContract`: (a) returns `rowCount === 0` for empty rows; (b) `rowCount === rows.length` for non-empty rows; (c) the returned object is frozen at the top level (`Object.isFrozen(result) === true` AND attempting to assign `result.rowCount = 999` either throws in strict mode or leaves the value unchanged); (d) `coverage` is omitted when not provided and present (with the supplied `warnings` array) when provided. The test file follows the discovery convention used by sibling `web/scripts/tests/*.test.mjs` files so `npm run test:grading` picks it up. The test does NOT attempt to validate the `FactContractGrain` union at runtime — that is the type-level gate's job (Step 5).
+5. Add a type-level gate: create `web/src/lib/contracts/factContract.type-test.ts` that imports `FactContractGrain` and asserts it equals the exact union `"session" | "lap" | "stint" | "driver" | "meeting" | "other"` using a structural-equality helper, e.g.:
+   ```ts
+   import type { FactContractGrain } from "./factContract";
+   type Equal<A, B> =
+     (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+   type Expect<T extends true> = T;
+   type _GrainExact = Expect<Equal<FactContractGrain, "session" | "lap" | "stint" | "driver" | "meeting" | "other">>;
+   ```
+   This file must be inside the `web/` TypeScript project so it is type-checked by `npm run typecheck`. If `FactContractGrain` is widened (e.g., `string`), narrowed, reordered into a different union shape, or removed, the `Expect<Equal<...>>` assertion fails the typecheck deterministically — runtime fallbacks cannot mask the regression. The file exports nothing of value at runtime; it exists solely as a compile-time gate.
+6. Do NOT wire into synthesis or validators here. The cutover lives in `08-synthesis-payload-cutover`; validator wiring lives in `08-validators-*`. Any cross-module import of `factContract.ts` outside its own test files (the runtime test in `web/scripts/tests/` and the type-level gate in `web/src/lib/contracts/`) is out of scope for this slice.
 
 ## Changed files expected
 - `web/src/lib/contracts/factContract.ts` (new — `FactContract` type, `FactContractGrain` union, `SemanticContractSerializer` interface, `serializeRowsToFactContract` helper)
-- `web/scripts/tests/fact-contract-shape.test.mjs` (new — unit tests for the helper and shape invariants)
+- `web/src/lib/contracts/factContract.type-test.ts` (new — compile-time type-equality gate for `FactContractGrain`; covered by `npm run typecheck`)
+- `web/scripts/tests/fact-contract-shape.test.mjs` (new — runtime unit tests for the helper and top-level-freeze invariant)
 
 ## Artifact paths
 None.
@@ -57,15 +67,15 @@ cd web && npm run test:grading
 
 ## Acceptance criteria
 - [ ] `FactContract` type and `FactContractGrain` union are exported from `web/src/lib/contracts/factContract.ts`.
-- [ ] `serializeRowsToFactContract` returns an object whose `rowCount` equals `rows.length` for both empty and non-empty inputs, and the returned top-level object is frozen.
+- [ ] `serializeRowsToFactContract` returns an object whose `rowCount` equals `rows.length` for both empty and non-empty inputs, and the returned object satisfies `Object.isFrozen(result) === true` at the top level (the helper does NOT deep-freeze nested `keys`/`rows`/`coverage.warnings`; this scope is documented in the helper's JSDoc).
 - [ ] `cd web && npm run test:grading` discovers and passes `fact-contract-shape.test.mjs`.
-- [ ] `cd web && npm run typecheck` passes with no new errors introduced by the new module.
+- [ ] `cd web && npm run typecheck` passes with no new errors and **fails deterministically** if `FactContractGrain` is widened, narrowed, reordered, or removed — proven by the `Expect<Equal<FactContractGrain, ...>>` assertion in `web/src/lib/contracts/factContract.type-test.ts`.
 - [ ] No imports of `factContract.ts` are added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts` in this slice (cutover is deferred to `08-synthesis-payload-cutover`).
 
 ## Out of scope
 - Synthesis prompt construction, payload cutover, or removal of any per-contract import (handled by `08-synthesis-payload-cutover`).
 - Validator implementation or `chat_query_trace.jsonl` side effects (handled by `08-validators-*`).
-- Any change to existing semantic contract modules under `web/src/lib/contracts/` other than adding the new `factContract.ts` file.
+- Any change to existing semantic contract modules under `web/src/lib/contracts/` other than adding the new `factContract.ts` and `factContract.type-test.ts` files.
 
 ## Risk / rollback
 New, additive module with no callers. Rollback: `git revert <commit>`.
@@ -98,10 +108,10 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Amend Step 3 and the matching acceptance text so the immutability contract is accurate: either deep-freeze `keys`/`rows`/`coverage.warnings` as well, or explicitly limit the guarantee to top-level property reassignment instead of saying callers cannot mutate the canonical shape.
+- [x] Amend Step 3 and the matching acceptance text so the immutability contract is accurate: either deep-freeze `keys`/`rows`/`coverage.warnings` as well, or explicitly limit the guarantee to top-level property reassignment instead of saying callers cannot mutate the canonical shape. (Resolved by limiting `Object.freeze` to top-level only and documenting the scope explicitly in Step 3, the helper's JSDoc, and the acceptance criterion.)
 
 ### Medium
-- [ ] Replace the Step 4 “TS-aware path OR runtime string-membership check” fork with one deterministic type-level gate that proves `FactContractGrain` is the exported union, because the current runtime fallback can pass even if the TypeScript type is widened or removed.
+- [x] Replace the Step 4 “TS-aware path OR runtime string-membership check” fork with one deterministic type-level gate that proves `FactContractGrain` is the exported union, because the current runtime fallback can pass even if the TypeScript type is widened or removed. (Resolved by removing the runtime/grain assertion from Step 4 and adding a new Step 5 type-level gate `web/src/lib/contracts/factContract.type-test.ts` that uses an `Expect<Equal<...>>` helper checked by `npm run typecheck`.)
 
 ### Low
 
