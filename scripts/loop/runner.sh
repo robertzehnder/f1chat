@@ -185,7 +185,30 @@ source "$LOOP_DIR/slice_helpers.sh"
 source "$LOOP_DIR/state_transitions.sh"
 
 echo "$$" > "$PIDFILE"
-trap 'rm -f "$PIDFILE"; log "runner exit"; exit 0' INT TERM
+
+# Spawn the watchdog sidecar (deterministic auto-heal for the failure
+# pathologies we've seen — orphan pidfile, stuck dispatcher, stale
+# .next/ cache, missing-binary loops, hourly cost spikes). The watchdog
+# polls runner state every WATCHDOG_INTERVAL seconds and is parent-
+# aware: it self-terminates when this runner exits. Disable with
+# LOOP_WATCHDOG_DISABLE=1 (e.g. while debugging the runner itself).
+WATCHDOG_PID=""
+if [[ "${LOOP_WATCHDOG_DISABLE:-0}" != "1" && -x "$LOOP_DIR/watchdog.sh" ]]; then
+  "$LOOP_DIR/watchdog.sh" >>"$LOOP_STATE_DIR/watchdog.log" 2>&1 &
+  WATCHDOG_PID=$!
+  log "watchdog spawned pid=$WATCHDOG_PID"
+fi
+
+# Trap on INT/TERM tears down both runner and watchdog cleanly.
+_shutdown() {
+  rm -f "$PIDFILE"
+  if [[ -n "$WATCHDOG_PID" ]] && kill -0 "$WATCHDOG_PID" 2>/dev/null; then
+    kill -TERM "$WATCHDOG_PID" 2>/dev/null || true
+  fi
+  log "runner exit"
+  exit 0
+}
+trap _shutdown INT TERM
 
 log "runner start pid=$$ tick=$TICK dry_run=$DRY_RUN main_worktree=$LOOP_MAIN_WORKTREE"
 log "guards: max_slice_failures=$MAX_SLICE_FAILURES max_total_dispatches=$MAX_TOTAL_DISPATCHES max_session_seconds=$MAX_SESSION_SECONDS"
