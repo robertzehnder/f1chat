@@ -1,7 +1,7 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: ready_to_merge
+status: done
 owner: codex
 user_approval_required: no
 created: 2026-04-26
