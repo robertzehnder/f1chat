@@ -1,8 +1,8 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: ready_to_merge
-owner: user
+status: done
+owner: -
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-04-29T10:45:00-04:00
