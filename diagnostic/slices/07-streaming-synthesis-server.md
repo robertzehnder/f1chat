@@ -109,7 +109,7 @@ bash scripts/loop/test_grading_gate.sh
   - AC-2: New test file exists at `web/scripts/tests/streaming-synthesis-server.test.mjs`; `npm run test:grading`'s glob `scripts/tests/*.test.mjs` picks it up; all 3 subtests pass when run via `node --test scripts/tests/streaming-synthesis-server.test.mjs` and via the full `test:grading` gate. ✓
   - AC-3: All 3 gates exit 0; gate 3 reports zero NEW failures vs integration baseline. ✓
 
-**Commit hash**: filled in by the commit step below.
+**Commit hash**: `af428e6` carries the implementation (anthropic.ts + new test + slice note); a small follow-up commit on this branch records this hash in the note itself.
 
 ## Audit verdict
 (filled by codex)
