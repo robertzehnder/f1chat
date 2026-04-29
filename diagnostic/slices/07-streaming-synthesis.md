@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -14,6 +14,7 @@ Stream the synthesis response to the client as tokens arrive, rather than buffer
 ## Inputs
 - `web/src/app/api/chat/route.ts`
 - `web/src/lib/chatRuntime.ts`
+- `web/src/components/chat/ChatWorkspace.tsx`
 
 ## Prior context
 - `diagnostic/_state.md`
@@ -23,23 +24,26 @@ None at author time.
 
 ## Decisions
 - **Transport.** Next.js App-Router route handlers return a Web `Response` whose body is a `ReadableStream<Uint8Array>` — there is no Node `ServerResponse.write()`. Streaming assertions therefore consume `response.body` via `getReader()` and count discrete `read()` results, not `write()` calls.
-- **UI scope (resolves Low #1).** Step 3 is **planned scope, not contingent**: `web/src/components/chat/ChatPanel.tsx` will be modified to consume the streaming body via `response.body.getReader()` and progressively append tokens to the rendered assistant message instead of awaiting the full response. The deterministic UI gate below verifies this.
+- **Consumer compatibility (resolves round-2 High).** The existing `/api/chat` JSON contract (`ChatApiResponse` defined at `web/src/lib/chatTypes.ts:66`) is preserved as the **default** response. Every existing structured-JSON caller continues to receive an identical `ChatApiResponse` JSON body, with no migration required:
+  - `web/scripts/chat-health-check.mjs:128` (reads `payload.answer`, `payload.sql`, `payload.adequacyGrade`, `payload.requestId`, `payload.runtime?.*`, etc.)
+  - `web/scripts/tests/session-propagation.test.mjs:42` (reads `payload.runtime.resolution.*`, `payload.sql`, `payload.generationSource`, `payload.generationNotes`, `payload.answer`)
+  - any other current or future caller that does not opt into streaming
+  Streaming is **opt-in** via the request `Accept: text/event-stream` header. Only `ChatWorkspace.tsx` sends that header in this slice; the health-check script and session-propagation tests are unchanged. The streamed body is SSE: a sequence of `data: {"type":"delta","text":"<chunk>"}\n\n` events for token chunks, followed by exactly one terminal `data: {"type":"final","payload":<ChatApiResponse>}\n\n` event carrying the complete structured payload (sql, runtime, requestId, etc.). The UI therefore still receives a full `ChatApiResponse` at the end, preserving `mapChatApiResponseToParts` and `deriveResolvedContext` without change.
+- **UI scope (resolves round-1 Low #1 and round-2 Medium).** The chat UI module that owns the `/api/chat` fetch and assistant rendering flow is `web/src/components/chat/ChatWorkspace.tsx` (verified at `ChatWorkspace.tsx:183`). The previously-named `ChatPanel.tsx` does not exist. Step 3 modifies `ChatWorkspace.tsx` to consume the SSE body via `response.body.getReader()` + `TextDecoder` and progressively append delta tokens to the rendered assistant message. The deterministic UI gate (Step 5) targets the same module.
 
 ## Steps
-1. Switch the route handler in `web/src/app/api/chat/route.ts` to return a streaming `Response` whose body is a `ReadableStream<Uint8Array>` produced from the synthesis async iterator. Set `Content-Type: text/plain; charset=utf-8` and `Cache-Control: no-store, no-transform`. Do not change the route's contract for non-streamed callers beyond making the body chunked.
-2. Update `web/src/lib/chatRuntime.ts` synthesis to expose an async iterator (or `ReadableStream`) that yields partial token strings as they are produced, rather than buffering the full string. Preserve existing return shape for any non-streaming caller by adding a parallel streaming entry point — do not break the buffered API used by tests outside this slice.
-3. Update `web/src/components/chat/ChatPanel.tsx` to consume the streaming body via `response.body.getReader()` (TextDecoder for chunk decoding) and progressively append decoded chunks to the rendered assistant message. The legacy "await full text, then render" path is replaced.
+1. Switch `web/src/app/api/chat/route.ts` to branch on the request `Accept` header. **JSON path (default, no `Accept: text/event-stream`):** behavior identical to today — return the structured `ChatApiResponse` JSON exactly as currently shaped (no field added or removed). **SSE path** (`Accept` includes `text/event-stream`): return a streaming `Response` with `Content-Type: text/event-stream; charset=utf-8` and `Cache-Control: no-store, no-transform`. Body is a `ReadableStream<Uint8Array>` that emits, in order, one or more `data: {"type":"delta","text":"<chunk>"}\n\n` SSE frames as synthesis tokens arrive, then exactly one terminal `data: {"type":"final","payload":<full ChatApiResponse>}\n\n` frame, then closes. Errors on the SSE path are emitted as a single `data: {"type":"error","payload":<ChatApiResponse-with-error>}\n\n` frame followed by stream close (mirrors the JSON error shape so the UI can fall back to existing error handling).
+2. Update `web/src/lib/chatRuntime.ts` synthesis to expose an async iterator (or `ReadableStream`) that yields partial token strings as they are produced, **in addition to** the existing buffered API. The buffered entry point used by the JSON path and by every caller outside this slice MUST remain intact and call-compatible (same exported name, same return shape). The streaming entry point internally uses the same answer-composition logic so that the concatenation of yielded tokens equals the legacy buffered answer for the same inputs.
+3. Update `web/src/components/chat/ChatWorkspace.tsx` `send()` to set `Accept: text/event-stream` on the `/api/chat` fetch, then read `response.body` via `getReader()` + `TextDecoder` and parse SSE frames. On each `delta` frame, append the chunk text to the assistant message's text part and re-set state so the rendered DOM updates progressively (no awaiting the full response). On the `final` frame, take the embedded `ChatApiResponse` payload and run the existing post-response logic unchanged (`mapChatApiResponseToParts`, `deriveResolvedContext`, `setResolved`, `setComposerCtx`, `lastResolved` patch, then `setLoading(false)`). On the `error` frame, mirror the current error branch using `payload.error` / `payload.requestId`. Factor the SSE-consumer into a small exported helper (e.g. `consumeChatStream(response, callbacks)` co-located in `ChatWorkspace.tsx` or a sibling file under `web/src/components/chat/`) so the UI gate can drive it directly without DOM rendering.
 4. Add `web/scripts/tests/streaming-synthesis.test.mjs` that:
-   - invokes the route handler (or its exported `POST`) and asserts `response.body` is a `ReadableStream`;
-   - reads the body via `response.body.getReader()` in a loop, recording each non-empty `value` returned before `done === true`;
-   - asserts the number of recorded chunks is **≥ 3** for a multi-paragraph synthesis fixture (no reliance on `ServerResponse.write()`);
-   - asserts the concatenated decoded chunks equal the full expected answer (correctness, not just chunkiness).
-5. Add `web/scripts/tests/streaming-ui.test.mjs` as the deterministic UI gate (resolves Medium #1): render `ChatPanel` against a stub `fetch` that returns a `Response` whose body is a `ReadableStream` emitting three queued chunks with explicit `await` between enqueues. Assert that after each chunk is enqueued and flushed, the rendered DOM contains the cumulative concatenation of chunks so far (i.e. the UI updates incrementally rather than only after the stream closes). Use the existing test runner conventions (`node --test` under `web/scripts/tests/*.test.mjs`, JSDOM or React testing-library if already in `web/package.json`; if not, drive the component's stream-consumer function directly and assert state updates per chunk).
+   - **JSON-compatibility assertion (resolves round-2 High):** invokes the route handler's exported `POST` with **no** `Accept: text/event-stream` (e.g. `Accept: application/json` or omitted) for a fixture request and asserts (a) `response.headers.get("content-type")` starts with `application/json`, (b) `await response.json()` returns an object that contains every `ChatApiResponse` field actually consumed by `chat-health-check.mjs:172-191` and `session-propagation.test.mjs` — at minimum `answer`, `sql`, `requestId`, `generationSource`, `generationNotes`, `adequacyGrade`, `adequacyReason`, and the `runtime.resolution.selectedSession.sessionKey` / `runtime.resolution.needsClarification` / `runtime.resolution.selectedDriverNumbers` paths — proving the legacy contract is intact for non-streaming callers.
+   - **Streaming assertion:** invokes the same `POST` with `Accept: text/event-stream` for a multi-paragraph fixture and asserts `response.body instanceof ReadableStream` and `response.headers.get("content-type")` includes `text/event-stream`. Reads the body via `response.body.getReader()` in a loop, decodes with `TextDecoder`, parses SSE frames, and asserts (a) the count of distinct `delta` frames is **≥ 3**, (b) exactly one terminal `final` frame is emitted, and (c) the concatenated `delta.text` values equal `final.payload.answer` (correctness, not just chunkiness).
+5. Add `web/scripts/tests/streaming-ui.test.mjs` as the deterministic UI gate (resolves round-1 Medium #1): drive the `ChatWorkspace` SSE-consumer helper extracted in Step 3 against a stub `Response` whose body is a `ReadableStream` emitting three queued `data: {"type":"delta","text":"<chunk>"}\n\n` frames with explicit `await` between enqueues, then a `data: {"type":"final","payload":{...}}\n\n` frame. Assert that after each `delta` is enqueued and flushed, a callback (or observable state) exposed by the consumer holds the **cumulative concatenation** of delta texts so far — i.e. the UI updates incrementally rather than only after the stream closes — and that on the `final` frame the consumer surfaces the embedded `ChatApiResponse` payload to its done callback. Use existing test-runner conventions (`node --test` under `web/scripts/tests/*.test.mjs`).
 
 ## Changed files expected
 - `web/src/app/api/chat/route.ts`
 - `web/src/lib/chatRuntime.ts`
-- `web/src/components/chat/ChatPanel.tsx`
+- `web/src/components/chat/ChatWorkspace.tsx`
 - `web/scripts/tests/streaming-synthesis.test.mjs`
 - `web/scripts/tests/streaming-ui.test.mjs`
 
@@ -55,8 +59,9 @@ cd web && npm run test:grading
 (`test:grading` is `node --test scripts/tests/*.test.mjs`, so both new `*.test.mjs` files are picked up automatically — no script change needed.)
 
 ## Acceptance criteria
-- [ ] `streaming-synthesis.test.mjs` asserts `response.body instanceof ReadableStream` and that `response.body.getReader()` yields ≥ 3 distinct non-empty chunks before `{ done: true }` for a multi-paragraph answer, and that the concatenated chunks equal the expected full answer.
-- [ ] `streaming-ui.test.mjs` asserts that `ChatPanel` (or its stream-consumer) renders the cumulative concatenation of chunks after each chunk arrives, not only after the stream closes — i.e. the UI streams. This is the deterministic gate for the UI claim; no manual verification.
+- [ ] `streaming-synthesis.test.mjs`'s **JSON-compatibility assertion** passes: when invoked without `Accept: text/event-stream`, the `POST` handler returns `Content-Type: application/json` and a JSON body containing every `ChatApiResponse` field consumed by `chat-health-check.mjs:172-191` and `session-propagation.test.mjs` (`answer`, `sql`, `requestId`, `generationSource`, `generationNotes`, `adequacyGrade`, `adequacyReason`, `runtime.resolution.selectedSession.sessionKey`, `runtime.resolution.needsClarification`, `runtime.resolution.selectedDriverNumbers`). No consumer migration required.
+- [ ] `streaming-synthesis.test.mjs`'s **streaming assertion** passes: when invoked with `Accept: text/event-stream`, `response.body instanceof ReadableStream`, the response emits ≥ 3 distinct `delta` SSE frames before exactly one terminal `final` frame, and the concatenated `delta.text` values equal `final.payload.answer`.
+- [ ] `streaming-ui.test.mjs` asserts that the `ChatWorkspace` SSE-consumer surfaces the cumulative concatenation of delta texts after each delta frame arrives (not only after the stream closes) and surfaces the `final` payload to its done callback. Deterministic gate; no manual verification.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -92,10 +97,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Specify how `/api/chat` preserves or migrates existing structured JSON callers before switching the route body to streamed `text/plain`; the current plan conflicts with the declared `ChatApiResponse` contract and existing consumers at `web/src/lib/chatTypes.ts:66`, `web/src/components/chat/ChatWorkspace.tsx:194`, `web/scripts/chat-health-check.mjs:128`, and `web/scripts/tests/session-propagation.test.mjs:42`.
+- [x] Specify how `/api/chat` preserves or migrates existing structured JSON callers before switching the route body to streamed `text/plain`; the current plan conflicts with the declared `ChatApiResponse` contract and existing consumers at `web/src/lib/chatTypes.ts:66`, `web/src/components/chat/ChatWorkspace.tsx:194`, `web/scripts/chat-health-check.mjs:128`, and `web/scripts/tests/session-propagation.test.mjs:42`.
 
 ### Medium
-- [ ] Replace every `ChatPanel.tsx` reference with the actual chat UI module that owns the `/api/chat` fetch and assistant rendering flow, and align `Inputs`, `Steps`, `Changed files expected`, and the UI gate accordingly; the current path does not exist, while the live fetch path is `web/src/components/chat/ChatWorkspace.tsx:183`.
+- [x] Replace every `ChatPanel.tsx` reference with the actual chat UI module that owns the `/api/chat` fetch and assistant rendering flow, and align `Inputs`, `Steps`, `Changed files expected`, and the UI gate accordingly; the current path does not exist, while the live fetch path is `web/src/components/chat/ChatWorkspace.tsx:183`.
 
 ### Low
 
