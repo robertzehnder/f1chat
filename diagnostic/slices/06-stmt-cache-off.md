@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T17:36:57Z
+updated: 2026-04-29T09:03:14-04:00
 ---
 
 ## Goal
@@ -129,7 +129,25 @@ test -s diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log
 Production-touching at deploy time, but verification is staging-only per `## Required services / env`. Require user-approved sentinel before merge. Rollback: `git revert` the slice commit; no Neon-config change is made by this slice, so no Neon-side rollback is required.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/06-stmt-cache-off`.
+- Pooled-endpoint verification target: **local PgBouncer-in-transaction-mode fallback** (per `## Required services / env` option 2). A short-lived `edoburu/pgbouncer:1.25.1` container (`openf1-stmt-cache-pgbouncer`) was started with `POOL_MODE=transaction`, fronting the local Postgres 16 instance running on host port 5433 (database `openf1`, user `openf1`). The verifier was launched with `STAGING_NEON_DATABASE_URL=postgres://openf1:openf1_local_dev@127.0.0.1:6432/openf1` mapped onto `NEON_DATABASE_URL` for the sub-process, and with `DATABASE_URL`/`NEON_DB_*`/`DB_*` keys cleared via `env -u …` so `createPool()` could only resolve the staging URL. Production credentials were not used. The PgBouncer container needed `IGNORE_STARTUP_PARAMETERS=extra_float_digits,statement_timeout,application_name` to accept the `pg.Pool` startup options set by `createPool()` in `web/src/lib/db.ts`; this is local-fixture configuration only and does not change anything in the slice's `Changed files expected`.
+- Decisions:
+  - Implemented the explicit-`name: undefined` rewrite in the `sql<T>()` body at `web/src/lib/db.ts:97` and left the public `(text: string, values?: unknown[])` signature unchanged, per Steps 1–2.
+  - Added the source-level Node-test-runner regression test at `web/scripts/tests/db-stmt-cache.test.mjs`. It performs brace-balanced extraction of `sql<T>()`'s body (starting from `export async function sql<`) and runs the positive `pool.query<…>({ … name: undefined … })` regex against that slice only, so a regression in `sql()` itself fails the test even if some other helper grew the same shape. The negative-lookahead regex `/\.query\([^)]*\bname\s*:\s*(?!undefined\b)/s` runs against both `web/src/lib/db.ts` and `web/src/lib/queries.ts` to keep the `runReadOnlySql()` direct-`client.query` path safe.
+  - Added the type-level guard at `web/src/lib/__tests__/db.stmt-cache.types.ts` using `// @ts-expect-error` without an `as never as string` cast, so the directive is consumed by exactly one expected error today and would flip to TS2578 ("Unused '@ts-expect-error' directive") if the public `sql()` signature ever widened to accept `QueryConfig`.
+  - Verifier (`web/scripts/verify-stmt-cache-off.ts`) imports `sql` and `pool` from `../src/lib/db.js` — the slice's only behavioural change is what gets exercised, not a parallel hand-rolled `pg.Pool`.
+  - Declared `tsx` in `web/package.json` `devDependencies` up-front (per the per-auditor lesson on `_state.md` line 62) and committed the resulting `web/package-lock.json` update.
+- Self-check / gate results (all exit 0):
+  - `cd web && npm install` — exit 0 (added 125 packages, 0 vulnerabilities).
+  - `cd web && npm run build` — exit 0 (Next.js 15 production build, all routes generated).
+  - `cd web && npm run typecheck` — exit 0 (`tsc --noEmit`; the `@ts-expect-error` in `db.stmt-cache.types.ts` consumed exactly one error).
+  - `cd web && npm run test:grading` — exit 0 (53 tests / 43 pass / 10 skipped / 0 fail; the new `db-stmt-cache.test.mjs` is included via the existing `scripts/tests/*.test.mjs` glob and both of its assertions pass).
+  - Pooled-endpoint verifier under `set -o pipefail` + `env -u …` — exit 0; stdout `stmt-cache-off verifier: 20 parallel sql() calls succeeded` captured to `diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log`.
+  - `test -s diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log` — exit 0.
+  - `! grep -E 'prepared statement .* (already exists|does not exist)' diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log` — exit 0 (no PgBouncer prepared-statement errors observed).
+- Note on artifact tracking: `*.log` is matched by the repo `.gitignore` (line 60). Modifying `.gitignore` is outside `Changed files expected`, so the artifact was committed via `git add -f` to honour the slice's mandated `.log` extension.
+- Commit topology (slice branch `slice/06-stmt-cache-off`): a single implementation commit tagged `[slice:06-stmt-cache-off][awaiting-audit]` sits on top of the plan-approved tip `4bc0b09`. The commit's tip hash on `origin/slice/06-stmt-cache-off` is the auditor's entry point.
 
 ## Audit verdict
 (filled by Codex)

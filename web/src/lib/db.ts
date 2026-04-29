@@ -94,6 +94,6 @@ export async function sql<T extends QueryResultRow>(
   text: string,
   values: unknown[] = []
 ): Promise<T[]> {
-  const result = await pool.query<T>(text, values);
+  const result = await pool.query<T>({ text, values, name: undefined });
   return result.rows;
 }
