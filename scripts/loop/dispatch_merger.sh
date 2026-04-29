@@ -260,4 +260,13 @@ if [[ -x scripts/loop/update_state.sh ]]; then
     scripts/loop/update_state.sh >>"$LOG" 2>&1 || logmsg "WARN: update_state.sh failed; continuing"
 fi
 
+# Refresh the test_grading baseline so test_grading_gate.sh tracks
+# integration's current state on subsequent slices. Best-effort —
+# baseline file lives outside git (gitignored under state/), so this
+# never blocks the merge.
+if [[ -x scripts/loop/refresh_test_grading_baseline.sh ]]; then
+  scripts/loop/refresh_test_grading_baseline.sh --quiet \
+    >>"$LOG" 2>&1 || logmsg "WARN: refresh_test_grading_baseline.sh failed; continuing"
+fi
+
 logmsg "merged and pushed; slice marked done"

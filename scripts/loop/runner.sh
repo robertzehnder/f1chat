@@ -660,6 +660,23 @@ while true; do
         || guard_rc=$?
       ;;
     user:blocked)
+      # Autonomous triage layer. Before surfacing USER ATTENTION, attempt
+      # to pattern-match the latest audit verdict against a known REJECT
+      # class and apply a deterministic auto-fix (e.g. scope-creep on a
+      # transitive test stub or artifact path). If triage flips the slice
+      # back to awaiting_audit, the runner just continues — next tick
+      # picks up the slice and codex re-audits. If triage doesn't apply
+      # or the per-slice attempt cap is reached, we fall through to
+      # USER ATTENTION as before.
+      if [[ "${LOOP_TRIAGE_DISABLE:-0}" != "1" && -x "$LOOP_DIR/triage_blocked_slice.sh" ]]; then
+        log "triage attempt for slice=$slice_id"
+        if "$LOOP_DIR/triage_blocked_slice.sh" "$slice_id" >>"$LOG" 2>&1; then
+          log "triage auto-fix succeeded; slice flipped to awaiting_audit"
+          sleep "$TICK"; continue
+        fi
+        log "triage no-pattern-match (or attempt cap); falling through to USER ATTENTION"
+      fi
+
       if [[ "${LOOP_AUTO_REPAIR:-0}" == "1" ]]; then
         log "auto-repair attempt for slice=$slice_id"
         TOTAL_DISPATCHES=$((TOTAL_DISPATCHES + 1))
