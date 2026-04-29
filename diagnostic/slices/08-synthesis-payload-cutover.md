@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:25:06Z
+updated: 2026-04-29T22:40:00Z
 ---
 
 ## Goal
@@ -102,6 +102,24 @@ Rollback: `git revert <commit>`. The grep drift gates make accidental re-introdu
 
 ### Medium
 - [x] Narrow `Changed files expected` and Step 5 to a test path that `cd web && npm run test:grading` actually executes, or add a separate gate for the declared test location; `test:grading` only runs `web/scripts/tests/*.test.mjs`, so a new test under `web/src/lib/__tests__/` would not prove the acceptance criteria.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
+- Prior-context paths `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json` and `diagnostic/slices/08-fact-contract-shape.md` both exist.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify a runnable `web/scripts/tests/*.test.mjs` harness for exercising the synthesis prompt path from `chatRuntime.ts`: either extract the prompt builder into a dependency-light module that the grading runner can import directly, or document every required transpile/path-alias rewrite and stub so the Node test does not fail on `@/lib/*` or other non-Node-resolvable dependencies.
+
+### Medium
+- [ ] Add a deterministic acceptance proof that the synthesis path is typed against `FactContract` rather than only rendering a prompt from one fixture, such as a `tsc`-checked type assertion or type-test covering the prompt-builder input surface.
+- [ ] Add `diagnostic/slices/08-synthesis-payload-cutover.md` to `Changed files expected`, because Step 1 requires the implementer to record the synthesis-field inventory inline in this slice's `Decisions` subsection.
 
 ### Low
 - [ ] None.
