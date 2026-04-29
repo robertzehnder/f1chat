@@ -125,8 +125,8 @@ follow-up commit `slice 06-driver-swap-local-fallback: record commit hash in
 completion note` so the recorded SHA never collides with the commit doing the
 recording.
 
-- Implementation commit (code + new files): __FILL_HASH_1__
-- Hash-recording follow-up (this commit): __FILL_HASH_2__
+- Implementation commit (code + new files): `01f60e74ae1f74b506d5434ab229948c99097c08`
+- Hash-recording follow-up (this commit): see this commit's SHA on the branch tip.
 
 **Decisions made during implementation:**
 
