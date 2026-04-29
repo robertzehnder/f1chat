@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T21:50:00Z
+updated: 2026-04-29T21:43:02Z
 ---
 
 ## Goal
@@ -143,3 +143,19 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite Step 1a and the first acceptance criterion so they do not require `FactContractValue` to reject arbitrary class instances at compile time; with TypeScript’s structural typing, the proposed JSON-value alias can reliably exclude functions/symbols/`bigint`/`undefined`, but “class instance” rejection needs either a narrower concrete example or an explicit runtime validation step in a later slice.
+
+### Medium
+- [ ] Amend Step 4 and the `test:grading` acceptance item to specify how `fact-contract-shape.test.mjs` loads `web/src/lib/contracts/factContract.ts` under the existing `node --test scripts/tests/*.test.mjs` harness, because plain Node will not import a `.ts` module without the same explicit `typescript` transpile-to-temp-`.mjs` pattern used by sibling tests.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
+- `web/package.json` defines `test:grading` as `node --test scripts/tests/*.test.mjs`, so any runtime test in this harness must be self-sufficient about TS loading.
