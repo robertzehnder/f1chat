@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T21:27:42-04:00
+updated: 2026-04-28T21:33:37-04:00
 ---
 
 ## Goal
@@ -170,12 +170,16 @@ the implementation-audit feedback on `connectionTimeoutMillis`.
 - Gate #5 `cd web && node --test scripts/tests/driver-fallback.test.mjs` -> exit `0`
 - Gate #6 `cd web && ! rg -n "pool\.(query|connect)\(" src/` -> exit `0`
 - Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> in scope; only expected files plus implicit-allow `diagnostic/_state.md`
-- Criterion `build` / `typecheck` / `test:grading` / `driver-fallback.test.mjs` / survivor gate -> PASS
+- Criterion `cd web && npm run build` -> PASS
+- Criterion `cd web && npm run typecheck` -> PASS
+- Criterion `cd web && npm run test:grading` -> PASS
+- Criterion `cd web && node --test scripts/tests/driver-fallback.test.mjs` -> PASS
+- Criterion `cd web && ! rg -n "pool\.(query|connect)\(" src/` -> PASS
 - Criterion `Existing call sites that import { sql, pool } from "@/lib/db" continue to compile and resolve via the new barrel` -> PASS
 - Criterion `No new gate requires a real Neon connection or staging environment to merge` -> PASS
-- Criterion `Without OPENF1_LOCAL_FALLBACK=1 behavior is identical to today` -> FAIL at [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:53), [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:68), [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:81): `createPool()` now hard-codes `connectionTimeoutMillis: 2_000` into every pool branch, so opt-out and production no longer preserve the prior lazy connection semantics promised in the slice goal.
+- Criterion `startup probe ("SELECT 1", 2 s connectionTimeoutMillis) runs against the resulting pool` -> FAIL at [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:141): the probe path uses `Promise.race` with a `setTimeout` budget and never sets `connectionTimeoutMillis` on the pool/client, so it does not implement the probe contract specified in the slice Goal, Required services / env, and Step 3.
 - Decision: REVISE
-- Rationale: gates pass, but the slice contract explicitly required the non-fallback path and production path to remain unchanged; moving the 2 s timeout onto the shared singleton pool is a behavior change outside that contract.
+- Rationale: the gates are green, but the implementation does not apply the required 2 s `connectionTimeoutMillis` probe semantics; it only stops awaiting after 2 s while the underlying `pg` connect attempt can continue.
 
 ## Plan-audit verdict (round 1)
 
