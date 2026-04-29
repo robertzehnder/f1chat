@@ -516,3 +516,176 @@ export async function synthesizeAnswerWithAnthropic(
     rawText
   };
 }
+
+export type StreamChunk =
+  | { kind: "answer_delta"; text: string }
+  | { kind: "reasoning_delta"; text: string }
+  | { kind: "final"; answer: string; reasoning?: string; model: string; rawText: string };
+
+function decodeJsonStringSoFar(
+  raw: string,
+  startIdx: number
+): { decoded: string; closed: boolean } {
+  let i = startIdx;
+  let out = "";
+  let closed = false;
+  while (i < raw.length) {
+    const c = raw[i];
+    if (c === "\\") {
+      if (i + 1 >= raw.length) break;
+      const n = raw[i + 1];
+      if (n === "n") { out += "\n"; i += 2; continue; }
+      if (n === "t") { out += "\t"; i += 2; continue; }
+      if (n === "r") { out += "\r"; i += 2; continue; }
+      if (n === "b") { out += "\b"; i += 2; continue; }
+      if (n === "f") { out += "\f"; i += 2; continue; }
+      if (n === '"' || n === "\\" || n === "/") { out += n; i += 2; continue; }
+      if (n === "u") {
+        if (i + 5 >= raw.length) break;
+        const hex = raw.slice(i + 2, i + 6);
+        if (!/^[0-9a-fA-F]{4}$/.test(hex)) break;
+        out += String.fromCharCode(parseInt(hex, 16));
+        i += 6;
+        continue;
+      }
+      out += n;
+      i += 2;
+      continue;
+    }
+    if (c === '"') {
+      closed = true;
+      i += 1;
+      break;
+    }
+    out += c;
+    i += 1;
+  }
+  return { decoded: out, closed };
+}
+
+export async function* synthesizeAnswerStream(
+  input: AnswerSynthesisInput
+): AsyncGenerator<StreamChunk, void, undefined> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is not configured.");
+  }
+
+  const model = DEFAULT_ANTHROPIC_MODEL;
+  const { system, messages } = buildSynthesisRequestParams(input);
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: ANSWER_MAX_TOKENS,
+      temperature: 0,
+      system,
+      messages,
+      stream: true
+    })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Anthropic API error (${response.status}): ${text}`);
+  }
+
+  if (!response.body) {
+    throw new Error("Anthropic streaming response did not include a body.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let sseBuffer = "";
+  let accumulated = "";
+
+  let answerStart = -1;
+  let reasoningStart = -1;
+  let answerYielded = "";
+  let reasoningYielded = "";
+  let answerClosed = false;
+  let reasoningClosed = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    sseBuffer += decoder.decode(value, { stream: true });
+
+    let eventBoundary;
+    while ((eventBoundary = sseBuffer.indexOf("\n\n")) !== -1) {
+      const eventBlock = sseBuffer.slice(0, eventBoundary);
+      sseBuffer = sseBuffer.slice(eventBoundary + 2);
+
+      for (const line of eventBlock.split("\n")) {
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        let evt: { type?: unknown; delta?: { type?: unknown; text?: unknown } };
+        try {
+          evt = JSON.parse(data);
+        } catch {
+          continue;
+        }
+        if (
+          evt.type !== "content_block_delta" ||
+          !evt.delta ||
+          evt.delta.type !== "text_delta" ||
+          typeof evt.delta.text !== "string"
+        ) {
+          continue;
+        }
+        accumulated += evt.delta.text;
+
+        if (answerStart === -1) {
+          const m = /"answer"\s*:\s*"/.exec(accumulated);
+          if (m && m.index !== undefined) {
+            answerStart = m.index + m[0].length;
+          }
+        }
+        if (reasoningStart === -1) {
+          const m = /"reasoning"\s*:\s*"/.exec(accumulated);
+          if (m && m.index !== undefined) {
+            reasoningStart = m.index + m[0].length;
+          }
+        }
+
+        if (answerStart !== -1 && !answerClosed) {
+          const { decoded, closed } = decodeJsonStringSoFar(accumulated, answerStart);
+          if (decoded.length > answerYielded.length) {
+            const delta = decoded.slice(answerYielded.length);
+            answerYielded = decoded;
+            yield { kind: "answer_delta", text: delta };
+          }
+          if (closed) answerClosed = true;
+        }
+
+        if (reasoningStart !== -1 && !reasoningClosed) {
+          const { decoded, closed } = decodeJsonStringSoFar(accumulated, reasoningStart);
+          if (decoded.length > reasoningYielded.length) {
+            const delta = decoded.slice(reasoningYielded.length);
+            reasoningYielded = decoded;
+            yield { kind: "reasoning_delta", text: delta };
+          }
+          if (closed) reasoningClosed = true;
+        }
+      }
+    }
+  }
+
+  const jsonText = extractJsonText(accumulated);
+  const parsed = parseAnswerJsonPayload(jsonText, accumulated);
+
+  yield {
+    kind: "final",
+    answer: parsed.answer,
+    reasoning: parsed.reasoning,
+    model,
+    rawText: accumulated
+  };
+}
