@@ -19,6 +19,32 @@
 
 set -euo pipefail
 
+# Harden PATH so child dispatchers can find node, npm, codex, claude, etc.
+# Without this the runner inherits whatever PATH the launching shell had,
+# and codex's wrapper script — which calls `env node ...` on its first
+# line — silently fails with rc=127 if the launching shell stripped the
+# nvm path. (Observed 2026-04-28: 06-driver-swap-local-fallback impl-audit
+# circuit-broke after 5 consecutive rc=127 dispatches.) This block makes
+# the runner self-sufficient regardless of how it was launched.
+_runner_path_segments=(
+  "$HOME/.nvm/versions/node/v22.12.0/bin"
+  "/opt/homebrew/bin"
+  "/opt/homebrew/sbin"
+  "/usr/local/bin"
+  "/usr/bin"
+  "/bin"
+  "/usr/sbin"
+  "/sbin"
+)
+for _seg in "${_runner_path_segments[@]}"; do
+  case ":${PATH:-}:" in
+    *":$_seg:"*) : ;;  # already there
+    *) [[ -d "$_seg" ]] && PATH="$_seg:${PATH:-}" ;;
+  esac
+done
+export PATH
+unset _runner_path_segments _seg
+
 # Resolve the main worktree's absolute path BEFORE anything else.
 LOOP_MAIN_WORKTREE="$(git rev-parse --show-toplevel)"
 export LOOP_MAIN_WORKTREE
