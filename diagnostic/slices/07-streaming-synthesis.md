@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -240,6 +240,21 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Align the Step 3 / Step 6 wiring constraint with the actual owning message-update path in `web/src/components/chat/ChatWorkspace.tsx:125` and `web/src/components/chat/ChatWorkspace.tsx:160`; the current file mutates assistant messages through `setStore(...)` / `patchActiveConversation(...)`, not a `setMessages(...)` setter, so the hard-coded `setMessages` AST gate currently requires an unscoped state-shape refactor instead of deterministically gating the live streaming update path.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` is current at `2026-04-29T18:25:29Z`; `sed -n '1,220p' diagnostic/_state.md` exited `0`.
+
+## Plan-audit verdict (round 10)
+
+**Status: REVISE**
+
+### High
+- [ ] Clarify Step 2 and the corresponding route/test expectations so the streaming synthesis seam preserves the current structured-answer contract from `web/src/lib/anthropic.ts`: the live prompt requires JSON with both `"answer"` and `"reasoning"` (`web/src/lib/anthropic.ts:101`, `web/src/lib/anthropic.ts:149`, `web/src/lib/anthropic.ts:289`), but the planned `synthesizeAnswerStreamWithAnthropic(input): AsyncIterable<string>` only yields answer-text chunks and does not specify how the SSE branch still obtains `answerReasoning` / final payload parity for `web/src/app/api/chat/route.ts:759-818`.
+
+### Medium
+- [ ] Amend Step 3 and/or Step 6 to require that `ChatWorkspace.tsx` inserts the placeholder assistant message into `patchActiveConversation(...messages...)` before `consumeChatStream(...)` begins, or add a deterministic gate for that ordering; otherwise the current `onDelta` shape can still patch `c.messages.map(...)` against a message that is not yet in state, so the plan can pass its static wiring test without any progressive UI update (`web/src/components/chat/ChatWorkspace.tsx:160`, `web/src/components/chat/ChatWorkspace.tsx:183-218`).
 
 ### Low
 
