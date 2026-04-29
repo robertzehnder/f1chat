@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:39:19Z
+updated: 2026-04-29T23:05:00Z
 ---
 
 ## Goal
@@ -193,3 +193,20 @@ Rollback: `git revert <commit>`. The grep drift gates make accidental re-introdu
 - `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
 - Prior-context paths `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json` and `diagnostic/slices/08-fact-contract-shape.md` both exist.
 - `rg -n "from ['\\\"][^'\\\"]*lib/contracts/|import type .*factContract|serializeRowsToFactContract" web/src/lib/chatRuntime.ts web/src/lib/anthropic.ts` exited `1`; the current repo state shows no existing `lib/contracts` imports on those two files, so the slice’s proof needs to focus on the payload-producing cutover, not only import removal.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] Reconcile Step 5 and the Acceptance criteria with the current synthesis prompt text in [web/src/lib/anthropic.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-synthesis-payload-cutover/web/src/lib/anthropic.ts:119): the live `Runtime:` block is `JSON.stringify(input.runtime ?? {})` over `{ questionType, grain, resolvedEntities, completenessWarnings }` from [route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-synthesis-payload-cutover/web/src/app/api/chat/route.ts:858), but the slice now allows replacing it with a derived `{ contractName, grain, keys, coverage }` summary while still claiming the prompt’s textual contents do not change; either narrow the goal/acceptance to permit that prompt-content change or specify an exact compatibility mapping and test assertion that preserves the existing serialized runtime text.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
+- Prior-context paths `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json` and `diagnostic/slices/08-fact-contract-shape.md` both exist.
