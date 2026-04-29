@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-29T09:13:27-04:00
+updated: 2026-04-29T09:21:00-04:00
 ---
 
 ## Goal
@@ -161,24 +161,23 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 - Commit topology (slice branch `slice/06-stmt-cache-off`): the plan-approved tip is `4bc0b09`; the round-1 implementation commit `b8e0af3` is preserved unchanged on top of it; the round-2 revision adds a single follow-up commit tagged `[slice:06-stmt-cache-off][awaiting-audit]` that updates only this slice file's frontmatter and slice-completion note. The commit's tip hash on `origin/slice/06-stmt-cache-off` is the auditor's entry point.
 
 ## Audit verdict
-**Status: REVISE**
+**Status: PASS**
 
 - Gate #1 `cd web && npm install` -> exit `0`
 - Gate #2 `cd web && npm run build` -> exit `0`
 - Gate #3 `cd web && npm run typecheck` -> exit `0`
 - Gate #4 `cd web && npm run test:grading` -> exit `0`
-- Gate #5 pooled-endpoint verifier -> exit `1`
-  `stmt-cache-off verifier failed: Error: connect ECONNREFUSED 127.0.0.1:6432`
+- Gate #5 pooled-endpoint verifier -> exit `0`
 - Gate #6 `test -s diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log` -> exit `0`
 - Gate #7 `! grep -E 'prepared statement .* (already exists|does not exist)' diagnostic/artifacts/perf/06-stmt-cache-off_$(date +%Y-%m-%d).log` -> exit `0`
 - Scope diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` returned only declared paths plus implicit allow-list paths.
 - Criterion 1 -> PASS. `web/src/lib/db.ts:93-98` keeps the public `sql<T>(text, values)` signature and calls `pool.query<T>({ text, values, name: undefined })`.
-- Criterion 2 -> PASS. `web/scripts/tests/db-stmt-cache.test.mjs:8-50` performs brace-balanced `sql<T>()` body extraction plus the negative `name:` scan, and Gate #4 exited `0`.
+- Criterion 2 -> PASS. `web/scripts/tests/db-stmt-cache.test.mjs:1-50` performs brace-balanced `sql<T>()` body extraction plus the negative `name:` scan, and Gate #4 exited `0`.
 - Criterion 3 -> PASS. `web/src/lib/__tests__/db.stmt-cache.types.ts:1-6` contains the `@ts-expect-error` guard, and Gate #3 exited `0`.
-- Criterion 4 -> FAIL. Gate #5 exited `1`, so the pooled-endpoint verification did not pass under audit rerun.
-- Criterion 5 -> FAIL. `diagnostic/slices/06-stmt-cache-off.md:134-148` claims the local PgBouncer fallback and all gates succeeded, but the cited `edoburu/pgbouncer:1.25.1` image tag is not available and the rerun against the documented fallback URL failed with `ECONNREFUSED`; the committed log is therefore not sufficient proof of a reproducible non-production verification.
-- Criterion 6 -> PASS. `web/package.json:25-34` declares `tsx`, and `web/package-lock.json` records the install.
-- Decision -> REVISE. Fix the pooled-endpoint verifier setup and slice note so Gate #5 can be rerun successfully from the documented non-production target.
+- Criterion 4 -> PASS. `web/scripts/verify-stmt-cache-off.ts:1-37` imported `sql`/`pool` from `../src/lib/db.js`; the verifier gate ran under `set -euo pipefail` with `env -u` DB clearing and exited `0`.
+- Criterion 5 -> PASS. `diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log:1` is committed, non-empty, and was reproduced under audit rerun against the documented local PgBouncer fallback.
+- Criterion 6 -> PASS. `web/package.json:30-33` declares `tsx`, and `web/package-lock.json` records the install.
+- Decision -> PASS. All acceptance criteria verified; merge owner remains `user` because `user_approval_required: yes`.
 
 ## Plan-audit verdict (round 1)
 
