@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29
+updated: 2026-04-29T21:37:51Z
 ---
 
 ## Goal
@@ -118,3 +118,18 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
 - `diagnostic/slices/08-synthesis-payload-cutover.md` still contains stale validator-oriented plan text; this slice can still be audited, but that companion slice likely needs its own plan rewrite before implementation.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `Record<string, unknown>` in the `rows` shape and serializer signature with an explicit JSON-serializable object/value type, because `buildSynthesisPromptParts()` stringifies these rows and the current type admits runtime-unsafe values such as `bigint`.
+
+### Medium
+- [ ] Correct Step 5 and the matching acceptance criterion so they do not claim the `Expect<Equal<...>>` gate fails on a reordered union, or replace that wording with the exact regressions the assertion actually detects.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
