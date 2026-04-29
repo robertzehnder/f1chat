@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -86,3 +86,19 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
 - `web/package.json` currently defines `test:grading` as `node --test scripts/tests/*.test.mjs`, so the planned test path is covered by the existing gate.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify how `/api/chat` preserves or migrates existing structured JSON callers before switching the route body to streamed `text/plain`; the current plan conflicts with the declared `ChatApiResponse` contract and existing consumers at `web/src/lib/chatTypes.ts:66`, `web/src/components/chat/ChatWorkspace.tsx:194`, `web/scripts/chat-health-check.mjs:128`, and `web/scripts/tests/session-propagation.test.mjs:42`.
+
+### Medium
+- [ ] Replace every `ChatPanel.tsx` reference with the actual chat UI module that owns the `/api/chat` fetch and assistant rendering flow, and align `Inputs`, `Steps`, `Changed files expected`, and the UI gate accordingly; the current path does not exist, while the live fetch path is `web/src/components/chat/ChatWorkspace.tsx:183`.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
+- `cd web && npm run build` before `cd web && npm run typecheck` matches the current auditor note for web slices.
