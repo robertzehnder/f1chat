@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T18:05:00-04:00
+updated: 2026-04-29T18:07:46-04:00
 ---
 
 ## Goal
@@ -162,7 +162,21 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 - [x] No imports of `factContract.ts` were added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts`. Verified: `git diff integration/perf-roadmap..HEAD -- web/src/lib/chatRuntime.ts web/src/lib/anthropic.ts` shows no diff.
 
 ## Audit verdict
-(filled by Codex)
+
+**Status: REVISE**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `cd web && npm run test:grading` -> exit `1`
+- `test:grading` failure context: `web/scripts/tests/answer-cache.test.mjs:373`, `web/scripts/tests/driver-fallback.test.mjs:223`, `web/scripts/tests/skip-repair.test.mjs:311`, and `web/scripts/tests/zero-llm-path.test.mjs:342` fail on this branch; representative errors are missing `synthesizeAnswerStream` from `anthropic.stub.mjs` and `ECONNREFUSED 127.0.0.1:1`.
+- Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> in scope: `diagnostic/slices/08-fact-contract-shape.md`, `web/src/lib/contracts/factContract.ts`, `web/src/lib/contracts/factContract.type-test.ts`, `web/scripts/tests/fact-contract-shape.test.mjs`
+- Criterion 1 PASS — `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, and `FactContractRow` are exported and `rows` is `ReadonlyArray<FactContractRow>` in `web/src/lib/contracts/factContract.ts:1`; the forbidden-value type gates are present in `web/src/lib/contracts/factContract.type-test.ts:13`.
+- Criterion 2 PASS — `serializeRowsToFactContract` sets `rowCount = input.rows.length`, applies top-level `Object.freeze`, and documents the non-deep-freeze limit in `web/src/lib/contracts/factContract.ts:29`; the runtime checks pass in `web/scripts/tests/fact-contract-shape.test.mjs:30`, `web/scripts/tests/fact-contract-shape.test.mjs:52`, `web/scripts/tests/fact-contract-shape.test.mjs:74`, and `web/scripts/tests/fact-contract-shape.test.mjs:109`, and the readonly type gates are in `web/src/lib/contracts/factContract.type-test.ts:23`.
+- Criterion 3 PASS — `fact-contract-shape.test.mjs` is discovered by `npm run test:grading` and passes as subtests `20`-`23`; the TS-loading harness is implemented in `web/scripts/tests/fact-contract-shape.test.mjs:14`.
+- Criterion 4 PASS — `cd web && npm run typecheck` exits `0`; the exact-union, forbidden-value, and readonly-mutation gates are present in `web/src/lib/contracts/factContract.type-test.ts:4`.
+- Criterion 5 PASS — no imports were added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts`; `git diff --unified=0 integration/perf-roadmap...HEAD -- web/src/lib/chatRuntime.ts web/src/lib/anthropic.ts` produced no hunks, and `rg -n "factContract" web/src web/scripts/tests` only finds the new type-test and runtime test.
+- Decision: REVISE
+- Rationale: the slice itself is in scope and its contract surfaces pass, but a declared mandatory gate still exits non-zero, so the slice cannot move to `ready_to_merge`.
 
 ## Plan-audit verdict (round 1)
 
