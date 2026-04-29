@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -198,6 +198,21 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Strengthen `streaming-ui-wiring.test.mjs` so it proves `Accept: text/event-stream` is attached to the `/api/chat` fetch request (or the specific request options passed on the `consumeChatStream` path), not merely that the string literal exists somewhere in `ChatWorkspace.tsx`; the current literal-only assertion can pass with a dead/orphaned constant and does not satisfy the deterministic owning-wiring gate required by `diagnostic/_state.md:68`.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
+
+## Plan-audit verdict (round 8)
+
+**Status: REVISE**
+
+### High
+- [ ] Strengthen `streaming-synthesis.test.mjs` so it proves the SSE path yields observable body data before the terminal frame / stream close, not merely that the fully collected body contains `>= 3` `delta` events; a buffered-at-end implementation still satisfies the current gate while missing the slice’s “stream over the wire as tokens arrive” goal (`diagnostic/slices/07-streaming-synthesis.md:38`, `diagnostic/slices/07-streaming-synthesis.md:49`, `diagnostic/slices/07-streaming-synthesis.md:81`).
+- [ ] Extend `streaming-ui.test.mjs` to split at least one `data: {...}\\n\\n` SSE frame across multiple `ReadableStream` reads and assert `consumeChatStream` reconstructs it correctly; the current whole-frame fixture does not gate the buffering-across-reads behavior Step 3 requires for real network chunking (`diagnostic/slices/07-streaming-synthesis.md:46`, `diagnostic/slices/07-streaming-synthesis.md:50`, `diagnostic/slices/07-streaming-synthesis.md:82`).
+
+### Medium
 
 ### Low
 
