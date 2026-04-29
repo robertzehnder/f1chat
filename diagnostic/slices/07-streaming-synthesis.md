@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -107,3 +107,20 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
 - `cd web && npm run build` before `cd web && npm run typecheck` matches the current auditor note for web slices.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Specify a self-contained `node --test` harness for Steps 4-5 that can execute `web/src/app/api/chat/route.ts` and the extracted streaming-consumer helper under the current plain test runner, including any required TS/TSX transpilation plus `@/...` / `next/*` import rewrites or an alternate JS-importable helper target; as written, the gates assume direct source imports that `web/package.json` does not provide.
+
+### Medium
+- [ ] Expand the JSON-compatibility assertion and matching acceptance criterion to cover every field currently read by `web/scripts/chat-health-check.mjs:172-191`, or narrow the “no consumer migration required” claim; the current minimum list omits live consumer reads such as `answerReasoning`, `model`, `result.rowCount`, `result.rows`, `runtime.completeness.warnings`, `runtime.questionType`, and `runtime.resolution.status`.
+- [ ] Align `Inputs` and `Changed files expected` with Step 3's optional sibling streaming-helper file, or constrain Step 3 to keep the exported helper inside `ChatWorkspace.tsx`; the current scope list omits one of the plan's own allowed edit targets.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
+- `web/package.json:10` still runs `test:grading` as plain `node --test scripts/tests/*.test.mjs`.
