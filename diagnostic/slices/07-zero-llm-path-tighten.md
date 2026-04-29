@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: awaiting_audit
-owner: codex
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T12:15:59-04:00
+updated: 2026-04-29T12:30:25-04:00
 ---
 
 ## Goal
@@ -196,7 +196,21 @@ The auditor can re-verify by checking out `3783d1e` (the parent of `d53f6b3`) an
 - [x] **Production no-throw — direct helper unit test** — `zero-llm-path.test.mjs:345` (test 6) calls the helper with `generationSource: "deterministic_template"` for each callSite under `NODE_ENV=production`; asserts no throw.
 
 ## Audit verdict
-(filled by Codex)
+**REJECT**
+
+- Gate `cd web && npm run build` -> exit `1`. Failure: `web/src/lib/queries.ts:1` imports missing `withTransaction`; build stops at `web/src/lib/queries.ts:1` with the same missing export and the downstream type-check phase never clears.
+- Gate `cd web && npm run typecheck` -> exit `2`. Failures: `web/src/lib/queries.ts:1` (`withTransaction` missing), `web/src/lib/queries.ts:789` (`tx` implicitly `any`), `web/src/lib/queries.ts:791` (untyped call with type arguments).
+- Gate `cd web && npm run test:grading` -> exit `0`.
+- Gate `Eligibility-list drift gate (two-way)` -> exit `0`.
+- Scope diff -> **FAIL**. `git diff --name-only integration/perf-roadmap...HEAD` includes `web/scripts/tests/answer-cache.test.mjs`, which is outside `## Changed files expected`, outside `## Artifact paths`, and outside the implicit allow-list. Out-of-scope edits are at `web/scripts/tests/answer-cache.test.mjs:127`, `web/scripts/tests/answer-cache.test.mjs:167`, `web/scripts/tests/answer-cache.test.mjs:185`, and `web/scripts/tests/answer-cache.test.mjs:612`.
+- Acceptance: cold deterministic, production-mode, zero LLM -> **PASS** via deterministic bypass at `web/src/app/api/chat/route.ts:727` and coverage test at `web/scripts/tests/zero-llm-path.test.mjs:342`.
+- Acceptance: warm answer-cache-hit, zero LLM -> **PASS** via cache-hit return path at `web/src/app/api/chat/route.ts:473` and test at `web/scripts/tests/zero-llm-path.test.mjs:379`.
+- Acceptance: LLM-required negative control -> **PASS** via non-template LLM path at `web/src/app/api/chat/route.ts:416` and test at `web/scripts/tests/zero-llm-path.test.mjs:414`.
+- Acceptance: dev-only assertion verified -> **PASS** via helper at `web/src/lib/zeroLlmGuard.ts:1` and test at `web/scripts/tests/zero-llm-path.test.mjs:449`.
+- Acceptance: non-deterministic no-throw -> **PASS** via helper guard at `web/src/lib/zeroLlmGuard.ts:9` and test at `web/scripts/tests/zero-llm-path.test.mjs:484`.
+- Acceptance: production no-throw -> **PASS** via helper guard at `web/src/lib/zeroLlmGuard.ts:6` and test at `web/scripts/tests/zero-llm-path.test.mjs:504`.
+- Decision -> **REJECT**.
+- Rationale -> scope creep in `web/scripts/tests/answer-cache.test.mjs` is disallowed by the slice contract, and the declared `build` / `typecheck` gates do not pass on the audited branch.
 
 ## Plan-audit verdict (round 1)
 
