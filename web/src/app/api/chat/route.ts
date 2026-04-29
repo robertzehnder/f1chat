@@ -18,6 +18,7 @@ import {
   setAnswerCacheEntry,
   type AnswerCacheSubset
 } from "@/lib/cache/answerCache";
+import { assertNoLlmForDeterministic } from "@/lib/zeroLlmGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -412,6 +413,11 @@ export async function POST(request: Request) {
           .filter(Boolean)
           .join(" | ");
       } else {
+        assertNoLlmForDeterministic({
+          generationSource,
+          templateKey: selectedTemplateKey ?? undefined,
+          callSite: "generateSqlWithAnthropic"
+        });
         const sqlgenSpan = startTrackedSpan(startSpan("sqlgen_llm"));
         try {
           const llm = await generateSqlWithAnthropic({
@@ -648,6 +654,11 @@ export async function POST(request: Request) {
 
         if (generationSource === "anthropic") {
           try {
+            assertNoLlmForDeterministic({
+              generationSource,
+              templateKey: selectedTemplateKey ?? undefined,
+              callSite: "repairSqlWithAnthropic"
+            });
             const repairSpan = startTrackedSpan(startSpan("repair_llm"));
             let repaired: Awaited<ReturnType<typeof repairSqlWithAnthropic>>;
             try {
@@ -714,34 +725,48 @@ export async function POST(request: Request) {
           : "";
 
       if (result.rowCount > 0) {
-        const synthSpan = startTrackedSpan(startSpan("synthesize_llm"));
-        try {
-          const synthesis = await cachedSynthesize({
-            question: message,
-            sql: result.sql,
-            rows: result.rows,
-            rowCount: result.rowCount,
-            runtime: {
-              questionType: runtime.questionType,
-              grain: runtime.grain.grain,
-              resolvedEntities: runtime.queryPlan.resolved_entities,
-              completenessWarnings: runtime.completeness.warnings
-            }
-          });
-          answer = synthesis.answer;
-          if (caveatText) {
-            answer = `${answer}${caveatText}`;
-          }
-          answerReasoning = synthesis.reasoning;
-        } catch {
+        if (generationSource === "deterministic_template") {
           answer = buildFallbackAnswer({
             question: message,
             rowCount: result.rowCount,
             rows: result.rows,
             caveatText
           });
-        } finally {
-          endTrackedSpan(synthSpan);
+        } else {
+          assertNoLlmForDeterministic({
+            generationSource,
+            templateKey: selectedTemplateKey ?? undefined,
+            callSite: "cachedSynthesize"
+          });
+          const synthSpan = startTrackedSpan(startSpan("synthesize_llm"));
+          try {
+            const synthesis = await cachedSynthesize({
+              question: message,
+              sql: result.sql,
+              rows: result.rows,
+              rowCount: result.rowCount,
+              runtime: {
+                questionType: runtime.questionType,
+                grain: runtime.grain.grain,
+                resolvedEntities: runtime.queryPlan.resolved_entities,
+                completenessWarnings: runtime.completeness.warnings
+              }
+            });
+            answer = synthesis.answer;
+            if (caveatText) {
+              answer = `${answer}${caveatText}`;
+            }
+            answerReasoning = synthesis.reasoning;
+          } catch {
+            answer = buildFallbackAnswer({
+              question: message,
+              rowCount: result.rowCount,
+              rows: result.rows,
+              caveatText
+            });
+          } finally {
+            endTrackedSpan(synthSpan);
+          }
         }
       }
 
