@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T21:34:51-04:00
+updated: 2026-04-28T21:40:19-04:00
 ---
 
 ## Goal
@@ -164,7 +164,7 @@ round-3 revise commit that replaces the `Promise.race` probe with a real
 **Survivor count:** `web/src/lib/queries.ts:789`'s `pool.connect()` is gone — replaced with `withTransaction(async (tx) => { … })`. `rg -n "pool\.(query|connect)\(" web/src/` returns 0 matches.
 
 ## Audit verdict
-**Status: REVISE**
+**Status: PASS**
 
 - Gate #1 `cd web && npm install --no-audit --no-fund` -> exit `0`
 - Gate #2 `cd web && npm run build` -> exit `0`
@@ -172,17 +172,17 @@ round-3 revise commit that replaces the `Promise.race` probe with a real
 - Gate #4 `cd web && npm run test:grading` -> exit `0`
 - Gate #5 `cd web && node --test scripts/tests/driver-fallback.test.mjs` -> exit `0`
 - Gate #6 `cd web && ! rg -n "pool\.(query|connect)\(" src/` -> exit `0`
-- Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> in scope; only expected files plus implicit-allow `diagnostic/_state.md`
+- Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> in scope; changed paths match the expected list plus implicit-allow `diagnostic/_state.md` single-line auditor note append
 - Criterion `cd web && npm run build` -> PASS
 - Criterion `cd web && npm run typecheck` -> PASS
 - Criterion `cd web && npm run test:grading` -> PASS
-- Criterion `cd web && node --test scripts/tests/driver-fallback.test.mjs` -> PASS
+- Criterion `cd web && node --test scripts/tests/driver-fallback.test.mjs` -> PASS; Cases A-F passed with the expected `DB_*`, `DATABASE_URL`, opt-out, production, and `NEON_DB_HOST` coverage at `web/scripts/tests/driver-fallback.test.mjs:223`, `:247`, `:267`, `:286`, `:306`, `:330`
 - Criterion `cd web && ! rg -n "pool\.(query|connect)\(" src/` -> PASS
-- Criterion `Existing call sites that import { sql, pool } from "@/lib/db" continue to compile and resolve via the new barrel` -> PASS
-- Criterion `No new gate requires a real Neon connection or staging environment to merge` -> PASS
-- Criterion `startup probe ("SELECT 1", 2 s connectionTimeoutMillis) runs against the resulting pool` -> FAIL at [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:141): the probe path uses `Promise.race` with a `setTimeout` budget and never sets `connectionTimeoutMillis` on the pool/client, so it does not implement the probe contract specified in the slice Goal, Required services / env, and Step 3.
-- Decision: REVISE
-- Rationale: the gates are green, but the implementation does not apply the required 2 s `connectionTimeoutMillis` probe semantics; it only stops awaiting after 2 s while the underlying `pg` connect attempt can continue.
+- Criterion `startup probe ("SELECT 1", 2 s connectionTimeoutMillis) runs against the resulting pool` -> PASS at `web/src/lib/db/driver.ts:141`; probe uses transient `pg.Client` with `connectionTimeoutMillis: 2_000`, executes `SELECT 1`, and fallback only branches after probe failure at `web/src/lib/db/driver.ts:168`
+- Criterion `Existing env-configuration branches are preserved and healthy-path pool identity is unchanged` -> PASS at `web/src/lib/db/driver.ts:42`, `:60`, `:78`, `:90`, `:133`; `createPool()` keeps URL, `NEON_DB_HOST`, and `DB_*` branches, exports one singleton `pool`, and `chooseDriver()` memoizes the same instance on non-fallback paths; Case C asserts `(await chooseDriver()).pool === pool` at `web/scripts/tests/driver-fallback.test.mjs:164`
+- Criterion `runReadOnlySql survivor is converted to the fallback-safe transaction helper` -> PASS at `web/src/lib/queries.ts:789` and `web/src/lib/db/driver.ts:208`
+- Criterion `No new gate requires a real Neon connection or staging environment to merge` -> PASS; fallback cases use unroutable local endpoints (`127.0.0.1:1`) and committed snapshot data in `web/data/local-fallback-snapshot.sql:1`
+- Decision: PASS
 
 ## Plan-audit verdict (round 1)
 
