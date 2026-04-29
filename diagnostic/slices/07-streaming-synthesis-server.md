@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-server
 phase: 7
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T20:35:00-04:00
+updated: 2026-04-29T21:05:00-04:00
 ---
 
 ## Goal
@@ -104,3 +104,22 @@ bash scripts/loop/test_grading_gate.sh
 - Gate order `build` → `typecheck` matches the existing auditor convention in `_state.md`.
 - `Changed files expected` is correctly scoped: `anthropic.ts`, the new test file, and the slice frontmatter — no route or client files, consistent with Goal and Out of scope.
 - The `bash scripts/loop/test_grading_gate.sh` gate is the standard baseline-aware grading gate used by other slices; consistent with Acceptance criteria AC-3.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — genuine Medium found)**
+
+### High
+
+### Medium
+- [ ] `StreamChunk.final` type definition omits `model` (and `rawText`) from `AnswerSynthesisOutput` (confirmed: `type AnswerSynthesisOutput = { answer, reasoning?, model, rawText }` at `web/src/lib/anthropic.ts:45-50`), yet Step 1 claims the terminal frame "mirrors today's `synthesizeAnswerWithAnthropic` return shape exactly." Since `DEFAULT_ANTHROPIC_MODEL` is not exported from `anthropic.ts` (it is an unexported `const`), the next sub-slice (`07-streaming-synthesis-route-sse`) will have no way to populate `ChatApiResponse.model` from the streaming output without a new export or a second `process.env` read. Either (a) add `model: string` to `StreamChunk.final` (and optionally `rawText: string`) so the terminal frame is fully self-contained, or (b) explicitly document that `model` is intentionally excluded and specify exactly how the next slice will obtain it.
+
+### Low
+- [ ] `StreamChunk.final` includes `usage?: object` which does not appear in `AnswerSynthesisOutput` and is not asserted in any subtest or acceptance criterion; either document that it is populated from the Anthropic `message_delta` event's `usage` field, or remove the field if it is not needed by this slice so the interface does not carry unexplained optional state.
+- [ ] Acceptance criterion AC-1 reads "existing `cachedSynthesize` export is preserved" but `cachedSynthesize` lives in `answerCache.ts` (not modified by this slice); reword to "existing `synthesizeAnswerWithAnthropic` export in `anthropic.ts` is unchanged (so `cachedSynthesize` in `answerCache.ts` continues to work)" to avoid misleading the implementer about what is at risk.
+
+### Notes (informational only — no action)
+- All round-1 items (both Mediums and both Lows) are marked `[x]` and the revised plan text addresses them correctly: stub surface is enumerated, Risk/Step 3 inconsistency resolved, auto-glob note added, delta ordering specified.
+- `AnswerSynthesisOutput` is not exported from `anthropic.ts`; the new `StreamChunk` type will be the only exported streaming contract surface — this is fine as long as `model` is included.
+- `DEFAULT_ANTHROPIC_MODEL` reads `process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6"` (line 1); it is not exported, confirming the cross-slice gap.
