@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T20:10:00Z
+updated: 2026-04-29T20:30:00Z
 ---
 
 ## Goal
@@ -23,7 +23,7 @@ Audit and tighten the deterministic-only path: questions that resolve fully via 
 - `diagnostic/notes/05-template-cache-coverage.md` — Phase 5 audit; the canonical inventory of the 32 deterministic templates and the basis for "deterministic-eligible" in this slice (its `## Coverage table` is the seed list; every row whose disposition is `future-Y` or `future-Y, with TTL/invalidation` is in scope here).
 
 ## Required services / env
-None at author time. Tests must work with `NODE_ENV=test` and without an `ANTHROPIC_API_KEY`; the assertion-trip test uses `NODE_ENV=development` to exercise the throw.
+None at author time. Tests must work with `NODE_ENV=test` and without an `ANTHROPIC_API_KEY` and **without a running Postgres** — the test never opens a DB connection. Postgres independence is achieved via the same transpile + import-rewrite harness already in use by `web/scripts/tests/answer-cache.test.mjs` (see lines 47–61, 143–166): the test reads `web/src/app/api/chat/route.ts` from disk, rewrites its `@/lib/queries`, `@/lib/anthropic`, `@/lib/deterministicSql`, `@/lib/chatRuntime`, `@/lib/cache/answerCache`, and `next/server` imports to local in-process stubs, transpiles via `typescript.transpileModule`, and imports the resulting `route.mjs`. The `queries.stub.mjs` exports a configurable `runReadOnlySql` (initialized via `__setRunReadOnlySqlImpl(fn)`) so deterministic SQL execution returns canned rows in-memory; no `DATABASE_URL` / `POOLED_DATABASE_URL` is consulted. The assertion-trip test uses `NODE_ENV=development` to exercise the throw; the no-throw test uses `NODE_ENV=production`.
 
 ## Steps
 1. Enumerate deterministic-eligible templates from `diagnostic/notes/05-template-cache-coverage.md` (the 32-row coverage table) and cross-check against the `templateKey: "..."` literals in `web/src/lib/deterministicSql.ts`. Codify this list in the test file as a single exported constant **named exactly `DETERMINISTIC_KEYS`** (e.g. `export const DETERMINISTIC_KEYS = ["...", ...];`) so the drift gate (see `## Gate commands`) can scope its extraction to that block and so future drift is caught.
@@ -33,9 +33,10 @@ None at author time. Tests must work with `NODE_ENV=test` and without an `ANTHRO
    - Rationale (reuse `buildFallbackAnswer`): the helper already exists in the same file (`web/src/app/api/chat/route.ts:68`) and produces a row-structured deterministic answer via `buildStructuredSummaryFromRows`; introducing a new formatter would expand scope. Capture this choice in a new `## Decisions` section.
 3. **Dev-only assertion.** Add a helper in `web/src/lib/chatRuntime.ts` (e.g. `assertNoLlmForDeterministic({ generationSource, templateKey, callSite })`) that throws `Error("zero-llm-path violation: ...")` when `process.env.NODE_ENV !== "production"` and `(generationSource === "deterministic_template" || answer-cache hit) && an LLM transport is about to be invoked`. Wire calls in `web/src/app/api/chat/route.ts` immediately before `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and the (now non-deterministic-only) `cachedSynthesize` call so any future regression that re-enters an LLM call from the deterministic branch trips the assertion. The assertion is a belt-and-braces guard on top of step 2's structural change: step 2 prevents the call in production; the dev assertion catches future regressions during development.
 4. Add tests in `web/scripts/tests/zero-llm-path.test.mjs` that:
-   - **Cold deterministic, all 32 templates** — for each `DETERMINISTIC_KEYS` entry, drive the chat route under `NODE_ENV=production` with a representative prompt and a stubbed `web/src/lib/anthropic.ts` whose three exports (`generateSqlWithAnthropic`, `repairSqlWithAnthropic`, `synthesizeAnswerWithAnthropic`) each increment a shared counter and reject. Reset the answer cache before each iteration (call `clearAnswerCache()` or equivalent reset) so the request actually exercises the cold path. Assert the counter is exactly `0` after each request — this directly verifies step 2's synthesis bypass.
+   - **Test harness — no Postgres, no Anthropic.** Mirror the `loadRouteAndCacheModule()` pattern in `web/scripts/tests/answer-cache.test.mjs:127–193` exactly: read `web/src/app/api/chat/route.ts`, rewrite all `@/lib/...` and `next/server` imports to local `*.stub.mjs` files, transpile via `typescript.transpileModule`, and dynamically import the resulting `route.mjs`. The `queries.stub.mjs` MUST expose `__setRunReadOnlySqlImpl(fn)` (as in `answer-cache.test.mjs:47–61`) so each test injects an in-memory `runReadOnlySql` returning canned rows for the deterministic template under exercise; this means Step 2's deterministic branch executes its SQL against the stub (no Postgres connection is ever opened). The `anthropic.stub.mjs` increments a shared counter on each export call, satisfying Step 4's counter requirement. The `deterministicSql.stub.mjs` is configured per iteration via `__setBuildDeterministicSqlTemplateImpl(fn)` to return a template object whose `templateKey` matches the `DETERMINISTIC_KEYS` entry under test (negative-control iterations leave the impl null so `buildDeterministicSqlTemplate` returns null).
+   - **Cold deterministic, all 32 templates** — for each `DETERMINISTIC_KEYS` entry, drive the (transpiled) chat route under `NODE_ENV=production` with a representative prompt; configure the deterministic-template stub to return a template with that `templateKey`, the `runReadOnlySql` stub to return one or more canned rows (so `result.rowCount > 0` and Step 2's branch is exercised), and the anthropic stub to increment+reject on every export. Reset the answer cache before each iteration (call `__resetAnswerCacheForTests()` from the transpiled `answerCache.mjs`, as in `answer-cache.test.mjs:352`) so the request actually exercises the cold path. Assert the counter is exactly `0` after each request — this directly verifies step 2's synthesis bypass.
    - **Warm answer-cache-hit deterministic** — pick at least one deterministic template, perform the cold request (or seed `setAnswerCacheEntry` with a representative entry whose `answerCacheKey` matches `buildAnswerCacheKey({ templateKey, sessionKey, sortedDriverNumbers, year })`), then issue a second request with identical inputs and assert the counter remains `0`. This guards the existing answer-cache short-circuit and addresses the codex round-4 medium directly.
-   - **LLM-required negative control** — drive at least one prompt that does NOT match any template (`buildDeterministicSqlTemplate` returns null) and assert the counter is `> 0`, i.e. the gate is not over-broad and the LLM stubs are actually wired.
+   - **LLM-required negative control** — drive at least one prompt that does NOT match any template (`buildDeterministicSqlTemplate` returns null — leave the `deterministicSql.stub.mjs` impl unset) and configure the anthropic stub's `generateSqlWithAnthropic` to return a benign SQL string and `runReadOnlySql` to return canned rows; assert the counter is `> 0`, i.e. the gate is not over-broad and the LLM stubs are actually wired.
    - **Dev-throw** — drive one deterministic-eligible prompt with `NODE_ENV=development` and force-bypass the production synthesis-skip (e.g. by wiring the assertion call site to invoke an LLM stub or by injecting a regression where step 2's branch is short-circuited via a test seam) to confirm the runtime throws an error containing `"zero-llm-path"`.
    - **Production no-throw** — under `NODE_ENV=production`, attempt the same forced-violation scenario as the dev-throw test and assert that no error is thrown (the assertion is dev-only by design).
 
@@ -220,7 +221,7 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Specify how the route-level tests avoid a real Postgres dependency: either add the exact seam that stubs `runReadOnlySql`/DB results for deterministic requests and the negative control, or move a local DB service requirement into `## Required services / env` and the gate assumptions; as written, Step 4 still executes deterministic SQL before the zero-LLM assertion, so `Required services / env: None` is not implementable.
+- [x] Specify how the route-level tests avoid a real Postgres dependency: either add the exact seam that stubs `runReadOnlySql`/DB results for deterministic requests and the negative control, or move a local DB service requirement into `## Required services / env` and the gate assumptions; as written, Step 4 still executes deterministic SQL before the zero-LLM assertion, so `Required services / env: None` is not implementable.
 
 ### Medium
 - None.
