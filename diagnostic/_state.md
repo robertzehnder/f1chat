@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-29T20:07:35Z
+# Project state — last updated: 2026-04-29T20:51:50Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -15,7 +15,7 @@ accumulated context the loop carries between slices._
 | 4 | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 7 | 5 | 3 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
+| 7 | 5 | 4 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `cd8fc0d` merge: 07-streaming-synthesis-route-sse [pass] — 2026-04-29
 - `785749b` merge: 07-streaming-synthesis-server [pass] — 2026-04-29
 - `b4a9aad` merge: 07-skip-repair-on-deterministic [pass] — 2026-04-29
 - `e8d0a17` merge: 07-zero-llm-path-tighten [pass] — 2026-04-29
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `205c23b` merge: 06-driver-swap-local-fallback [pass] — 2026-04-28
 - `5c87764` merge: 05-answer-cache [pass] — 2026-04-28
 - `4cdd7e0` merge: 05-template-cache-coverage-audit [pass] — 2026-04-28
-- `60b2c42` merge: 05-resolver-lru [pass] — 2026-04-28
 
 ## Open architectural decisions
 
