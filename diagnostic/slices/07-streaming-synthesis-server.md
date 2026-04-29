@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-server
 phase: 7
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T15:40:00-04:00
+updated: 2026-04-29T19:45:00-04:00
 ---
 
 ## Goal
@@ -72,3 +72,23 @@ bash scripts/loop/test_grading_gate.sh
 
 ## Audit verdict
 (filled by codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-1 forced-findings ratchet: not applied — genuine Mediums found)**
+
+### High
+
+### Medium
+- [ ] Step 3 says the test "stubs `client.messages.stream`" but does not enumerate which other imports in `web/src/lib/anthropic.ts` require stubs or rewrites when the test harness transpiles and imports the module; per the `_state.md` auditor note ("When a plan proposes direct transpilation/import of a TS module in a Node test, require explicit rewrites or stubs for every `@/lib/*` dependency"), add an explicit list of every non-SDK import in `anthropic.ts` that must be stubbed or rewritten so the transpile-and-import step is self-contained.
+- [ ] The Risk section claims "the unit test verifies `cachedSynthesize` returns the same `{ answer, reasoning }` payload as before for a fixed input," but Step 3 defines no such assertion — Step 3 only tests `synthesizeAnswerStream` directly; either add a `cachedSynthesize` regression subtest to Step 3 (stub the stream, call `cachedSynthesize(...)`, assert it returns `{ answer, reasoning }` with expected values) or correct the Risk mitigation to name the existing `answer-cache.test.mjs` baseline as the safety net, so the plan is internally consistent and the implementer who reads only Step 3 is not misled.
+
+### Low
+- [ ] Step 4 says "wire the new test into the `npm run test:grading` runner" without stating that placing the file in `web/scripts/tests/` is sufficient (since `web/package.json:10` runs `node --test scripts/tests/*.test.mjs` automatically); add a note so the implementer does not modify `package.json`, which would then need to appear in `Changed files expected`.
+- [ ] The `reasoning_delta` event ordering is unspecified: because the model streams JSON where `reasoning` always follows `answer` in the schema (`{"answer": "...", "reasoning": "..."}`), all `reasoning_delta` events will necessarily arrive after all `answer_delta` events; add a sentence acknowledging this expected ordering so the implementer does not attempt interleaved answer/reasoning streaming, which the JSON structure cannot produce.
+
+### Notes (informational only — no action)
+- Gate order `build` → `typecheck` matches the existing auditor convention in `_state.md`.
+- `Changed files expected` is correctly scoped: `anthropic.ts`, the new test file, and the slice frontmatter — no route or client files, consistent with Goal and Out of scope.
+- The `bash scripts/loop/test_grading_gate.sh` gate is the standard baseline-aware grading gate used by other slices; consistent with Acceptance criteria AC-3.
