@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T22:20:00Z
+updated: 2026-04-28T22:04:43-04:00
 ---
 
 ## Goal

@@ -24,6 +24,36 @@ function firstUrl(...keys: string[]): string | undefined {
   return undefined;
 }
 
+export function assertPooledDatabaseUrl(env: NodeJS.ProcessEnv): void {
+  if (env.NODE_ENV !== "production") {
+    return;
+  }
+  const candidate = (env.NEON_DATABASE_URL ?? env.DATABASE_URL)?.trim();
+  if (!candidate) {
+    return;
+  }
+  let host: string;
+  let port: string;
+  try {
+    const parsed = new URL(candidate);
+    host = parsed.hostname;
+    port = parsed.port || "5432";
+  } catch {
+    throw new Error(
+      `Neon pooler URL required in production: could not parse DATABASE_URL/NEON_DATABASE_URL as a URL. ` +
+        `Switch to the Neon pooler URL (host suffix '-pooler', port 6543).`
+    );
+  }
+  const hostOk = host.includes("-pooler");
+  const portOk = port === "6543";
+  if (!hostOk || !portOk) {
+    throw new Error(
+      `Neon pooler URL required in production: got host='${host}' port='${port}'. ` +
+        `Switch to the Neon pooler URL (host must contain '-pooler' and port must be 6543).`
+    );
+  }
+}
+
 function sslForHost(host: string): { rejectUnauthorized: boolean } | undefined {
   if (process.env.DB_SSL === "false" || process.env.NEON_SSL === "false") {
     return undefined;
@@ -83,6 +113,15 @@ function createPool(): Pool {
     ssl: sslForHost(host),
     ...base
   });
+}
+
+// Next.js sets NEXT_PHASE='phase-production-build' during `next build`, where
+// NODE_ENV is also forced to 'production' for static analysis. Skip the
+// startup assertion during that phase so the build does not consume the
+// developer's local DATABASE_URL; the assertion still fires when db.ts is
+// imported at production runtime (next start, scripts/verify-pooled-url.mjs).
+if (process.env.NEXT_PHASE !== "phase-production-build") {
+  assertPooledDatabaseUrl(process.env);
 }
 
 export const pool = globalForPool.__openf1Pool ?? createPool();
