@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T14:53:13Z
+updated: 2026-04-29T15:30:00Z
 ---
 
 ## Goal
@@ -58,9 +58,11 @@ None.
 cd web && npm run build
 cd web && npm run typecheck
 cd web && npm run test:grading
-# Eligibility-list drift gate: every deterministic-eligible templateKey enumerated
-# in zero-llm-path.test.mjs (DETERMINISTIC_KEYS constant) must exist in
-# deterministicSql.ts (catches renames in either direction).
+# Eligibility-list drift gate (two-way): the set of deterministic-eligible
+# templateKeys in zero-llm-path.test.mjs (DETERMINISTIC_KEYS) and the set of
+# templateKey literals in deterministicSql.ts must be identical. Catches both
+# (a) test-side staleness (key removed/renamed in registry) and (b) source-side
+# additions/renames not mirrored into DETERMINISTIC_KEYS.
 bash -c '
   set -euo pipefail
   test_file=web/scripts/tests/zero-llm-path.test.mjs
@@ -68,27 +70,38 @@ bash -c '
   missing=0
   # Scope extraction to the DETERMINISTIC_KEYS array literal block so quoted
   # strings elsewhere in the test file (prompts, error messages) are ignored.
-  keys=$(awk "/DETERMINISTIC_KEYS[[:space:]]*=/,/\\];/" "$test_file" \
+  test_keys=$(awk "/DETERMINISTIC_KEYS[[:space:]]*=/,/\\];/" "$test_file" \
          | grep -oE "\"[a-z_0-9]+\"" \
          | tr -d "\"" \
          | sort -u)
-  if [ -z "$keys" ]; then
+  if [ -z "$test_keys" ]; then
     echo "DETERMINISTIC_KEYS constant not found or empty in $test_file" >&2
     exit 1
   fi
-  for k in $keys; do
-    if ! grep -qE "templateKey: \"$k\"" "$src"; then
-      echo "Missing templateKey: $k in $src" >&2
-      missing=1
-    fi
-  done
-  # Inverse: the registry must define at least one templateKey literal.
-  if ! grep -qE "templateKey: \"[a-z_0-9]+\"" "$src"; then
+  src_keys=$(grep -oE "templateKey: \"[a-z_0-9]+\"" "$src" \
+         | grep -oE "\"[a-z_0-9]+\"" \
+         | tr -d "\"" \
+         | sort -u)
+  if [ -z "$src_keys" ]; then
     echo "deterministicSql.ts has no templateKey literals — registry missing." >&2
     exit 1
   fi
+  # Direction 1 (test -> source): every key in DETERMINISTIC_KEYS must exist in the registry.
+  for k in $test_keys; do
+    if ! echo "$src_keys" | grep -qx "$k"; then
+      echo "Test key $k missing from $src (renamed/removed in registry?)" >&2
+      missing=1
+    fi
+  done
+  # Direction 2 (source -> test): every templateKey in the registry must be in DETERMINISTIC_KEYS.
+  for k in $src_keys; do
+    if ! echo "$test_keys" | grep -qx "$k"; then
+      echo "Source key $k missing from DETERMINISTIC_KEYS in $test_file (added/renamed in registry?)" >&2
+      missing=1
+    fi
+  done
   [ "$missing" -eq 0 ] || exit 1
-  echo "Eligibility drift gate passed."
+  echo "Eligibility drift gate (two-way) passed."
 '
 ```
 
@@ -193,7 +206,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Fix the eligibility drift gate to check the inverse set as well: after extracting `DETERMINISTIC_KEYS`, also fail if any `templateKey: "..."` literal in `web/src/lib/deterministicSql.ts` is absent from that constant, because the current gate only proves `test -> registry` and would silently miss newly added or renamed deterministic templates despite Step 1 and the acceptance criteria claiming full 32-template coverage.
+- [x] Fix the eligibility drift gate to check the inverse set as well: after extracting `DETERMINISTIC_KEYS`, also fail if any `templateKey: "..."` literal in `web/src/lib/deterministicSql.ts` is absent from that constant, because the current gate only proves `test -> registry` and would silently miss newly added or renamed deterministic templates despite Step 1 and the acceptance criteria claiming full 32-template coverage.
 
 ### Low
 - [ ] None.
