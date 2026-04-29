@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T21:43:02Z
+updated: 2026-04-29T22:05:00Z
 ---
 
 ## Goal
@@ -32,7 +32,7 @@ None at author time.
    - `contractName: string` — the semantic contract identifier (e.g., `"core.laps_enriched"`, `"core.strategy_summary"`).
    - `grain: FactContractGrain` where `FactContractGrain = "session" | "lap" | "stint" | "driver" | "meeting" | "other"`.
    - `keys: Record<string, string | number | null>` — resolved IDs that bind the rows to a runtime context (e.g., `session_key`, `driver_number`).
-   - `rows: ReadonlyArray<FactContractRow>` — serialized rows from this contract, constrained at the type level to JSON-serializable values (see Step 1a). Downstream `buildSynthesisPromptParts()` stringifies these rows via `JSON.stringify`, so values such as `bigint`, `undefined`, functions, or class instances must be excluded from the type to fail at compile time rather than serialize as `null`/throw at runtime.
+   - `rows: ReadonlyArray<FactContractRow>` — serialized rows from this contract, constrained at the type level to JSON-serializable values (see Step 1a). Downstream `buildSynthesisPromptParts()` stringifies these rows via `JSON.stringify`, so values such as `bigint`, `undefined`, functions, and symbols must be excluded from the type to fail at compile time rather than serialize as `null`/throw at runtime. Class-instance rejection is intentionally NOT in the type-level contract (see Step 1a for rationale).
    - `rowCount: number` — must equal `rows.length`.
    - `coverage?: { warnings: ReadonlyArray<string> }` — optional completeness warnings carried alongside rows.
    Export `FactContract`, `FactContractGrain`, `FactContractRow`, and `FactContractValue`.
@@ -45,10 +45,19 @@ None at author time.
      | ReadonlyArray<FactContractValue>;
    export type FactContractRow = { readonly [key: string]: FactContractValue };
    ```
-   This deliberately excludes `undefined`, `bigint`, functions, symbols, and class instances so that `JSON.stringify(row)` in the synthesis prompt path is total (no silent `undefined`-elision and no `TypeError` for `bigint`). Numeric `NaN`/`Infinity` are not excluded at the type level — they are valid `number` values; if a future slice needs them rejected, that is a runtime validator concern, not a `FactContract` shape concern.
+   This excludes `undefined`, `bigint`, functions, and symbols at the type level so that `JSON.stringify(row)` in the synthesis prompt path is total (no silent `undefined`-elision and no `TypeError` for `bigint`). It does **not** attempt to reject "class instances" at compile time: TypeScript is structurally typed, so a class instance whose enumerable own properties already match `{ [key: string]: FactContractValue }` is — by design — assignable to `FactContractRow` and there is no purely type-level mechanism to forbid it. Class-instance / non-plain-object rejection (e.g., guarding against `Date`, `Map`, or instances with non-enumerable methods that would be silently dropped by `JSON.stringify`) is therefore out of scope for this slice and is handled, if needed, by a runtime validator in a later slice (`08-validators-*`). Numeric `NaN`/`Infinity` are likewise valid `number` values at the type level; runtime rejection (if ever needed) is a validator concern, not a `FactContract` shape concern.
 2. In the same file, export a `SemanticContractSerializer<TInput>` interface: `(input: TInput) => FactContract`. Keep the file dependency-free of `chatRuntime.ts` and `anthropic.ts` so either side can import without circular deps.
 3. Implement and export `serializeRowsToFactContract(input: { contractName: string; grain: FactContractGrain; keys: Record<string, string | number | null>; rows: ReadonlyArray<FactContractRow>; coverage?: { warnings: ReadonlyArray<string> } }): FactContract`. The helper sets `rowCount = input.rows.length` and wraps the result in `Object.freeze` (top-level only — this guards against reassignment of the returned object's own properties such as `rowCount` or `contractName`; it does **NOT** recursively freeze `keys`, `rows`, or `coverage.warnings`, whose immutability is conveyed at the type level via `ReadonlyArray<...>` and `Record<string, ...>` and is the caller's responsibility at runtime). Document this limitation in a one-line JSDoc above the helper so consumers in later slices do not assume deep immutability.
-4. Add `web/scripts/tests/fact-contract-shape.test.mjs` covering the runtime behavior of `serializeRowsToFactContract`: (a) returns `rowCount === 0` for empty rows; (b) `rowCount === rows.length` for non-empty rows; (c) the returned object is frozen at the top level (`Object.isFrozen(result) === true` AND attempting to assign `result.rowCount = 999` either throws in strict mode or leaves the value unchanged); (d) `coverage` is omitted when not provided and present (with the supplied `warnings` array) when provided. The test file follows the discovery convention used by sibling `web/scripts/tests/*.test.mjs` files so `npm run test:grading` picks it up. The test does NOT attempt to validate the `FactContractGrain` union at runtime — that is the type-level gate's job (Step 5).
+4. Add `web/scripts/tests/fact-contract-shape.test.mjs` covering the runtime behavior of `serializeRowsToFactContract`: (a) returns `rowCount === 0` for empty rows; (b) `rowCount === rows.length` for non-empty rows; (c) the returned object is frozen at the top level (`Object.isFrozen(result) === true` AND attempting to assign `result.rowCount = 999` either throws in strict mode or leaves the value unchanged); (d) `coverage` is omitted when not provided and present (with the supplied `warnings` array) when provided. The test does NOT attempt to validate the `FactContractGrain` union at runtime — that is the type-level gate's job (Step 5).
+
+   **TS-loading harness (mandatory).** The `test:grading` script in `web/package.json` runs `node --test scripts/tests/*.test.mjs`, and plain Node cannot import a `.ts` source file. This test MUST therefore use the same in-process transpile-to-temp-`.mjs` pattern that sibling tests already use (e.g. `web/scripts/tests/cache-control-markers.test.mjs`'s `transpileAndImportAnthropic` helper, which:
+   1. reads the `.ts` source via `node:fs/promises#readFile`,
+   2. transpiles it with `ts.transpileModule(sourceText, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, esModuleInterop: true } })` from the existing `typescript` dev-dependency,
+   3. writes the emitted JS to a `mkdtemp(...)`'d directory under `node:os#tmpdir` as `factContract.mjs`,
+   4. dynamic-`import()`s that file,
+   5. and cleans the temp directory in a `finally`/`after` hook via `rm(dir, { recursive: true, force: true })`.
+   
+   Concretely: the test file imports `ts from "typescript"` (already a dev-dependency, no new deps), resolves `web/src/lib/contracts/factContract.ts` from `import.meta.url` (`path.resolve(__dirname, "..", "..", "src/lib/contracts/factContract.ts")`), and exposes the transpiled `serializeRowsToFactContract` to the assertions above. No new harness, runner, or `package.json` script is added — the test stays compatible with `node --test scripts/tests/*.test.mjs` exactly as the sibling tests do. A `.ts` loader (`tsx`, `ts-node`, `--experimental-loader`, etc.) is intentionally NOT introduced.
 5. Add a type-level gate: create `web/src/lib/contracts/factContract.type-test.ts` that imports `FactContractGrain` and asserts it is structurally equal to the exact union `"session" | "lap" | "stint" | "driver" | "meeting" | "other"` using an equality helper, e.g.:
    ```ts
    import type { FactContractGrain } from "./factContract";
@@ -76,9 +85,9 @@ cd web && npm run test:grading
 ```
 
 ## Acceptance criteria
-- [ ] `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, and `FactContractRow` are exported from `web/src/lib/contracts/factContract.ts`, and the `rows` field on `FactContract` is typed `ReadonlyArray<FactContractRow>` (NOT `ReadonlyArray<Record<string, unknown>>`), so a row containing a `bigint`, `undefined`, function, symbol, or class instance fails `npm run typecheck`.
+- [ ] `FactContract`, `FactContractGrain`, `FactContractScalar`, `FactContractValue`, and `FactContractRow` are exported from `web/src/lib/contracts/factContract.ts`, and the `rows` field on `FactContract` is typed `ReadonlyArray<FactContractRow>` (NOT `ReadonlyArray<Record<string, unknown>>`), so a row property whose value type is `bigint`, `undefined`, a function, or a `symbol` fails `npm run typecheck`. Class-instance rejection is intentionally NOT asserted (TypeScript structural typing makes a type-level prohibition impossible; that surface is owned by a later runtime validator in `08-validators-*`).
 - [ ] `serializeRowsToFactContract` returns an object whose `rowCount` equals `rows.length` for both empty and non-empty inputs, and the returned object satisfies `Object.isFrozen(result) === true` at the top level (the helper does NOT deep-freeze nested `keys`/`rows`/`coverage.warnings`; this scope is documented in the helper's JSDoc).
-- [ ] `cd web && npm run test:grading` discovers and passes `fact-contract-shape.test.mjs`.
+- [ ] `cd web && npm run test:grading` discovers and passes `fact-contract-shape.test.mjs`. The test loads `web/src/lib/contracts/factContract.ts` via the in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern used by sibling tests such as `cache-control-markers.test.mjs` (no new dev-dependency, no `.ts` loader, no change to the `node --test scripts/tests/*.test.mjs` runner contract); the temp directory is removed in a `finally`/`after` hook.
 - [ ] `cd web && npm run typecheck` passes with no new errors and **fails deterministically** if `FactContractGrain` is widened (added member or broadened to `string`), narrowed (member removed), member-substituted (e.g., `"meeting"` → `"event"`), or its export removed — proven by the `Expect<Equal<FactContractGrain, ...>>` assertion in `web/src/lib/contracts/factContract.type-test.ts`. Pure source-order reordering of the union members is intentionally NOT a regression (TypeScript unions are unordered at the type level; behavior is identical) and is therefore not asserted.
 - [ ] No imports of `factContract.ts` are added to `web/src/lib/chatRuntime.ts` or `web/src/lib/anthropic.ts` in this slice (cutover is deferred to `08-synthesis-payload-cutover`).
 
@@ -149,10 +158,10 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite Step 1a and the first acceptance criterion so they do not require `FactContractValue` to reject arbitrary class instances at compile time; with TypeScript’s structural typing, the proposed JSON-value alias can reliably exclude functions/symbols/`bigint`/`undefined`, but “class instance” rejection needs either a narrower concrete example or an explicit runtime validation step in a later slice.
+- [x] Rewrite Step 1a and the first acceptance criterion so they do not require `FactContractValue` to reject arbitrary class instances at compile time; with TypeScript’s structural typing, the proposed JSON-value alias can reliably exclude functions/symbols/`bigint`/`undefined`, but “class instance” rejection needs either a narrower concrete example or an explicit runtime validation step in a later slice. (Resolved by removing the "class instance" claim from Step 1a, the `rows` field doc in Step 1, and the matching acceptance criterion; structural-typing limitation is now stated explicitly and class-instance/non-plain-object rejection is deferred to `08-validators-*`.)
 
 ### Medium
-- [ ] Amend Step 4 and the `test:grading` acceptance item to specify how `fact-contract-shape.test.mjs` loads `web/src/lib/contracts/factContract.ts` under the existing `node --test scripts/tests/*.test.mjs` harness, because plain Node will not import a `.ts` module without the same explicit `typescript` transpile-to-temp-`.mjs` pattern used by sibling tests.
+- [x] Amend Step 4 and the `test:grading` acceptance item to specify how `fact-contract-shape.test.mjs` loads `web/src/lib/contracts/factContract.ts` under the existing `node --test scripts/tests/*.test.mjs` harness, because plain Node will not import a `.ts` module without the same explicit `typescript` transpile-to-temp-`.mjs` pattern used by sibling tests. (Resolved by adding a "TS-loading harness (mandatory)" subsection to Step 4 that pins the test to the same in-process `ts.transpileModule` → `mkdtemp` → temp-`.mjs` → dynamic-`import()` pattern used by `cache-control-markers.test.mjs`, and updating the `test:grading` acceptance item to require that pattern explicitly.)
 
 ### Low
 
