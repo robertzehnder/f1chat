@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-client-wiring
 phase: 7
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T17:10:39-04:00
+updated: 2026-04-29T21:13:35Z
 ---
 
 ## Goal
@@ -56,6 +56,7 @@ Wire the chat client to opt into the SSE streaming response added by `07-streami
    ): Promise<void>
    ```
    - The helper inserts the placeholder assistant message FIRST (via `deps.patchActiveConversation`) before issuing the fetch, then calls `consumeChatStream`. Each `onAnswerDelta` invocation patches the placeholder's parts by id (NOT by index). On resolve, the helper replaces the placeholder with the finalized assistant message via the same `patchActiveConversation` path. On reject, it replaces the placeholder with the error message. (`patchActiveConversation` is the existing setter at `ChatWorkspace.tsx:87` — the helper accepts it as a plain function ref, no React context required.)
+   - **Runtime imports constraint (load-bearing for Step 4 bundling):** `sendChatMessage.ts` MUST NOT contain any runtime VALUE imports other than `import { consumeChatStream } from "./consumeChatStream"`. All other side-effecting collaborators (id generation, conversation patching, fetch) MUST be injected via `SendChatMessageDeps`. Type-only imports (`import type { ... } from "@/lib/..."`) are allowed because TypeScript's import-elision drops them at strip-time, so they do not appear in the transpiled `.mjs` and do not need stubs in the test tmpdir. This constraint is what allows Step 4's tmpdir to contain only the two transpiled helper files with no `@/lib/*` stub sandbox; if a future change adds a runtime value import (e.g. a finalization helper from `@/lib/chat/...`), the implementer MUST either move it behind a dep or add a corresponding stub in the tmpdir per `_state.md` Note #6.
 3. **Update `web/src/components/chat/ChatWorkspace.tsx`**:
    - Add `Accept: text/event-stream` alongside `content-type: application/json` in the chat POST headers (the helper from Step 2 owns this).
    - Replace the inline `try { fetch(...) ... } catch { ... } finally { setLoading(false) }` block in the existing `handleSubmit` callback with a call to `sendChatMessage(...)`, passing `patchActiveConversation`, `setResolved`, `setComposerCtx`, and a generated `placeholderId` as deps. The `useCallback` wrapper, `setLoading` toggling, and user-message insertion stay in the component (only the post-user-message work moves into the helper).
@@ -69,7 +70,12 @@ Wire the chat client to opt into the SSE streaming response added by `07-streami
      - **No `@/lib/*` stubs are needed for this slice** because both modules import `@/lib/chatTypes` only as `import type { ... }`, which TypeScript's import-elision drops at strip-time. (This addresses `_state.md` Note #6: the bundling mechanism applies, but the stub sandbox does not. The implementer must verify before adding new value imports — any later runtime `@/lib/*` import requires a stub written into the same tmpdir.)
    - **Helper unit tests** for `consumeChatStream` (loaded from tmpdir): build synthetic `Response` objects (SSE body via `ReadableStream` + `text/event-stream` content-type; JSON body via `Response.json(...)`-style stub). Assert: SSE path fires `onAnswerDelta` for each `answer_delta` frame in order, fires `onReasoningDelta` for `reasoning_delta`, returns the `final` payload as `ChatApiResponse`, and throws when an `error` frame is received. JSON path fires `onAnswerDelta` exactly once with the full answer string, then returns the JSON unchanged.
    - **Integration tests** for `sendChatMessage` (loaded from tmpdir; the Step-2 pure helper, NOT ChatWorkspace.tsx itself): pass an in-memory `patchActiveConversation` spy that mutates a local `Conversation` object, an injected `fetchImpl` returning a synthetic SSE Response, and a fixed `newId`. Assert: (a) placeholder is inserted into `messages` BEFORE the first delta arrives (verified by sequencing the spy's call order against the SSE body's chunks); (b) deltas patch the placeholder by id even after a no-op reorder of the messages list mid-stream; (c) on `final`, the helper replaces the placeholder (same id) with the finalized assistant message; (d) when the synthetic Response throws mid-stream, the helper replaces the placeholder with an error message and never leaves it in streaming state. (Because `sendChatMessage` is a plain async function, none of these assertions need a React renderer.)
-   - The existing route-harness pattern at `web/scripts/tests/answer-cache.test.mjs` (and `streaming-synthesis-route.test.mjs`) is the structural model — same tmpdir bundling, but without the heavy `@/lib/*` stub sandbox those route tests need. The bundling step itself is non-negotiable: without it, Node will throw `ERR_MODULE_NOT_FOUND` resolving `./consumeChatStream` from the in-tmpdir `sendChatMessage.mjs`.
+   - **ChatWorkspace wiring assertion** (deterministic source-grep gate, in the same `streaming-synthesis-client.test.mjs` file): read `web/src/components/chat/ChatWorkspace.tsx` from disk via `fs/promises.readFile` and assert that the live component is actually wired to the helpers — not just that the helpers exist in isolation:
+     - Asserts that the file source contains the substring `sendChatMessage(` (proving Step 3's delegation was performed and the post-user-message work routes through the new helper).
+     - Asserts that the file source contains the substring `text/event-stream` (proving the `Accept` header opt-in landed in the live component).
+     - Asserts that the file source does NOT contain the inline pattern `fetch("/api/chat"` nor `fetch('/api/chat'` (proving the old inline send block from `handleSubmit` was removed; if the implementer keeps a direct `/api/chat` literal anywhere else, this assertion fires and forces a clean delegation).
+     - Rationale: without this gate the slice could pass with `consumeChatStream.ts` and `sendChatMessage.ts` exhaustively unit-tested while the real `ChatWorkspace.tsx` continues to issue its old JSON-only `fetch` and never opts into SSE. This grep-style check is intentionally cheap and structural — it is not a substitute for the helper tests, but a tripwire on the integration seam.
+   - The existing route-harness pattern at `web/scripts/tests/answer-cache.test.mjs` (and `streaming-synthesis-route.test.mjs`) is the structural model — same tmpdir bundling, but without the heavy `@/lib/*` stub sandbox those route tests need. (The lighter footprint is sound because of the Step-2 runtime-imports constraint: `sendChatMessage.ts` is restricted to a single relative value import (`./consumeChatStream`), and `consumeChatStream.ts` is itself pure fetch/Response logic with only type-only `@/lib/chatTypes` imports — so the tmpdir contains exactly the two transpiled helper `.mjs` files.) The bundling step itself is non-negotiable: without it, Node will throw `ERR_MODULE_NOT_FOUND` resolving `./consumeChatStream` from the in-tmpdir `sendChatMessage.mjs`.
 
 ## Changed files expected
 - `web/src/lib/chat/consumeChatStream.ts` (new — transport-agnostic SSE/JSON helper).
@@ -94,6 +100,8 @@ bash scripts/loop/test_grading_gate.sh
 - [ ] `ChatWorkspace.tsx` sends `Accept: text/event-stream`, delegates the post-user-message work to `sendChatMessage(...)`, and keeps `setLoading` / `useCallback` in-component.
 - [ ] Graceful JSON fallback: when the server returns JSON instead of SSE, `consumeChatStream` still fires `onAnswerDelta(answer)` once with the full string and returns the same `ChatApiResponse` shape; `sendChatMessage`'s placeholder UX still completes successfully.
 - [ ] Tests cover: SSE path with multiple deltas, JSON fallback path, error frame mid-stream, error thrown mid-stream replaces placeholder (no leftover streaming state), placeholder-id resilience to message-list reordering — all asserted against `sendChatMessage` and `consumeChatStream` directly without React rendering.
+- [ ] Wiring assertion test reads `web/src/components/chat/ChatWorkspace.tsx` source and asserts it contains `sendChatMessage(`, contains `text/event-stream`, and no longer contains a direct `fetch("/api/chat"` / `fetch('/api/chat'` literal — guarding against helper-only refactors that leave the live component issuing JSON-only requests.
+- [ ] `sendChatMessage.ts` has no runtime VALUE imports beyond `import { consumeChatStream } from "./consumeChatStream"` (verifiable by inspection of the file's import block; type-only `import type` imports are permitted).
 - [ ] All 3 gates pass.
 
 ## Out of scope
@@ -181,8 +189,8 @@ _(none)_
 _(none)_
 
 ### Medium
-- [ ] Add a deterministic gate for the live `ChatWorkspace.tsx` wiring, not just the extracted helpers: assert the submit path delegates to `sendChatMessage(...)` (or otherwise prove the old inline `/api/chat` send block is gone) so the slice cannot pass with `consumeChatStream.ts` / `sendChatMessage.ts` tested in isolation while the real component never opts into the SSE path.
-- [ ] Resolve the Step-2/Step-4 harness contradiction around runtime helper imports: either require `sendChatMessage.ts` to receive any response-mapping/finalization helpers via deps so the tmpdir test remains self-contained, or update the test plan to stub those value imports explicitly; the current “no `@/lib/*` stubs are needed” claim is only true if `sendChatMessage.ts` avoids runtime imports beyond `./consumeChatStream`, which the plan does not currently guarantee.
+- [x] Add a deterministic gate for the live `ChatWorkspace.tsx` wiring, not just the extracted helpers: assert the submit path delegates to `sendChatMessage(...)` (or otherwise prove the old inline `/api/chat` send block is gone) so the slice cannot pass with `consumeChatStream.ts` / `sendChatMessage.ts` tested in isolation while the real component never opts into the SSE path.
+- [x] Resolve the Step-2/Step-4 harness contradiction around runtime helper imports: either require `sendChatMessage.ts` to receive any response-mapping/finalization helpers via deps so the tmpdir test remains self-contained, or update the test plan to stub those value imports explicitly; the current “no `@/lib/*` stubs are needed” claim is only true if `sendChatMessage.ts` avoids runtime imports beyond `./consumeChatStream`, which the plan does not currently guarantee.
 
 ### Low
 _(none)_
