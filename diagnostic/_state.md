@@ -56,7 +56,6 @@ _None._
 ## Notes for auditors
 
 _No accumulated notes yet. Auditors may append single-line lessons here, max 10 entries._
-- For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
 - For `web/src/lib/db.ts` slices, verify all existing env-configuration branches (`*_DATABASE_URL`, `NEON_DB_HOST`, `DB_*`) before accepting “behavior unchanged” claims or fallback semantics (slice:06-driver-swap-local-fallback).
 - Drift-check bash gates must have an explicit `else` clause (or negated `if !`) that sets a flag and a post-loop exit; an `if … then :; fi` without else silently passes on missing keys (slice:07-zero-llm-path-tighten).
 - Two-way drift gates must compare both expected->source and source->expected sets; checking only one direction misses newly added or renamed source keys (slice:07-zero-llm-path-tighten).
@@ -66,3 +65,4 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - When a slice changes `/api/*` transport or media type, require the plan to name every existing consumer that must migrate or the explicit compatibility path for legacy structured callers (slice:07-streaming-synthesis).
 - When a slice claims progressive UI streaming, require a deterministic gate over the owning UI state-update path, not only over a helper parser callback contract (slice:07-streaming-synthesis).
 - For SSE/streaming slices, require one gate that observes pre-terminal bytes before stream close and one gate that splits a logical frame across multiple `ReadableStream` reads; frame-count-only or whole-frame fixtures do not prove real streaming semantics (slice:07-streaming-synthesis).
+- When a UI opts all requests into SSE, require the plan to cover every non-streaming early-return branch with `final`/`error` SSE frames or an explicit client-side fallback; otherwise the helper can receive JSON on valid cache-hit, clarification, or validation paths (slice:07-streaming-synthesis).
