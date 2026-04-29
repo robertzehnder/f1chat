@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-server
 phase: 7
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T22:20:00-04:00
+updated: 2026-04-29T15:58:24-04:00
 ---
 
 ## Goal
@@ -80,7 +80,36 @@ bash scripts/loop/test_grading_gate.sh
 - Rollback: `git revert <commit>` removes the new export and test file; existing call sites are unchanged so nothing else regresses.
 
 ## Slice-completion note
-(filled by claude implementer)
+
+**Branch:** `slice/07-streaming-synthesis-server`
+
+**Implementation summary**
+- `web/src/lib/anthropic.ts`: added the `StreamChunk` tagged-union type (`answer_delta` | `reasoning_delta` | `final`) and an `async function*` export `synthesizeAnswerStream(input)` that POSTs to `https://api.anthropic.com/v1/messages` with `stream: true`, walks the SSE `content_block_delta` events via `Response.body.getReader()` + `TextDecoder`, accumulates the streamed JSON, and progressively decodes the in-flight `"answer"` and `"reasoning"` string values via a small JSON-string-decoder helper (`decodeJsonStringSoFar`) that yields incremental `answer_delta`/`reasoning_delta` chunks. The terminal `final` frame is produced by re-using the existing `extractJsonText` + `parseAnswerJsonPayload` helpers on the concatenated stream text and carries `{ answer, reasoning?, model, rawText }` matching `AnswerSynthesisOutput` exactly. The existing non-streaming `synthesizeAnswerWithAnthropic`, `generateSqlWithAnthropic`, `repairSqlWithAnthropic` exports are unchanged (only addition; no refactor of shared helpers).
+- `web/scripts/tests/streaming-synthesis-server.test.mjs`: new test file (auto-globbed by `test:grading`) using the same TypeScript transpile-and-import pattern as `web/scripts/tests/answer-cache.test.mjs`. Stub surface: `process.env.ANTHROPIC_API_KEY="test-key"` set before import, `globalThis.fetch` replaced per-subtest and restored in `finally`. No `@/lib/*` rewrites required (anthropic.ts has zero such imports). Three subtests:
+  1. Happy-path streaming: emits SSE chunks `'{"answer": "Lewis '`, `'Hamilton won.", "reasoning": "He '`, `'had the fastest pace."}'`; asserts ≥2 `answer_delta`, ≥1 `reasoning_delta`, exactly 1 `final`; `final.answer` == concatenated `answer_delta` text; `final.reasoning` == concatenated `reasoning_delta` text; `final.model` non-empty and equals `process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6"`; `final.rawText` non-empty and equals concatenation of all SSE delta text payloads; all `answer_delta` events appear before all `reasoning_delta` events.
+  2. Malformed-JSON terminal-parse path: stub stream closes with truncated `'{"answer": "abc'`; asserts the iterator throws an error matching `/Could not parse JSON from model output/` (the `parseAnswerJsonPayload` error class).
+  3. Non-regression on `synthesizeAnswerWithAnthropic`: stub `fetch` returns a non-streaming Anthropic Messages-API JSON response; asserts the returned `{ answer, reasoning, model, rawText }` matches expected values.
+
+**Decisions**
+- Used `async function*` returning `AsyncGenerator<StreamChunk, void, undefined>`, which satisfies `AsyncIterable<StreamChunk>` per TS structural typing (the slice signature requirement).
+- JSON-string decoder is a fresh helper local to `anthropic.ts` rather than re-using `recoverSqlFromTruncatedJsonPayload` (which is hard-wired for the `"sql"` key); the new helper takes a generic `startIdx` and supports incremental yielding without needing recovery semantics, since the terminal parse re-uses the existing `parseAnswerJsonPayload` for error semantics.
+- `final.answer` is sourced from `parseAnswerJsonPayload`'s output (which calls `.trim()`); for typical/test inputs with no leading/trailing whitespace this matches the concatenated `answer_delta` text. `final.rawText` is the raw concatenation of all SSE `text_delta` payloads (i.e., the streaming analog of `parseAnthropicTextFromResponse`'s output).
+- Did NOT introduce `@anthropic-ai/sdk` (out of scope per the slice's Inputs note); used raw `fetch` with `stream: true` to mirror the existing `synthesizeAnswerWithAnthropic` style.
+- Did NOT modify `web/package.json`: `npm run test:grading` auto-globs `scripts/tests/*.test.mjs`, so dropping the new file in that directory is sufficient.
+
+**Gates (run from /Users/robertzehnder/.openf1-loop-worktrees/07-streaming-synthesis-server)**
+- `cd web && npm run build` → exit 0 (Next.js 15.5.15 compiled successfully; all routes built; no new pages added).
+- `cd web && npm run typecheck` → exit 0 (`tsc --noEmit`; no new TS errors).
+- `bash scripts/loop/test_grading_gate.sh` → exit 0 with `[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=28 baseline_fails=28 baseline_failures_fixed=0`. The 3 new subtests in `streaming-synthesis-server.test.mjs` all pass; no test that was passing on integration is now failing.
+
+**Self-checks**
+- Changed-files diff is exactly the 3 expected files: `web/src/lib/anthropic.ts` (additive: `StreamChunk` type + `decodeJsonStringSoFar` helper + `synthesizeAnswerStream` export, all appended after the unchanged `synthesizeAnswerWithAnthropic`), `web/scripts/tests/streaming-synthesis-server.test.mjs` (new), `diagnostic/slices/07-streaming-synthesis-server.md` (frontmatter + this note). `web/package.json`, `web/src/lib/cache/answerCache.ts`, `web/src/app/api/chat/route.ts`, and all client components are untouched.
+- Acceptance criteria coverage:
+  - AC-1: `synthesizeAnswerStream` is exported with the documented `AsyncIterable<StreamChunk>` signature; `synthesizeAnswerWithAnthropic` in `anthropic.ts` is byte-identical (only addition appended after it). `cachedSynthesize` in `answerCache.ts` is unchanged and continues to delegate to `synthesizeAnswerWithAnthropic`. ✓
+  - AC-2: New test file exists at `web/scripts/tests/streaming-synthesis-server.test.mjs`; `npm run test:grading`'s glob `scripts/tests/*.test.mjs` picks it up; all 3 subtests pass when run via `node --test scripts/tests/streaming-synthesis-server.test.mjs` and via the full `test:grading` gate. ✓
+  - AC-3: All 3 gates exit 0; gate 3 reports zero NEW failures vs integration baseline. ✓
+
+**Commit hash**: filled in by the commit step below.
 
 ## Audit verdict
 (filled by codex)
