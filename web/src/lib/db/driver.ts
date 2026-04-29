@@ -1,4 +1,4 @@
-import { Pool, QueryResultRow } from "pg";
+import { Client, Pool, QueryResultRow } from "pg";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 
@@ -138,17 +138,27 @@ export function chooseDriver(): Promise<Driver> {
   return driverPromise;
 }
 
-function probeNeon(target: Pool): Promise<unknown> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error("probe exceeded 2000ms budget"));
-    }, 2_000);
+async function probeNeon(target: Pool): Promise<void> {
+  // The singleton pool's options must remain byte-for-byte identical to the
+  // pre-slice createPool() output (preserves opt-out/prod connect semantics),
+  // so we cannot apply connectionTimeoutMillis to it. Instead, open a transient
+  // pg.Client against the same connection params with connectionTimeoutMillis:
+  // 2000 — pg's native connect-timeout enforces the 2 s probe budget.
+  const opts = (target as unknown as { options: Record<string, unknown> }).options;
+  const probeClient = new Client({
+    ...opts,
+    connectionTimeoutMillis: 2_000,
   });
-  const probe = target.query("SELECT 1");
-  return Promise.race([probe, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
-  });
+  try {
+    await probeClient.connect();
+    await probeClient.query("SELECT 1");
+  } finally {
+    try {
+      await probeClient.end();
+    } catch {
+      // swallow end errors so the original probe outcome surfaces
+    }
+  }
 }
 
 function acquireNeonClient(target: Pool) {
