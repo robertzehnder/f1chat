@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-route-sse
 phase: 7
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T22:30:00-04:00
+updated: 2026-04-29T16:23:31-04:00
 ---
 
 ## Goal
@@ -92,7 +92,89 @@ bash scripts/loop/test_grading_gate.sh
 - Rollback: `git revert` removes the SSE branch entirely; non-SSE clients are unaffected.
 
 ## Slice-completion note
-(filled by claude implementer)
+
+**Branch:** `slice/07-streaming-synthesis-route-sse` (pushed to origin)
+**Implementer:** claude
+
+### What changed
+
+- `web/src/app/api/chat/route.ts` — refactored `POST` into a thin dispatcher
+  that detects `Accept: text/event-stream` and either (a) returns today's
+  JSON via `NextResponse.json(...)` or (b) returns a `Response` wrapping a
+  `ReadableStream` whose chunks are SSE frames per the contract documented
+  at the top of the file. The bulk of the route body moved into
+  `runChatRoute(request, ctx) -> Promise<RouteOutcome>`. Each prior
+  `return NextResponse.json(...)` became `return { payload, status, ...}`.
+  - Synthesis path branches on `ctx.sseRequested`: when true, it iterates
+    `synthesizeAnswerStream(...)` and forwards `answer_delta` /
+    `reasoning_delta` chunks via `ctx.emitDelta(kind, text)`; the `final`
+    chunk's `{ answer, reasoning }` populate `synth{Answer,Reasoning}`
+    which flow into the route's existing JSON response shape unchanged.
+    Discriminant is `kind` (NOT `type`) per `web/src/lib/anthropic.ts:520`.
+  - Generic catch (`runChatRoute` outer catch) returns `RouteOutcome` with
+    `asError: { message, code: "chat_query_failed" }`. The dispatcher
+    emits an SSE `error` frame for SSE-opted requests; non-SSE returns
+    HTTP 400 with the same JSON shape today's catch returned.
+- `web/scripts/tests/streaming-synthesis-route.test.mjs` (new) — covers
+  every exit branch under both modes:
+  - validation-error (invalid JSON body) — `web/src/app/api/chat/route.ts:235-241`
+  - validation-error (missing message) — `web/src/app/api/chat/route.ts:243-250`
+  - clarification — `web/src/app/api/chat/route.ts:308-353`
+  - completeness-blocked — `web/src/app/api/chat/route.ts:355-411`
+  - answer-cache hit (warm) — `web/src/app/api/chat/route.ts:520-585`
+  - deterministic-template (cold) — `web/src/app/api/chat/route.ts:780-786`
+  - synthesis (LLM) — `web/src/app/api/chat/route.ts:786-862` (asserts
+    >=2 `answer_delta` + 1 `final`; non-SSE body deep-equals SSE final-frame
+    data modulo per-call dynamic fields `requestId` / `runtime.durationMs`)
+  - error path — generic catch at `web/src/app/api/chat/route.ts:982-1012`
+    (asserts `error` frame for SSE; HTTP 400 + JSON for non-SSE)
+  - Accept-header gating — confirms the branching key is `Accept`, not body
+- ANTHROPIC_STUB extended (step 6a): added `state.synthesizeStream`,
+  `__setSynthesizeStreamImpl(fn)`, reset wired into `__resetAnthropic()`,
+  and an `async function* synthesizeAnswerStream(input)` wrapper that
+  yields whatever the test-supplied async iterable yields (chunks must use
+  `kind` discriminant per `anthropic.ts:520-523`). Without this hook the
+  route's new `synthesizeAnswerStream` import would throw at load time.
+- `parseSseFrames(text)` helper (step 6b option (a)): splits on the SSE
+  record terminator `\n\n`, parses each block's `event:` / `data:` lines,
+  JSON-parses the joined data. The in-process stub-driven stream completes
+  synchronously, so `await response.text()` is the correct consumption mode.
+
+### Decisions
+
+- **No opportunistic refactor.** The body restructure into `runChatRoute`
+  was the minimum required to support the SSE branch (returns now produce
+  outcomes the dispatcher renders). All log/trace/cache logic preserved
+  verbatim. JSON response shape unchanged for every branch.
+- **SSE bypasses the answer-synthesis cache (`cachedSynthesize`).** SSE
+  calls `synthesizeAnswerStream` directly — `cachedSynthesize` only wraps
+  the non-streaming `synthesizeAnswerWithAnthropic`. This matches the
+  current (post `07-streaming-synthesis-server`) primitive surface and
+  keeps the streaming bytes flowing without an extra accumulation hop.
+  Non-SSE requests continue to hit the cache exactly as before.
+- **Error frame `code` field.** Generic-catch errors emit
+  `code: "chat_query_failed"` to give the client a stable identifier
+  separate from the human-readable `message`. The `error` frame is only
+  emitted for the generic catch — graceful exits (transient DB,
+  validation, clarification, etc.) still emit `final`.
+
+### Gate results
+
+| Gate | Command | Exit |
+|---|---|---|
+| 1 | `cd web && npm run build` | 0 |
+| 2 | `cd web && npm run typecheck` | 0 |
+| 3 | `bash scripts/loop/test_grading_gate.sh` | 0 (PASS — no new failures vs integration baseline; slice_fails=28 baseline_fails=28) |
+
+### Self-check
+
+- [x] `Accept: text/event-stream` branching at top of handler; non-SSE returns identical JSON.
+- [x] Synthesis path emits `answer_delta` + `reasoning_delta` + `final`; final-frame data deep-equal to non-SSE JSON (modulo per-call `requestId` / `runtime.durationMs`).
+- [x] All non-LLM exit branches emit exactly 1 `final` frame whose data equals the non-SSE JSON for that same branch (line citations above).
+- [x] Generic-catch error path emits `error` SSE frame; non-SSE returns HTTP 400 + JSON.
+- [x] New test `streaming-synthesis-route.test.mjs` covers all the above and exits 0 in `npm run test:grading`.
+- [x] All 3 gates pass with exit code 0.
+- [x] Only the three files in `## Changed files expected` were modified.
 
 ## Audit verdict
 (filled by codex)

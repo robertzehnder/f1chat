@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import {
   generateSqlWithAnthropic,
-  repairSqlWithAnthropic
+  repairSqlWithAnthropic,
+  synthesizeAnswerStream
 } from "@/lib/anthropic";
 import { buildHeuristicSql, runReadOnlySql } from "@/lib/queries";
 import { buildDeterministicSqlTemplate } from "@/lib/deterministicSql";
@@ -21,6 +22,57 @@ import {
 import { assertNoLlmForDeterministic } from "@/lib/zeroLlmGuard";
 
 export const dynamic = "force-dynamic";
+
+// ---------------------------------------------------------------------------
+// SSE frame contract (binding for the client wired in 07-streaming-synthesis-
+// client-wiring). The route emits SSE only when the request carries
+// `Accept: text/event-stream`; otherwise it returns today's JSON unchanged.
+//
+//   event: answer_delta
+//   data: {"text": "..."}
+//
+//   event: reasoning_delta
+//   data: {"text": "..."}
+//
+//   event: final
+//   data: <full response payload, byte-identical to the JSON the same branch
+//          would return without SSE>
+//
+//   event: error
+//   data: {"message": "...", "code": "..."}
+//
+// Non-LLM exit branches (validation error, clarification, completeness-blocked,
+// answer-cache hit, deterministic-template, transient-DB) emit a single `final`
+// frame whose data equals their non-SSE JSON. Only thrown errors caught by the
+// generic handler emit `error`.
+// ---------------------------------------------------------------------------
+
+const SSE_RESPONSE_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache, no-transform",
+  Connection: "keep-alive",
+  "X-Accel-Buffering": "no"
+} as const;
+
+function wantsSse(request: Request): boolean {
+  const accept = request.headers.get("accept") ?? "";
+  return accept.toLowerCase().includes("text/event-stream");
+}
+
+type SseDeltaKind = "answer_delta" | "reasoning_delta";
+
+type RouteCtx = {
+  sseRequested: boolean;
+  emitDelta: (kind: SseDeltaKind, text: string) => void;
+};
+
+type RouteOutcome = {
+  payload: Record<string, unknown>;
+  status: number;
+  // When set, an SSE-opted request emits an `error` frame instead of `final`.
+  // Non-SSE requests always render `payload` as JSON with `status`.
+  asError?: { message: string; code: string };
+};
 
 type ChatBody = {
   message?: string;
@@ -142,7 +194,49 @@ function enforcePinnedSessionKeyInSql(sql: string, pinnedSessionKey?: number): {
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
+  const sseRequested = wantsSse(request);
+
+  if (!sseRequested) {
+    const outcome = await runChatRoute(request, {
+      sseRequested: false,
+      emitDelta: () => {}
+    });
+    return NextResponse.json(outcome.payload, { status: outcome.status });
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const writeFrame = (event: string, data: unknown): void => {
+        controller.enqueue(
+          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+        );
+      };
+      try {
+        const outcome = await runChatRoute(request, {
+          sseRequested: true,
+          emitDelta: (kind, text) => writeFrame(kind, { text })
+        });
+        if (outcome.asError) {
+          writeFrame("error", outcome.asError);
+        } else {
+          writeFrame("final", outcome.payload);
+        }
+      } catch (err) {
+        writeFrame("error", {
+          message: err instanceof Error ? err.message : String(err),
+          code: "internal"
+        });
+      } finally {
+        controller.close();
+      }
+    }
+  });
+  return new Response(stream, { headers: SSE_RESPONSE_HEADERS });
+}
+
+async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutcome> {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
 
@@ -160,24 +254,40 @@ export async function POST(request: Request) {
 
   let totalSpan: Span | null = null;
 
+  let body: ChatBody = {};
+  let runtime: ChatRuntimeResult | undefined;
+  let generatedSqlForTrace: string | null = null;
+  let generationSourceForTrace: string | null = null;
+  let templateKeyForTrace: string | null = null;
+  let modelForTrace: string | null = null;
+  let autoResolutionNoteForTrace: string | null = null;
+  let lastSqlElapsedMsForTrace: number | null = null;
+  let sessionPinKeyForTrace: number | null = null;
+  let sessionPinNoteForTrace: string | null = null;
+
   try {
     totalSpan = startTrackedSpan(startSpan("total"));
     await logServer("INFO", "chat_request_received", { requestId });
 
     const intakeSpan = startTrackedSpan(startSpan("request_intake"));
 
-    let body: ChatBody = {};
     try {
       body = await request.json();
     } catch {
       await logServer("WARN", "chat_invalid_json", { requestId });
-      return NextResponse.json({ error: "Invalid JSON body", requestId }, { status: 400 });
+      return {
+        payload: { error: "Invalid JSON body", requestId },
+        status: 400
+      };
     }
 
     const message = body.message?.trim();
     if (!message) {
       await logServer("WARN", "chat_missing_message", { requestId });
-      return NextResponse.json({ error: "message is required", requestId }, { status: 400 });
+      return {
+        payload: { error: "message is required", requestId },
+        status: 400
+      };
     }
 
     endTrackedSpan(intakeSpan);
@@ -202,16 +312,6 @@ export async function POST(request: Request) {
         ...payload
       });
     };
-
-    let runtime: ChatRuntimeResult | undefined;
-    let generatedSqlForTrace: string | null = null;
-    let generationSourceForTrace: string | null = null;
-    let templateKeyForTrace: string | null = null;
-    let modelForTrace: string | null = null;
-    let autoResolutionNoteForTrace: string | null = null;
-    let lastSqlElapsedMsForTrace: number | null = null;
-    let sessionPinKeyForTrace: number | null = null;
-    let sessionPinNoteForTrace: string | null = null;
 
     try {
       runtime = await buildChatRuntime({
@@ -285,19 +385,22 @@ export async function POST(request: Request) {
           runtimeMs: runtime.durationMs,
           autoResolutionNote: autoResolutionNoteForTrace
         });
-        return NextResponse.json({
-          requestId,
-          answer,
-          adequacyGrade: quality.grade,
-          adequacyReason: quality.reason,
-          responseGrade: quality.grade,
-          gradeReason: quality.reason,
-          generationSource: "runtime_clarification",
-          model: null,
-          generationNotes: [autoResolutionNote, "clarification_required"].filter(Boolean).join(" | "),
-          sql: "-- query not executed (clarification required)",
-          runtime
-        });
+        return {
+          payload: {
+            requestId,
+            answer,
+            adequacyGrade: quality.grade,
+            adequacyReason: quality.reason,
+            responseGrade: quality.grade,
+            gradeReason: quality.reason,
+            generationSource: "runtime_clarification",
+            model: null,
+            generationNotes: [autoResolutionNote, "clarification_required"].filter(Boolean).join(" | "),
+            sql: "-- query not executed (clarification required)",
+            runtime
+          },
+          status: 200
+        };
       }
 
       if (!runtime.completeness.available && !runtime.completeness.canProceedWithFallback) {
@@ -355,21 +458,24 @@ export async function POST(request: Request) {
           autoResolutionNote: autoResolutionNoteForTrace
         });
 
-        return NextResponse.json({
-          requestId,
-          answer,
-          adequacyGrade: quality.grade,
-          adequacyReason: quality.reason,
-          responseGrade: quality.grade,
-          gradeReason: quality.reason,
-          generationSource: "runtime_unavailable",
-          model: null,
-          generationNotes: [autoResolutionNote, "completeness_blocked_execution"]
-            .filter(Boolean)
-            .join(" | "),
-          sql: "-- query not executed (completeness blocked)",
-          runtime
-        });
+        return {
+          payload: {
+            requestId,
+            answer,
+            adequacyGrade: quality.grade,
+            adequacyReason: quality.reason,
+            responseGrade: quality.grade,
+            gradeReason: quality.reason,
+            generationSource: "runtime_unavailable",
+            model: null,
+            generationNotes: [autoResolutionNote, "completeness_blocked_execution"]
+              .filter(Boolean)
+              .join(" | "),
+            sql: "-- query not executed (completeness blocked)",
+            runtime
+          },
+          status: 200
+        };
       }
 
       const resolvedContext = {
@@ -547,21 +653,24 @@ export async function POST(request: Request) {
           autoResolutionNote: autoResolutionNoteForTrace
         });
 
-        return NextResponse.json({
-          requestId,
-          answer: cachedAnswer.answer,
-          answerReasoning: cachedAnswer.answerReasoning,
-          adequacyGrade: cachedAnswer.adequacyGrade,
-          adequacyReason: cachedAnswer.adequacyReason,
-          responseGrade: cachedAnswer.responseGrade,
-          gradeReason: cachedAnswer.gradeReason,
-          generationSource: cachedAnswer.generationSource,
-          model: cachedAnswer.model,
-          generationNotes: cachedAnswer.generationNotes,
-          sql: cachedAnswer.sql,
-          result: hitResult,
-          runtime
-        });
+        return {
+          payload: {
+            requestId,
+            answer: cachedAnswer.answer,
+            answerReasoning: cachedAnswer.answerReasoning,
+            adequacyGrade: cachedAnswer.adequacyGrade,
+            adequacyReason: cachedAnswer.adequacyReason,
+            responseGrade: cachedAnswer.responseGrade,
+            gradeReason: cachedAnswer.gradeReason,
+            generationSource: cachedAnswer.generationSource,
+            model: cachedAnswer.model,
+            generationNotes: cachedAnswer.generationNotes,
+            sql: cachedAnswer.sql,
+            result: hitResult,
+            runtime
+          },
+          status: 200
+        };
       }
 
       const executeSqlWithTrace = async (sql: string, queryPath: string, attemptLabel: string) => {
@@ -740,30 +849,64 @@ export async function POST(request: Request) {
           });
           const synthSpan = startTrackedSpan(startSpan("synthesize_llm"));
           try {
-            const synthesis = await cachedSynthesize({
-              question: message,
-              sql: result.sql,
-              rows: result.rows,
-              rowCount: result.rowCount,
-              runtime: {
-                questionType: runtime.questionType,
-                grain: runtime.grain.grain,
-                resolvedEntities: runtime.queryPlan.resolved_entities,
-                completenessWarnings: runtime.completeness.warnings
+            let synthAnswer: string;
+            let synthReasoning: string | undefined;
+            try {
+              if (ctx.sseRequested) {
+                let streamedAnswer = "";
+                let streamedReasoning: string | undefined;
+                for await (const chunk of synthesizeAnswerStream({
+                  question: message,
+                  sql: result.sql,
+                  rows: result.rows,
+                  rowCount: result.rowCount,
+                  runtime: {
+                    questionType: runtime.questionType,
+                    grain: runtime.grain.grain,
+                    resolvedEntities: runtime.queryPlan.resolved_entities,
+                    completenessWarnings: runtime.completeness.warnings
+                  }
+                })) {
+                  if (chunk.kind === "answer_delta") {
+                    ctx.emitDelta("answer_delta", chunk.text);
+                  } else if (chunk.kind === "reasoning_delta") {
+                    ctx.emitDelta("reasoning_delta", chunk.text);
+                  } else if (chunk.kind === "final") {
+                    streamedAnswer = chunk.answer;
+                    streamedReasoning = chunk.reasoning;
+                  }
+                }
+                synthAnswer = streamedAnswer;
+                synthReasoning = streamedReasoning;
+              } else {
+                const synthesis = await cachedSynthesize({
+                  question: message,
+                  sql: result.sql,
+                  rows: result.rows,
+                  rowCount: result.rowCount,
+                  runtime: {
+                    questionType: runtime.questionType,
+                    grain: runtime.grain.grain,
+                    resolvedEntities: runtime.queryPlan.resolved_entities,
+                    completenessWarnings: runtime.completeness.warnings
+                  }
+                });
+                synthAnswer = synthesis.answer;
+                synthReasoning = synthesis.reasoning;
               }
-            });
-            answer = synthesis.answer;
-            if (caveatText) {
-              answer = `${answer}${caveatText}`;
+              answer = synthAnswer;
+              if (caveatText) {
+                answer = `${answer}${caveatText}`;
+              }
+              answerReasoning = synthReasoning;
+            } catch {
+              answer = buildFallbackAnswer({
+                question: message,
+                rowCount: result.rowCount,
+                rows: result.rows,
+                caveatText
+              });
             }
-            answerReasoning = synthesis.reasoning;
-          } catch {
-            answer = buildFallbackAnswer({
-              question: message,
-              rowCount: result.rowCount,
-              rows: result.rows,
-              caveatText
-            });
           } finally {
             endTrackedSpan(synthSpan);
           }
@@ -883,21 +1026,24 @@ export async function POST(request: Request) {
         });
       }
 
-      return NextResponse.json({
-        requestId,
-        answer,
-        answerReasoning,
-        adequacyGrade: quality.grade,
-        adequacyReason: quality.reason,
-        responseGrade: quality.grade,
-        gradeReason: quality.reason,
-        generationSource,
-        model,
-        generationNotes: finalGenerationNotes,
-        sql: result.sql,
-        result,
-        runtime
-      });
+      return {
+        payload: {
+          requestId,
+          answer,
+          answerReasoning,
+          adequacyGrade: quality.grade,
+          adequacyReason: quality.reason,
+          responseGrade: quality.grade,
+          gradeReason: quality.reason,
+          generationSource,
+          model,
+          generationNotes: finalGenerationNotes,
+          sql: result.sql,
+          result,
+          runtime
+        },
+        status: 200
+      };
     } catch (error) {
       if (isTransientDatabaseAvailabilityError(error)) {
         const answer =
@@ -951,8 +1097,8 @@ export async function POST(request: Request) {
           runtimeMs: runtime?.durationMs ?? null,
           autoResolutionNote: autoResolutionNoteForTrace
         });
-        return NextResponse.json(
-          {
+        return {
+          payload: {
             requestId,
             answer,
             adequacyGrade: quality.grade,
@@ -963,8 +1109,8 @@ export async function POST(request: Request) {
             model: null,
             sql: "-- query not executed (database temporarily unavailable)"
           },
-          { status: 200 }
-        );
+          status: 200
+        };
       }
 
       const quality = assessChatQuality({
@@ -1016,8 +1162,8 @@ export async function POST(request: Request) {
         runtimeMs: runtime?.durationMs ?? null,
         autoResolutionNote: autoResolutionNoteForTrace
       });
-      return NextResponse.json(
-        {
+      return {
+        payload: {
           error: error instanceof Error ? error.message : "Chat query failed",
           requestId,
           adequacyGrade: quality.grade,
@@ -1025,8 +1171,12 @@ export async function POST(request: Request) {
           responseGrade: quality.grade,
           gradeReason: quality.reason
         },
-        { status: 400 }
-      );
+        status: 400,
+        asError: {
+          message: error instanceof Error ? error.message : "Chat query failed",
+          code: "chat_query_failed"
+        }
+      };
     }
   } finally {
     if (totalSpan) {
