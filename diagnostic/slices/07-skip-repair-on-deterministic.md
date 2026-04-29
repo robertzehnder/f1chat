@@ -1,11 +1,11 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29
+updated: 2026-04-29T17:06:14Z
 ---
 
 ## Goal
@@ -21,8 +21,11 @@ Skip the LLM-based JSON-repair pass when the upstream output is already valid JS
 None at author time.
 
 ## Steps
-1. Wrap the repair-call site with a `JSON.parse` try/catch; on success, skip repair.
-2. Add tests covering: (a) valid JSON skips repair; (b) malformed JSON still triggers repair.
+1. In `web/src/lib/chatRuntime.ts`, locate the repair-call site (the path that invokes the LLM-based JSON repair on the upstream output) and wrap it with a `JSON.parse(...)` try/catch on the upstream string. On successful parse, return the parsed value directly and skip the repair call entirely. On `SyntaxError`, fall through to the existing repair path.
+2. Expose an injectable seam so tests can observe whether the repair path was invoked. Either (a) accept an optional `repairFn` parameter on the relevant exported function (defaulting to the real repair implementation), or (b) export a small `__testHooks` object with a counter / spy that the implementation increments when repair runs. The seam must be reachable from a Node `--test` test file without bundling Next.
+3. Add `web/scripts/tests/skip-repair.test.mjs` with two `node:test` cases:
+   - `valid JSON skips repair` — feed a string of valid JSON, assert the spy/counter was NOT called and the returned value equals `JSON.parse(input)`.
+   - `malformed JSON triggers repair` — feed a malformed JSON string, assert the spy/counter WAS called exactly once.
 
 ## Changed files expected
 - `web/src/lib/chatRuntime.ts`
@@ -38,9 +41,12 @@ cd web && npm run typecheck
 cd web && npm run test:grading
 ```
 
+Note: `npm run test:grading` resolves to `node --test scripts/tests/*.test.mjs` (see `web/package.json`), so the new `web/scripts/tests/skip-repair.test.mjs` file is picked up automatically by that gate — no script wiring is required, but the gate is only observable if the test file is present and both cases below execute.
+
 ## Acceptance criteria
-- [ ] Valid JSON path: zero repair calls.
-- [ ] Malformed JSON path: repair still runs.
+- [ ] `npm run test:grading` reports `skip-repair.test.mjs > valid JSON skips repair` as `ok`, with the test asserting the repair spy/counter is `0` after a valid-JSON input AND that the returned value deep-equals `JSON.parse(input)`.
+- [ ] `npm run test:grading` reports `skip-repair.test.mjs > malformed JSON triggers repair` as `ok`, with the test asserting the repair spy/counter is exactly `1` after a malformed-JSON input.
+- [ ] The new test file is discovered by the existing `node --test scripts/tests/*.test.mjs` glob (verified by both subtests appearing in the `npm run test:grading` summary output).
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -59,10 +65,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Make the new skip-repair assertions observable through a named gate by stating which `npm run test:grading` test target or harness path executes `web/scripts/tests/skip-repair.test.mjs`; otherwise the plan can pass its listed gates without proving either acceptance criterion.
+- [x] Make the new skip-repair assertions observable through a named gate by stating which `npm run test:grading` test target or harness path executes `web/scripts/tests/skip-repair.test.mjs`; otherwise the plan can pass its listed gates without proving either acceptance criterion.
 
 ### Medium
-- [ ] Rewrite the acceptance criteria so each one names the concrete test/assertion outcome the implementer must add, rather than only the runtime behavior (“zero repair calls” / “repair still runs”).
+- [x] Rewrite the acceptance criteria so each one names the concrete test/assertion outcome the implementer must add, rather than only the runtime behavior (“zero repair calls” / “repair still runs”).
 
 ### Low
 - [ ] None.
