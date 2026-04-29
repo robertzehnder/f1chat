@@ -1,7 +1,7 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: revising_plan
+status: pending_plan_audit
 owner: claude
 user_approval_required: no
 created: 2026-04-26
@@ -26,7 +26,7 @@ Audit and tighten the deterministic-only path: questions that resolve fully via 
 None at author time. Tests must work with `NODE_ENV=test` and without an `ANTHROPIC_API_KEY`; the assertion-trip test uses `NODE_ENV=development` to exercise the throw.
 
 ## Steps
-1. Enumerate deterministic-eligible templates from `diagnostic/notes/05-template-cache-coverage.md` (the 32-row coverage table) and cross-check against the `templateKey: "..."` literals in `web/src/lib/deterministicSql.ts`. Codify this list in the test file as a single constant so future drift is caught.
+1. Enumerate deterministic-eligible templates from `diagnostic/notes/05-template-cache-coverage.md` (the 32-row coverage table) and cross-check against the `templateKey: "..."` literals in `web/src/lib/deterministicSql.ts`. Codify this list in the test file as a single exported constant **named exactly `DETERMINISTIC_KEYS`** (e.g. `export const DETERMINISTIC_KEYS = ["...", ...];`) so the drift gate (see `## Gate commands`) can scope its extraction to that block and so future drift is caught.
 2. Add a dev-only runtime assertion at each LLM call site reachable from a deterministic-eligible request. Implementation: a helper in `web/src/lib/chatRuntime.ts` (e.g. `assertNoLlmForDeterministic({ generationSource, templateKey })`) that throws `Error("zero-llm-path violation: ...")` when `process.env.NODE_ENV !== "production"` and `(generationSource === "deterministic_template" || answer-cache hit) && an LLM transport is about to be invoked`. Wire calls in `web/src/app/api/chat/route.ts` immediately before `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and the synthesis path so any future regression that re-enters an LLM call from the deterministic branch trips the assertion.
 3. Add tests in `web/scripts/tests/zero-llm-path.test.mjs` that:
    - For each deterministic-eligible template (from step 1), drive the chat route with a representative prompt and a stubbed `web/src/lib/anthropic.ts` whose three exports (`generateSqlWithAnthropic`, `repairSqlWithAnthropic`, `synthesizeAnswerWithAnthropic`) increment a counter and reject. Assert the counter is `0`.
@@ -49,20 +49,35 @@ cd web && npm run build
 cd web && npm run typecheck
 cd web && npm run test:grading
 # Eligibility-list drift gate: every deterministic-eligible templateKey enumerated
-# in zero-llm-path.test.mjs must exist in deterministicSql.ts (catches renames).
+# in zero-llm-path.test.mjs (DETERMINISTIC_KEYS constant) must exist in
+# deterministicSql.ts (catches renames in either direction).
 bash -c '
   set -euo pipefail
   test_file=web/scripts/tests/zero-llm-path.test.mjs
   src=web/src/lib/deterministicSql.ts
   missing=0
-  for k in $(grep -oE "\"[a-z_0-9]+\"" "$test_file" | tr -d "\"" | sort -u); do
-    if grep -qE "templateKey: \"$k\"" "$src"; then :; fi
+  # Scope extraction to the DETERMINISTIC_KEYS array literal block so quoted
+  # strings elsewhere in the test file (prompts, error messages) are ignored.
+  keys=$(awk "/DETERMINISTIC_KEYS[[:space:]]*=/,/\\];/" "$test_file" \
+         | grep -oE "\"[a-z_0-9]+\"" \
+         | tr -d "\"" \
+         | sort -u)
+  if [ -z "$keys" ]; then
+    echo "DETERMINISTIC_KEYS constant not found or empty in $test_file" >&2
+    exit 1
+  fi
+  for k in $keys; do
+    if ! grep -qE "templateKey: \"$k\"" "$src"; then
+      echo "Missing templateKey: $k in $src" >&2
+      missing=1
+    fi
   done
-  # Inverse: the test file must reference at least one templateKey from the registry
+  # Inverse: the registry must define at least one templateKey literal.
   if ! grep -qE "templateKey: \"[a-z_0-9]+\"" "$src"; then
     echo "deterministicSql.ts has no templateKey literals — registry missing." >&2
     exit 1
   fi
+  [ "$missing" -eq 0 ] || exit 1
   echo "Eligibility drift gate passed."
 '
 ```
@@ -110,7 +125,7 @@ Rollback: `git revert <commit>`.
 **Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — genuine High found)**
 
 ### High
-- [ ] Fix the eligibility drift gate: the loop body `if grep -qE "templateKey: \"$k\"" "$src"; then :; fi` has no `else` clause, so a key present in the test file but absent from `deterministicSql.ts` is silently ignored; `$missing` is declared but never set to `1` and never checked, so the gate always exits `0` regardless of drift. Replace with: `if ! grep -qE "templateKey: \"$k\"" "$src"; then echo "Missing templateKey: $k" >&2; missing=1; fi` inside the loop, followed by `[ "$missing" -eq 0 ] || exit 1` after it. Also scope the grep on the test file to templateKey values only (e.g. `grep -oP '(?<=")[a-z_0-9]+(?=")' "$test_file"` filtered by context, or use the DETERMINISTIC_KEYS constant directly) to avoid false-positive matches on non-key quoted strings.
+- [x] Fix the eligibility drift gate: the loop body `if grep -qE "templateKey: \"$k\"" "$src"; then :; fi` has no `else` clause, so a key present in the test file but absent from `deterministicSql.ts` is silently ignored; `$missing` is declared but never set to `1` and never checked, so the gate always exits `0` regardless of drift. Replace with: `if ! grep -qE "templateKey: \"$k\"" "$src"; then echo "Missing templateKey: $k" >&2; missing=1; fi` inside the loop, followed by `[ "$missing" -eq 0 ] || exit 1` after it. Also scope the grep on the test file to templateKey values only (e.g. `grep -oP '(?<=")[a-z_0-9]+(?=")' "$test_file"` filtered by context, or use the DETERMINISTIC_KEYS constant directly) to avoid false-positive matches on non-key quoted strings.
 
 ### Medium
 - [ ] None.
