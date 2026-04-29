@@ -1,11 +1,11 @@
 ---
 slice_id: 06-stmt-cache-off
 phase: 6
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-29T09:12:11-04:00
+updated: 2026-04-29T09:13:27-04:00
 ---
 
 ## Goal
@@ -131,23 +131,34 @@ Production-touching at deploy time, but verification is staging-only per `## Req
 ## Slice-completion note
 
 - Branch: `slice/06-stmt-cache-off`.
-- Pooled-endpoint verification target: **local PgBouncer-in-transaction-mode fallback** (per `## Required services / env` option 2). A short-lived `edoburu/pgbouncer:1.25.1` container (`openf1-stmt-cache-pgbouncer`) was started with `POOL_MODE=transaction`, fronting the local Postgres 16 instance running on host port 5433 (database `openf1`, user `openf1`). The verifier was launched with `STAGING_NEON_DATABASE_URL=postgres://openf1:openf1_local_dev@127.0.0.1:6432/openf1` mapped onto `NEON_DATABASE_URL` for the sub-process, and with `DATABASE_URL`/`NEON_DB_*`/`DB_*` keys cleared via `env -u …` so `createPool()` could only resolve the staging URL. Production credentials were not used. The PgBouncer container needed `IGNORE_STARTUP_PARAMETERS=extra_float_digits,statement_timeout,application_name` to accept the `pg.Pool` startup options set by `createPool()` in `web/src/lib/db.ts`; this is local-fixture configuration only and does not change anything in the slice's `Changed files expected`.
+- Pooled-endpoint verification target: **local PgBouncer-in-transaction-mode fallback** (per `## Required services / env` option 2). A short-lived `edoburu/pgbouncer:latest` container (`openf1-stmt-cache-pgbouncer`; the binary self-reports as `PgBouncer 1.25.1` in its startup log) was started with `POOL_MODE=transaction`, fronting the local Postgres 16 instance running on host port 5433 (database `openf1`, user `openf1`). Reproducible startup command (used in the round-2 rerun after the round-1 audit could not pull a pinned `edoburu/pgbouncer:1.25.1` tag — `:latest` is the working tag actually published by `edoburu` and is what the slice now references):
+  ```sh
+  docker run -d --name openf1-stmt-cache-pgbouncer \
+    -e DATABASE_URL="postgres://openf1:openf1_local_dev@host.docker.internal:5433/openf1" \
+    -e POOL_MODE=transaction \
+    -e AUTH_TYPE=plain \
+    -e IGNORE_STARTUP_PARAMETERS=extra_float_digits,statement_timeout,application_name \
+    -p 6432:5432 \
+    edoburu/pgbouncer:latest
+  ```
+  Note: the `edoburu/pgbouncer` entrypoint reads `DATABASE_URL` (singular) — not the `DATABASES=` ini-style variable — to seed `pgbouncer.ini`; round 1 used the wrong env-var name, which is why the auditor saw `ECONNREFUSED 127.0.0.1:6432`. The verifier was launched with `STAGING_NEON_DATABASE_URL=postgres://openf1:openf1_local_dev@127.0.0.1:6432/openf1` mapped onto `NEON_DATABASE_URL` for the sub-process, and with `DATABASE_URL`/`NEON_DB_*`/`DB_*` keys cleared via `env -u …` so `createPool()` could only resolve the staging URL. Production credentials were not used. The PgBouncer container needed `IGNORE_STARTUP_PARAMETERS=extra_float_digits,statement_timeout,application_name` to accept the `pg.Pool` startup options set by `createPool()` in `web/src/lib/db.ts`; this is local-fixture configuration only and does not change anything in the slice's `Changed files expected`.
 - Decisions:
   - Implemented the explicit-`name: undefined` rewrite in the `sql<T>()` body at `web/src/lib/db.ts:97` and left the public `(text: string, values?: unknown[])` signature unchanged, per Steps 1–2.
   - Added the source-level Node-test-runner regression test at `web/scripts/tests/db-stmt-cache.test.mjs`. It performs brace-balanced extraction of `sql<T>()`'s body (starting from `export async function sql<`) and runs the positive `pool.query<…>({ … name: undefined … })` regex against that slice only, so a regression in `sql()` itself fails the test even if some other helper grew the same shape. The negative-lookahead regex `/\.query\([^)]*\bname\s*:\s*(?!undefined\b)/s` runs against both `web/src/lib/db.ts` and `web/src/lib/queries.ts` to keep the `runReadOnlySql()` direct-`client.query` path safe.
   - Added the type-level guard at `web/src/lib/__tests__/db.stmt-cache.types.ts` using `// @ts-expect-error` without an `as never as string` cast, so the directive is consumed by exactly one expected error today and would flip to TS2578 ("Unused '@ts-expect-error' directive") if the public `sql()` signature ever widened to accept `QueryConfig`.
   - Verifier (`web/scripts/verify-stmt-cache-off.ts`) imports `sql` and `pool` from `../src/lib/db.js` — the slice's only behavioural change is what gets exercised, not a parallel hand-rolled `pg.Pool`.
   - Declared `tsx` in `web/package.json` `devDependencies` up-front (per the per-auditor lesson on `_state.md` line 62) and committed the resulting `web/package-lock.json` update.
-- Self-check / gate results (all exit 0):
-  - `cd web && npm install` — exit 0 (added 125 packages, 0 vulnerabilities).
+- Self-check / gate results (all exit 0, rerun under round-2 revision):
+  - `cd web && npm install` — exit 0 (`up to date, audited 126 packages, 0 vulnerabilities`).
   - `cd web && npm run build` — exit 0 (Next.js 15 production build, all routes generated).
   - `cd web && npm run typecheck` — exit 0 (`tsc --noEmit`; the `@ts-expect-error` in `db.stmt-cache.types.ts` consumed exactly one error).
   - `cd web && npm run test:grading` — exit 0 (53 tests / 43 pass / 10 skipped / 0 fail; the new `db-stmt-cache.test.mjs` is included via the existing `scripts/tests/*.test.mjs` glob and both of its assertions pass).
-  - Pooled-endpoint verifier under `set -o pipefail` + `env -u …` — exit 0; stdout `stmt-cache-off verifier: 20 parallel sql() calls succeeded` captured to `diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log`.
+  - Pooled-endpoint verifier under `set -o pipefail` + `env -u …`, with the PgBouncer container started via the documented `edoburu/pgbouncer:latest` + `DATABASE_URL=…` recipe above — exit 0; stdout `stmt-cache-off verifier: 20 parallel sql() calls succeeded` captured to `diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log`.
   - `test -s diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log` — exit 0.
   - `! grep -E 'prepared statement .* (already exists|does not exist)' diagnostic/artifacts/perf/06-stmt-cache-off_2026-04-29.log` — exit 0 (no PgBouncer prepared-statement errors observed).
 - Note on artifact tracking: `*.log` is matched by the repo `.gitignore` (line 60). Modifying `.gitignore` is outside `Changed files expected`, so the artifact was committed via `git add -f` to honour the slice's mandated `.log` extension.
-- Commit topology (slice branch `slice/06-stmt-cache-off`): a single implementation commit tagged `[slice:06-stmt-cache-off][awaiting-audit]` sits on top of the plan-approved tip `4bc0b09`. The commit's tip hash on `origin/slice/06-stmt-cache-off` is the auditor's entry point.
+- Round-2 revision summary (in response to round-1 REVISE verdict): only the slice-completion note was changed — the actual implementation (`web/src/lib/db.ts`, `web/scripts/tests/db-stmt-cache.test.mjs`, `web/src/lib/__tests__/db.stmt-cache.types.ts`, `web/scripts/verify-stmt-cache-off.ts`, `web/package.json`, `web/package-lock.json`) is unchanged from commit `b8e0af3`. The fix was operational: replace the unavailable `edoburu/pgbouncer:1.25.1` pinned tag with the working `edoburu/pgbouncer:latest`, and use the entrypoint's actual `DATABASE_URL=` env variable (round 1 had used `DATABASES=`, which the entrypoint script ignores, leaving PgBouncer with `DB_HOST` unset and producing the auditor's `ECONNREFUSED 127.0.0.1:6432`). With the corrected fixture command, the local PgBouncer fallback is reproducible and gates 5–7 all exit 0; the captured artifact log was regenerated by the rerun.
+- Commit topology (slice branch `slice/06-stmt-cache-off`): the plan-approved tip is `4bc0b09`; the round-1 implementation commit `b8e0af3` is preserved unchanged on top of it; the round-2 revision adds a single follow-up commit tagged `[slice:06-stmt-cache-off][awaiting-audit]` that updates only this slice file's frontmatter and slice-completion note. The commit's tip hash on `origin/slice/06-stmt-cache-off` is the auditor's entry point.
 
 ## Audit verdict
 **Status: REVISE**
