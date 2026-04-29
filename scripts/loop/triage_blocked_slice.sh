@@ -235,6 +235,99 @@ PY
 fi
 
 # ----------------------------------------------------------------------
+# Class 3: GATE-USES-OLD-TEST-GRADING
+#
+# Pattern: slice's Gate commands block calls raw `npm run test:grading`,
+# the audit shows it exited non-zero, BUT the failing tests are all
+# already in the integration baseline (i.e. zero NEW failures). The new
+# baseline-aware gate would have passed. Auto-fix: swap the slice's
+# gate command to the wrapper and flip status back to awaiting_audit.
+#
+# This is the recurring case that hit every Phase 7+ slice after the
+# baseline-aware gate landed but before in-flight slices migrated.
+# ----------------------------------------------------------------------
+if echo "$verdict" | grep -qE "test:grading.*exit"; then
+  # Only fire if the slice's plan uses the raw gate (not the wrapper).
+  if grep -qE '^cd web && npm run test:grading\s*$' "$slice_file_branch"; then
+    # Verify: run the baseline-aware wrapper from the slice worktree. If
+    # it exits 0, the failing tests are all baseline — safe to swap.
+    set +e
+    LOOP_STATE_DIR="$LOOP_STATE_DIR" \
+    LOOP_MAIN_WORKTREE="$slice_worktree" \
+      bash "$slice_worktree/scripts/loop/test_grading_gate.sh" >/dev/null 2>&1
+    wrapper_rc=$?
+    set -e
+    if (( wrapper_rc == 0 )); then
+      # Swap the raw gate line for the wrapper invocation in the slice plan.
+      python3 - "$slice_file_branch" <<'PY'
+import re, sys
+path = sys.argv[1]
+text = open(path).read()
+new_gate = '\n'.join([
+  '# Baseline-aware gate (auto-applied by triage). Wrapper runs',
+  "# 'npm run test:grading' from web/, diffs the slice's failing-test set",
+  "# against integration's currently-recorded baseline at",
+  '# scripts/loop/state/test_grading_baseline.txt, and exits 0 when the',
+  '# slice introduces ZERO new failures vs that baseline. Replaces the',
+  '# raw gate which would block on integration\'s pre-existing breakage.',
+  'bash scripts/loop/test_grading_gate.sh',
+])
+text = re.sub(
+    r'^cd web && npm run test:grading\s*$',
+    new_gate,
+    text, count=1, flags=re.M
+)
+open(path, 'w').write(text)
+PY
+
+      # Flip frontmatter back to awaiting_audit.
+      python3 - "$slice_file_branch" <<'PY'
+import re, sys, datetime
+path = sys.argv[1]
+text = open(path).read()
+parts = text.split('---', 2)
+fm = parts[1]
+fm = re.sub(r'^status:.*$', 'status: awaiting_audit', fm, count=1, flags=re.M)
+fm = re.sub(r'^owner:.*$',  'owner: codex',          fm, count=1, flags=re.M)
+ts = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
+fm = re.sub(r'^updated:.*$', f'updated: {ts}', fm, count=1, flags=re.M)
+open(path, 'w').write(parts[0] + '---' + fm + '---' + parts[2])
+PY
+
+      # Strip any "blocked: pre-existing driver-fallback" trailing note
+      # that claude appended when self-blocking — gate is now correct
+      # so the note is misleading.
+      python3 - "$slice_file_branch" <<'PY'
+import re, sys
+path = sys.argv[1]
+text = open(path).read()
+text = re.sub(r'\n## Plan-revise escalation\n.*?\Z', '', text, flags=re.S)
+open(path, 'w').write(text)
+PY
+
+      ( cd "$slice_worktree" && \
+        git add "diagnostic/slices/${slice_id}.md" && \
+        git commit -m "[slice:${slice_id}][triage-unblock] swap raw test:grading for baseline-aware gate" >/dev/null 2>&1 && \
+        git push >/dev/null 2>&1 || true )
+
+      ( cd "$LOOP_MAIN_WORKTREE" && \
+        cp "$slice_file_branch" "$slice_file_main" && \
+        git add "diagnostic/slices/${slice_id}.md" && \
+        git commit -m "mirror: ${slice_id} status → awaiting_audit (triage gate-migration auto-fix)" >/dev/null 2>&1 && \
+        git push >/dev/null 2>&1 || true )
+
+      rm -f "$LOOP_STATE_DIR/fail_count_${slice_id}"
+
+      log_event "auto-fix-class3-gate-migration" "swapped raw npm run test:grading for baseline-aware wrapper" "wrapper exit=0 means slice has 0 new failures vs baseline"
+      exit 0
+    else
+      log_event "skip-class3-wrapper-also-fails" "wrapper exit=$wrapper_rc means slice DOES introduce new failures" "real regression — escalating"
+      # Fall through to escalate.
+    fi
+  fi
+fi
+
+# ----------------------------------------------------------------------
 # Unknown — escalate.
 # ----------------------------------------------------------------------
 log_event "no-pattern-match" "verdict did not match a known triage class" "escalating to user"
