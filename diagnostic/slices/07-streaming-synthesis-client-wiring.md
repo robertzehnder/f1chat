@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-client-wiring
 phase: 7
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T15:40:00-04:00
+updated: 2026-04-29T21:10:00-04:00
 ---
 
 ## Goal
@@ -81,3 +81,24 @@ bash scripts/loop/test_grading_gate.sh
 
 ## Audit verdict
 (filled by codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-1 forced-findings ratchet: not applied — genuine Medium item found)**
+
+### High
+_(none)_
+
+### Medium
+- [ ] Step 3 instructs the implementer to "Test ChatWorkspace integration via the existing harness pattern (see `web/scripts/tests/answer-cache.test.mjs` for the React-component testing approach already in use)" — but `answer-cache.test.mjs` is a route-harness test that transpiles `route.ts` and calls it as a plain function; it has no React rendering capability. `ChatWorkspace.tsx` is a React functional component using `useState`, `useCallback`, and `useEffect` hooks that cannot execute outside a React render context. The acceptance criteria require asserting that the placeholder is inserted BEFORE the first delta, that deltas patch by id, and that an error mid-stream replaces the placeholder — all of which require observing component state mutations. Replace the `answer-cache.test.mjs` reference with a concrete approach: either (a) refactor ChatWorkspace's async send logic into a pure, hook-free helper that can be tested directly (preferred — aligns with the slice's additive-only scope if the helper is extracted as part of Step 1/2) and test that helper with a synthetic `patchActiveConversation` spy, or (b) explicitly scope the ChatWorkspace test assertions to the `consumeChatStream` helper only and drop the "placeholder-id resilience to reordering" AC to the `consumeChatStream` level where it is testable without React rendering.
+
+### Low
+- [ ] The `consumeChatStream` return type in Step 1 uses `/* + same fields as today's JSON */` as a comment placeholder. Specify the key additional fields explicitly (e.g., `sql`, `generationSource`, `model`, `requestId`) or reference the `RouteOutcome["payload"]` type from `route.ts` so the TypeScript definition is unambiguous and the type-check gate is meaningful.
+
+### Notes (informational only — no action)
+- `patchActiveConversation` confirmed at `ChatWorkspace.tsx:87` — no new setter needed.
+- All three Prior context paths exist on disk.
+- Gate ordering (build → typecheck → test_grading_gate.sh) is correct.
+- `## Changed files expected` covers all files touched by the steps; no package.json changes needed.
+- The `consumeChatStream` helper has no `@/lib/*` dependencies (pure fetch/Response utility), so the _state.md Note #6 transpilation concern does not apply here.
