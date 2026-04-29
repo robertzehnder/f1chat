@@ -1,11 +1,11 @@
 ---
 slice_id: 06-driver-swap-local-fallback
 phase: 6
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T19:47:30-04:00
+updated: 2026-04-28T21:26:31-04:00
 ---
 
 ## Goal
@@ -161,7 +161,21 @@ recording.
 **Survivor count:** `web/src/lib/queries.ts:789`'s `pool.connect()` is gone — replaced with `withTransaction(async (tx) => { … })`. `rg -n "pool\.(query|connect)\(" web/src/` returns 0 matches.
 
 ## Audit verdict
-(filled by Codex)
+**Status: REVISE**
+
+- Gate #1 `cd web && npm install --no-audit --no-fund` -> exit `0`
+- Gate #2 `cd web && npm run build` -> exit `0`
+- Gate #3 `cd web && npm run typecheck` -> exit `0`
+- Gate #4 `cd web && npm run test:grading` -> exit `0`
+- Gate #5 `cd web && node --test scripts/tests/driver-fallback.test.mjs` -> exit `0`
+- Gate #6 `cd web && ! rg -n "pool\.(query|connect)\(" src/` -> exit `0`
+- Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> in scope; only expected files plus implicit-allow `diagnostic/_state.md`
+- Criterion `build` / `typecheck` / `test:grading` / `driver-fallback.test.mjs` / survivor gate -> PASS
+- Criterion `Existing call sites that import { sql, pool } from "@/lib/db" continue to compile and resolve via the new barrel` -> PASS
+- Criterion `No new gate requires a real Neon connection or staging environment to merge` -> PASS
+- Criterion `Without OPENF1_LOCAL_FALLBACK=1 behavior is identical to today` -> FAIL at [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:53), [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:68), [web/src/lib/db/driver.ts](/Users/robertzehnder/.openf1-loop-worktrees/06-driver-swap-local-fallback/web/src/lib/db/driver.ts:81): `createPool()` now hard-codes `connectionTimeoutMillis: 2_000` into every pool branch, so opt-out and production no longer preserve the prior lazy connection semantics promised in the slice goal.
+- Decision: REVISE
+- Rationale: gates pass, but the slice contract explicitly required the non-fallback path and production path to remain unchanged; moving the 2 s timeout onto the shared singleton pool is a behavior change outside that contract.
 
 ## Plan-audit verdict (round 1)
 
