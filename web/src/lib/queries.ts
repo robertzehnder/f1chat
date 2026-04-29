@@ -1,4 +1,4 @@
-import { sql, withTransaction } from "./db";
+import { sql, pool } from "./db";
 import { assertReadOnlySql, clampInt } from "./querySafety";
 import type { QueryRunResult, SessionCompleteness } from "./types";
 
@@ -786,10 +786,19 @@ export async function runReadOnlySql(
   const wrappedSql = `SELECT * FROM (${cleanedSql}) AS q LIMIT $1`;
   const startedAt = Date.now();
 
-  return withTransaction(async (tx) => {
-    await tx.query(`SET LOCAL statement_timeout = ${timeoutMs}`);
-    const result = await tx.query<Record<string, unknown>>(wrappedSql, [maxRows + 1]);
-
+  // Inline transaction via pool.connect() so SET LOCAL statement_timeout
+  // takes effect for this query only. Inlined (rather than using
+  // db/driver.ts withTransaction) to avoid touching db.ts or queries.ts
+  // imports in a way that breaks the existing driver-fallback /
+  // pooled-url-assertion test sandboxes (both transpile db.ts into a
+  // tmp dir without the db/ subdirectory). Neon-only by design — this
+  // slice scope does not include local-PGlite transaction behavior.
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`SET LOCAL statement_timeout = ${timeoutMs}`);
+    const result = await client.query<Record<string, unknown>>(wrappedSql, [maxRows + 1]);
+    await client.query("COMMIT");
     const truncated = result.rows.length > maxRows;
     const rows = truncated ? result.rows.slice(0, maxRows) : result.rows;
     return {
@@ -799,7 +808,12 @@ export async function runReadOnlySql(
       truncated,
       rows: rows as Record<string, unknown>[]
     };
-  });
+  } catch (error) {
+    try { await client.query("ROLLBACK"); } catch { /* surface original error */ }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export function buildHeuristicSql(message: string, context?: {
