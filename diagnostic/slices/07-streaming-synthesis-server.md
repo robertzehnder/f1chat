@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-server
 phase: 7
-status: revising_plan
+status: pending_plan_audit
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T21:05:00-04:00
+updated: 2026-04-29T21:35:00-04:00
 ---
 
 ## Goal
@@ -31,7 +31,7 @@ Add a server-side streaming variant of the answer-synthesis call to `web/src/lib
 1. In `web/src/lib/anthropic.ts`, add and export `synthesizeAnswerStream(input): AsyncIterable<StreamChunk>` where `StreamChunk` is a tagged union:
    - `{ kind: "answer_delta"; text: string }` — incremental chunks of the answer text as the model streams.
    - `{ kind: "reasoning_delta"; text: string }` — incremental chunks of the reasoning text.
-   - `{ kind: "final"; answer: string; reasoning: string; usage?: object }` — terminal frame that mirrors today's `synthesizeAnswerWithAnthropic` return shape exactly (same `{ answer, reasoning }` payload).
+   - `{ kind: "final"; answer: string; reasoning?: string; model: string; rawText: string }` — terminal frame that mirrors today's `synthesizeAnswerWithAnthropic` return shape exactly (`AnswerSynthesisOutput` at `web/src/lib/anthropic.ts:45-50`: `{ answer, reasoning?, model, rawText }`). The `model` field is populated from the same `DEFAULT_ANTHROPIC_MODEL` constant the existing function uses (`anthropic.ts:1`); `rawText` is the concatenated streamed text. Including `model` makes the terminal frame fully self-contained so the next sub-slice (`07-streaming-synthesis-route-sse`) can populate `ChatApiResponse.model` from the streaming output without re-reading `process.env.ANTHROPIC_MODEL` or requiring a new export of `DEFAULT_ANTHROPIC_MODEL`.
    The function calls the Anthropic Messages API directly via `fetch("https://api.anthropic.com/v1/messages", { ..., body: JSON.stringify({ ..., stream: true }) })` — same endpoint, headers, prompt, and JSON output schema as `synthesizeAnswerWithAnthropic` (existing code at `web/src/lib/anthropic.ts:475`-`:518`, which builds prompts via `buildSynthesisRequestParams` at `:149` and parses via `parseAnswerJsonPayload`). The streaming wrapper consumes the SSE response body (`content_block_delta` events with `delta.text` payloads), accumulates the JSON-shaped output as it arrives, parses the JSON progressively to detect when the `answer` field is being filled vs the `reasoning` field, and yields deltas plus a final frame. If the model returns malformed JSON at terminal-parse time, throw the same error class that `parseAnswerJsonPayload` throws today (i.e., re-use the existing parse helper on the accumulated text).
    Expected delta ordering: because the model produces JSON of the form `{"answer": "...", "reasoning": "..."}` (with `answer` before `reasoning` in the schema enforced by the existing prompt), all `answer_delta` events naturally arrive before any `reasoning_delta` events. The implementer must NOT attempt to interleave the two streams — interleaved order is not producible from this JSON shape.
 2. Keep the existing `synthesizeAnswerWithAnthropic(input)` export in `anthropic.ts` unchanged (caller-compatibility for `cachedSynthesize` in `answerCache.ts`, which is the only call site, see `web/src/lib/cache/answerCache.ts:106`). The new `synthesizeAnswerStream` is a SEPARATE export sharing helper functions (`buildSynthesisRequestParams`, `parseAnswerJsonPayload`); it does NOT replace or refactor `synthesizeAnswerWithAnthropic` in this slice.
@@ -42,7 +42,7 @@ Add a server-side streaming variant of the answer-synthesis call to `web/src/lib
      - No SDK stub is required (SDK is not used; see Inputs section).
      - No `@/lib/*` rewrites are required (no such imports exist in `anthropic.ts`).
    - **Behavior subtests.** Stub `fetch` to emit a fixed sequence of partial-JSON SSE chunks (e.g., `{"answer": "Lewis `, `Hamilton won.", "reasoning": "He `, `had the fastest pace."}`), then close. Call `synthesizeAnswerStream(...)` and collect the yielded chunks.
-   - **Assertions.** At least 2 `answer_delta` chunks observed, at least 1 `reasoning_delta` chunk observed, exactly 1 `final` chunk observed, `final.answer` matches the concatenated `answer_delta` text, `final.reasoning` matches the concatenated `reasoning_delta` text, and all `answer_delta` events appear before all `reasoning_delta` events in the observed sequence.
+   - **Assertions.** At least 2 `answer_delta` chunks observed, at least 1 `reasoning_delta` chunk observed, exactly 1 `final` chunk observed, `final.answer` matches the concatenated `answer_delta` text, `final.reasoning` matches the concatenated `reasoning_delta` text, `final.model` is a non-empty string (matches `process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6"`), `final.rawText` is a non-empty string equal to the concatenation of all SSE delta text payloads, and all `answer_delta` events appear before all `reasoning_delta` events in the observed sequence.
    - **Malformed-JSON subtest.** Stub a stream that closes with invalid JSON (e.g., truncated mid-key); assert the iterator throws an error whose `.message` matches the substring thrown by `parseAnswerJsonPayload` today (re-use the existing error class).
    - **Non-regression subtest for `synthesizeAnswerWithAnthropic`.** Stub `fetch` to return a non-streaming JSON response (matching today's Anthropic Messages-API non-streaming shape); call `synthesizeAnswerWithAnthropic(...)` and assert the returned `{ answer, reasoning, model, rawText }` matches expected values. This guards against accidental refactor regression even though Step 2 forbids refactor.
 4. No `package.json` edit required: `web/package.json:10` (`"test:grading": "node --test scripts/tests/*.test.mjs"`) auto-globs every `.test.mjs` file in `web/scripts/tests/`, so creating the file in that directory is sufficient and `package.json` does NOT appear in `Changed files expected`.
@@ -64,7 +64,7 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/anthropic.ts` exports a function `synthesizeAnswerStream` with the documented `AsyncIterable<StreamChunk>` signature; existing `cachedSynthesize` export is preserved.
+- [ ] `web/src/lib/anthropic.ts` exports a function `synthesizeAnswerStream` with the documented `AsyncIterable<StreamChunk>` signature, and the existing `synthesizeAnswerWithAnthropic` export in `anthropic.ts` is unchanged (so `cachedSynthesize` in `web/src/lib/cache/answerCache.ts`, which delegates to it, continues to work without modification).
 - [ ] `web/scripts/tests/streaming-synthesis-server.test.mjs` exists and is wired into `npm run test:grading`; all subtests in that file pass.
 - [ ] All 3 gates exit 0 (build, typecheck, baseline-aware test gate with no NEW failures vs integration baseline).
 
@@ -113,11 +113,11 @@ bash scripts/loop/test_grading_gate.sh
 ### High
 
 ### Medium
-- [ ] `StreamChunk.final` type definition omits `model` (and `rawText`) from `AnswerSynthesisOutput` (confirmed: `type AnswerSynthesisOutput = { answer, reasoning?, model, rawText }` at `web/src/lib/anthropic.ts:45-50`), yet Step 1 claims the terminal frame "mirrors today's `synthesizeAnswerWithAnthropic` return shape exactly." Since `DEFAULT_ANTHROPIC_MODEL` is not exported from `anthropic.ts` (it is an unexported `const`), the next sub-slice (`07-streaming-synthesis-route-sse`) will have no way to populate `ChatApiResponse.model` from the streaming output without a new export or a second `process.env` read. Either (a) add `model: string` to `StreamChunk.final` (and optionally `rawText: string`) so the terminal frame is fully self-contained, or (b) explicitly document that `model` is intentionally excluded and specify exactly how the next slice will obtain it.
+- [x] `StreamChunk.final` type definition omits `model` (and `rawText`) from `AnswerSynthesisOutput` (confirmed: `type AnswerSynthesisOutput = { answer, reasoning?, model, rawText }` at `web/src/lib/anthropic.ts:45-50`), yet Step 1 claims the terminal frame "mirrors today's `synthesizeAnswerWithAnthropic` return shape exactly." Since `DEFAULT_ANTHROPIC_MODEL` is not exported from `anthropic.ts` (it is an unexported `const`), the next sub-slice (`07-streaming-synthesis-route-sse`) will have no way to populate `ChatApiResponse.model` from the streaming output without a new export or a second `process.env` read. Either (a) add `model: string` to `StreamChunk.final` (and optionally `rawText: string`) so the terminal frame is fully self-contained, or (b) explicitly document that `model` is intentionally excluded and specify exactly how the next slice will obtain it.
 
 ### Low
-- [ ] `StreamChunk.final` includes `usage?: object` which does not appear in `AnswerSynthesisOutput` and is not asserted in any subtest or acceptance criterion; either document that it is populated from the Anthropic `message_delta` event's `usage` field, or remove the field if it is not needed by this slice so the interface does not carry unexplained optional state.
-- [ ] Acceptance criterion AC-1 reads "existing `cachedSynthesize` export is preserved" but `cachedSynthesize` lives in `answerCache.ts` (not modified by this slice); reword to "existing `synthesizeAnswerWithAnthropic` export in `anthropic.ts` is unchanged (so `cachedSynthesize` in `answerCache.ts` continues to work)" to avoid misleading the implementer about what is at risk.
+- [x] `StreamChunk.final` includes `usage?: object` which does not appear in `AnswerSynthesisOutput` and is not asserted in any subtest or acceptance criterion; either document that it is populated from the Anthropic `message_delta` event's `usage` field, or remove the field if it is not needed by this slice so the interface does not carry unexplained optional state.
+- [x] Acceptance criterion AC-1 reads "existing `cachedSynthesize` export is preserved" but `cachedSynthesize` lives in `answerCache.ts` (not modified by this slice); reword to "existing `synthesizeAnswerWithAnthropic` export in `anthropic.ts` is unchanged (so `cachedSynthesize` in `answerCache.ts` continues to work)" to avoid misleading the implementer about what is at risk.
 
 ### Notes (informational only — no action)
 - All round-1 items (both Mediums and both Lows) are marked `[x]` and the revised plan text addresses them correctly: stub surface is enumerated, Risk/Step 3 inconsistency resolved, auto-glob note added, delta ordering specified.
