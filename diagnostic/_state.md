@@ -65,3 +65,4 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - When a slice claims to skip or alter an LLM JSON-repair path, verify the named module actually owns that parse/repair flow before approving test or file scope (slice:07-skip-repair-on-deterministic).
 - For async route-harness tests that temporarily set `NODE_ENV`, require the helper to await the callback (or inline `try/finally` around awaited work); a synchronous wrapper resets env before later repair/fallback awaits execute (slice:07-skip-repair-on-deterministic).
 - When a slice changes `/api/*` transport or media type, require the plan to name every existing consumer that must migrate or the explicit compatibility path for legacy structured callers (slice:07-streaming-synthesis).
+- When a slice claims progressive UI streaming, require a deterministic gate over the owning UI state-update path, not only over a helper parser callback contract (slice:07-streaming-synthesis).
