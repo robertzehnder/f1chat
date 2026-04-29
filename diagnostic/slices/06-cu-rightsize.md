@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-29T10:18:11-04:00
+updated: 2026-04-29T10:20:06-04:00
 ---
 
 ## Goal
@@ -86,7 +86,7 @@ No `web/` source files are expected to change; if any do, the slice is out of sc
 test -f diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
 jq -e '.endpoint | (.autoscaling_limit_min_cu and .autoscaling_limit_max_cu and .suspend_timeout_seconds != null)' \
   diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
-jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' \
+jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$")' \
   diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json
 
 # 2. Decision note exists and declares the chosen window + auditable cost/perf tradeoff.
@@ -248,7 +248,7 @@ test "$LIVE_SUS" = "$DOC_SUS"
 
 # 4. Post-change artifact exists and matches BOTH the live endpoint AND the note for every in-scope setting.
 test -f diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json
-jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' \
+jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$")' \
   diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json
 AFTER_MIN=$(jq -r '.endpoint.autoscaling_limit_min_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
 AFTER_MAX=$(jq -r '.endpoint.autoscaling_limit_max_cu' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json)
@@ -329,6 +329,23 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 ### Re-verification (2026-04-29, post-revise)
 
 The previous audit (`e41427b`) returned REVISE because `psql` was unavailable in the auditor's shell, so gate 5 could not be reproduced (`bash: psql: command not found`). All other gates passed. No artifacts, decision-document content, or live Neon endpoint settings were changed during this revise iteration — the resized endpoint remains at `0.25/1/0`, matching `06-cu-rightsize-after_2026-04-28.json` and the decision note. Gates were re-run in this implementer worktree with `psql` made available on `PATH` (Homebrew `postgresql@16` install at `/opt/homebrew/opt/postgresql@16/bin/psql`); every gate exit code was 0, including gate 5. The auditor must run gate 5 with a `psql` client on `PATH` to verify the smoke test (or skip gate 5 with rationale if the audit environment cannot install one).
+
+### Re-verification (2026-04-29, post-revise round 2 — jq escape fix)
+
+The most recent audit (`547ede1`) returned REVISE because the gate-1 and gate-4 `jq` `captured_at` regex tests used the escape sequence `\\.[0-9]+` inside a `jq` string, which the audit environment's `jq` rejected with `Invalid escape at line 1, column 4 (while parsing '"\."')`. The fix is gate-text only and follows the `_state.md` lesson "Validate `jq` regex escapes in gate commands under the repo's actual `jq`": `\\.` was replaced with the regex character class `[.]`, which matches a literal dot without requiring any string-level escape and therefore compiles under any `jq` version. No artifacts, decision-document content, or live Neon endpoint settings were changed during this revise iteration — the resized endpoint remains at `0.25/1/0`, matching `06-cu-rightsize-after_2026-04-28.json` and the decision note. All ten gates were re-run in this implementer worktree (jq 1.8.1, `psql` on `PATH` via Homebrew `postgresql@16`); every gate exit code was 0.
+
+| Gate | Result | Notes |
+|---|---|---|
+| 1 — pre-change artifact + `captured_at` (jq `[.]` form) | PASS | parses + regex compiles; `captured_at = 2026-04-28T23:33:47Z` |
+| 2 — note declares all required fields | PASS | grep matches every required line |
+| 2-recompute — cost-delta math | PASS | doc max −116.80, computed −116.80; doc min 0, computed 0 |
+| 2a — Evidence section format/uniqueness | PASS | three required field-path lines, each appearing exactly once under `## Evidence` |
+| 2b — single approval sentinel under `## User approval` | PASS | first non-blank line under heading; only occurrence in file |
+| 2b' — APPROVAL_TS < patch_applied_at <= captured_at, patch_applied_at == endpoint.updated_at | PASS | 2026-04-28T20:35:00Z < 2026-04-28T23:36:27Z <= 2026-04-28T23:36:35Z |
+| 2c — latency-budget basis re-derivation | PASS | `bounded_by`, doc 5629.55 ≥ max(5629.55, 0.34) |
+| 3 — live endpoint matches note | PASS | LIVE 0.25/1/0 == DOC 0.25/1/0 |
+| 4 — after artifact matches live AND note (jq `[.]` form) | PASS | regex compiles; AFTER 0.25/1/0 == LIVE 0.25/1/0 == DOC 0.25/1/0 |
+| 5 — `psql "$DATABASE_URL" -At -c "SELECT 1" \| grep -qx 1` | PASS | pooler still routes through resized endpoint |
 
 ## Audit verdict
 **Status: REVISE**
