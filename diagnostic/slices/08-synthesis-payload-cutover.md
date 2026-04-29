@@ -1,15 +1,15 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:36:39Z
+updated: 2026-04-29T22:39:19Z
 ---
 
 ## Goal
-Cut over synthesis prompt construction in `web/src/lib/chatRuntime.ts` to consume only `FactContract`-shaped payloads. Remove any direct contract-class imports (or class-instance call sites) from the synthesis path so that the prompt builder reads only fields defined by the `FactContract` type from `web/src/lib/contracts/factContract.ts`.
+Cut over the *row payload* the synthesis prompt builder consumes from the legacy `{ rows, rowCount, runtime }` shape to a `FactContract`-shaped value (per `web/src/lib/contracts/factContract.ts`). The orchestration-level fields `question` and `sql` (which are the user prompt and the generated SQL, not part of the row payload) remain inputs to the synthesis prompt builder unchanged — the cutover is row-payload-only and does not change the prompt's textual contents. After this slice, the synthesis prompt builder reads its row payload only via fields defined by the `FactContract` type, no contract-class imports remain on the synthesis path, and a deterministic, tsc-checked signature proves the cutover.
 
 ## Inputs
 - `web/src/lib/chatRuntime.ts`
@@ -30,8 +30,31 @@ None at author time.
 2. Identify every import in `chatRuntime.ts` AND `anthropic.ts` (and any other file the inventory surfaces on the synthesis path) that resolves to a contract class or class-instance helper from `web/src/lib/contracts/` (anything that is not the `FactContract` type from `factContract.ts`). If none exist at the synthesis path, record that finding in `Decisions` and skip step 4.
 3. For each synthesis-prompt input that currently reads from a contract-class field, replace the access with the equivalent `FactContract` field (per `web/src/lib/contracts/factContract.ts`). The synthesis path must end up reading only from values typed as `FactContract` (or arrays thereof).
 4. Remove the now-unused contract-class imports from the affected files (`chatRuntime.ts` and/or `anthropic.ts`). Do not modify `web/src/lib/contracts/` itself in this slice — the FactContract shape is fixed by the previous slice (`08-fact-contract-shape`).
-5. Test-harness extraction (addresses round-3 High): create a new dependency-light module at `web/src/lib/synthesis/buildSynthesisPrompt.ts` that exports the synthesis prompt-builder. This new module **must import nothing other than the `FactContract` type from `web/src/lib/contracts/factContract.ts`** — specifically, no imports of `@/lib/queries`, `@/lib/resolverCache`, `@/lib/perfTrace`, `@/lib/anthropic`, the `@anthropic-ai/sdk` package, or any other `@/lib/*` module. The exported function's signature must be `buildSynthesisPrompt(input: FactContract): { staticPrefix: string; dynamicSuffix: string }` (or `(input: readonly FactContract[])` if the inventory shows multi-contract synthesis). Rewire the existing call sites — `buildSynthesisPromptParts`/`buildSynthesisRequestParams` in `anthropic.ts` and the synthesis call in `route.ts` — to consume the new module. Then add `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs` that mirrors the pattern of `web/scripts/tests/fact-contract-shape.test.mjs`: read `web/src/lib/synthesis/buildSynthesisPrompt.ts`, run `ts.transpileModule` with `{ module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, esModuleInterop: true }`, write the output to a `mkdtemp` tmp `.mjs` file, dynamic-import it, then call `buildSynthesisPrompt` with a hand-built `FactContract` fixture and assert that the rendered prompt contains the expected fields (e.g. `contractName`, `grain`, `keys`, sample rows). The test must NOT attempt to transpile or import `chatRuntime.ts`, `anthropic.ts`, or `route.ts` directly — those have unresolvable `@/lib/*` and SDK dependencies that the grading runner cannot satisfy. The test must run under the existing `test:grading` runner — do not introduce a new test framework or place the test under `web/src/lib/__tests__/` (that path is not covered by the gate).
-6. Type-signature proof (addresses round-3 Medium #1): because Step 5 declares the new module's exported signature as `(input: FactContract) => …`, every call site rewired in Step 5 must pass a `FactContract`-typed value. `cd web && npm run typecheck` will fail compilation if any caller still passes the legacy `{ rows, rowCount, runtime }` shape (which is structurally incompatible with `FactContract`). This is the deterministic, tsc-checked acceptance proof that the cutover is complete — no runtime fixture is sufficient on its own.
+5. Test-harness extraction (addresses round-3 High): create a new dependency-light module at `web/src/lib/synthesis/buildSynthesisPrompt.ts` that exports the synthesis prompt-builder. This new module **must import nothing other than the `FactContract` type from `web/src/lib/contracts/factContract.ts`** — specifically, no imports of `@/lib/queries`, `@/lib/resolverCache`, `@/lib/perfTrace`, `@/lib/anthropic`, the `@anthropic-ai/sdk` package, or any other `@/lib/*` module. The exported function's signature must be exactly:
+   ```ts
+   buildSynthesisPrompt(input: {
+     question: string;
+     sql: string;
+     contract: FactContract;
+   }): { staticPrefix: string; dynamicSuffix: string }
+   ```
+   Rationale (addresses round-4 High): the existing prompt at `web/src/lib/anthropic.ts:124-141` interpolates `question` and `sql` directly, and `FactContract` (per `web/src/lib/contracts/factContract.ts:18-25`) intentionally does not carry those fields — they are orchestration inputs, not row payload. Wrapping them as siblings of a `contract: FactContract` field preserves the existing prompt text verbatim while making the row payload the only `FactContract`-shaped input. If a future slice consolidates `question`/`sql` into `FactContract`, that is out-of-scope here.
+   Rewire the existing call sites — `buildSynthesisPromptParts`/`buildSynthesisRequestParams` in `anthropic.ts` and the synthesis call site(s) in `route.ts` — to consume the new module. The `dynamicSuffix` body must continue to render `Question:`, `SQL:`, `Row count:`, `Rows (sample):`, and `Runtime:` blocks; sourcing inside the new module is `input.question`, `input.sql`, `input.contract.rowCount`, `input.contract.rows.slice(0, 25)`, and a runtime block derived from `input.contract` (e.g. `{ contractName, grain, keys, coverage }`).
+   Then add `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs` that mirrors the pattern of `web/scripts/tests/fact-contract-shape.test.mjs`: read `web/src/lib/synthesis/buildSynthesisPrompt.ts`, run `ts.transpileModule` with `{ module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, esModuleInterop: true }`, write the output to a `mkdtemp` tmp `.mjs` file, dynamic-import it, then call `buildSynthesisPrompt` with a hand-built `{ question, sql, contract: <FactContract fixture> }` argument and assert that the rendered prompt contains the expected fields (`question`, `sql`, `contractName`, `grain`, sample rows). The test must NOT attempt to transpile or import `chatRuntime.ts`, `anthropic.ts`, or `route.ts` directly — those have unresolvable `@/lib/*` and SDK dependencies that the grading runner cannot satisfy. The test must run under the existing `test:grading` runner — do not introduce a new test framework or place the test under `web/src/lib/__tests__/` (that path is not covered by the gate).
+6. Type-signature proof (addresses round-3 Medium #1 and round-4 High): because Step 5 declares the new module's exported signature as `(input: { question: string; sql: string; contract: FactContract }) => …`, every rewired call site must pass a value whose `contract` field is structurally typed as `FactContract`. `cd web && npm run typecheck` will fail compilation if any caller still passes the legacy `{ rows, rowCount, runtime }` shape under `contract` (or omits `contract` entirely), which is structurally incompatible with `FactContract`. This is the deterministic, tsc-checked acceptance proof that the row-payload cutover is complete — no runtime fixture is sufficient on its own.
+7. FactContract construction site (addresses round-4 Medium): rewire `web/src/app/api/chat/route.ts` (the synthesis call sites at ~lines 858–869 for `synthesizeAnswerStream` and ~lines 882–893 for `cachedSynthesize`) so the FactContract value is produced at the call site and passed into the new builder under `contract`. Concretely, before the synthesis call, import `serializeRowsToFactContract` (and the `FactContractGrain` type if needed for the mapping) from `@/lib/contracts/factContract`, then construct:
+   ```ts
+   const contract = serializeRowsToFactContract({
+     contractName: runtime.questionType ?? "synthesis_payload",
+     grain: mapToFactContractGrain(runtime.grain.grain), // map to one of "session"|"lap"|"stint"|"driver"|"meeting"|"other", default "other"
+     keys: filterScalarKeys(runtime.queryPlan.resolved_entities), // narrow to Record<string, string|number|null>
+     rows: result.rows,
+     ...(runtime.completeness.warnings.length > 0
+       ? { coverage: { warnings: runtime.completeness.warnings } }
+       : {}),
+   });
+   ```
+   Pass `{ question: message, sql: result.sql, contract }` into the synthesis path (via the rewired `synthesizeAnswerStream`/`cachedSynthesize` signatures, which now accept the wrapper input from Step 5). The two helpers `mapToFactContractGrain` and `filterScalarKeys` may be inlined in `route.ts` as local functions (they are mapping/narrowing helpers — keep them tiny and untyped beyond their inputs). Sourcing summary, in-tree-traceable: `contractName` ← `runtime.questionType` (string, fallback `"synthesis_payload"`); `grain` ← `runtime.grain.grain` mapped to the `FactContractGrain` union; `keys` ← `runtime.queryPlan.resolved_entities` filtered to scalar (string | number | null) values; `rows` ← `result.rows`; `coverage.warnings` ← `runtime.completeness.warnings` (only when non-empty). The implementer should record the exact derived names and any narrowing decisions inline in this slice's `Decisions` subsection (added during implementation) per Step 1's audit-trail requirement.
 
 ## Changed files expected
 - `diagnostic/slices/08-synthesis-payload-cutover.md` (Step 1 requires the implementer to record the synthesis-field inventory inline in this slice's `Decisions` subsection — that edit is in-scope for this slice's commit)
@@ -77,10 +100,11 @@ cd web && ! grep -nE "from ['\"]@/lib/" src/lib/synthesis/buildSynthesisPrompt.t
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/chatRuntime.ts` and `web/src/lib/anthropic.ts` each import nothing from `web/src/lib/contracts/` except the `FactContract` type (or related types) from `factContract.ts`. Both drift-gate pipelines above exit 0.
-- [ ] `web/src/lib/synthesis/buildSynthesisPrompt.ts` exists and exports a synthesis prompt-builder whose input parameter is typed exactly as `FactContract` (or `readonly FactContract[]` if the inventory shows multi-contract synthesis). The new module imports only the `FactContract` type from `web/src/lib/contracts/factContract.ts` and no other `@/lib/*` modules; both the contracts drift gate and the dep-light gate above exit 0.
-- [ ] Because the new module's exported function is typed `(input: FactContract) => …` and every synthesis call site is rewired through it, `cd web && npm run typecheck` proves at compile time that no caller still passes the legacy `{ rows, rowCount, runtime }` payload — this is the deterministic, tsc-checked proof that the cutover is complete.
-- [ ] The new `web/scripts/tests/*.test.mjs` test transpiles ONLY `web/src/lib/synthesis/buildSynthesisPrompt.ts` via `ts.transpileModule`, dynamic-imports it, and asserts the rendered prompt for a hand-built `FactContract` fixture contains the expected fields.
+- [ ] `web/src/lib/chatRuntime.ts` and `web/src/lib/anthropic.ts` each import nothing from `web/src/lib/contracts/` except the `FactContract` type (or related types) from `factContract.ts`. Both drift-gate pipelines above exit 0. (Per round-4 Notes, the current repo state already has zero `lib/contracts/` imports on those two files; the drift gates lock that state in for this slice and any future regressions.)
+- [ ] `web/src/lib/synthesis/buildSynthesisPrompt.ts` exists and exports a synthesis prompt-builder whose input parameter is typed exactly as `{ question: string; sql: string; contract: FactContract }`, with the `contract` field's static type being `FactContract` (sourced from `factContract.ts`). The new module imports only the `FactContract` type from `web/src/lib/contracts/factContract.ts` and no other `@/lib/*` modules; both the contracts drift gate and the dep-light gate above exit 0.
+- [ ] `web/src/app/api/chat/route.ts` constructs a `FactContract` value via `serializeRowsToFactContract` (imported from `@/lib/contracts/factContract`) at each synthesis call site (~lines 858–869 and ~lines 882–893) and passes it as the `contract` field of the wrapper input — no synthesis call site passes the legacy `{ rows, rowCount, runtime }` shape into the prompt builder.
+- [ ] Because the new module's exported function is typed `(input: { question: string; sql: string; contract: FactContract }) => …` and every synthesis call site is rewired through it, `cd web && npm run typecheck` proves at compile time that no caller still passes the legacy `{ rows, rowCount, runtime }` payload as the row-payload field — this is the deterministic, tsc-checked proof that the row-payload cutover is complete.
+- [ ] The new `web/scripts/tests/*.test.mjs` test transpiles ONLY `web/src/lib/synthesis/buildSynthesisPrompt.ts` via `ts.transpileModule`, dynamic-imports it, and asserts the rendered prompt for a hand-built `{ question, sql, contract: <FactContract fixture> }` argument contains the expected fields (`question`, `sql`, `contractName`, `grain`, sample rows).
 - [ ] `npm run build` (run first) and `npm run typecheck` are both green.
 - [ ] `npm run test:grading` is green for this slice's added/changed test, and the repo-wide run does not regress (per `_state.md` Notes for auditors entry on `08-fact-contract-shape`: hold REVISE on any non-zero exit from the shared `test:grading` gate).
 
@@ -157,10 +181,10 @@ Rollback: `git revert <commit>`. The grep drift gates make accidental re-introdu
 **Status: REVISE**
 
 ### High
-- [ ] Reconcile Step 5 / Step 6 / Acceptance with the current synthesis prompt surface: `web/src/lib/anthropic.ts:32` and `web/src/lib/anthropic.ts:119` still require `question` and `sql`, but `web/src/lib/contracts/factContract.ts:18` does not define either field, so `buildSynthesisPrompt(input: FactContract)` cannot replace `buildSynthesisPromptParts(input: AnswerSynthesisInput)` as written unless the slice explicitly preserves `question`/`sql` in a wrapper or intentionally changes the prompt contents.
+- [x] Reconcile Step 5 / Step 6 / Acceptance with the current synthesis prompt surface: `web/src/lib/anthropic.ts:32` and `web/src/lib/anthropic.ts:119` still require `question` and `sql`, but `web/src/lib/contracts/factContract.ts:18` does not define either field, so `buildSynthesisPrompt(input: FactContract)` cannot replace `buildSynthesisPromptParts(input: AnswerSynthesisInput)` as written unless the slice explicitly preserves `question`/`sql` in a wrapper or intentionally changes the prompt contents.
 
 ### Medium
-- [ ] Specify where the first `FactContract` value on the synthesis path is constructed and how `contractName`, `grain`, `keys`, and optional `coverage` are sourced, because the current route call site at `web/src/app/api/chat/route.ts:882` still passes `{ question, sql, rows, rowCount, runtime }` and the repo has no existing synthesis-path caller of `serializeRowsToFactContract` from `web/src/lib/contracts/factContract.ts:30`.
+- [x] Specify where the first `FactContract` value on the synthesis path is constructed and how `contractName`, `grain`, `keys`, and optional `coverage` are sourced, because the current route call site at `web/src/app/api/chat/route.ts:882` still passes `{ question, sql, rows, rowCount, runtime }` and the repo has no existing synthesis-path caller of `serializeRowsToFactContract` from `web/src/lib/contracts/factContract.ts:30`.
 
 ### Low
 - [ ] None.
