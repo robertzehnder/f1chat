@@ -80,7 +80,10 @@ Baseline (gates Phase 1):
 
 - `07-zero-llm-path-tighten`
 - `07-skip-repair-on-deterministic`
-- `07-streaming-synthesis`
+<!-- - `07-streaming-synthesis` (decomposed 2026-04-29 after iter cap of 10 plan-revise rounds without converging; codex's audit verdicts repeatedly surfaced multi-surface integration concerns — synthesis seam attached to wrong module, JSON contract preservation, 6 non-LLM exit branches needing SSE compat, client placeholder ordering. The slice was over-scoped for one iteration cycle; replaced with three focused sub-slices below.) -->
+- `07-streaming-synthesis-server`
+- `07-streaming-synthesis-route-sse`
+- `07-streaming-synthesis-client-wiring`
 
 ## Phase 8 — Synthesis Hardening
 

@@ -1,0 +1,88 @@
+---
+slice_id: 07-streaming-synthesis-route-sse
+phase: 7
+status: pending_plan_audit
+owner: claude
+user_approval_required: no
+created: 2026-04-29
+updated: 2026-04-29T15:40:00-04:00
+---
+
+## Goal
+Wire the streaming primitive added by `07-streaming-synthesis-server` into the `/api/chat` route. When the request carries `Accept: text/event-stream`, the route emits Server-Sent Events; otherwise it preserves today's JSON response exactly. Specify behavior for EVERY route exit branch — synthesis path AND non-LLM short-circuits — so the SSE-opted client never receives a non-SSE response on a request it asked to stream. This is the integration concern codex's round-11 audit on the predecessor slice surfaced.
+
+## Inputs
+- `web/src/app/api/chat/route.ts` — route entry. Today there are at least 6 distinct exit branches: clarification, completeness-blocked, answer-cache-hit, validation-error, deterministic synthesis, LLM synthesis. Every branch must be auditable for SSE compatibility.
+- `web/src/lib/anthropic.ts` — `synthesizeAnswerStream` from `07-streaming-synthesis-server` (prerequisite).
+- `diagnostic/_state.md`
+
+## Prior context
+- `diagnostic/_state.md`
+- `diagnostic/slices/07-streaming-synthesis.md` — predecessor's round-9, round-10, round-11 audit verdicts catalog the route-side integration issues this slice's narrower scope must cover end-to-end.
+- `diagnostic/slices/07-streaming-synthesis-server.md` — sibling slice that adds the streaming primitive this slice consumes.
+
+## Required services / env
+- Same as today's chat route. Tests use the existing in-process stub harness pattern from `web/scripts/tests/answer-cache.test.mjs`.
+
+## Steps
+1. **Define the SSE frame contract** at the top of `web/src/app/api/chat/route.ts` (or a small helper in the same file). Frames:
+   - `event: answer_delta\ndata: {"text": "..."}\n\n` — incremental answer text from the streaming synthesizer.
+   - `event: reasoning_delta\ndata: {"text": "..."}\n\n` — optional reasoning chunks (empty for non-LLM branches).
+   - `event: final\ndata: <full response payload, identical to today's JSON>\n\n` — terminal frame for both synthesis and non-LLM branches; payload mirrors the JSON the route currently returns.
+   - `event: error\ndata: {"message": "...", "code": "..."}\n\n` — terminal frame on any thrown error.
+   Document the contract in code comments so the client (next slice) implements against the same shape.
+2. **Branch on `Accept: text/event-stream`** at the top of the route handler. If absent, all paths return today's JSON unchanged. If present, every exit path emits SSE frames per the contract.
+3. **Synthesis path SSE wiring.** Replace the `cachedSynthesize(...)` call (currently at `web/src/app/api/chat/route.ts:743` and surrounding lines) with `synthesizeAnswerStream(...)` when SSE is requested. Forward `answer_delta` and `reasoning_delta` chunks to the response body; on the streaming `final` frame, emit a `final` SSE frame whose data payload is identical to today's JSON return shape (caller-visible parity). Non-streaming requests continue to use `cachedSynthesize` unchanged.
+4. **Non-LLM branch SSE wiring.** For each non-synthesis exit branch the route has today, when SSE is requested, emit a single `final` SSE frame whose data payload is the same JSON the branch returns today. The client perceives a one-frame stream. Branches to cover (cite line numbers in the slice-completion note):
+   - clarification request (route's clarification branch)
+   - completeness-blocked branch
+   - answer-cache hit (warm) — the existing `web/src/app/api/chat/route.ts:467` short-circuit
+   - validation-error branch
+   - deterministic-template branch (post `07-zero-llm-path-tighten` — emits `final` directly without going through synthesis)
+   - any other early-return path the implementer audits.
+   For every branch, the data payload of the `final` frame MUST be byte-identical (modulo whitespace) to today's JSON return for that same branch.
+5. **Error handling.** Any thrown error inside an SSE-opted request emits an `error` SSE frame and closes the stream cleanly. Today's non-SSE error path (HTTP 4xx/5xx with JSON body) is preserved for non-SSE requests.
+6. Add an end-to-end route test at `web/scripts/tests/streaming-synthesis-route.test.mjs` that exercises EACH branch under both SSE and JSON modes:
+   - Synthesis path: asserts ≥2 `answer_delta` frames + 1 `final` frame in SSE mode; asserts identical JSON body in non-SSE mode.
+   - Each non-LLM branch: asserts exactly 1 `final` frame in SSE mode whose data equals the non-SSE mode's JSON body.
+   - Error path: asserts `error` frame is emitted for SSE; asserts HTTP 4xx/5xx with JSON body for non-SSE.
+   Reuse the existing `loadRouteAndCacheModule()` stub harness pattern.
+
+## Changed files expected
+- `web/src/app/api/chat/route.ts` (additive: SSE frame helper, conditional branch on `Accept: text/event-stream`, per-branch SSE/JSON parity).
+- `web/scripts/tests/streaming-synthesis-route.test.mjs` (new).
+- `diagnostic/slices/07-streaming-synthesis-route-sse.md` (frontmatter + slice-completion note).
+
+## Artifact paths
+None.
+
+## Gate commands
+```bash
+cd web && npm run build
+cd web && npm run typecheck
+bash scripts/loop/test_grading_gate.sh
+```
+
+## Acceptance criteria
+- [ ] `web/src/app/api/chat/route.ts` branches on `Accept: text/event-stream` at the top of the handler; non-SSE requests continue to return today's JSON byte-identically.
+- [ ] Synthesis path emits `answer_delta` + (optional) `reasoning_delta` + `final` SSE frames; final-frame data equals non-SSE JSON shape.
+- [ ] Every non-LLM exit branch emits a single `final` SSE frame whose data equals the non-SSE JSON for that branch. Branches enumerated in the slice-completion note with line citations.
+- [ ] Error path emits `error` SSE frame for SSE, HTTP-error JSON for non-SSE.
+- [ ] `web/scripts/tests/streaming-synthesis-route.test.mjs` covers all the above and exits 0 in `npm run test:grading`.
+- [ ] All 3 gates pass.
+
+## Out of scope
+- Any change to `web/src/lib/anthropic.ts` (`07-streaming-synthesis-server` dependency — already merged before this slice).
+- Any change to client code (`07-streaming-synthesis-client-wiring` follow-on).
+- Refactoring the route's branch structure beyond what's required to add the SSE branch (no opportunistic cleanup).
+
+## Risk / rollback
+- Risk: a non-LLM branch's JSON shape doesn't round-trip through the SSE `final` frame data. Mitigation: per-branch test asserts byte-equality between SSE final-frame data and non-SSE JSON body.
+- Risk: the route's existing JSON return semantics change subtly (e.g., header set or omitted). Mitigation: non-SSE test cases pin the existing behavior.
+- Rollback: `git revert` removes the SSE branch entirely; non-SSE clients are unaffected.
+
+## Slice-completion note
+(filled by claude implementer)
+
+## Audit verdict
+(filled by codex)
