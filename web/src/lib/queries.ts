@@ -1,4 +1,4 @@
-import { pool, sql } from "./db";
+import { sql, withTransaction } from "./db";
 import { assertReadOnlySql, clampInt } from "./querySafety";
 import type { QueryRunResult, SessionCompleteness } from "./types";
 
@@ -786,12 +786,9 @@ export async function runReadOnlySql(
   const wrappedSql = `SELECT * FROM (${cleanedSql}) AS q LIMIT $1`;
   const startedAt = Date.now();
 
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(`SET LOCAL statement_timeout = ${timeoutMs}`);
-    const result = await client.query(wrappedSql, [maxRows + 1]);
-    await client.query("COMMIT");
+  return withTransaction(async (tx) => {
+    await tx.query(`SET LOCAL statement_timeout = ${timeoutMs}`);
+    const result = await tx.query<Record<string, unknown>>(wrappedSql, [maxRows + 1]);
 
     const truncated = result.rows.length > maxRows;
     const rows = truncated ? result.rows.slice(0, maxRows) : result.rows;
@@ -802,12 +799,7 @@ export async function runReadOnlySql(
       truncated,
       rows: rows as Record<string, unknown>[]
     };
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  });
 }
 
 export function buildHeuristicSql(message: string, context?: {
