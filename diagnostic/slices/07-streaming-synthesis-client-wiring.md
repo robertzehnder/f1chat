@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-client-wiring
 phase: 7
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T17:15:37-04:00
+updated: 2026-04-29T17:26:26-04:00
 ---
 
 ## Goal
@@ -272,7 +272,20 @@ bash scripts/loop/test_grading_gate.sh
   (plus the in-scope frontmatter + slice-completion note edit).
 
 ## Audit verdict
-(filled by codex)
+**PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS: `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/07-streaming-synthesis-client-wiring.md`, `web/scripts/tests/streaming-synthesis-client.test.mjs`, `web/src/components/chat/ChatWorkspace.tsx`, `web/src/lib/chat/consumeChatStream.ts`, `web/src/lib/chat/sendChatMessage.ts`; all match declared scope.
+- AC-1 PASS: `web/src/lib/chat/consumeChatStream.ts:43-121` returns `Promise<ChatApiResponse>`, handles SSE and JSON responses, and exposes `onAnswerDelta` / `onReasoningDelta`.
+- AC-2 PASS: `web/src/lib/chat/sendChatMessage.ts:40-145` is a pure async helper, inserts the placeholder before `fetch` at `:54-58`, patches by id during deltas at `:67-72`, and replaces by id on final/error at `:118-143`.
+- AC-3 PASS: `web/src/components/chat/ChatWorkspace.tsx:146-196` keeps `useCallback` / `setLoading` in-component and delegates post-user-message work to `sendChatMessage(...)`; the live request path sends `Accept: text/event-stream` in `web/src/lib/chat/sendChatMessage.ts:76-81`.
+- AC-4 PASS: JSON fallback is implemented in `web/src/lib/chat/consumeChatStream.ts:47-54` and `web/src/lib/chat/sendChatMessage.ts:107-136`, and verified by `web/scripts/tests/streaming-synthesis-client.test.mjs:169-186,395-420` plus `cd web && node --test scripts/tests/streaming-synthesis-client.test.mjs` -> exit `0`.
+- AC-5 PASS: direct helper coverage for multi-delta SSE, JSON fallback, SSE error frame, thrown fetch error, placeholder replacement, and reorder resilience is present at `web/scripts/tests/streaming-synthesis-client.test.mjs:105-420`.
+- AC-6 PASS: the wiring assertion reads the live component source and enforces `sendChatMessage(`, `text/event-stream`, and no direct `fetch("/api/chat"` / `fetch('/api/chat'` at `web/scripts/tests/streaming-synthesis-client.test.mjs:427-453`.
+- AC-7 PASS: `web/src/lib/chat/sendChatMessage.ts:1-9` has a single runtime VALUE import (`./consumeChatStream`); all other imports are `import type`.
+- AC-8 PASS: all 3 declared gates exited `0`.
 
 ## Plan-audit verdict (round 1)
 
