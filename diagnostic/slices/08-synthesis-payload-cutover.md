@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:22:58Z
+updated: 2026-04-29T22:25:06Z
 ---
 
 ## Goal
@@ -28,32 +28,37 @@ None at author time.
 2. Identify every import in `chatRuntime.ts` that resolves to a contract class or class-instance helper from `web/src/lib/contracts/` (anything that is not the `FactContract` type from `factContract.ts`). If none exist at the synthesis path, record that finding in `Decisions` and skip step 4.
 3. For each synthesis-prompt input that currently reads from a contract-class field, replace the access with the equivalent `FactContract` field (per `web/src/lib/contracts/factContract.ts`). The synthesis path must end up reading only from values typed as `FactContract` (or arrays thereof).
 4. Remove the now-unused contract-class imports from `chatRuntime.ts`. Do not modify `web/src/lib/contracts/` itself in this slice — the FactContract shape is fixed by the previous slice (`08-fact-contract-shape`).
-5. Update or extend the existing chatRuntime synthesis tests so the prompt-construction call signature accepts and asserts a `FactContract`-typed payload. If a synthesis-prompt test does not yet exist, add a focused unit test that invokes the prompt-construction function with a hand-built `FactContract` fixture and asserts the rendered prompt contains the expected fields.
+5. Add (or extend) a `*.test.mjs` test under `web/scripts/tests/` (the directory `npm run test:grading` actually executes) that invokes the synthesis prompt-construction path with a hand-built `FactContract` fixture and asserts the rendered prompt contains the expected fields. The test must run under the existing `test:grading` runner — do not introduce a new test framework or place the test under `web/src/lib/__tests__/` (that path is not covered by the gate).
 
 ## Changed files expected
 - `web/src/lib/chatRuntime.ts`
-- A chatRuntime synthesis test file under `web/src/lib/__tests__/` (or the existing colocated test, if one exists — implementer picks the path matching the current test layout and records it in the implementation-audit handoff).
+- A chatRuntime synthesis test under `web/scripts/tests/` named `*.test.mjs` (e.g. `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs`) so it is picked up by `npm run test:grading`. Implementer records the exact filename in the implementation-audit handoff.
 
 ## Artifact paths
 None.
 
 ## Gate commands
 ```bash
-cd web && npm run typecheck
+# Build first: web/tsconfig.json includes .next/types/**/*.ts, which tsc
+# --noEmit will fail to resolve on a clean worktree until next build emits
+# them. So build precedes typecheck.
 cd web && npm run build
+cd web && npm run typecheck
 cd web && npm run test:grading
-# Drift gate: assert no contract-class imports remain in the synthesis path.
-# The grep must exit 0 only when zero matches are found; non-FactContract
-# imports from web/src/lib/contracts/ in chatRuntime.ts fail the gate.
-cd web && ! grep -nE "from ['\"](\.\.?/)+lib/contracts/(?!factContract)" src/lib/chatRuntime.ts
-cd web && ! grep -nE "from ['\"]@/lib/contracts/(?!factContract)" src/lib/chatRuntime.ts
+# Drift gate: chatRuntime.ts must import nothing from lib/contracts/
+# except factContract. Implementation: list every contracts/ import line
+# in the file, filter out factContract lines; if anything remains, fail.
+# Uses POSIX ERE (no negative lookahead) so it runs in the repo shell.
+# The leading `!` negates the pipeline exit so the gate exits 0 only when
+# zero offending lines remain.
+cd web && ! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/chatRuntime.ts | grep -vE "lib/contracts/factContract"
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/chatRuntime.ts` imports nothing from `web/src/lib/contracts/` except the `FactContract` type (or related types) from `factContract.ts`. The two grep gates above both exit 0.
-- [ ] The synthesis prompt-construction function in `chatRuntime.ts` accepts `FactContract`-typed payloads and reads only fields defined by that type; this is enforced by the updated/new unit test.
-- [ ] `npm run typecheck` and `npm run build` are green.
-- [ ] `npm run test:grading` is green for this slice's added/changed tests, and the repo-wide run does not regress (per `_state.md` Notes for auditors entry on `08-fact-contract-shape`: hold REVISE on any non-zero exit from the shared `test:grading` gate).
+- [ ] `web/src/lib/chatRuntime.ts` imports nothing from `web/src/lib/contracts/` except the `FactContract` type (or related types) from `factContract.ts`. The drift-gate pipeline above exits 0.
+- [ ] The synthesis prompt-construction function in `chatRuntime.ts` accepts `FactContract`-typed payloads and reads only fields defined by that type; this is enforced by the new/updated `web/scripts/tests/*.test.mjs` test.
+- [ ] `npm run build` (run first) and `npm run typecheck` are both green.
+- [ ] `npm run test:grading` is green for this slice's added/changed test, and the repo-wide run does not regress (per `_state.md` Notes for auditors entry on `08-fact-contract-shape`: hold REVISE on any non-zero exit from the shared `test:grading` gate).
 
 ## Out of scope
 - Modifying the `FactContract` shape or anything under `web/src/lib/contracts/`.
@@ -92,11 +97,11 @@ Rollback: `git revert <commit>`. The grep drift gates make accidental re-introdu
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite the two grep drift gates to use syntax the repo shell can execute; `grep -E` does not support the negative-lookahead expressions currently written, so the acceptance proof for "no non-`factContract` contract imports remain" is not runnable as specified.
-- [ ] Reorder the web gates to run `cd web && npm run build` before `cd web && npm run typecheck`, because `web/tsconfig.json` includes `.next/types/**/*.ts` and a clean worktree can fail `tsc --noEmit` before the build generates those files.
+- [x] Rewrite the two grep drift gates to use syntax the repo shell can execute; `grep -E` does not support the negative-lookahead expressions currently written, so the acceptance proof for "no non-`factContract` contract imports remain" is not runnable as specified.
+- [x] Reorder the web gates to run `cd web && npm run build` before `cd web && npm run typecheck`, because `web/tsconfig.json` includes `.next/types/**/*.ts` and a clean worktree can fail `tsc --noEmit` before the build generates those files.
 
 ### Medium
-- [ ] Narrow `Changed files expected` and Step 5 to a test path that `cd web && npm run test:grading` actually executes, or add a separate gate for the declared test location; `test:grading` only runs `web/scripts/tests/*.test.mjs`, so a new test under `web/src/lib/__tests__/` would not prove the acceptance criteria.
+- [x] Narrow `Changed files expected` and Step 5 to a test path that `cd web && npm run test:grading` actually executes, or add a separate gate for the declared test location; `test:grading` only runs `web/scripts/tests/*.test.mjs`, so a new test under `web/src/lib/__tests__/` would not prove the acceptance criteria.
 
 ### Low
 - [ ] None.
