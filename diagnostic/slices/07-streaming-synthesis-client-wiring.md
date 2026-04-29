@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-client-wiring
 phase: 7
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T21:35:00-04:00
+updated: 2026-04-29T21:52:00-04:00
 ---
 
 ## Goal
@@ -127,3 +127,22 @@ _(none)_
 - Gate ordering (build → typecheck → test_grading_gate.sh) is correct.
 - `## Changed files expected` covers all files touched by the steps; no package.json changes needed.
 - The `consumeChatStream` helper has no `@/lib/*` dependencies (pure fetch/Response utility), so the _state.md Note #6 transpilation concern does not apply here.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — genuine Medium item found)**
+
+### High
+_(none)_
+
+### Medium
+- [ ] `sendChatMessage.ts` contains a runtime VALUE import `import { consumeChatStream } from "./consumeChatStream"` — not a type-only import. Step 4 describes the test as using the `node:test` + `typescript` transpile mechanism but explicitly dismisses the `answer-cache.test.mjs` bundled-to-tmpdir approach as "NOT applicable here" and "heavier than what's needed." However, all existing tests in this codebase (including `streaming-synthesis-route.test.mjs`) resolve relative module imports by writing transpiled files to a shared `mkdtemp` directory and using `await import()` — without that mechanism, Node cannot resolve `./consumeChatStream` at test runtime and the integration tests will fail at import. Revise Step 4 to either: (a) specify that the test transpiles both `consumeChatStream.ts` and `sendChatMessage.ts` into the same tmpdir using the `mkdtemp + writeFile + await import()` pattern (same mechanism as existing tests, but without the heavy `@/lib/*` stubs since none are needed), or (b) add `consumeChatStream` to `SendChatMessageDeps` so tests can inject a stub and bypass the relative-import dependency entirely.
+
+### Low
+_(none)_
+
+### Notes (informational only — no action)
+- Round-1 Medium (React test harness reference) and Round-1 Low (return type specification) are both resolved in the revised plan.
+- The `test:grading` script uses `node --test scripts/tests/*.test.mjs` which will pick up `streaming-synthesis-client.test.mjs` by glob — gate coverage is correct.
+- The distinction between "heavy `@/lib/*` stubs" and "the tmpdir+import() bundling mechanism" is orthogonal — the plan conflates them. For this slice, the stubs are not needed, but the bundling mechanism is.
