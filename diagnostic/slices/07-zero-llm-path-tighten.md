@@ -1,11 +1,11 @@
 ---
 slice_id: 07-zero-llm-path-tighten
 phase: 7
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T12:14:47-04:00
+updated: 2026-04-29T12:15:59-04:00
 ---
 
 ## Goal
@@ -125,7 +125,75 @@ bash -c '
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/07-zero-llm-path-tighten`
+
+**Commit:** `d53f6b3` — `slice 07-zero-llm-path-tighten: deterministic-only path skips all LLM transports`
+
+### Files changed (in declared scope)
+
+- `web/src/lib/zeroLlmGuard.ts` (**new** — 16 lines; imports nothing).
+  Exports `assertNoLlmForDeterministic({ generationSource, templateKey, callSite })`; early-returns under `NODE_ENV === "production"`; early-returns when `generationSource !== "deterministic_template"`; otherwise throws `Error("zero-llm-path violation: callSite=<x> templateKey=<y>")`.
+- `web/src/app/api/chat/route.ts` — three changes:
+  1. `import { assertNoLlmForDeterministic } from "@/lib/zeroLlmGuard"` (line 21).
+  2. New branch in the `if (result.rowCount > 0)` block (route.ts:727–769): when `generationSource === "deterministic_template"`, sets `answer = buildFallbackAnswer({...})` and skips the `synthSpan` / `cachedSynthesize` block unconditionally; the prior `cachedSynthesize` path is retained verbatim for all other `generationSource` values, gated by an `assertNoLlmForDeterministic({callSite: "cachedSynthesize"})` call placed *outside* the synth try/catch so a future regression that re-enters this site cannot have its dev-only throw silently swallowed by the synthesis-failure fallback.
+  3. `assertNoLlmForDeterministic({callSite: "generateSqlWithAnthropic"})` placed before the `sqlgen_llm` span on the non-deterministic branch (route.ts:416), and `assertNoLlmForDeterministic({callSite: "repairSqlWithAnthropic"})` placed before the `repair_llm` span on the SQL-failure branch (route.ts:657). Both are placed *outside* the surrounding try/catch so a regression-induced dev throw isn't swallowed by the heuristic-fallback catch handler.
+- `web/scripts/tests/zero-llm-path.test.mjs` (**new** — six `node:test` cases):
+  1. *cold deterministic, all 32 templates* — drives the transpiled chat route under `NODE_ENV=production` once per `DETERMINISTIC_KEYS` entry; configures the deterministic-template stub to return that key, the `runReadOnlySql` stub to return one canned row, and an anthropic stub whose `generate/repair/synthesize` exports each increment a shared counter. Asserts the counter is `0` after each request and `body.generationSource === "deterministic_template"`.
+  2. *warm answer-cache hit* — same setup as (1) but issues two identical requests; asserts the counter remains `0`.
+  3. *LLM-required negative control* — deterministic stub returns `null`; configures `generateSqlWithAnthropic` and `synthesizeAnswerWithAnthropic` to return benign responses; asserts the counter is `> 0` and `body.generationSource === "anthropic"`.
+  4. *dev-throw — direct unit test of the helper* — transpiles `web/src/lib/zeroLlmGuard.ts` directly via `typescript.transpileModule` (no alias rewriting needed because the new module imports nothing from `@/lib/*`). Under `NODE_ENV=development`, calls `assertNoLlmForDeterministic({generationSource: "deterministic_template", templateKey: DETERMINISTIC_KEYS[0], callSite})` for each of the three callSite values; asserts each throws an `Error` whose message contains `"zero-llm-path"`, the `callSite`, and the `templateKey`.
+  5. *dev no-throw — direct unit test of the helper* — under `NODE_ENV=development`, calls the helper with `generationSource: "llm_generated"` (and again with `"anthropic"`); asserts no throw.
+  6. *production no-throw — direct unit test of the helper* — under `NODE_ENV=production`, calls the helper with `generationSource: "deterministic_template"` for each callSite; asserts no throw. All `NODE_ENV` mutations are wrapped in `withNodeEnv()` (try/finally restores the original).
+
+### Files changed (out of declared scope — mechanical / semantic follow-ons from the route.ts change)
+
+- `web/scripts/tests/answer-cache.test.mjs` — two changes, both directly forced by the slice's planned route.ts diff:
+  1. **Mechanical:** added `.replace(/from\s+["']@\/lib\/zeroLlmGuard["']/g, ...)` to the existing import-rewrite chain (and a matching `zeroLlmGuard.stub.mjs` write) so the existing harness keeps resolving the route's transpiled module after route.ts gains the new `@/lib/zeroLlmGuard` import. Without this line every existing answer-cache test fails at module load with `Cannot find package '@/lib'`.
+  2. **Semantic:** updated the TTL-expiry test's post-expiry synth-spy assertion from `assert.ok(synthCalls >= 2, ...)` to `assert.equal(synthCalls, 0, "deterministic_template path bypasses cachedSynthesize unconditionally (slice 07-zero-llm-path-tighten)")`. The old assertion was implicitly verifying that `cachedSynthesize` is invoked on the deterministic path, which is exactly the behavior step 2 of this slice removes.
+- These two tweaks are not listed under `## Changed files expected`, but I judged them in-scope-by-implication because they are strictly forced by the planned route.ts diff and the slice's stated goal. If the auditor disagrees, the alternative is to mark the slice blocked because `npm run test:grading` would otherwise fail; I would then need a follow-on slice to do the same one-line + one-assertion update. Calling it out explicitly here so the auditor can rule.
+
+### Decisions
+
+- **Use `buildFallbackAnswer` (existing helper at `web/src/app/api/chat/route.ts:68`) for the deterministic-branch answer** rather than introducing a new formatter. Already established in the slice's `## Decisions`; chose this path verbatim.
+- **Synthesis bypass is unconditional (production AND non-production).** Step 2 of the slice; the dev-only assertion is a separate belt-and-braces guard, not a substitute for the structural change.
+- **Assertion calls are placed *outside* the surrounding try/catch at all three call sites.** Not explicitly mandated by the slice, but necessary so that a future regression-induced dev throw cannot be silently swallowed by the catch handlers (`heuristic_fallback` for `generateSqlWithAnthropic`, `heuristic_after_template_failure` for the deterministic-SQL retry path, `buildFallbackAnswer` for `cachedSynthesize`). Inside the try block, the dev throw would be caught and converted to a heuristic-fallback or fallback-answer response, defeating the purpose of the assertion. Placing it before the try keeps its semantics: if it throws, the request fails fast in dev; if it returns (production or non-deterministic generationSource), the LLM call proceeds normally.
+- **Helper unit-test transpiles `zeroLlmGuard.ts` directly with no alias rewriting.** Confirmed implementable from the declared diff because the new module's source has zero `@/lib/*` imports (only `process.env.NODE_ENV` and its arguments).
+
+### Gate command results
+
+| Gate | Exit code | Notes |
+|---|---:|---|
+| `cd web && npm run build` | **non-zero (pre-existing failure)** | TS2305 in `src/lib/queries.ts` line 1: `Module '"./db"' has no exported member 'withTransaction'`. Reproduced verbatim on the parent commit `3783d1e` (slice/07-zero-llm-path-tighten HEAD before my work) by stashing my changes — see evidence below. Root cause: slice `06-stmt-cache-off` (commit `b8e0af3`, merged at `731300a`) introduced `web/src/lib/db.ts` which shadows the older `web/src/lib/db/` directory; the new `db.ts` does not re-export `withTransaction`, but `queries.ts` still imports it from `./db`. This is **not introduced by this slice** and the fix would require modifying `web/src/lib/db.ts` and/or `web/src/lib/queries.ts`, neither of which is in this slice's `## Changed files expected`. Flagged for auditor; out of scope for this slice. |
+| `cd web && npm run typecheck` | **non-zero (same pre-existing failure)** | Same TS2305 error on `web/src/lib/queries.ts:1`, plus two cascading errors (`Parameter 'tx' implicitly has any` on line 789, `Untyped function calls may not accept type arguments` on line 791) that are downstream of the missing `withTransaction` export. Same out-of-scope determination. |
+| `cd web && npm run test:grading` | **0** | 72 subtests: 62 pass, 10 skipped (`OPENF1_RUN_CHAT_INTEGRATION_TESTS` not set; pre-existing). All six new `zero-llm-path.test.mjs` cases pass (subtests 67–72). All nine `answer-cache.test.mjs` cases pass after the two follow-on changes documented above. |
+| Eligibility-list drift gate (two-way) | **0** | `Eligibility drift gate (two-way) passed.` `DETERMINISTIC_KEYS` in `zero-llm-path.test.mjs` and the `templateKey: "..."` literals in `web/src/lib/deterministicSql.ts` are bijective at 32 keys each. |
+
+#### Pre-existing-failure evidence
+
+Reproduction of the build/typecheck failure on the parent commit (without any of my changes):
+
+```
+$ git stash --include-untracked --keep-index
+Saved working directory and index state WIP on slice/07-zero-llm-path-tighten: 3783d1e [slice:07-zero-llm-path-tighten][plan-approved]
+$ git status
+nothing to commit, working tree clean
+$ cd web && npm run typecheck
+src/lib/queries.ts(1,15): error TS2305: Module '"./db"' has no exported member 'withTransaction'.
+src/lib/queries.ts(789,33): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/lib/queries.ts(791,26): error TS2347: Untyped function calls may not accept type arguments.
+```
+
+The auditor can re-verify by checking out `3783d1e` (the parent of `d53f6b3`) and running `cd web && npm run typecheck`.
+
+### Acceptance-criteria self-check
+
+- [x] **Cold deterministic, production-mode, zero LLM** — `zero-llm-path.test.mjs:200` (test 1) iterates all 32 `DETERMINISTIC_KEYS` under `NODE_ENV=production` with a freshly-cleared answer cache; asserts `__getAnthropicCounter() === 0` for each.
+- [x] **Warm answer-cache-hit, zero LLM** — `zero-llm-path.test.mjs:240` (test 2) issues two identical deterministic requests under `NODE_ENV=production`; asserts the counter is `0` after both. The second response also takes the route's existing answer-cache short-circuit (route.ts:467).
+- [x] **LLM-required negative control** — `zero-llm-path.test.mjs:268` (test 3) drives a non-template prompt; asserts the counter is `> 0` and `body.generationSource === "anthropic"`.
+- [x] **Dev-only assertion verified — direct helper unit test** — `zero-llm-path.test.mjs:295` (test 4) calls `mod.assertNoLlmForDeterministic` for each of the three callSite values under `NODE_ENV=development`; asserts each throws an `Error` whose message contains `"zero-llm-path"`, the `callSite`, and the `templateKey`.
+- [x] **Non-deterministic no-throw — direct helper unit test** — `zero-llm-path.test.mjs:328` (test 5) calls the helper with `generationSource: "llm_generated"` and `"anthropic"` under `NODE_ENV=development`; asserts no throw.
+- [x] **Production no-throw — direct helper unit test** — `zero-llm-path.test.mjs:345` (test 6) calls the helper with `generationSource: "deterministic_template"` for each callSite under `NODE_ENV=production`; asserts no throw.
 
 ## Audit verdict
 (filled by Codex)
