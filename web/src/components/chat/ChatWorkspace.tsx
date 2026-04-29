@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChatApiResponse, ChatMessage, ChatMessageAssistant, ChatStore, Conversation } from "@/lib/chatTypes";
+import type { ChatMessage, ChatStore, Conversation } from "@/lib/chatTypes";
 import { createEmptyStore, loadChatStore, saveChatStore } from "@/lib/chatPersistence";
 import { mapChatApiResponseToParts } from "@/lib/mapChatResponse";
 import { deriveResolvedContext, type ResolvedSessionContext } from "@/lib/chatContext";
+import { sendChatMessage } from "@/lib/chat/sendChatMessage";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { MessageThread } from "@/components/chat/MessageThread";
 import { Composer, type ComposerContext } from "@/components/chat/Composer";
@@ -171,72 +172,24 @@ export function ChatWorkspace() {
     setInput("");
     setLoading(true);
 
-    const assistantMessage: ChatMessageAssistant = {
-      id: newId(),
-      role: "assistant",
-      createdAt: new Date().toISOString(),
-      parts: []
-    };
-    const assistantTime = assistantMessage.createdAt;
-
+    // Streaming POST opts in via Accept: text/event-stream; sendChatMessage
+    // owns the placeholder-first ordering, fetch, and stream consumption.
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          context: {
-            sessionKey: snapshotAtSend.sessionKey,
-            driverNumber: snapshotAtSend.driverNumber
-          }
-        })
-      });
-      const data = (await response.json()) as ChatApiResponse;
-
-      if (!response.ok) {
-        const err =
-          data.error != null
-            ? `Request failed: ${data.error}${data.requestId ? ` (request_id=${data.requestId})` : ""}`
-            : `Request failed with status ${response.status}`;
-        assistantMessage.parts = [{ type: "text", text: err }];
-        setResolved(data.requestId ? { requestId: data.requestId } : null);
-        patchActiveConversation((c) => ({
-          ...c,
-          updatedAt: assistantTime,
-          messages: [...c.messages, assistantMessage]
-        }));
-      } else {
-        assistantMessage.parts = mapChatApiResponseToParts(data);
-        const dr = deriveResolvedContext(data);
-        setResolved(dr);
-        const nextCtx: ComposerContext = {
-          sessionKey: dr.sessionKey ?? snapshotAtSend.sessionKey,
-          sessionLabel: dr.sessionLabel ?? snapshotAtSend.sessionLabel,
-          driverNumber: dr.driverNumbers?.[0] ?? snapshotAtSend.driverNumber
-        };
-        setComposerCtx(nextCtx);
-        patchActiveConversation((c) => ({
-          ...c,
-          updatedAt: assistantTime,
-          messages: [...c.messages, assistantMessage],
-          lastResolved: {
-            sessionKey: dr.sessionKey,
-            sessionLabel: dr.sessionLabel,
-            driverNumbers: dr.driverNumbers,
-            resolutionStatus: dr.resolutionStatus,
-            needsClarification: dr.needsClarification,
-            requestId: dr.requestId
-          },
-          contextSnapshot: nextCtx
-        }));
-      }
-    } catch {
-      assistantMessage.parts = [{ type: "text", text: "Unable to process this request right now." }];
-      patchActiveConversation((c) => ({
-        ...c,
-        updatedAt: assistantTime,
-        messages: [...c.messages, assistantMessage]
-      }));
+      await sendChatMessage(
+        {
+          text,
+          snapshotAtSend,
+          assistantTime: new Date().toISOString(),
+          placeholderId: newId()
+        },
+        {
+          patchActiveConversation,
+          setResolved,
+          setComposerCtx,
+          mapResponseToParts: mapChatApiResponseToParts,
+          deriveResolved: deriveResolvedContext
+        }
+      );
     } finally {
       setLoading(false);
     }
