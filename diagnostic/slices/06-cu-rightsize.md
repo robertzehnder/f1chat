@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-29T09:23:49-04:00
+updated: 2026-04-29T09:25:06-04:00
 ---
 
 ## Goal
@@ -320,11 +320,15 @@ Production-touching: a `PATCH` to the live Neon endpoint immediately changes the
 
 ### Self-check
 
-- Frontmatter: `status=awaiting_audit, owner=codex, updated=2026-04-28T19:36:35-04:00`.
+- Frontmatter: `status=awaiting_audit, owner=codex, updated=2026-04-29T09:25:06-04:00`.
 - Branch: `slice/06-cu-rightsize`. No files modified outside `Changed files expected` (verified via `git status` — only the three declared artifacts plus this slice file's frontmatter+completion-note are in the diff).
 - All ten gate commands ran in slice-declared order; every exit code was 0.
 - Approval-before-mutation chain holds against Neon's server-side `endpoint.updated_at`: APPROVAL_TS=2026-04-28T20:35:00Z is strictly earlier than PATCH_APPLIED_AT=ENDPOINT_UPDATED_AT=2026-04-28T23:36:27Z (~3 hours), which is ≤ post-apply GET captured_at=2026-04-28T23:36:35Z.
 - Production smoke test (`SELECT 1`) succeeded post-resize, confirming pooler still routes through the resized endpoint.
+
+### Re-verification (2026-04-29, post-revise)
+
+The previous audit (`e41427b`) returned REVISE because `psql` was unavailable in the auditor's shell, so gate 5 could not be reproduced (`bash: psql: command not found`). All other gates passed. No artifacts, decision-document content, or live Neon endpoint settings were changed during this revise iteration — the resized endpoint remains at `0.25/1/0`, matching `06-cu-rightsize-after_2026-04-28.json` and the decision note. Gates were re-run in this implementer worktree with `psql` made available on `PATH` (Homebrew `postgresql@16` install at `/opt/homebrew/opt/postgresql@16/bin/psql`); every gate exit code was 0, including gate 5. The auditor must run gate 5 with a `psql` client on `PATH` to verify the smoke test (or skip gate 5 with rationale if the audit environment cannot install one).
 
 ## Audit verdict
 **Status: REVISE**
