@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: awaiting_audit
-owner: codex
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T18:54:41-04:00
+updated: 2026-04-29T19:23:08-04:00
 ---
 
 ## Goal
@@ -220,7 +220,28 @@ Branch: `slice/08-synthesis-payload-cutover`. Implemented on top of plan-approve
 7. ⚠ `npm run test:grading` exits 1 due to 3 pre-existing PGlite environment failures (`Case A` / `Case B` / `Case E` in `driver-fallback.test.mjs`). These same 3 tests fail on `integration/perf-roadmap` with the identical exit code under the same Node + npm + worktree state, so this slice introduces no regression. The slice fixed 11 pre-existing failures (the `synthesizeAnswerStream` stub gap in answer-cache/skip-repair/zero-llm-path tests) as a direct consequence of touching those test files for the new `factContract.stub.mjs` plumbing — see `Decisions / Out-of-scope test maintenance` for justification.
 
 ## Audit verdict
-(filled by Codex)
+**Status: REJECT**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `cd web && npm run test:grading` -> exit `1`
+  - `web/scripts/tests/driver-fallback.test.mjs:223` Case A failed: `[db] using local PGlite fallback (reason=probe-failed): connect ECONNREFUSED 127.0.0.1:1`
+  - `web/scripts/tests/driver-fallback.test.mjs:247` Case B failed: `[db] using local PGlite fallback (reason=probe-failed): connect ECONNREFUSED 127.0.0.1:1`
+  - `web/scripts/tests/driver-fallback.test.mjs:306` Case E failed: `[db] using local PGlite fallback (reason=probe-failed): connect ECONNREFUSED 127.0.0.1:1`
+- Gate #4 `cd web && ! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/chatRuntime.ts | grep -vE "lib/contracts/factContract"` -> exit `0`
+- Gate #5 `cd web && ! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/anthropic.ts | grep -vE "lib/contracts/factContract"` -> exit `0`
+- Gate #6 `cd web && ! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/synthesis/buildSynthesisPrompt.ts | grep -vE "lib/contracts/factContract"` -> exit `0`
+- Gate #7 `cd web && ! grep -nE "from ['\"]@/lib/" src/lib/synthesis/buildSynthesisPrompt.ts | grep -vE "@/lib/contracts/factContract"` -> exit `0`
+- Scope FAIL — `diagnostic/slices/08-synthesis-payload-cutover.md:83` declares only one new `web/scripts/tests/*.test.mjs` path for this slice; `git diff --name-only integration/perf-roadmap...HEAD` also includes out-of-scope edits in `web/scripts/tests/answer-cache.test.mjs:1`, `web/scripts/tests/cache-benchmark.test.mjs:1`, `web/scripts/tests/cache-control-markers.test.mjs:1`, `web/scripts/tests/prompt-prefix-split.test.mjs:1`, `web/scripts/tests/skip-repair.test.mjs:1`, `web/scripts/tests/streaming-synthesis-route.test.mjs:1`, `web/scripts/tests/streaming-synthesis-server.test.mjs:1`, and `web/scripts/tests/zero-llm-path.test.mjs:1`.
+- Criterion 1 PASS — `web/src/lib/anthropic.ts:1-2` imports only `FactContract` from `factContract.ts`; Gate #4 and Gate #5 exit `0`.
+- Criterion 2 PASS — `web/src/lib/synthesis/buildSynthesisPrompt.ts:1-64` exports `buildSynthesisPrompt(input: { question: string; sql: string; contract: FactContract })`; Gate #6 and Gate #7 exit `0`.
+- Criterion 3 PASS — `web/src/app/api/chat/route.ts:23-71` constructs the contract via `serializeRowsToFactContract`, and `web/src/app/api/chat/route.ts:907-912` plus `web/src/app/api/chat/route.ts:925-930` pass `{ question, sql, contract }`.
+- Criterion 4 PASS — Gate #2 exits `0`; the typed `contract: FactContract` surface in `web/src/lib/anthropic.ts:35-39` and `web/src/lib/synthesis/buildSynthesisPrompt.ts:3-7` enforces the cutover at compile time.
+- Criterion 5 PASS — `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:39-52` transpiles and imports only `web/src/lib/synthesis/buildSynthesisPrompt.ts`, and the assertions required by the slice are present at `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:94-233`.
+- Criterion 6 PASS — Gate #1 and Gate #2 exit `0`.
+- Criterion 7 FAIL — `diagnostic/_state.md:47` requires REVISE on any non-zero shared `npm run test:grading` gate, and Gate #3 exits `1`.
+- Decision: REJECT
+- Rationale: the branch exceeds the declared slice scope and the shared grading gate is still red, so it is not mergeable under the audit contract.
 
 ## Plan-audit verdict (round 1)
 
