@@ -1,8 +1,8 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29T13:21:11-04:00
@@ -156,7 +156,20 @@ Rollback: `git revert <commit>` (single commit removes the new test file).
 - [x] `git diff --name-only integration/perf-roadmap...HEAD` lists only `web/scripts/tests/skip-repair.test.mjs` and this slice file (`diagnostic/slices/07-skip-repair-on-deterministic.md`) — confirmed at commit time.
 
 ## Audit verdict
-(filled by Codex)
+**REVISE**
+
+- Gate `cd web && npm run build` -> exit `0`.
+- Gate `cd web && npm run typecheck` -> exit `0`.
+- Gate `cd web && npm run test:grading` -> exit `1`.
+- Gate `cd web && npm run test:grading` failure context -> `web/scripts/tests/driver-fallback.test.mjs:223`, `web/scripts/tests/driver-fallback.test.mjs:247`, `web/scripts/tests/driver-fallback.test.mjs:306` (`Case A`, `Case B`, `Case E` fail with `connect ECONNREFUSED 127.0.0.1:1` after logging `using local PGlite fallback`).
+- Scope diff -> **PASS**. `git diff --name-only integration/perf-roadmap...HEAD` lists only `diagnostic/_state.md`, `diagnostic/slices/07-skip-repair-on-deterministic.md`, and `web/scripts/tests/skip-repair.test.mjs`; `_state.md` is an append-only addition under `## Notes for auditors`, and the other two paths are in scope.
+- Acceptance: `deterministic SQL exec failure falls back to heuristic without invoking LLM repair` -> **PASS** (`web/scripts/tests/skip-repair.test.mjs:311`; `npm run test:grading` subtest `ok 67`).
+- Acceptance: `anthropic SQL exec failure invokes LLM repair (positive control)` -> **PASS** (`web/scripts/tests/skip-repair.test.mjs:358`; `npm run test:grading` subtest `ok 68`).
+- Acceptance: `dev-throw — assertNoLlmForDeterministic blocks repairSqlWithAnthropic callSite under NODE_ENV=development` -> **PASS** (`web/scripts/tests/skip-repair.test.mjs:406`; `npm run test:grading` subtest `ok 69`).
+- Acceptance: all three subtests appear in the grading summary -> **PASS** (`ok 67`, `ok 68`, `ok 69` in the `npm run test:grading` run).
+- Acceptance: no out-of-scope code changes -> **PASS**. No production files changed.
+- Decision -> **REVISE**.
+- Rationale -> The slice is not merge-ready because the required grading gate still exits non-zero in this environment; re-audit only after `npm run test:grading` is green end-to-end.
 
 ## Plan-audit verdict (round 1)
 
