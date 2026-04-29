@@ -60,3 +60,4 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
 - When a slice names a fallback implementation file, align verification commands and changed-files scope with the actual existing entrypoint or require creating the new path explicitly (slice:06-pooled-url-assertion).
 - When a slice verifies a lower-precedence DB URL variable, require commands and fixtures to unset or override any higher-precedence URL variable explicitly so the check cannot false-pass on ambient env (slice:06-pooled-url-assertion).
+- If a slice requires a checked-in artifact, include that artifact path under Changed files expected or the implementation diff becomes automatic scope creep at audit time (slice:06-pooled-url-assertion).
