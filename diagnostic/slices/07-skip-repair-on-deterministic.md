@@ -1,11 +1,11 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T17:15:16Z
+updated: 2026-04-29T17:18:56Z
 ---
 
 ## Goal
@@ -33,12 +33,36 @@ None — the test loads the route module under TS transpile + stubs, like `zero-
    - If this structure has changed since the audit (it should not have — no production-code edits in this slice), STOP and re-open the slice's plan. Otherwise proceed.
 2. **Add `web/scripts/tests/skip-repair.test.mjs`.** Mirror the harness setup in `web/scripts/tests/zero-llm-path.test.mjs`:
    - Re-use the same stub strings (`NEXT_SERVER_STUB`, `ANTHROPIC_STUB`, `QUERIES_STUB`, `DETERMINISTIC_SQL_STUB`, `CHAT_RUNTIME_STUB`, `CHAT_QUALITY_STUB`, `ANSWER_SANITY_STUB`, `SERVER_LOG_STUB`, `PERF_TRACE_STUB`, `ZERO_LLM_GUARD_STUB`) and the same `loadRouteHarness` / `withRoute` / `resetAll` / `makeFakeRuntime` / `postChat` shape. You may either copy them inline into the new file (preferred — keeps the test self-contained per the existing convention) or factor them into a shared helper if the maintainer accepts that scope; default to inline copy.
+   - **Async-aware `withNodeEnv` helper (round 3 audit fix).** Do NOT copy the synchronous `withNodeEnv(value, fn)` shape from `zero-llm-path.test.mjs` (it returns the inner Promise from `try`, which means the `finally` resets `NODE_ENV` before any awaited SQL-repair / heuristic-fallback work inside the callback completes). Instead, define and use an `async` variant in the new test file:
+     ```js
+     async function withNodeEnv(value, fn) {
+       const original = process.env.NODE_ENV;
+       process.env.NODE_ENV = value;
+       try {
+         return await fn();
+       } finally {
+         process.env.NODE_ENV = original;
+       }
+     }
+     ```
+     All three test cases below MUST invoke this helper as `await withNodeEnv("production", async () => { ... await postChat(loaded) ... })` (or equivalently, `await withNodeEnv("production", () => postChat(loaded))` is acceptable ONLY because the `await fn()` inside the helper now waits for the returned Promise before running the `finally`). If you prefer to skip the helper entirely, an inline `try/finally` around an awaited call is also acceptable, e.g.:
+     ```js
+     const original = process.env.NODE_ENV;
+     process.env.NODE_ENV = "production";
+     try {
+       const { status, body } = await postChat(loaded);
+       // assertions...
+     } finally {
+       process.env.NODE_ENV = original;
+     }
+     ```
+     Either shape proves the production-only branch (`generationSource === "anthropic"` gate around `repairSqlWithAnthropic`) is exercised end-to-end with `NODE_ENV=production` held across every awaited boundary inside the route handler.
    - Add THREE `node:test` cases with EXACT names so acceptance criteria can match them:
      1. `deterministic SQL exec failure falls back to heuristic without invoking LLM repair`
         - Set `__setBuildDeterministicSqlTemplateImpl(() => ({ templateKey: DETERMINISTIC_KEYS[0], sql: "SELECT 1 FROM core.sessions WHERE session_key = 9839" }))`.
         - Set `__setBuildChatRuntimeImpl(async () => makeFakeRuntime({ sessionKey: 9839 }))`.
         - Set `__setRunReadOnlySqlImpl` to throw on the first call (any Error with a representative message, e.g. `new Error("simulated SQL exec failure")`) and succeed on the second call returning `{ sql, rows: [{ stub_col: 1 }], rowCount: 1, elapsedMs: 1, truncated: false }`.
-        - Run under `withNodeEnv("production", () => postChat(loaded))` so the dev-throw guard is suppressed (this exercises the if-guard in `route.ts`, which is what the test is locking in — production behavior).
+        - Invoke as `const { status, body } = await withNodeEnv("production", async () => postChat(loaded));` using the **async-aware** helper defined above (or an inline `try/finally` around an awaited `postChat(loaded)`). Either shape MUST hold `NODE_ENV=production` across the entire awaited route handler so the dev-throw guard stays suppressed for the full SQL-exec-failure → heuristic fallback path; this is what exercises the production if-guard the slice locks in.
         - Assert `status === 200`.
         - Assert `body.generationSource === "heuristic_after_template_failure"` (the fall-back source set by `route.ts` when a deterministic template's SQL fails).
         - Assert `loaded.anthropic.__getAnthropicCounter() === 0` — proving no LLM call (and specifically no `repairSqlWithAnthropic` call) was made on the deterministic-source failure path.
@@ -49,7 +73,7 @@ None — the test loads the route module under TS transpile + stubs, like `zero-
         - Set `__setSynthesizeImpl(async () => ({ answer: "stub", reasoning: "stub" }))`.
         - Set `__setRunReadOnlySqlImpl` to throw on the first call and succeed on the second.
         - Set `__setBuildChatRuntimeImpl(async () => makeFakeRuntime({ sessionKey: 100 }))` and leave `__setBuildDeterministicSqlTemplateImpl` unset so it returns `null` (forcing the anthropic generation path).
-        - Run under `withNodeEnv("production", () => postChat(loaded))`.
+        - Invoke as `const { status, body } = await withNodeEnv("production", async () => postChat(loaded));` using the **async-aware** helper (or inline `try/finally` around an awaited call). The production env MUST stay set across the awaited generate → SQL-exec → repair → re-execute → synthesize chain, otherwise the production-only `repairSqlWithAnthropic` branch is not reliably exercised.
         - Assert `status === 200`.
         - Assert `body.generationSource === "anthropic_repaired"`.
         - Assert `loaded.anthropic.__getAnthropicCounter() >= 2` — at least one generate call AND one repair call (and possibly one synthesize). The strict lower bound of 2 is sufficient because every stub increments the same shared counter.
@@ -80,7 +104,7 @@ Note: `npm run test:grading` resolves to `node --test scripts/tests/*.test.mjs` 
 - [ ] `npm run test:grading` reports `skip-repair.test.mjs > anthropic SQL exec failure invokes LLM repair (positive control)` as `ok`, with the test asserting `body.generationSource === "anthropic_repaired"` AND `__getAnthropicCounter() >= 2` (i.e. the LLM repair stub was reached at least once) after an anthropic-source request whose first SQL execution throws.
 - [ ] `npm run test:grading` reports `skip-repair.test.mjs > dev-throw — assertNoLlmForDeterministic blocks repairSqlWithAnthropic callSite under NODE_ENV=development` as `ok`, with the test asserting the guard throws an Error matching `/zero-llm-path/` whose message includes both `"repairSqlWithAnthropic"` and the supplied `templateKey`.
 - [ ] All three subtests above appear in the `npm run test:grading` summary output (proves the file was picked up by the `node --test scripts/tests/*.test.mjs` glob).
-- [ ] No files outside `web/scripts/tests/skip-repair.test.mjs` are modified by this slice (proven by `git diff --name-only main...HEAD` listing only that path).
+- [ ] No files outside `web/scripts/tests/skip-repair.test.mjs` are modified by this slice (proven by `git diff --name-only integration/perf-roadmap...HEAD` listing only that path — this is the loop's required diff base, since the dispatcher mirrors slice work onto `integration/perf-roadmap`).
 
 ## Out of scope
 - Editing any production module (`web/src/**`). If a future slice wants to refactor `route.ts`'s repair branch (e.g. extract the if-guard into a named function), that belongs in its own slice, not here.
@@ -135,10 +159,10 @@ Rollback: `git revert <commit>` (single commit removes the new test file).
 **Status: REVISE**
 
 ### High
-- [ ] Make the planned route tests hold `NODE_ENV=production` across the awaited `postChat(...)` work by using an async-aware env wrapper (or inline `try/finally` around an awaited call); the cited `withNodeEnv("production", () => postChat(loaded))` shape resets `NODE_ENV` before the later SQL-repair / heuristic-fallback awaits execute, so it does not reliably exercise the intended production-only branch.
+- [x] Make the planned route tests hold `NODE_ENV=production` across the awaited `postChat(...)` work by using an async-aware env wrapper (or inline `try/finally` around an awaited call); the cited `withNodeEnv("production", () => postChat(loaded))` shape resets `NODE_ENV` before the later SQL-repair / heuristic-fallback awaits execute, so it does not reliably exercise the intended production-only branch.
 
 ### Medium
-- [ ] Replace the final scope-proof acceptance criterion’s `git diff --name-only main...HEAD` with the loop’s required diff base `git diff --name-only integration/perf-roadmap...HEAD`, so the slice proves file scope against the branch the dispatcher mirrors from.
+- [x] Replace the final scope-proof acceptance criterion’s `git diff --name-only main...HEAD` with the loop’s required diff base `git diff --name-only integration/perf-roadmap...HEAD`, so the slice proves file scope against the branch the dispatcher mirrors from.
 
 ### Low
 - [ ] None.
