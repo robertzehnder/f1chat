@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-29T21:27:37Z
+# Project state — last updated: 2026-04-29T22:17:25Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -16,7 +16,7 @@ accumulated context the loop carries between slices._
 | 5 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 7 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 8 | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 |
+| 8 | 7 | 1 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
 | 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `804aa07` merge: 08-fact-contract-shape [pass] — 2026-04-29
 - `6e2aa4e` merge: 07-streaming-synthesis-client-wiring [pass] — 2026-04-29
 - `cd8fc0d` merge: 07-streaming-synthesis-route-sse [pass] — 2026-04-29
 - `785749b` merge: 07-streaming-synthesis-server [pass] — 2026-04-29
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `731300a` merge: 06-stmt-cache-off [pass] — 2026-04-29
 - `0616c01` merge: 06-pooled-url-assertion [pass] — 2026-04-29
 - `205c23b` merge: 06-driver-swap-local-fallback [pass] — 2026-04-28
-- `5c87764` merge: 05-answer-cache [pass] — 2026-04-28
 
 ## Open architectural decisions
 
