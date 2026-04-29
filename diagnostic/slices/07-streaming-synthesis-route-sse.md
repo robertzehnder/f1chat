@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-route-sse
 phase: 7
-status: revising_plan
+status: pending_plan_audit
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T21:10:00-04:00
+updated: 2026-04-29T21:55:00-04:00
 ---
 
 ## Goal
@@ -50,8 +50,13 @@ Wire the streaming primitive added by `07-streaming-synthesis-server` into the `
 6a. **Extend the in-process ANTHROPIC_STUB** so the route's new `synthesizeAnswerStream` import resolves under the harness. The existing stub in `zero-llm-path.test.mjs` / `skip-repair.test.mjs` exports only `generateSqlWithAnthropic`, `repairSqlWithAnthropic`, and `synthesizeAnswerWithAnthropic`; the route under test will additionally `import { synthesizeAnswerStream } from "../../lib/anthropic"`. The new test's stub MUST add:
    - A `state.synthesizeStream` slot, a `__setSynthesizeStreamImpl(fn)` test hook, and reset both in `__resetAnthropic()`.
    - An `export async function* synthesizeAnswerStream(input)` async-generator wrapper that, when configured, yields whatever the test-supplied async iterable / generator yields (so a test can drive controllable `answer_delta`, `reasoning_delta`, and `final` chunks); when not configured, throws `"anthropic stub: synthesizeAnswerStream not configured"`.
+   - **Discriminant + chunk shape (binding):** every chunk yielded by the stub MUST match the real `StreamChunk` type defined at `web/src/lib/anthropic.ts:520-523`. The discriminant field name is **`kind`** (NOT `type`). The three concrete shapes are:
+     - `{ kind: "answer_delta", text: string }`
+     - `{ kind: "reasoning_delta", text: string }`
+     - `{ kind: "final", answer: string, reasoning?: string, model: string, rawText: string }`
+     The route handler MUST switch on `chunk.kind` and, for the terminal `final` chunk, map `{ answer, reasoning, model, rawText }` onto the JSON response shape today's non-streaming branch returns (the field names differ — this mapping is the integration point and must be exercised by the test). Using `type` instead of `kind` in either the stub or the route is a bug class explicitly called out in `_state.md` Notes for auditors and would produce tests that pass internally yet fail against the real `synthesizeAnswerStream`.
    Without these additions, the SSE synthesis test cannot inject a deterministic stream and the route import will throw at load time.
-6b. **SSE-reader helper pattern** for the test. The SSE-mode handler returns `new Response(new ReadableStream(...))` with `Content-Type: text/event-stream`, NOT a `NextResponse.json(...)` mock. The test MUST consume the stream by either (a) `const text = await response.text()` then splitting on the SSE record terminator `\n\n` and parsing each block's `event:` / `data:` lines, or (b) iterating the response body's reader (`response.body.getReader()`) and decoding chunks as in `web/scripts/tests/streaming-synthesis-server.test.mjs`. The test file should declare a small `parseSseFrames(text)` helper that returns `[{event, data}, ...]` and use it for every SSE assertion; pick (a) if the route's stream completes synchronously in tests (the simpler path), (b) only if intermediate chunk timing must be observed.
+6b. **SSE-reader helper pattern** for the test. The SSE-mode handler returns `new Response(new ReadableStream(...))` with `Content-Type: text/event-stream`, NOT a `NextResponse.json(...)` mock. **Default to option (a):** `const text = await response.text()` then split on the SSE record terminator `\n\n` and parse each block's `event:` / `data:` lines via a small `parseSseFrames(text)` helper that returns `[{event, data}, ...]`. The in-process stub-driven stream completes synchronously, so option (a) is the simpler and correct path for every test in this slice. Use option (b) — `response.body.getReader()` chunk decoding as in `web/scripts/tests/streaming-synthesis-server.test.mjs` — ONLY if a future test in this file specifically needs to observe intermediate-chunk timing (none of the cases in step 6 require it).
 
 ## Changed files expected
 - `web/src/app/api/chat/route.ts` (additive: SSE frame helper, conditional branch on `Accept: text/event-stream`, per-branch SSE/JSON parity).
@@ -121,10 +126,10 @@ _(none)_
 _(none)_
 
 ### Medium
-- [ ] Step 6a specifies that the `synthesizeAnswerStream` stub "yields whatever the test-supplied async iterable / generator yields" and mentions driving "controllable `answer_delta`, `reasoning_delta`, and `final` chunks" — but never names the discriminant field. The actual `StreamChunk` type at `web/src/lib/anthropic.ts:520-523` uses `kind` as the discriminant: `{ kind: "answer_delta"; text: string }`, `{ kind: "reasoning_delta"; text: string }`, `{ kind: "final"; answer: string; reasoning?: string; model: string; rawText: string }`. An implementer who writes the stub and route handler using `type` (a natural guess) instead of `kind` will produce tests that pass internally but fail against the real `synthesizeAnswerStream`. Fix: add a line to step 6a explicitly stating the discriminant is `kind`, reference `StreamChunk` at `anthropic.ts:520`, and note the final chunk's field names (`answer`, `reasoning`, `model`, `rawText`) so the route can map them to the JSON response shape.
+- [x] Step 6a specifies that the `synthesizeAnswerStream` stub "yields whatever the test-supplied async iterable / generator yields" and mentions driving "controllable `answer_delta`, `reasoning_delta`, and `final` chunks" — but never names the discriminant field. The actual `StreamChunk` type at `web/src/lib/anthropic.ts:520-523` uses `kind` as the discriminant: `{ kind: "answer_delta"; text: string }`, `{ kind: "reasoning_delta"; text: string }`, `{ kind: "final"; answer: string; reasoning?: string; model: string; rawText: string }`. An implementer who writes the stub and route handler using `type` (a natural guess) instead of `kind` will produce tests that pass internally but fail against the real `synthesizeAnswerStream`. Fix: add a line to step 6a explicitly stating the discriminant is `kind`, reference `StreamChunk` at `anthropic.ts:520`, and note the final chunk's field names (`answer`, `reasoning`, `model`, `rawText`) so the route can map them to the JSON response shape.
 
 ### Low
-- [ ] Step 6b leaves the implementer to choose between option (a) (`response.text()` + split) and option (b) (`getReader()`) without a firm default; "pick (a) if the stream completes synchronously" is contingent on a property the implementer cannot easily verify in advance. Consider committing to option (a) as the default since a synchronous in-process stream is the standard test harness behavior.
+- [x] Step 6b leaves the implementer to choose between option (a) (`response.text()` + split) and option (b) (`getReader()`) without a firm default; "pick (a) if the stream completes synchronously" is contingent on a property the implementer cannot easily verify in advance. Consider committing to option (a) as the default since a synchronous in-process stream is the standard test harness behavior.
 
 ### Notes (informational only — no action)
 - Round-1 Medium items both resolved: step 6a now specifies `__setSynthesizeStreamImpl` hook; step 6b now specifies `parseSseFrames(text)` helper.
