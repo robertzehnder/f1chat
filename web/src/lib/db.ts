@@ -28,6 +28,19 @@ export function assertPooledDatabaseUrl(env: NodeJS.ProcessEnv): void {
   if (env.NODE_ENV !== "production") {
     return;
   }
+  // Next.js sets NODE_ENV=production during `next build` (so compile-time
+  // optimizations like tree-shaking and dead-code elimination kick in),
+  // even on dev machines that don't have a real prod pooler URL set.
+  // NEXT_PHASE='phase-production-build' is the unambiguous build-time
+  // marker; any production runtime (server start, edge function, route
+  // handler) has NEXT_PHASE='phase-production-server' or undefined, so
+  // the assertion still fires when it actually matters — when the app
+  // is about to serve real traffic. Skipping during build is required
+  // so this slice doesn't break local `next build` for any contributor
+  // who hasn't exported a Neon pooler URL.
+  if (env.NEXT_PHASE === "phase-production-build") {
+    return;
+  }
   const candidate = (env.NEON_DATABASE_URL ?? env.DATABASE_URL)?.trim();
   if (!candidate) {
     return;
