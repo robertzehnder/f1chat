@@ -1,8 +1,8 @@
 ---
 slice_id: 07-streaming-synthesis
 phase: 7
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -131,3 +131,18 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
 - `web/package.json:10` still runs `test:grading` as plain `node --test scripts/tests/*.test.mjs`.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Add a deterministic gate that exercises the actual `ChatWorkspace.tsx` `onDelta` wiring, or narrow Step 3 / the acceptance criteria so the slice no longer claims the UI progressively re-renders streamed assistant text; the current `streaming-ui.test.mjs` only proves the helper callback contract, so a broken state-update path in `ChatWorkspace.tsx` would still pass (`diagnostic/slices/07-streaming-synthesis.md:39`, `diagnostic/slices/07-streaming-synthesis.md:41`, `diagnostic/slices/07-streaming-synthesis.md:43`, `diagnostic/slices/07-streaming-synthesis.md:57`).
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T18:25:29Z, so no staleness note applies.
+- `cd web && npm run build` before `cd web && npm run typecheck` still matches the current auditor note for web slices.
