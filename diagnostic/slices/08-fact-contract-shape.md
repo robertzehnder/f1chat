@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-29
 ---
 
 ## Goal
@@ -57,3 +57,20 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite the Steps and Acceptance criteria so they implement the stated goal of defining and adopting a canonical `FactContract` serialization shape; the current plan instead specifies an answer validator workflow and never names the contract fields, serialization boundary, or adoption path for existing per-contract shapes.
+
+### Medium
+- [ ] Expand `Changed files expected` to include the synthesis wiring and test files the plan already requires, or narrow the Steps so they only touch `web/src/lib/contracts/factContract.ts`.
+- [ ] Replace the `Prior context` note about a validator-only bar with context that matches this slice’s declared goal, or change the goal if this slice is intentionally about validation rather than `FactContract` shape definition.
+
+### Low
+- [ ] Specify where validation logs are emitted and how the gate suite or tests will assert the `chat_query_trace.jsonl` side effect, since the current acceptance item is observable but not yet test-shaped.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current enough to use; no stale-state note needed.
