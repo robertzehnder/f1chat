@@ -28,6 +28,9 @@ set -euo pipefail
 # the runner self-sufficient regardless of how it was launched.
 _runner_path_segments=(
   "$HOME/.nvm/versions/node/v22.12.0/bin"
+  "/opt/homebrew/opt/postgresql@15/bin"
+  "/opt/homebrew/opt/postgresql@16/bin"
+  "/opt/homebrew/opt/postgresql@17/bin"
   "/opt/homebrew/bin"
   "/opt/homebrew/sbin"
   "/usr/local/bin"
