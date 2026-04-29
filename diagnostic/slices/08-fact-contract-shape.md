@@ -137,7 +137,7 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 **Branch:** `slice/08-fact-contract-shape`
 **Implementation commits:**
 - `86f3ab4d4f84174ea7de36f658cde141cfe38c11` — initial implementation (FactContract type, serializer, type-level + runtime gates).
-- _post-revise commit_ — gate #3 narrowed to isolated `node --test scripts/tests/fact-contract-shape.test.mjs` per the `_state.md` auditor note (L68); no implementation file changed.
+- `13717f4` — gate #3 narrowed to isolated `node --test scripts/tests/fact-contract-shape.test.mjs` per the `_state.md` auditor note (L68); no implementation file changed.
 
 ### Revise round (round 1) — what changed
 - Gate #3 in this slice was updated from `cd web && npm run test:grading` to `cd web && node --test scripts/tests/fact-contract-shape.test.mjs`. Rationale: the previous round's audit returned REVISE because `npm run test:grading` exited `1` on slice-external failures (`answer-cache.test.mjs`, `driver-fallback.test.mjs`, `skip-repair.test.mjs`, `zero-llm-path.test.mjs` — missing `synthesizeAnswerStream` export from `anthropic.stub.mjs` and `ECONNREFUSED 127.0.0.1:1`). Those four files are not in this slice's `Changed files expected`; remediating them would change slice intent. Per the auditor note appended to `diagnostic/_state.md` after round 0 ("require an isolated green gate or repair the shared failures first"), this slice now declares the isolated gate. The matching acceptance criterion (#3) and a one-paragraph rationale below the `Gate commands` block were updated to reference the isolated gate explicitly.
