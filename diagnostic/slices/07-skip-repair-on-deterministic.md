@@ -1,11 +1,11 @@
 ---
 slice_id: 07-skip-repair-on-deterministic
 phase: 7
-status: blocked
-owner: user
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T13:34:06-04:00
+updated: 2026-04-29T14:21:42-04:00
 ---
 
 ## Goal
@@ -94,7 +94,13 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+# Baseline-aware gate (auto-applied by triage). Wrapper runs
+# 'npm run test:grading' from web/, diffs the slice's failing-test set
+# against integration's currently-recorded baseline at
+# scripts/loop/state/test_grading_baseline.txt, and exits 0 when the
+# slice introduces ZERO new failures vs that baseline. Replaces the
+# raw gate which would block on integration's pre-existing breakage.
+bash scripts/loop/test_grading_gate.sh
 ```
 
 Note: `npm run test:grading` resolves to `node --test scripts/tests/*.test.mjs` (see `web/package.json`), so the new `web/scripts/tests/skip-repair.test.mjs` file is picked up automatically by that gate — no script wiring is required.
