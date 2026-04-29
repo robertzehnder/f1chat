@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29
+updated: 2026-04-29T22:22:58Z
 ---
 
 ## Goal
@@ -86,3 +86,21 @@ Rollback: `git revert <commit>`. The grep drift gates make accidental re-introdu
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite the two grep drift gates to use syntax the repo shell can execute; `grep -E` does not support the negative-lookahead expressions currently written, so the acceptance proof for "no non-`factContract` contract imports remain" is not runnable as specified.
+- [ ] Reorder the web gates to run `cd web && npm run build` before `cd web && npm run typecheck`, because `web/tsconfig.json` includes `.next/types/**/*.ts` and a clean worktree can fail `tsc --noEmit` before the build generates those files.
+
+### Medium
+- [ ] Narrow `Changed files expected` and Step 5 to a test path that `cd web && npm run test:grading` actually executes, or add a separate gate for the declared test location; `test:grading` only runs `web/scripts/tests/*.test.mjs`, so a new test under `web/src/lib/__tests__/` would not prove the acceptance criteria.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-29T22:17:25Z, so no staleness note applies.
+- Prior-context paths `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json` and `diagnostic/slices/08-fact-contract-shape.md` both exist.
