@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-29T09:25:06-04:00
+updated: 2026-04-29T10:18:11-04:00
 ---
 
 ## Goal
@@ -333,7 +333,10 @@ The previous audit (`e41427b`) returned REVISE because `psql` was unavailable in
 ## Audit verdict
 **Status: REVISE**
 
-- Gate 1 pre-change artifact exists/parses -> exit `0`
+- Gate 1 `test -f diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` -> exit `0`
+- Gate 1 `jq -e '.endpoint | (.autoscaling_limit_min_cu and .autoscaling_limit_max_cu and .suspend_timeout_seconds != null)' diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` -> exit `0`
+- Gate 1 `jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` -> exit `3`
+- Gate 1 failure context -> `jq: error: Invalid escape at line 1, column 4 (while parsing '"\."')`
 - Gate 2 note declares required fields -> exit `0`
 - Gate 2-recompute cost-delta math -> exit `0`
 - Gate 2a evidence section format/uniqueness -> exit `0`
@@ -341,19 +344,21 @@ The previous audit (`e41427b`) returned REVISE because `psql` was unavailable in
 - Gate 2b' approval-before-mutation timestamp chain -> exit `0`
 - Gate 2c latency-budget basis re-derivation -> exit `0`
 - Gate 3 live Neon endpoint matches note -> exit `0`
-- Gate 4 post-change artifact matches live and note -> exit `0`
-- Gate 5 `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` -> exit `1`
-- Gate 5 failure context -> `bash: psql: command not found`
-- Scope-diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` stays within declared scope plus the implicit allow-list; `diagnostic/_state.md` is in-scope here because its hunks are append-only additions under `## Notes for auditors` and the section remains under the 10-entry cap.
+- Gate 4 `test -f diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` -> exit `0`
+- Gate 4 `jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` -> exit `3`
+- Gate 4 failure context -> `jq: error: Invalid escape at line 1, column 4 (while parsing '"\."')`
+- Gate 4 artifact/live/note parity checks -> exit `0`
+- Gate 5 `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` -> exit `0`
+- Scope-diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` stays within declared scope plus the implicit allow-list; `diagnostic/_state.md` remains append-only under `## Notes for auditors`, and the section stays within the 10-entry cap.
 - Acceptance 1 required grep-able fields, cost deltas, and latency-budget basis -> PASS
 - Acceptance 2 `## Evidence` section exact lines/uniqueness -> PASS
 - Acceptance 3 `## User approval` section and approval-before-mutation chain -> PASS
-- Acceptance 4 pre-change artifact capture/parsing -> PASS
+- Acceptance 4 pre-change artifact contents and timestamp field -> PASS
 - Acceptance 5 post-change artifact/live/note parity and timestamps -> PASS
 - Acceptance 6 live Neon endpoint settings equal documented values -> PASS
-- Acceptance 7 post-change pooler smoke test -> FAIL. `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` did not run because `psql` is unavailable in the audit environment.
+- Acceptance 7 post-change pooler smoke test -> PASS
 - Decision -> REVISE
-- Rationale -> The slice is substantively correct on note/artifact/live-endpoint parity, but it does not satisfy the declared smoke-test acceptance criterion in this environment because gate 5 exits non-zero.
+- Rationale -> [diagnostic/slices/06-cu-rightsize.md] declares two `jq` timestamp gates that do not compile under the audit environment's `jq`, so the gate block does not pass as written even though the underlying artifacts and live settings are consistent.
 
 ## Plan-audit verdict (round 1)
 
