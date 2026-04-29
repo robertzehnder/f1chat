@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-29T17:02:57Z
+# Project state — last updated: 2026-04-29T18:25:29Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -15,7 +15,7 @@ accumulated context the loop carries between slices._
 | 4 | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 7 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
+| 7 | 3 | 2 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `b4a9aad` merge: 07-skip-repair-on-deterministic [pass] — 2026-04-29
 - `e8d0a17` merge: 07-zero-llm-path-tighten [pass] — 2026-04-29
 - `cfe2972` merge: 06-cu-rightsize [pass] — 2026-04-29
 - `731300a` merge: 06-stmt-cache-off [pass] — 2026-04-29
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `4cdd7e0` merge: 05-template-cache-coverage-audit [pass] — 2026-04-28
 - `60b2c42` merge: 05-resolver-lru [pass] — 2026-04-28
 - `07da581` merge: 04-explain-before-after [pass] — 2026-04-28
-- `34f2c00` merge: 04-perf-indexes-sql [pass] — 2026-04-28
 
 ## Open architectural decisions
 
