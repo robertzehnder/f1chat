@@ -118,7 +118,7 @@ bash scripts/loop/test_grading_gate.sh
 
 **Branch:** `slice/07-streaming-synthesis-client-wiring` (pushed to origin)
 **Implementer:** claude
-**Implementation commit:** filled by commit hash below.
+**Implementation commit:** `7dde39f` (parent: `4c00835` plan-approved).
 
 ### What changed
 
