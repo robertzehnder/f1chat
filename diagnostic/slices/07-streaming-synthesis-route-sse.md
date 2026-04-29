@@ -1,11 +1,11 @@
 ---
 slice_id: 07-streaming-synthesis-route-sse
 phase: 7
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-29
-updated: 2026-04-29T20:45:00-04:00
+updated: 2026-04-29T21:10:00-04:00
 ---
 
 ## Goal
@@ -111,3 +111,22 @@ _(none)_
 - `synthesizeAnswerStream` confirmed exported at `anthropic.ts:566` — prerequisite slice is merged and the dependency is available.
 - Gate ordering (build → typecheck) is correct and does not exhibit the typecheck-before-build anti-pattern from audit principles.
 - All three `## Prior context` paths exist on disk.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — genuine Medium item found)**
+
+### High
+_(none)_
+
+### Medium
+- [ ] Step 6a specifies that the `synthesizeAnswerStream` stub "yields whatever the test-supplied async iterable / generator yields" and mentions driving "controllable `answer_delta`, `reasoning_delta`, and `final` chunks" — but never names the discriminant field. The actual `StreamChunk` type at `web/src/lib/anthropic.ts:520-523` uses `kind` as the discriminant: `{ kind: "answer_delta"; text: string }`, `{ kind: "reasoning_delta"; text: string }`, `{ kind: "final"; answer: string; reasoning?: string; model: string; rawText: string }`. An implementer who writes the stub and route handler using `type` (a natural guess) instead of `kind` will produce tests that pass internally but fail against the real `synthesizeAnswerStream`. Fix: add a line to step 6a explicitly stating the discriminant is `kind`, reference `StreamChunk` at `anthropic.ts:520`, and note the final chunk's field names (`answer`, `reasoning`, `model`, `rawText`) so the route can map them to the JSON response shape.
+
+### Low
+- [ ] Step 6b leaves the implementer to choose between option (a) (`response.text()` + split) and option (b) (`getReader()`) without a firm default; "pick (a) if the stream completes synchronously" is contingent on a property the implementer cannot easily verify in advance. Consider committing to option (a) as the default since a synchronous in-process stream is the standard test harness behavior.
+
+### Notes (informational only — no action)
+- Round-1 Medium items both resolved: step 6a now specifies `__setSynthesizeStreamImpl` hook; step 6b now specifies `parseSseFrames(text)` helper.
+- Round-1 Low resolved: step 6 now names `loadRouteHarness()` consistently.
+- `StreamChunk.kind` discriminant confirmed at `anthropic.ts:520-523`; final chunk shape is `{ kind: "final"; answer: string; reasoning?: string; model: string; rawText: string }` — distinct from the route's JSON response shape, so mapping is non-trivial.
