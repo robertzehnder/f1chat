@@ -1,11 +1,11 @@
 ---
 slice_id: 08-fact-contract-shape
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T21:50:22Z
+updated: 2026-04-29T22:10:00Z
 ---
 
 ## Goal
@@ -177,6 +177,20 @@ New, additive module with no callers. Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Amend Step 1/Step 3 and the matching acceptance text so the `keys` mutability contract is internally consistent: either make `keys` a readonly map type as part of `FactContract`, or stop claiming `Record<string, string | number | null>` conveys immutability for nested `keys` data when the helper only applies a top-level `Object.freeze`. (Resolved by retyping `keys` to `Readonly<Record<string, string | number | null>>` in Step 1, the Step 3 helper signature, and the acceptance criterion, so the type-level readonly guarantee on `keys` entries lines up with the runtime top-level `Object.freeze` on the returned `FactContract`. Step 3's doc text was rewritten to state precisely what `Object.freeze` covers (top-level property reassignment, including `keys`/`rows`/`coverage`) versus what type-level `Readonly<...>`/`ReadonlyArray<...>` covers (well-typed reassignment of nested entries), and to drop the previous over-claim that bare `Record<string, ...>` conveyed immutability.)
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-29T21:27:37Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] Add a compile-time gate file or extend `web/src/lib/contracts/factContract.type-test.ts` so `npm run typecheck` deterministically exercises the core contract claims for `FactContractRow` and nested readonly surfaces: assert that `bigint`, `undefined`, function, and `symbol` row values are rejected, and that writes like `result.keys.session_key = 1` / `result.rows.push(...)` fail, because the current plan’s acceptance criteria require those failures but no planned file actually triggers them.
+
+### Medium
 
 ### Low
 
