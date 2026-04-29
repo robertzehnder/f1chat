@@ -1,7 +1,7 @@
 ---
 slice_id: 07-streaming-synthesis-server
 phase: 7
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-29
@@ -112,7 +112,15 @@ bash scripts/loop/test_grading_gate.sh
 **Commit hash**: `af428e6` carries the implementation (anthropic.ts + new test + slice note); a small follow-up commit on this branch records this hash in the note itself.
 
 ## Audit verdict
-(filled by codex)
+**PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS: `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/07-streaming-synthesis-server.md`, `web/scripts/tests/streaming-synthesis-server.test.mjs`, `web/src/lib/anthropic.ts`
+- AC-1 PASS: `web/src/lib/anthropic.ts:520-690` adds `StreamChunk` plus exported `synthesizeAnswerStream(...)`; `git diff --unified=0 integration/perf-roadmap...HEAD -- web/src/lib/anthropic.ts` shows additive-only changes starting after `web/src/lib/anthropic.ts:518`, so existing `synthesizeAnswerWithAnthropic` is unchanged
+- AC-2 PASS: `web/scripts/tests/streaming-synthesis-server.test.mjs:76-198` covers happy-path streaming, malformed terminal JSON, and non-regression for `synthesizeAnswerWithAnthropic`; `cd web && node --test scripts/tests/streaming-synthesis-server.test.mjs` -> exit `0` (`3` subtests passed)
+- AC-3 PASS: all declared gates observed exit `0`
 
 ## Plan-audit verdict (round 1)
 
