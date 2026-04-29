@@ -1,11 +1,11 @@
 ---
 slice_id: 06-cu-rightsize
 phase: 6
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-29T10:20:06-04:00
+updated: 2026-04-29T10:45:00-04:00
 ---
 
 ## Goal
@@ -348,12 +348,11 @@ The most recent audit (`547ede1`) returned REVISE because the gate-1 and gate-4 
 | 5 — `psql "$DATABASE_URL" -At -c "SELECT 1" \| grep -qx 1` | PASS | pooler still routes through resized endpoint |
 
 ## Audit verdict
-**Status: REVISE**
+**Status: PASS**
 
 - Gate 1 `test -f diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` -> exit `0`
 - Gate 1 `jq -e '.endpoint | (.autoscaling_limit_min_cu and .autoscaling_limit_max_cu and .suspend_timeout_seconds != null)' diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` -> exit `0`
-- Gate 1 `jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` -> exit `3`
-- Gate 1 failure context -> `jq: error: Invalid escape at line 1, column 4 (while parsing '"\."')`
+- Gate 1 `jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$")' diagnostic/artifacts/perf/06-cu-rightsize-before_2026-04-28.json` -> exit `0`
 - Gate 2 note declares required fields -> exit `0`
 - Gate 2-recompute cost-delta math -> exit `0`
 - Gate 2a evidence section format/uniqueness -> exit `0`
@@ -362,8 +361,7 @@ The most recent audit (`547ede1`) returned REVISE because the gate-1 and gate-4 
 - Gate 2c latency-budget basis re-derivation -> exit `0`
 - Gate 3 live Neon endpoint matches note -> exit `0`
 - Gate 4 `test -f diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` -> exit `0`
-- Gate 4 `jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$")' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` -> exit `3`
-- Gate 4 failure context -> `jq: error: Invalid escape at line 1, column 4 (while parsing '"\."')`
+- Gate 4 `jq -er '.captured_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$")' diagnostic/artifacts/perf/06-cu-rightsize-after_2026-04-28.json` -> exit `0`
 - Gate 4 artifact/live/note parity checks -> exit `0`
 - Gate 5 `psql "$DATABASE_URL" -At -c "SELECT 1" | grep -qx 1` -> exit `0`
 - Scope-diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` stays within declared scope plus the implicit allow-list; `diagnostic/_state.md` remains append-only under `## Notes for auditors`, and the section stays within the 10-entry cap.
@@ -374,8 +372,8 @@ The most recent audit (`547ede1`) returned REVISE because the gate-1 and gate-4 
 - Acceptance 5 post-change artifact/live/note parity and timestamps -> PASS
 - Acceptance 6 live Neon endpoint settings equal documented values -> PASS
 - Acceptance 7 post-change pooler smoke test -> PASS
-- Decision -> REVISE
-- Rationale -> [diagnostic/slices/06-cu-rightsize.md] declares two `jq` timestamp gates that do not compile under the audit environment's `jq`, so the gate block does not pass as written even though the underlying artifacts and live settings are consistent.
+- Decision -> PASS
+- Rationale -> The live Neon endpoint, decision note, before/after artifacts, approval chronology, and pooler smoke test all verify the slice as implemented.
 
 ## Plan-audit verdict (round 1)
 
