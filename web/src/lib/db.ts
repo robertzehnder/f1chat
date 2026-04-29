@@ -115,14 +115,7 @@ function createPool(): Pool {
   });
 }
 
-// Next.js sets NEXT_PHASE='phase-production-build' during `next build`, where
-// NODE_ENV is also forced to 'production' for static analysis. Skip the
-// startup assertion during that phase so the build does not consume the
-// developer's local DATABASE_URL; the assertion still fires when db.ts is
-// imported at production runtime (next start, scripts/verify-pooled-url.mjs).
-if (process.env.NEXT_PHASE !== "phase-production-build") {
-  assertPooledDatabaseUrl(process.env);
-}
+assertPooledDatabaseUrl(process.env);
 
 export const pool = globalForPool.__openf1Pool ?? createPool();
 if (!globalForPool.__openf1Pool) {

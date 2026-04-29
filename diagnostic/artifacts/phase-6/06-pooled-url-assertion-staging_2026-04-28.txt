@@ -1,8 +1,11 @@
 ==========================================================
 Staging verification for slice 06-pooled-url-assertion
-Captured: 2026-04-29T02:10:58Z
+Captured: 2026-04-29T03:30:56Z
 Note: NEON_DATABASE_URL is unset for each invocation via 'env -u NEON_DATABASE_URL'
 Note: pg.Pool construction is lazy; harness does not call .query / .connect / .end
+Note: db.ts now invokes assertPooledDatabaseUrl(process.env) unconditionally at module load
+      (no NEXT_PHASE bypass), so the direct-URL throw originates at module load before
+      the harness re-invokes the exported function.
 ==========================================================
 
 ----- Invocation 1: pooler URL (expected: exit 0, stdout 'OK: pooler url accepted') -----
@@ -17,13 +20,13 @@ Exit code: 0
 Command:
   cd web && env -u NEON_DATABASE_URL NODE_ENV=production DATABASE_URL=postgres://USER:PASS@ep-foo-bar.us-east-2.aws.neon.tech:5432/openf1?sslmode=require node scripts/verify-pooled-url.mjs
 
-file:///Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/scripts/.tmp-verify-pooled-url-uzCsRx/db.mjs:41
+file:///Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/scripts/.tmp-verify-pooled-url-25KtdN/db.mjs:41
         throw new Error(`Neon pooler URL required in production: got host='${host}' port='${port}'. ` +
               ^
 
 Error: Neon pooler URL required in production: got host='ep-foo-bar.us-east-2.aws.neon.tech' port='5432'. Switch to the Neon pooler URL (host must contain '-pooler' and port must be 6543).
-    at assertPooledDatabaseUrl (file:///Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/scripts/.tmp-verify-pooled-url-uzCsRx/db.mjs:41:15)
-    at file:///Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/scripts/.tmp-verify-pooled-url-uzCsRx/db.mjs:107:5
+    at assertPooledDatabaseUrl (file:///Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/scripts/.tmp-verify-pooled-url-25KtdN/db.mjs:41:15)
+    at file:///Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/scripts/.tmp-verify-pooled-url-25KtdN/db.mjs:101:1
     at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:547:26)
     at async file:///Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/scripts/verify-pooled-url.mjs:37:13
