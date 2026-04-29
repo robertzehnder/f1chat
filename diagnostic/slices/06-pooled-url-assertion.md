@@ -1,11 +1,11 @@
 ---
 slice_id: 06-pooled-url-assertion
 phase: 6
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-28T22:30:00-04:00
+updated: 2026-04-28T23:05:00-04:00
 ---
 
 ## Goal
@@ -111,21 +111,23 @@ Production-touching. Require user-approved sentinel before merge. Rollback: `git
 - [x] Staging artifact `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt` exists and contains both `OK: pooler url accepted` and the non-zero-exit `Neon pooler URL required` error from the direct-URL invocation.
 
 ## Audit verdict
-**REJECT**
+**REVISE**
 
 - Gate #1 `cd web && npm run build` -> exit `0`
-- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `1`
+- Gate #2 context -> `error TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/.next/types/app/api/admin/perf-summary/route.ts' not found.` `Matched by include pattern '.next/types/**/*.ts' in '/Users/robertzehnder/.openf1-loop-worktrees/06-pooled-url-assertion/web/tsconfig.json'`
 - Gate #3 `cd web && npm run test:grading` -> exit `0`
-- Scope diff -> FAIL: `git diff --name-only integration/perf-roadmap...HEAD` includes `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt`, which is outside `Changed files expected`; only `diagnostic/slices/06-pooled-url-assertion.md` and a single-line append to `diagnostic/_state.md` are implicitly allowed.
+- Scope diff -> PASS: `git diff --name-only integration/perf-roadmap...HEAD` is limited to the declared changed files, the declared artifact path, and `diagnostic/_state.md` notes append.
 - Criterion 1 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:79`)
 - Criterion 2 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:87`, `web/scripts/tests/pooled-url-assertion.test.mjs:99`)
 - Criterion 3 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:108`)
 - Criterion 4 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:115`)
 - Criterion 5 -> PASS (`web/scripts/tests/pooled-url-assertion.test.mjs:129`, `web/scripts/tests/pooled-url-assertion.test.mjs:140`; `web/src/lib/db.ts:31`, `web/src/lib/db.ts:80`)
-- Criterion 6 -> PASS (`npm run test:grading` exit `0`; new tests executed as subtests 30-36)
+- Criterion 6 -> FAIL: `cd web && npm run typecheck` exits `1`, so the gate block does not pass locally.
 - Criterion 7 -> PASS (`diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:8`, `diagnostic/artifacts/phase-6/06-pooled-url-assertion-staging_2026-04-28.txt:16`; independent reruns: pooler command exit `0`, direct-url command exit `1`)
-- Decision -> REJECT
-- Rationale -> Scope creep: the implementation added a checked-in artifact required by the slice, but the artifact path was not listed under `Changed files expected`, so the branch diff is out of scope under the audit rules.
+- Step 2 contract -> FAIL (`web/src/lib/db.ts:123`): module load skips `assertPooledDatabaseUrl(process.env)` when `NEXT_PHASE === 'phase-production-build'`, so the required production import-time assertion is no longer unconditional.
+- Decision -> REVISE
+- Rationale -> Fix the broken `typecheck` gate and restore the required production import-time assertion semantics without the `NEXT_PHASE` bypass.
 
 ## Plan-audit verdict (round 1)
 
