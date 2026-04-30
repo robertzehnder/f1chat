@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-29
 ---
 
 ## Goal
@@ -58,3 +58,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace the ambiguous/non-path `## Prior context` entries at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:20) and [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:21) with concrete existing artifact path(s), because plan-audit requires every listed prior-context path to be directly readable.
+- [ ] Replace the raw `cd web && npm run test:grading` gate at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:43) with `bash scripts/loop/test_grading_gate.sh` per the standing auditor note in `diagnostic/_state.md`.
+- [ ] Add `web/src/lib/chatRuntime.ts` to `## Changed files expected` at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:32), because Step 4 explicitly wires the validator into the synthesis post-step there.
+
+### Low
+- [ ] Clarify whether the validator interface from [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:27) lives in a new shared contract/type file, and if so add that path under `## Changed files expected`.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was readable and its timestamp did not block this audit.
