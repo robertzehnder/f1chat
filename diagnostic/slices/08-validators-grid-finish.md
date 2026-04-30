@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -114,6 +114,22 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Tighten Step 5 and the Acceptance criteria to require a route-wiring assertion that a failing `gridFinish` validation still leaves the user-facing response payload unchanged/unblocked, because Step 4 explicitly says failures only log to `chat_query_trace.jsonl` in this phase and the existing validator route-wiring pattern checks that non-blocking behavior.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was readable on 2026-04-29; its advisory timestamp (`2026-04-30T03:18:23Z`) did not block this audit.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Expand Step 2, Step 3, and the Acceptance criteria to cover comparative grid/finish claims derivable from `grid_vs_finish` (for example "Verstappen gained more positions than Leclerc", "Leclerc lost fewer places", or equivalent winner/ordering wording), because the slice goal says every grid/finish claim must be consistent with `grid_vs_finish` and the prior-context benchmark includes that claim shape.
 
 ### Low
 - [ ] None.
