@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate uses the loop-approved baseline wrapper instead of failing on known shared grading failures.
+- [ ] Rewrite the `web` gate commands so the block is runnable as written from the repo root, for example `(cd web && npm run build)` and `(cd web && npm run typecheck)`, because repeated `cd web && ...` lines leave the shell in `web/` after the first command.
+- [ ] Enumerate the exact pace-related branches/helpers/constants to move out of `buildDeterministicSqlTemplate`, because the current “pace-related” wording is ambiguous in a file that mixes pace, pit, position, and canonical-ID templates.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T15:40:29Z, so no stale-state note applies.
