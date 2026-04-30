@@ -81,6 +81,7 @@ Rollback: `git revert <commit>`.
 
 **Commit hashes:**
 - `0c8f4df` — split: extract telemetry SQL into deterministicSql/telemetry.ts (code split + slice-note + frontmatter flip)
+- `740101a` — slice: record commit hash in completion note (this slice file update)
 
 ## Audit verdict
 (filled by Codex)
