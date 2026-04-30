@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-sessions
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:10:00Z
+updated: 2026-04-30T13:46:22-04:00
 ---
 
 ## Goal
@@ -56,7 +56,43 @@ grep -nE "from ['\"](\.\./queries|@/lib/queries)['\"]" web/src/lib/queries/sessi
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-split-queries-sessions`
+
+**Symbols moved from `web/src/lib/queries.ts` to `web/src/lib/queries/sessions.ts`:**
+- `getSessions`
+- `getSessionByKey`
+- `getSessionDrivers`
+- `getSessionLaps`
+- `getSessionWeather`
+- `getSessionRaceControl`
+- `getSessionTelemetry`
+- `getSessionCompleteness`
+- `getSessionTableCounts`
+
+Together with their session-only constants (`DEFAULT_LIST_LIMIT`, `MAX_LIST_LIMIT`, `TELEMETRY_TABLES`, `SESSION_TABLE_COUNT_SQL`) and locally-redeclared helpers (`nullableLike`, `safeLimit`, `parseCountValue`) — following the same self-contained pattern as the prior `queries/resolver.ts` and `queries/catalog.ts` splits.
+
+**Back-compat:** `web/src/lib/queries.ts` re-exports all nine moved functions via `export { ... } from "./queries/sessions"`, so existing consumers (`@/lib/queries`) continue to work unchanged. Consumer-import migration is deferred per Step 3.
+
+**Decisions:**
+- Kept `getOverviewStats`, `getGlobalTableCounts`, `runReadOnlySql`, `buildHeuristicSql` and `GLOBAL_TABLE_COUNT_SQL` in `queries.ts` — they are not session-scoped queries.
+- `safeLimit` / `parseCountValue` are duplicated locally in `queries/sessions.ts` (still consumed by `runReadOnlySql` / `getGlobalTableCounts` in `queries.ts`). This matches the convention established by `queries/resolver.ts`, which also redeclares `safeLimit` and `nullableLike` locally rather than introducing a shared helper module (out of scope for a mechanical split).
+- Removed the now-unused `import type { SessionCompleteness }` from `queries.ts`; it remains imported by `queries/sessions.ts` where `getSessionCompleteness` lives.
+- Did not re-export `SessionCompleteness` from `queries.ts` — a repo-wide grep confirms no consumer imports the type from `@/lib/queries`.
+
+**Gate command exit codes (run from worktree root after `cd web && npm ci`):**
+- `(cd web && npm run build)` → 0 (Next.js build succeeded; all 21 routes compiled)
+- `(cd web && npm run typecheck)` → 0 (`tsc --noEmit` clean)
+- `bash scripts/loop/test_grading_gate.sh` → 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`)
+- `grep -nE "from ['\"](\.\./queries|@/lib/queries)['\"]" web/src/lib/queries/sessions.ts` → 1 (no matches → circular-import guard satisfied), `test $? -eq 1` → 0
+
+**Self-check vs acceptance criteria:**
+- [x] `web/src/lib/queries/sessions.ts` exists and exports the moved symbols (verified: 9 `export async function`).
+- [x] `web/src/lib/queries.ts` no longer contains the moved bodies (`git diff --stat` shows -317 lines from queries.ts; remaining content is only re-exports plus `getOverviewStats` / `getGlobalTableCounts` / `runReadOnlySql` / `buildHeuristicSql`).
+- [x] `web/src/lib/queries/sessions.ts` contains no import from `'../queries'` or `'@/lib/queries'` (grep gate exit 1).
+- [x] All gate commands pass.
+
+**Commit hash:** `68cc3be`
 
 ## Audit verdict
 (filled by Codex)
