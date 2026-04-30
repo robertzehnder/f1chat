@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T02:50:31Z
+updated: 2026-04-30T02:52:37Z
 ---
 
 ## Goal
@@ -116,6 +116,22 @@ Rollback: `git revert <commit>`.
 ### Medium
 - [x] Replace or remove `scripts/loop/state/test_grading_baseline.txt` from `## Prior context`; the path does not exist in this worktree, so the slice's required-reading block is currently not satisfiable.
 - [x] Reconcile Step 5 and the logging acceptance criterion with the cited `validator-pit-stints-route-wiring` precedent: either assert against captured `appendJsonLog` payloads as that harness does, or explicitly plan a file-backed logger stub and direct file reads instead of saying the test reads a real `chat_query_trace.jsonl` line.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Tighten Step 2 and the corresponding tests so claim validation is claim-type-specific, not just "value appears somewhere in the sector numeric set": `best S1` / `fastest sector 1` must match `best_s1` (or the min of `duration_sector_1`), `average S1` must match `avg_s1` (or the mean of `duration_sector_1` if that is the intended derivation), and analogous rules must hold for S2/S3; otherwise the validator will falsely approve contradictory best-vs-average sector claims.
+
+### Medium
+- [ ] None.
 
 ### Low
 - [ ] None.
