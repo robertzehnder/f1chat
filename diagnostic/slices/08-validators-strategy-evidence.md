@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T04:30:00Z
+updated: 2026-04-30T04:14:31Z
 ---
 
 ## Goal
@@ -130,6 +130,21 @@ Rollback: `git revert <commit>`.
 
 ### High
 - [x] Reconcile the validator goal with the real synthesis-contract source: either expand the slice so strategy-decision validation is guaranteed to receive `core.strategy_evidence_summary` rows at runtime, or narrow the goal/acceptance text away from “must reference an event in `strategy_evidence_summary`”, because the current route builds the contract from `runtime.queryPlan.primary_tables[0]` in [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:72) while real strategy table ordering still puts `core.strategy_summary` / `core.stint_summary` ahead of `core.strategy_evidence_summary` in [web/src/lib/chatRuntime.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/lib/chatRuntime.ts:939) and [web/src/lib/chatRuntime.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/lib/chatRuntime.ts:968).
+
+### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
+- Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite the `Gate commands` block so each `web` command runs in its own subshell from repo root (for example `(cd web && npm run build)` / `(cd web && npm run typecheck)`), because the current sequential `cd web && ...` lines leave the shell in `web/` after the first command and make the second `cd web` plus the repo-root `bash scripts/loop/test_grading_gate.sh` invocation fail.
 
 ### Medium
 
