@@ -56,6 +56,7 @@ _None._
 ## Notes for auditors
 
 _No accumulated notes yet. Auditors may append single-line lessons here, max 10 entries._
+- Require every Phase 3 per-contract materialization slice to include DB apply/existence/parity gate commands, not only web gates (slice:03-strategy-evidence-summary).
 - For multi-index SQL slices, gate every declared index individually or assert `pg_index.indisvalid = true`; existence plus a shared EXPLAIN is insufficient (slice:04-perf-indexes-sql).
 - For `web/src/lib/db.ts` slices, verify all existing env-configuration branches (`*_DATABASE_URL`, `NEON_DB_HOST`, `DB_*`) before accepting “behavior unchanged” claims or fallback semantics (slice:06-driver-swap-local-fallback).
 - Drift-check bash gates must have an explicit `else` clause (or negated `if !`) that sets a flag and a post-loop exit; an `if … then :; fi` without else silently passes on missing keys (slice:07-zero-llm-path-tighten).
@@ -66,4 +67,3 @@ _No accumulated notes yet. Auditors may append single-line lessons here, max 10 
 - When a plan specifies a stub for an async-generator, require it to name the concrete discriminant field and reference the TypeScript type definition; missing this causes test-internal passes against wrong field names (slice:07-streaming-synthesis-route-sse).
 - When a slice declares a repo-wide gate like `npm run test:grading`, hold the audit at REVISE on any non-zero exit even if the slice-local assertions pass; require an isolated green gate or repair the shared failures first (slice:08-fact-contract-shape).
 - Slice plans must invoke the test-grading gate via `bash scripts/loop/test_grading_gate.sh`, not raw `cd web && npm run test:grading`; the wrapper diffs failures against `scripts/loop/state/test_grading_baseline.txt` so pre-existing integration failures (e.g. `driver-fallback.test.mjs` Cases A/B/E) do not auto-REJECT (slice:08-synthesis-payload-cutover).
-- For source-string wiring tests, require the assertion to bind the query result identifier to the rendered prop/consumer; separate “query call exists” and “component renders” substrings are insufficient (slice:10-session-detail-pace-table).
