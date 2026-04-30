@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-completeness
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T14:52:55Z
+updated: 2026-04-30T14:56:17Z
 ---
 
 ## Goal
@@ -22,10 +22,28 @@ Extract completeness-checks (have we got enough data to answer?) from chatRuntim
 None at author time.
 
 ## Steps
-1. Identify the target completeness-check functions/types in `web/src/lib/chatRuntime.ts`. Lock the final list before moving.
-2. Move them verbatim to `web/src/lib/chatRuntime/completeness.ts` (a new module). Add re-exports back through `web/src/lib/chatRuntime.ts` for any symbol that another file currently imports from `@/lib/chatRuntime`, so existing public surface is preserved.
+1. Identify the target completeness-check functions/types in `web/src/lib/chatRuntime.ts`. Lock the final list before moving. The locked move list MUST be exactly the completeness-only symbols (see "Split boundary" below); do not include grain-selection or query-planning symbols.
+2. Move them verbatim to `web/src/lib/chatRuntime/completeness.ts` (a new module). The new module MUST be self-contained: it imports `QuestionType` from `./classification` only, plus any standard-library/third-party deps it needs; it MUST NOT import `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `QueryPlan`, `grainForQuestion`, or `buildQueryPlan` from `@/lib/chatRuntime` (those stay in `chatRuntime.ts` for separate later slices). If a moved function references a trivial private helper currently colocated in `chatRuntime.ts` (e.g. `unique`, `includesAnyPhrase`), duplicate it locally inside `completeness.ts` rather than importing it back, matching the precedent set in `web/src/lib/chatRuntime/resolution.ts` (see `diagnostic/slices/09-split-chatRuntime-resolution.md` Slice-completion note, "Local helpers in `resolution.ts`"). Add re-exports back through `web/src/lib/chatRuntime.ts` for any symbol that another file currently imports from `@/lib/chatRuntime`, so existing public surface is preserved.
 3. Update direct imports of the moved symbols across the codebase to point at `@/lib/chatRuntime/completeness`. As of audit time, the only external file that imports from `@/lib/chatRuntime` is `web/src/app/api/chat/route.ts`, and it currently imports `buildChatRuntime` / `ChatRuntimeResult` (neither is a completeness symbol); confirm via repo-wide `grep -rn "from \"@/lib/chatRuntime\"" web/src` before/after the move and list any additional callsites discovered. If no external callsite imports a moved symbol, document that finding in the slice-completion note rather than touching unrelated files.
-4. Verify no new circular imports are introduced by the split (see Acceptance criteria for the explicit check).
+4. Verify no new circular imports are introduced by the split — run the madge gate listed in `Gate commands` and confirm `chatRuntime.ts → chatRuntime/completeness.ts` remains a one-way edge (see Acceptance criteria for the explicit check).
+
+## Split boundary (locked at plan time)
+
+The "completeness" concern is narrow: deciding which warehouse tables a question requires, what counts as "we have enough rows to answer", and which fallback options exist when a required table is empty or session-scoped. The split boundary therefore IS:
+
+In-scope (move to `completeness.ts`):
+- Types: `CompletenessStatus` (`web/src/lib/chatRuntime.ts:33`), `TableCheck` (`web/src/lib/chatRuntime.ts:62`).
+- Functions: `requiredTablesForQuestion` (`web/src/lib/chatRuntime.ts:615`), `fallbackOptionsForTables` (`web/src/lib/chatRuntime.ts:770`).
+- Plus any private helper used only by those two functions (e.g. `unique`, `includesAnyPhrase`) — duplicated locally per Step 2.
+
+Out-of-scope (stay in `chatRuntime.ts`, to be moved by separate later phase-9 slices):
+- Grain-selection: `Grain` type (`web/src/lib/chatRuntime.ts:35`), `RowVolume` type (`web/src/lib/chatRuntime.ts:34`), `grainForQuestion` (`web/src/lib/chatRuntime.ts:808`).
+- Query-planning: `QueryPlan` type (`web/src/lib/chatRuntime.ts:69`), `buildQueryPlan` (`web/src/lib/chatRuntime.ts:872`).
+- Resolution candidates already exported from `./chatRuntime/resolution`: `SessionCandidate` / `DriverCandidate` are currently still defined in `chatRuntime.ts` (`web/src/lib/chatRuntime.ts:44,54`) and used by the inline completeness use-site inside `buildChatRuntime`, but they are NOT inputs/outputs of `requiredTablesForQuestion` or `fallbackOptionsForTables`, so they do not need to move with this slice.
+
+The inline completeness use-site inside `buildChatRuntime` (`web/src/lib/chatRuntime.ts:1675-1733`) is also out of scope for this slice — only the helper functions and their types move; the inline block continues to reference them via `./chatRuntime/completeness` imports.
+
+This boundary keeps `completeness.ts` free of any back-import into `chatRuntime.ts` and keeps the per-slice diff small. If Step 1 finds an additional helper used ONLY by `requiredTablesForQuestion` / `fallbackOptionsForTables`, treat it as in-scope and move it; if a helper is shared with grain/query-planning code, leave it in `chatRuntime.ts` and duplicate a private copy in `completeness.ts` per Step 2.
 
 ## Changed files expected
 - `web/src/lib/chatRuntime.ts` (moved bodies removed; re-exports added if needed)
@@ -40,11 +58,14 @@ None.
 cd web && npm run build
 cd web && npm run typecheck
 bash scripts/loop/test_grading_gate.sh
+cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime
 ```
 
 ## Acceptance criteria
 - [ ] `web/src/lib/chatRuntime/completeness.ts` exists and exports the moved symbols.
 - [ ] `web/src/lib/chatRuntime.ts` no longer contains the moved bodies (only re-exports if needed).
+- [ ] `web/src/lib/chatRuntime/completeness.ts` does not import any of `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `QueryPlan`, `grainForQuestion`, or `buildQueryPlan` from `@/lib/chatRuntime` (verified by `grep -n "from \"@/lib/chatRuntime\"\|from \"\\.\\./chatRuntime\"" web/src/lib/chatRuntime/completeness.ts` returning no matches).
+- [ ] `npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime` (run from `web/`) reports no circular dependency involving `chatRuntime.ts` ↔ `chatRuntime/completeness.ts`.
 - [ ] All gate commands pass.
 
 ## Out of scope
@@ -80,10 +101,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Define the split boundary so `completeness.ts` does not import private completeness/query-plan types or helpers back from `chatRuntime.ts`; `web/src/lib/chatRuntime.ts:33-86` and `web/src/lib/chatRuntime.ts:760-957` show the likely dependencies (`CompletenessStatus`, `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `TableCheck`, `QueryPlan`, `fallbackOptionsForTables`, `grainForQuestion`, `buildQueryPlan`), and leaving them behind would force a circular back-import or a non-verbatim rewrite.
+- [x] Define the split boundary so `completeness.ts` does not import private completeness/query-plan types or helpers back from `chatRuntime.ts`; `web/src/lib/chatRuntime.ts:33-86` and `web/src/lib/chatRuntime.ts:760-957` show the likely dependencies (`CompletenessStatus`, `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `TableCheck`, `QueryPlan`, `fallbackOptionsForTables`, `grainForQuestion`, `buildQueryPlan`), and leaving them behind would force a circular back-import or a non-verbatim rewrite.
 
 ### Medium
-- [ ] Add an explicit circular-dependency gate and matching acceptance criterion for Step 4; precedent already exists at `diagnostic/slices/09-split-chatRuntime-resolution.md:43-50` (`cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime`), while this slice currently names the check in `diagnostic/slices/09-split-chatRuntime-completeness.md:28,47-50` but does not make it executable.
+- [x] Add an explicit circular-dependency gate and matching acceptance criterion for Step 4; precedent already exists at `diagnostic/slices/09-split-chatRuntime-resolution.md:43-50` (`cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime`), while this slice currently names the check in `diagnostic/slices/09-split-chatRuntime-completeness.md:28,47-50` but does not make it executable.
 
 ### Low
 - [ ] None.
