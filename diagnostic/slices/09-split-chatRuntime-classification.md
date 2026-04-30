@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-classification
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T16:00:00Z
+updated: 2026-04-30T10:18:09-04:00
 ---
 
 ## Goal
@@ -55,7 +55,30 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-split-chatRuntime-classification`
+
+**Commits:**
+- `64d7d80` — slice 09: extract classifyQuestion + QuestionType into chatRuntime/classification.ts (single implementation commit on top of plan-approved history `4b4a7db`).
+
+**Files changed:**
+- `web/src/lib/chatRuntime/classification.ts` (new) — exports `QuestionType` and `classifyQuestion`. A private `normalize` helper duplicates the one-line text-normalize regex from `chatRuntime.ts`; this avoids a circular import (since `chatRuntime.ts` now imports from `./chatRuntime/classification`) and keeps the new module self-contained. The helper is unexported so it does not widen public surface area.
+- `web/src/lib/chatRuntime.ts` — removed the moved `QuestionType` type alias (was line 21) and the moved `classifyQuestion` function body (was line 519). Added a single new import line: `import { classifyQuestion, type QuestionType } from "./chatRuntime/classification";`. No re-export of the moved symbols, per the round-3-approved no-re-export stance. The other helpers that take `QuestionType` (`shouldUseRuntimeFastPath`, `requiresResolvedSession`, `requiredTablesForQuestion`, `grainForQuestion`, `SESSION_REQUIRED_TYPES`, plus the in-file `buildChatRuntime` call site) now resolve `QuestionType` and `classifyQuestion` via that internal import.
+
+**Decisions:**
+- Re-grepped `classifyQuestion` / `QuestionType` repo-wide at impl time. Results match the planner's grep snapshot: zero external consumers (only internal references inside `chatRuntime.ts`, plus a comment-string mention of "classifyQuestion" inside `web/scripts/tests/perf-trace-spans.test.mjs:78` which is not an import). The "Changed files expected" third bullet therefore collapses to zero files; no other file is touched.
+- `normalize` was duplicated rather than moved or re-imported. It is a 65-character pure function and is still used at `chatRuntime.ts:1124` (the `buildChatRuntime` entry point's `normalizedMessage` line) and elsewhere; importing it from `classification.ts` back into `chatRuntime.ts` would establish a cycle in the very module the slice is splitting. Inline duplication is the cleanest mechanical move and matches the slice's "pure mechanical split" framing.
+
+**Self-check vs. acceptance criteria:**
+- AC #1 — `web/src/lib/chatRuntime/classification.ts` exists and `export`s `QuestionType` and `classifyQuestion`. Verified: file is 92 lines, both symbols are exported.
+- AC #2 — `chatRuntime.ts` no longer contains the moved bodies and does not re-export them. Verified: `grep -n "classifyQuestion\|QuestionType" web/src/lib/chatRuntime.ts` shows no `function classifyQuestion`, no `export type QuestionType`, only the new internal import on line 15 and downstream type/call references.
+- AC #3 — direct external imports updated. Verified: re-grepped the repo, no external file imports `classifyQuestion` or `QuestionType` from `@/lib/chatRuntime`, so nothing to update.
+- AC #4 — all gate commands pass (see below).
+
+**Gate command results:**
+- `cd web && npm run build` — exit 0. Next.js 15.5.15 compiled successfully, all 4 static pages generated, type-check pass embedded in the build did not flag any cycle.
+- `cd web && npm run typecheck` — exit 0. `tsc --noEmit` clean.
+- `bash scripts/loop/test_grading_gate.sh` — exit 0. Output: `[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`. Pre-existing baseline failures (e.g. `driver-fallback.test.mjs` Cases A/B/E) remain unchanged, matching the auditor-note guidance from `_state.md`.
 
 ## Audit verdict
 (filled by Codex)
