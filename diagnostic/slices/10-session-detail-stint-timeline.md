@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-stint-timeline
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -55,3 +55,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the declared gate matches loop policy and does not fail on known baseline grading cases.
+
+### Medium
+- [ ] Rewrite Step 3 and the acceptance criteria to require a deterministic automated check for the stint timeline; `if the project has any` plus a fallback screenshot does not verify the goal or the contract-parity claim.
+- [ ] Add the expected test file and any artifact path the plan intends to create, or remove the screenshot path entirely; the current Changed files expected / Artifact paths blocks do not cover Step 3.
+- [ ] Name the concrete Phase 3 semantic contract source this slice will consume so Step 2 is auditable and the implementer is not left to guess which contract defines stint data.
+
+### Low
+- [ ] Tighten `Page renders without runtime errors` into a command- or assertion-based acceptance criterion tied to the declared gates.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T21:15:31Z, so no staleness note applies.
