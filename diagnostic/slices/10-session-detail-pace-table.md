@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:32:20Z
+updated: 2026-04-30T20:45:00Z
 ---
 
 ## Goal
@@ -34,7 +34,7 @@ contract.
 4. Add an automated source-assertion test at `web/scripts/tests/session-detail-pace-table.test.mjs` (pattern: `web/scripts/tests/db-stmt-cache.test.mjs`) that uses `node:fs.readFileSync` + `node:assert/strict` to assert:
    - `web/src/lib/queries/sessions.ts` source contains both `export async function getSessionDriverPace` and `FROM core.driver_session_summary` within the same function body, plus `WHERE session_key = $1`.
    - `web/src/app/sessions/[sessionKey]/PaceTable.tsx` exists, exports a default function, imports from `@/components/DataTable`, and renders `<DataTable` with a `rows={` prop (i.e. the source contains both substrings) so the visible-column set is delegated to `DataTable`'s `Object.keys(rows[0])` derivation.
-   - `web/src/app/sessions/[sessionKey]/page.tsx` (a) imports `getSessionDriverPace` from `@/lib/queries` (or the sessions submodule), (b) **calls** it as `getSessionDriverPace(` (call-site, not just an import-only reference), and (c) renders the result via the literal substring `<PaceTable rows={` — this combined assertion is the observable proof that the `Promise.all` wiring threads the awaited query result into the `rows` prop, and rejects revisions where the import is present but the call-or-prop wiring is missing.
+   - `web/src/app/sessions/[sessionKey]/page.tsx` source must (a) import `getSessionDriverPace` from `@/lib/queries` (or the sessions submodule), and (b) bind the awaited query result to the `<PaceTable>` `rows` prop via a **shared identifier** — not two independent substring matches. The test enforces this by extracting a destructured identifier with the regex `/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/` (capture group 1 — the **last** name in the Promise.all destructure, which Step 3 fixes as `pace`), additionally asserting the matched Promise.all argument list contains `getSessionDriverPace(` (regex `/await\s+Promise\.all\(\[[\s\S]*?getSessionDriverPace\(/`), and then asserting the literal `<PaceTable rows={<captured>}` appears in the same source — where `<captured>` is interpolated from capture group 1 of the destructure regex. The destructure-regex match, the inner-`Promise.all`-call regex match, and the interpolated `<PaceTable rows={<captured>}` substring being present together are the observable proof that the same awaited `getSessionDriverPace(...)` result is the value passed into `<PaceTable rows={...}/>`. Two independent substring assertions (one for the call site, one for `rows={`) are explicitly **not** sufficient and the test must fail if the destructure regex captures nothing or the captured identifier does not appear inside the `<PaceTable rows={...}` prop.
    - The `getSessionDriverPace` function body contains **every** column name enumerated in Step 1 — i.e., the literal substrings `driver_number`, `driver_name`, `team_name`, `lap_count`, `valid_lap_count`, `best_lap`, `median_lap`, `avg_lap`, `best_valid_lap`, `median_valid_lap`, `best_s1`, `best_s2`, `best_s3`, `avg_s1`, `avg_s2`, `avg_s3` — and does **not** reference `raw.laps` (the slice must use the materialized `core.*` contract per Phase 10 item 1). The test iterates the column list and asserts each as a substring so the SELECT-shape — and therefore the `DataTable`-rendered visible-column list per Step 2 — stays in lock-step with Step 1. Because `DataTable` renders `<th>{column}</th>` for every key of `rows[0]` (`web/src/components/DataTable.tsx:24-29`), the SELECT-list assertion is also the observable check on visible columns.
 
 ## Changed files expected
@@ -59,7 +59,7 @@ bash scripts/loop/test_grading_gate.sh
 - [ ] `bash scripts/loop/test_grading_gate.sh` exits 0 (no new failures vs `scripts/loop/state/test_grading_baseline.txt`); the new `session-detail-pace-table.test.mjs` is part of the run and passes.
 - [ ] All four assertion groups inside `web/scripts/tests/session-detail-pace-table.test.mjs` (listed in Step 4) pass — this is the observable check that the page is wired to `core.driver_session_summary` rather than to `raw.laps`, and that `PaceTable` is rendered from `page.tsx`.
 - [ ] The `getSessionDriverPace` SQL string in `web/src/lib/queries/sessions.ts` contains every column listed in Step 1; this is enforced by the per-column substring loop in Step 4's fourth assertion group, so the test and this criterion are the same observable check.
-- [ ] `page.tsx` both **calls** `getSessionDriverPace(` (not merely imports it) and renders the result via `<PaceTable rows={`; this is enforced by Step 4's third assertion group (sub-bullets a/b/c) and is the observable proof that the `Promise.all` wiring is in place.
+- [ ] `page.tsx` binds the awaited `getSessionDriverPace(...)` result to `<PaceTable rows={...}>` through a **shared identifier** captured from the `Promise.all` destructure — not via two independent substring matches. This is enforced by Step 4's third assertion group: the destructure-regex `/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/` captures the identifier (capture group 1), the matched `Promise.all` argument contains `getSessionDriverPace(` (per the inner regex `/await\s+Promise\.all\(\[[\s\S]*?getSessionDriverPace\(/`), and the same captured identifier appears in `<PaceTable rows={<captured>}`. Dead or unrelated dataflow (e.g. an unused `getSessionDriverPace(` call alongside an unrelated `<PaceTable rows={someOther}>`) fails this check.
 - [ ] The visible `PaceTable` columns (the `<th>` set rendered by `DataTable` from `Object.keys(rows[0])` per `web/src/components/DataTable.tsx:17,24-29`) include **at minimum** the Goal-required metrics — `median_lap`, `best_lap`, `best_s1`, `best_s2`, `best_s3` — alongside identifying columns `driver_number`, `driver_name`, `team_name`. Because the visible column set is row-key-derived, this is observable through Step 4's fourth assertion group (the per-column substring loop on the SELECT list) combined with Step 4's second assertion group (which proves `PaceTable` delegates rendering to `DataTable` via `rows={`).
 
 ## Out of scope
@@ -141,7 +141,7 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite Step 4 and the matching acceptance criteria to prove the same awaited `getSessionDriverPace(...)` result is passed into `<PaceTable rows={...} />`; separate substring checks for a call site and a rendered `rows={` prop still allow dead or unrelated dataflow.
+- [x] Rewrite Step 4 and the matching acceptance criteria to prove the same awaited `getSessionDriverPace(...)` result is passed into `<PaceTable rows={...} />`; separate substring checks for a call site and a rendered `rows={` prop still allow dead or unrelated dataflow.
 
 ### Medium
 - [ ] None.
