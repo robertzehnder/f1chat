@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:30:00Z
+updated: 2026-04-30T21:05:00Z
 ---
 
 ## Goal
@@ -94,6 +94,22 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 - [x] Replace the ambiguous "Playwright/RTL tests if the project has any" step with one concrete test strategy and gateable command that matches this repo's existing test harness.
 - [x] Specify the required data/runtime prerequisites for validating this page, including the DB-backed session data/env expected by the chosen test or verification path.
 - [x] Rewrite the acceptance criteria so each item is observable via a named automated check or explicit artifact, including how "matches the underlying contract" will be verified for a specific session.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T20:16:19Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Make the final acceptance criterion and Step 4 use the same observable check: either assert the full `SELECT` column list/order from Step 1 in `session-detail-pace-table.test.mjs`, or narrow the criterion so it no longer claims the test proves the query references only the enumerated columns.
 
 ### Low
 - [ ] None.
