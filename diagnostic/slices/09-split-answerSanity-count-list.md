@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-count-list
 phase: 9
-status: revising_plan
+status: pending_plan_audit
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T20:15:00Z
 ---
 
 ## Goal
@@ -30,6 +30,7 @@ None at author time.
 ## Changed files expected
 - `web/src/lib/answerSanity.ts`
 - `web/src/lib/answerSanity/countList.ts`
+- `web/src/app/api/chat/orchestration.ts` (only direct external import of `buildStructuredSummaryFromRows`; updated to import from `@/lib/answerSanity/countList` per Step 3)
 
 ## Artifact paths
 None.
@@ -38,7 +39,7 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
@@ -63,10 +64,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh`; raw `test:grading` is not an acceptable repo-wide gate because it ignores the loop baseline protocol from `diagnostic/_state.md`.
+- [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh`; raw `test:grading` is not an acceptable repo-wide gate because it ignores the loop baseline protocol from `diagnostic/_state.md`.
 
 ### Medium
-- [ ] Expand `Changed files expected` to cover the direct-import call sites named in Step 3; the current file list omits the codebase files the plan explicitly says it will edit.
+- [x] Expand `Changed files expected` to cover the direct-import call sites named in Step 3; the current file list omits the codebase files the plan explicitly says it will edit.
 
 ### Low
 - [ ] None.
