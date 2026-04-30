@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-count-list
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,19 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh`; raw `test:grading` is not an acceptable repo-wide gate because it ignores the loop baseline protocol from `diagnostic/_state.md`.
+
+### Medium
+- [ ] Expand `Changed files expected` to cover the direct-import call sites named in Step 3; the current file list omits the codebase files the plan explicitly says it will edit.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T19:34:04Z, so no stale-state note is required.
