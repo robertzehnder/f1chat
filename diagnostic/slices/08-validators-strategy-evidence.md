@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: revising_plan
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T04:24:34Z
+updated: 2026-04-30T00:25:35-04:00
 ---
 
 ## Goal
@@ -189,3 +189,7 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
 - Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
+
+## Plan-revise escalation
+
+Hit  without converging on APPROVED. Latest audit verdict still has open items. User intervention required.
