@@ -1,11 +1,11 @@
 ---
 slice_id: 10-replay-viewer-mvp
 phase: 10
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:35:00-04:00
+updated: 2026-04-30T19:22:27-04:00
 ---
 
 ## Goal
@@ -104,7 +104,48 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`. The slice adds new files (one query function block extending `sessions.ts`, two new app files under `web/src/app/replay/[sessionId]/`, one new test file) and does not modify any existing UI or query, so revert is mechanical and cannot regress sibling Phase 10 surfaces.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/10-replay-viewer-mvp` (will be pushed to `origin/slice/10-replay-viewer-mvp` as the `[slice:10-replay-viewer-mvp][awaiting-audit]` HEAD).
+
+**Commit:** the single `[slice:10-replay-viewer-mvp][awaiting-audit]` commit at the HEAD of `slice/10-replay-viewer-mvp`. Run `git log -1 slice/10-replay-viewer-mvp` to read the hash and full message.
+
+**Files changed (all within declared "Changed files expected" scope):**
+- `web/src/lib/queries/sessions.ts` — appended two new exported async functions: `getSessionRaceProgression(sessionKey: number)` selecting all 12 columns from `core.race_progression_summary` filtered by `session_key = $1` and ordered `lap_number ASC, position_end_of_lap ASC NULLS LAST`; and `getSessionReplayFrames(sessionKey: number)` selecting all 9 columns from `core.replay_lap_frames` filtered by `session_key = $1` ordered `lap_number ASC`. Neither references `raw.laps`, `raw.position_history`, `raw.weather`, or `raw.race_control`. Return type is `Promise<Record<string, unknown>[]>` mirroring the sister `getSessionStintTimeline`.
+- `web/src/app/replay/[sessionId]/ReplayViewer.tsx` — new server component (no client hooks, no charting libs, only inline `style={{...}}`). Empty `progression` ⇒ `<section className="card"><h2>Replay Viewer</h2><p className="muted">No replay frames available for this session.</p></section>`. Non-empty: computes `maxLap = Math.max(1, ...progression.map((r) => Number(r.lap_number ?? 0)))` and `numDrivers = Math.max(1, new Set(progression.map((r) => Number(r.driver_number))).size)`, groups rows by `driver_number` preserving SQL order, renders one `<div data-testid="replay-driver-row">` per driver with a `<div data-testid="replay-track">` containing self-closing `<div data-testid="replay-lap-marker" title={`Lap ${row.lap_number} • P${row.position_end_of_lap}`} key={idx} style={{...}} />` markers (`data-testid` is the **first** attribute, `title={...}` the **second**). Marker `left` = `((Number(row.lap_number ?? 0) - 1) / maxLap) * 100` expressed as `${...}%`; `top` = `((Number(row.position_end_of_lap ?? 0) - 1) / numDrivers) * 100` expressed as `${...}%`, both clamped non-negative. After the per-driver tracks, renders `<div data-testid="replay-frame-strip">` whose children are `<div data-testid="replay-frame">` elements (one per row of `frames`), each whose body and `title` include `leader_driver_number` and `race_control_flag` literally.
+- `web/src/app/replay/[sessionId]/page.tsx` — new server component. `import { getSessionRaceProgression, getSessionReplayFrames } from "@/lib/queries/sessions"` + default-import `ReplayViewer from "./ReplayViewer"`, `export const dynamic = "force-dynamic"`. Body parses `sessionId` to `Number(key)`; `!Number.isFinite(key)` early-returns `<section className="card"><h2>Invalid session id</h2></section>`. The awaited `Promise.all` is `const [progression, frames] = await Promise.all([getSessionRaceProgression(key), getSessionReplayFrames(key)])` — both call sites inside the argument list, both destructured identifiers used as `<ReplayViewer progression={progression} frames={frames} />` inside an outer `<div className="stack">` with a `<section className="hero"><h1>Replay · Session {String(key)}</h1></section>` header preceding the viewer.
+- `web/scripts/tests/replay-viewer-mvp.test.mjs` — new source-assertion test (Node `node:test`, `node:fs`, no DB/env). Implements G1–G5 exactly per Step 5: G1 iterates the 12 progression columns and asserts each is in the extracted body of `getSessionRaceProgression`, plus `FROM core.race_progression_summary` and `WHERE session_key = $1`, plus negative checks for `raw.laps` / `raw.position_history`. G2a does the symmetric check for `getSessionReplayFrames` against `core.replay_lap_frames` with the 9 columns and negative checks for `raw.weather` / `raw.race_control`. G2b asserts default-export presence and the six required substrings (`replay-driver-row`, `replay-track`, `replay-lap-marker`, `lap_number`, `position_end_of_lap`, `numDrivers`). G2c implements the brace-balanced extraction exactly as Step 5 specifies — locate marker, find self-closing `/>`, find `title={` inside that window, then walk the **full source** balancing `{`/`}` from the `title={`'s opening brace to its matching closing brace, slicing the inner expression and asserting both `lap_number` and `position_end_of_lap` substrings. G3 asserts the four frame-strip substrings. G4 asserts the import-from-`@/lib/queries/sessions` regex (both names in the same import clause), the destructure regex (captures groups 1+2), the Promise.all-arg regex (both call sites), the interpolated `<ReplayViewer progression={<g1>} frames={<g2>}` substring, and the default-import regex for `./ReplayViewer`. G5 asserts `idxHero >= 0`, `idxViewer >= 0`, `idxHero < idxViewer`.
+- `diagnostic/slices/10-replay-viewer-mvp.md` — frontmatter `status=in_progress`/`status=awaiting_audit` transitions and this completion note.
+
+**Decisions:**
+- The `replay-lap-marker` element places `data-testid` as the **first** attribute and `title={...}` as the **second**, with the React `key={idx}` prop intentionally placed **after** `title={...}` rather than at the conventional first slot. Step 3 fixes this attribute order ("`data-testid="replay-lap-marker"` is the **first** attribute and `title={...}` is the **second** attribute") because Step 5 G2c's brace-balanced walker assumes `title={` is the next attribute after `data-testid` inside the `[markerIdx, closeIdx)` window. Putting `key` between them would not break G2c (it only requires `title={` somewhere in the window), but the slice text is explicit, so I followed it literally.
+- The marker's `title` is a JSX template literal `` `Lap ${row.lap_number} • P${row.position_end_of_lap}` `` rather than a string-concatenation form. The brace-balanced walker in G2c naively counts every `{` and `}`, including the `${...}` openers inside the template; the walker's depth therefore goes 1 (outer `{`) → 2 (`${` for `lap_number`) → 1 (`}`) → 2 (`${` for `position_end_of_lap`) → 1 (`}`) → 0 (outer `}`), so it correctly slices the entire template-literal expression and both `lap_number` / `position_end_of_lap` substrings appear inside the slice. This is the observable test G2c demands.
+- The `numDrivers` denominator (`new Set(progression.map(r => Number(r.driver_number))).size`) is computed once outside the per-driver loop and used for the marker's `top` percentage, making the vertical axis a true "positions over time" mapping rather than a constant offset, per Step 3's explicit requirement that "this is what makes this an actual 'positions-over-time' mapping rather than a constant offset". G2b enforces the literal substring `numDrivers` so the variable cannot drift to e.g. `driverCount` without the test failing.
+- The frame strip's children render both an in-body literal (`L${lap_number} · ${leader} · ${flag}`) and a `title=` annotation referencing both `leader_driver_number` and `race_control_flag`, so the G3 substring assertions are satisfied via either the body or the title — matches Step 3's ("inside its body or `title` attribute") and Step 5 G3's ("substrings"). I picked the title route because it is the natural hover affordance and keeps the visible body short.
+- The page uses `Promise.all([getSessionRaceProgression(key), getSessionReplayFrames(key)])` (only the two query calls) rather than mixing in the existing `getSessionByKey(key)` for header text. The header instead uses `String(key)` directly — Step 4 only requires `Replay · Session {String(key)}`, and adding a third Promise.all entry would have changed the destructure shape that G4 inspects.
+- Inside the worktree, `web/node_modules` was empty, so `npm install` was run to materialize Next/TypeScript binaries before invoking `npm run typecheck` and `npm run build`. The install produced no diff: `node_modules`, `.next`, and `web/scripts/tests/.tmp-*` directories are all `.gitignore`d (verified via `git status --ignored`). No `package.json` / `package-lock.json` change is part of the slice diff.
+
+**Gate results (exit codes):**
+- Gate #1 `cd web && npm run build` — **exit `0`**. New `/replay/[sessionId]` route appears in the Next.js route summary alongside the existing routes (`├ ƒ /replay/[sessionId]                        169 B         102 kB`); compile + typecheck during build succeeded.
+- Gate #2 `cd web && npm run typecheck` — **exit `0`**. `tsc --noEmit` produced no errors.
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` — **exit `0`**. Wrapper output: `[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`. Direct run inside this worktree of `npm run test:grading` reports `# tests 183 # pass 134 # fail 39 # cancelled 0 # skipped 10`, where the 39 fails set is identical to the integration baseline (no new failures introduced) and the test count rose by 7 — exactly the seven sub-tests in `web/scripts/tests/replay-viewer-mvp.test.mjs` (G1, G2a, G2b, G2c, G3, G4, G5), all green.
+
+**Self-check (acceptance criteria):**
+- `cd web && npm run typecheck` exit 0 — passes (Gate #2).
+- `cd web && npm run build` exit 0 — passes (Gate #1).
+- `bash scripts/loop/test_grading_gate.sh` exit 0 (no new failures vs baseline) — passes (Gate #3).
+- All five assertion groups (G1–G5) inside `web/scripts/tests/replay-viewer-mvp.test.mjs` pass — passes (direct `node --test scripts/tests/replay-viewer-mvp.test.mjs` reports `# tests 7 # pass 7 # fail 0`).
+- `getSessionRaceProgression` SQL contains every column listed in Step 1 — passes (G1 iterates the column list and all 12 are matched).
+- `getSessionReplayFrames` SQL contains every column listed in Step 2 — passes (G2a iterates the column list and all 9 are matched).
+- `page.tsx` binds the awaited results into `<ReplayViewer progression={...} frames={...}>` through **shared identifiers** captured from the `Promise.all` destructure — passes (G4 destructure regex captures `progression` / `frames`, the matched Promise.all arg list contains both call sites, and the literal `<ReplayViewer progression={progression} frames={frames}` substring is present).
+
+**Out-of-scope confirmations:**
+- No client-side interactivity (no `"use client"`, no `useState`/`useEffect`/event handlers); the component is a pure server component with static inline styles.
+- No charting libraries added; visualization is plain `<div>`s with inline CSS positioning.
+- No telemetry-grain replay (no `core.car_data` reference); both queries are lap-grain.
+- No new columns added to `core.replay_lap_frames`, `core.race_progression_summary`, or `core.race_progression_summary_mat`; the queries select an existing subset.
+- No modifications to `core_build.*` source-definition layer.
+- No cross-session comparison or championship-aggregate views.
+- `git status` confirms only the five expected files are modified or added (slice md + the four files listed under "Changed files expected"); no other files were touched.
 
 ## Audit verdict
 (filled by Codex)
