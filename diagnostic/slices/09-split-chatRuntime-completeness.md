@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-completeness
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:25:00Z
+updated: 2026-04-30T19:05:00Z
 ---
 
 ## Goal
@@ -48,6 +48,7 @@ This boundary keeps `completeness.ts` free of any back-import into `chatRuntime.
 ## Changed files expected
 - `web/src/lib/chatRuntime.ts` (moved bodies removed; re-exports added if needed)
 - `web/src/lib/chatRuntime/completeness.ts` (new)
+- `diagnostic/slices/09-split-chatRuntime-completeness.md` (implementer fills in the `Slice-completion note` section)
 - Any direct-import callsite of a moved symbol identified by Step 3's grep. Expected at audit time: none beyond `chatRuntime.ts` itself, since `web/src/app/api/chat/route.ts` only imports `buildChatRuntime` / `ChatRuntimeResult`. If Step 3 finds additional callsites, append them to this list in the slice-completion note.
 
 ## Artifact paths
@@ -121,7 +122,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Add `diagnostic/slices/09-split-chatRuntime-completeness.md` to `Changed files expected`, because the implementer must update the `Slice-completion note` in this slice file and the current scope list omits that required edit.
+- [x] Add `diagnostic/slices/09-split-chatRuntime-completeness.md` to `Changed files expected`, because the implementer must update the `Slice-completion note` in this slice file and the current scope list omits that required edit.
 
 ### Low
 - [ ] None.
