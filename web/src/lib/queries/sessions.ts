@@ -327,6 +327,35 @@ export async function getSessionDriverPace(sessionKey: number): Promise<Record<s
   );
 }
 
+export async function getSessionStintTimeline(sessionKey: number): Promise<Record<string, unknown>[]> {
+  return sql<Record<string, unknown>>(
+    `
+    SELECT
+      driver_number,
+      driver_name,
+      team_name,
+      stint_number,
+      compound_name,
+      lap_start,
+      lap_end,
+      tyre_age_at_start,
+      fresh_tyre,
+      stint_length_laps,
+      lap_count,
+      valid_lap_count,
+      avg_lap,
+      best_lap,
+      avg_valid_lap,
+      best_valid_lap,
+      degradation_per_lap
+    FROM core.stint_summary
+    WHERE session_key = $1
+    ORDER BY driver_number ASC, stint_number ASC
+    `,
+    [sessionKey]
+  );
+}
+
 export async function getSessionTableCounts(
   sessionKey: number,
   tableNames: string[]
