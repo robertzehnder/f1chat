@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-stint-timeline
 phase: 10
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:32:43Z
+updated: 2026-04-30T17:33:39-04:00
 ---
 
 ## Goal
@@ -91,7 +91,30 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 - **Gate command (round-1 High).** Switched from raw `cd web && npm run test:grading` to `bash scripts/loop/test_grading_gate.sh` per the loop policy lesson recorded in `diagnostic/_state.md` (slice:08-synthesis-payload-cutover): the wrapper diffs failures against `scripts/loop/state/test_grading_baseline.txt` so pre-existing integration failures do not auto-REJECT.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/10-session-detail-stint-timeline` (based on `cc24a3f` — plan-approved tip).
+
+**Changes (matches Changed files expected exactly):**
+- `web/src/lib/queries/sessions.ts` — added `export async function getSessionStintTimeline(sessionKey: number)` selecting all 17 columns from Step 1 from `core.stint_summary` filtered by `WHERE session_key = $1`, ordered `driver_number ASC, stint_number ASC`.
+- `web/src/app/sessions/[sessionKey]/StintTimeline.tsx` — new server component (no `"use client"`, no hooks, no charting libs, inline `style={{...}}` only). Empty-rows path renders a `<section className="card"><h3>Stint Timeline</h3><p className="muted">…</p></section>`. Non-empty path computes `maxLap = Math.max(1, ...rows.map(r => Number(r.lap_end ?? 0)))`, groups rows by `driver_number` preserving SQL order, and renders one `data-testid="stint-row"` per driver containing a label and a `data-testid="stint-track"` whose children are self-closing `<div data-testid="stint-bar" title={\`${row.compound_name} • ${row.stint_length_laps} laps\`} style={{...}} />` bars (data-testid first, title second, per Step 2 attribute-order requirement). Bar `left` / `width` are clamped non-negative percentages of `maxLap`. Compound color mapping is a literal record `SOFT/MEDIUM/HARD/INTERMEDIATE/WET` with neutral grey fallback.
+- `web/src/app/sessions/[sessionKey]/page.tsx` — added `getSessionStintTimeline` to the existing `from "@/lib/queries/sessions"` import (matches G3 regex's `@/lib/queries/sessions` arm), added a default import `import StintTimeline from "./StintTimeline"` (G4), appended `getSessionStintTimeline(key)` as the **last** entry in `Promise.all([...])` and destructured the result as `stints` so `stints` is the **final** identifier in the destructure pattern (G3 regex captures the last name before `]`), and rendered `<StintTimeline rows={stints} />` directly **after** `<PaceTable rows={pace} />` and **before** the existing weather/race-control `two-col` block (G5 ordering).
+- `web/scripts/tests/session-detail-stint-timeline.test.mjs` — new source-string assertion test mirroring `session-detail-pace-table.test.mjs`. Implements the five assertion groups exactly as specified in Step 4: G1 column substring loop over the 17 columns + `FROM core.stint_summary` + `WHERE session_key = $1` + `!body.includes("raw.stints")`; G2 substring presence + brace-balanced extraction of the bar's `title={...}` JSX expression (using `extractBraceExpression` walking `{`/`}` from the opening `{` of `title={`) and asserting both `compound_name` and `stint_length_laps` are inside that extracted expression; G3 import regex + `Promise.all` destructure capture + `Promise.all([...])` arg-list call regex + interpolated `<StintTimeline rows={<captured>}` substring; G4 sibling-import regex `/import\s+StintTimeline\s+from\s+["']\.\/StintTimeline["']/`; G5 deterministic `indexOf` ordering of `<PaceTable rows={pace}` < `<StintTimeline rows={<captured>}` < `Weather Preview`.
+
+**Decisions (no scope drift from approved plan):**
+- Imported `getSessionStintTimeline` from `@/lib/queries/sessions` directly (sister `getSessionDriverPace` does the same). Step 4 G3 regex accepts either `@/lib/queries` or `@/lib/queries/sessions`, so no edit to `web/src/lib/queries.ts` was needed and that file is therefore not touched (kept out of "Changed files expected").
+- Compound→color mapping kept as an in-file literal record per Step 2; no shared module added (Out-of-scope guard against new abstractions).
+- The bar `title` is a template literal `` `${row.compound_name} • ${row.stint_length_laps} laps` `` so the brace-balanced extraction in G2 is the right shape (a plain regex would have been fooled by the inner `${...}` openers, which is exactly what Step 4 G2 calls out).
+
+**Gate exit codes (run from `/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline`):**
+- `cd web && npm run typecheck` → exit 0.
+- `cd web && npm run build` → exit 0 (Next.js 15 build, all 21 routes compiled including `/sessions/[sessionKey]`).
+- `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`). The new `session-detail-stint-timeline.test.mjs` runs as part of `node --test scripts/tests/*.test.mjs` and all five subtests (G1–G5) pass.
+
+**Self-checks:**
+- `git status` shows only the four files in "Changed files expected" plus the slice-file frontmatter/completion-note edit.
+- The `Promise.all` destructure regex `/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/` matched against the new `page.tsx` captures `stints` (the final identifier), and the rendered element is `<StintTimeline rows={stints} />` — confirmed by running G3 in isolation against the post-edit source.
+- `<StintTimeline rows={stints} />` index in `page.tsx` lies strictly between `<PaceTable rows={pace}` and the literal `Weather Preview` (G5 holds).
+- The `title={...}` brace-balanced extraction over the new `StintTimeline.tsx` yields the expression `` `${row.compound_name} • ${row.stint_length_laps} laps` `` which contains both `compound_name` and `stint_length_laps` substrings (G2's tooltip-binding assertion holds).
 
 ## Audit verdict
 (filled by Codex)
