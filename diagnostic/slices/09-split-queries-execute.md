@@ -1,7 +1,7 @@
 ---
 slice_id: 09-split-queries-execute
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -96,7 +96,21 @@ Rollback: `git revert <commit>`.
 **Commit:** `78db58e` (`slice/09-split-queries-execute`).
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `(cd web && npm run build)` -> exit `0`
+- Gate #2 `(cd web && npm run typecheck)` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Gate #4 `grep -nE "from ['\"]((\.\./)+(lib/)?queries(/index)?|@/lib/queries(/index)?)['\"]" web/src/lib/queries/execute.ts; test $? -eq 1` -> exit `0`
+- Gate #5 `(cd web && npx --yes madge --circular --extensions ts,tsx --ts-config tsconfig.json src/lib/queries/execute.ts)` -> exit `0`
+- Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/slices/09-split-queries-execute.md`, `web/src/lib/queries.ts`, `web/src/lib/queries/execute.ts`; subset of declared scope plus the implicit slice-file allow-list.
+- Acceptance 1: PASS — `web/src/lib/queries/execute.ts:5`, `web/src/lib/queries/execute.ts:6`, `web/src/lib/queries/execute.ts:7`, and `web/src/lib/queries/execute.ts:9` keep the three module-private `DEFAULT_*` constants and `safeLimit`; `web/src/lib/queries/execute.ts:13` exports `runReadOnlySql`.
+- Acceptance 2: PASS — `web/src/lib/queries.ts:3` re-exports `runReadOnlySql`; moved bodies are absent from `web/src/lib/queries.ts`, while non-target symbols remain at `web/src/lib/queries.ts:25`, `web/src/lib/queries.ts:60`, `web/src/lib/queries.ts:90`, `web/src/lib/queries.ts:101`, and `web/src/lib/queries.ts:122`.
+- Acceptance 3: PASS — grep guard exit `0`; `web/src/lib/queries/execute.ts:1`, `web/src/lib/queries/execute.ts:2`, and `web/src/lib/queries/execute.ts:3` show no import that re-enters `queries.ts`.
+- Acceptance 4: PASS — madge exit `0`; zero cycles reported through `web/src/lib/queries/execute.ts`.
+- Acceptance 5: PASS — all declared gate commands passed.
+
+PASS — mechanical split implemented within scope; safe to merge.
 
 ## Plan-audit verdict (round 1)
 
