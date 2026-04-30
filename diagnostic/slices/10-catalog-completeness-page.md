@@ -1,11 +1,11 @@
 ---
 slice_id: 10-catalog-completeness-page
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:13:00-04:00
+updated: 2026-04-30T23:35:00-04:00
 ---
 
 ## Goal
@@ -57,7 +57,7 @@ bash scripts/loop/test_grading_gate.sh
 
 ## Acceptance criteria
 - [ ] `web/scripts/tests/catalog-completeness.test.mjs` exists and passes under `bash scripts/loop/test_grading_gate.sh` with these assertions:
-  - **G1**: `getCatalogCompleteness` is declared in `web/src/lib/queries/sessions.ts` (`export async function getCatalogCompleteness`); its body contains the literal substrings `FROM core.session_completeness` and `WHERE` (so the parameterized `$1`/`$2` filters apply); it does NOT reference any `raw.` table (the test asserts the body string does not include `raw.`); and it references each of these column identifiers as literal substrings: `session_key`, `meeting_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status`, `completeness_score`, `has_core_analysis_pack`, `has_drivers`, `has_laps`, `has_pit`, `has_stints`, `has_weather`, `has_team_radio`, `has_position_history`, `has_intervals`, `has_car_data`, `has_location`, `has_session_result`, `has_starting_grid`, `has_race_control`.
+  - **G1**: `getCatalogCompleteness` is declared in `web/src/lib/queries/sessions.ts` (`export async function getCatalogCompleteness`); its body contains the literal substrings `FROM core.session_completeness` and `WHERE`; it does NOT reference any `raw.` table (the test asserts the body string does not include `raw.`); and it references each of these column identifiers as literal substrings: `session_key`, `meeting_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status`, `completeness_score`, `has_core_analysis_pack`, `has_drivers`, `has_laps`, `has_pit`, `has_stints`, `has_weather`, `has_team_radio`, `has_position_history`, `has_intervals`, `has_car_data`, `has_location`, `has_session_result`, `has_starting_grid`, `has_race_control`. **G1 also enforces the SQL contract from Step 1 by asserting**: (i) the body contains the year-filter predicate `$1::int IS NULL OR year = $1` and the status-filter predicate `$2::text IS NULL OR completeness_status = $2` as literal substrings (i.e. the `$1`-bound year filter and `$2`-bound status filter are both present); (ii) the body contains the literal substring `ORDER BY date_start DESC NULLS LAST, session_key DESC`; and (iii) the body references both the `safeLimit` and `clampInt` helper identifiers as literal substrings (proving `LIMIT` and `OFFSET` are bounded via the existing helpers rather than passed through unclamped).
   - **G2**: `web/src/app/catalog/completeness/CompletenessTable.tsx` exists, exports a default function (`/export\s+default\s+function\b/`), and contains the literal substrings `data-testid="completeness-row"`, `data-testid="completeness-status"`, `data-testid="completeness-coverage"`, `completeness_status`, `completeness_score`, and `meeting_name`. **G2 also asserts that the file's source references EACH of the 14 `has_*` contract-coverage column identifiers** (`has_core_analysis_pack`, `has_drivers`, `has_laps`, `has_pit`, `has_stints`, `has_weather`, `has_team_radio`, `has_position_history`, `has_intervals`, `has_car_data`, `has_location`, `has_session_result`, `has_starting_grid`, `has_race_control`) as literal substrings. This proves (statically, without a live DB) that the contract-coverage cell consumes the `has_*` flags from `core.session_completeness` rather than omitting the goal-critical "which contracts populated this session" output.
   - **G3**: `web/src/app/catalog/completeness/page.tsx` (a) imports `getCatalogCompleteness` from `@/lib/queries/sessions` specifically (per-module path; the `@/lib/queries` barrel form is NOT accepted because this slice does not modify `web/src/lib/queries.ts` to re-export the new function); (b) calls `getCatalogCompleteness(` somewhere in the file body; (c) contains a `<CompletenessTable rows={<binding>}` JSX element from which `<binding>` is extracted via `/<CompletenessTable\s+rows=\{(\w+)\}/`; and (d) `<binding>` matches the `<name>` in some `const <name>\s*=\s*await\s+getCatalogCompleteness(` declaration in the same file (i.e., the JSX rows prop is bound to the awaited query result, by name).
   - **G4**: `page.tsx` default-imports `CompletenessTable` from `./CompletenessTable` (`/import\s+CompletenessTable\s+from\s+["']\.\/CompletenessTable["']/`).
@@ -124,7 +124,7 @@ Rollback: `git revert <commit>`. The route is purely additive at `/catalog/compl
 ### High
 
 ### Medium
-- [ ] Tighten G1 so the grading test proves `getCatalogCompleteness` implements the required SQL contract from Step 1 rather than merely mentioning `WHERE`: assert the source contains the year/status filter predicates (or equivalent `$1`/`$2`-bound checks), the `ORDER BY date_start DESC NULLS LAST, session_key DESC` clause, and the `safeLimit` / `clampInt` bounded `LIMIT`/`OFFSET` helpers.
+- [x] Tighten G1 so the grading test proves `getCatalogCompleteness` implements the required SQL contract from Step 1 rather than merely mentioning `WHERE`: assert the source contains the year/status filter predicates (or equivalent `$1`/`$2`-bound checks), the `ORDER BY date_start DESC NULLS LAST, session_key DESC` clause, and the `safeLimit` / `clampInt` bounded `LIMIT`/`OFFSET` helpers.
 
 ### Low
 
