@@ -1,11 +1,11 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:55:00Z
+updated: 2026-04-30T23:59:00Z
 ---
 
 ## Goal
@@ -143,6 +143,20 @@ Rollback: `git revert <commit>`.
 ### Medium
 - [x] Add a gate command that generates `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` and asserts it contains the required new-run counts, prior-baseline counts, and improved / unchanged / regressed question IDs, because the current gate block never produces or validates that required deliverable.
 - [x] Specify the row-level source for step 4’s improved / unchanged / regressed question-ID delta by referencing `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` or another per-question artifact, because `00-fresh-benchmark_2026-04-26.json` only exposes summary/actionable aggregates and cannot support question-level comparison by itself.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-04-30T23:32:00Z`).
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Narrow step 3 and the benchmark gate copy command to the raw results file (`web/logs/chat_health_check_<stamp>.json`) and exclude `*.summary.json`, because `ls -t web/logs/chat_health_check_*.json` will usually pick the later-written summary object instead of the 50-row graded array and make the artifact copy/validation fail.
+
+### Medium
 
 ### Low
 
