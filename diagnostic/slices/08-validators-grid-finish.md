@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -36,7 +36,7 @@ None at author time.
 2. Implement the validator: parse grid/finish claims from `answerText` — covering BOTH (a) explicit grid-position / finish-position statements (e.g. "started P5", "finished P3", "from grid 7 to P2") AND (b) position-change claims derivable from `grid_vs_finish` (e.g. "gained 4 places", "lost 2 positions", "moved up/down N spots", "climbed/dropped N places", and equivalent wording) — and assert consistency against the `grid_vs_finish` rows in the attached `FactContract`. Position-change claims are validated by computing `grid_position - finish_position` for the named driver from the contract row and comparing against the parsed claim's signed magnitude.
 3. Add unit tests at `web/scripts/tests/validator-grid-finish.test.mjs` covering pass + fail cases for BOTH claim shapes: (a) explicit grid/finish position statements and (b) position-change claims (e.g. "gained 4 places" pass, "gained 4 places" fail when actual delta differs, "lost 2 positions" pass/fail) (mirror the structure of `validator-sector-consistency.test.mjs`).
 4. Wire into the synthesis post-step in `web/src/app/api/chat/route.ts` alongside the existing pit-stints and sector-consistency validators (after answer comes back, before returning to user): call `validateGridFinish(answer, synthesisContract)` and add a `gridFinish` field to the `validators` object passed to `appendQueryTrace` (line ~1054). Validation failures get logged in `chat_query_trace.jsonl` but don't reject the answer in this phase.
-5. Add a route-wiring test at `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (mirror `validator-sector-consistency-route-wiring.test.mjs`) asserting the trace event includes `validators.gridFinish`.
+5. Add a route-wiring test at `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (mirror `validator-sector-consistency-route-wiring.test.mjs`) asserting (a) the trace event written to `chat_query_trace.jsonl` includes the `validators.gridFinish` field, AND (b) when `validateGridFinish` returns `ok: false` for the synthesized answer, the user-facing route response is unchanged/unblocked — i.e., the HTTP response status and answer-text payload are identical to the pass case (validation failure logs to the trace but does not reject, alter, or strip the response), matching the non-blocking behavior already exercised by the sector-consistency route-wiring test.
 
 ## Changed files expected
 - `web/src/lib/validators/gridFinishValidator.ts` (new)
@@ -57,6 +57,7 @@ bash scripts/loop/test_grading_gate.sh
 ## Acceptance criteria
 - [ ] Validator returns structured pass/fail with reason on test cases for BOTH (a) explicit grid/finish position statements and (b) position-change claims (e.g. "gained/lost N places", "moved up/down N positions").
 - [ ] Synthesis post-step runs validators; failures surface in `chat_query_trace.jsonl` under the `validators.gridFinish` field.
+- [ ] Route-wiring test asserts that when `validateGridFinish` returns `ok: false`, the user-facing response payload (HTTP status and answer text) is unchanged versus the pass case — failing validation is non-blocking in this phase.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -112,7 +113,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Tighten Step 5 and the Acceptance criteria to require a route-wiring assertion that a failing `gridFinish` validation still leaves the user-facing response payload unchanged/unblocked, because Step 4 explicitly says failures only log to `chat_query_trace.jsonl` in this phase and the existing validator route-wiring pattern checks that non-blocking behavior.
+- [x] Tighten Step 5 and the Acceptance criteria to require a route-wiring assertion that a failing `gridFinish` validation still leaves the user-facing response payload unchanged/unblocked, because Step 4 explicitly says failures only log to `chat_query_trace.jsonl` in this phase and the existing validator route-wiring pattern checks that non-blocking behavior.
 
 ### Low
 - [ ] None.
