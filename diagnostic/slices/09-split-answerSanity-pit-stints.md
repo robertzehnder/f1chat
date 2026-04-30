@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-pit-stints
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T14:36:39-04:00
+updated: 2026-04-30T18:44:52Z
 ---
 
 ## Goal
@@ -78,7 +78,15 @@ Branch: `slice/09-split-answerSanity-pit-stints` (worktree at `/Users/robertzehn
 Commit hash: `28918de6c5c6ca3b5ff0e2be9d6513bb65759857`.
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `web/src/lib/answerSanity.ts`, `web/src/lib/answerSanity/pitStints.ts`, and the slice file allow-list path.
+- Acceptance criterion: `web/src/lib/answerSanity/pitStints.ts` exists and exports the moved symbols -> PASS (`web/src/lib/answerSanity/pitStints.ts:48`, `web/src/lib/answerSanity/pitStints.ts:55`, `web/src/lib/answerSanity/pitStints.ts:84`, `web/src/lib/answerSanity/pitStints.ts:114`, `web/src/lib/answerSanity/pitStints.ts:148`, `web/src/lib/answerSanity/pitStints.ts:183`, `web/src/lib/answerSanity/pitStints.ts:209`, `web/src/lib/answerSanity/pitStints.ts:224`, `web/src/lib/answerSanity/pitStints.ts:245`, `web/src/lib/answerSanity/pitStints.ts:255`).
+- Acceptance criterion: `web/src/lib/answerSanity.ts` no longer contains the moved bodies -> PASS; the file now imports/re-exports the pit-stint symbols at `web/src/lib/answerSanity.ts:1` and `web/src/lib/answerSanity.ts:13`, with remaining local bodies starting at `web/src/lib/answerSanity.ts:37` and no local definitions for the moved functions.
+- Acceptance criterion: all gate commands pass -> PASS.
 
 ## Plan-audit verdict (round 1)
 
