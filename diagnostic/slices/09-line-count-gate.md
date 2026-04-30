@@ -1,11 +1,11 @@
 ---
 slice_id: 09-line-count-gate
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:30:00Z
+updated: 2026-04-30T19:58:02Z
 ---
 
 ## Goal
@@ -73,3 +73,20 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T19:53:42Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Revise the goal, steps, gate commands, and acceptance criteria so the slice does not require `bash scripts/loop/line_count_gate.sh` to exit 0 against the current tree while `web/src/lib/chatRuntime.ts` (1601), `web/src/lib/anthropic.ts` (642), `web/src/lib/deterministicSql/pace.ts` (631), and `web/src/lib/deterministicSql.ts` (511) already exceed the proposed 500-line cap (`find web/src/lib -type f -name '*.ts' -print0 | xargs -0 wc -l | sort -nr | sed -n '1,10p'` exited 0). 
+
+### Medium
+- [ ] Remove the unsupported "or feed an oversized fixture path" branch from Step 4 or specify the exact script interface and fixture artifact needed to test it, because Step 1 defines only a fixed scan of `web/src/lib/*.ts` and `## Artifact paths` is currently `None` ([diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:25), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:28), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:34)).
+- [ ] Correct the acceptance criterion to refer to a `web/src/lib/*.ts` file rather than a "test file in lib/" so it matches the goal and the scripted scope ([diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:12), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:47)).
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` last updated 2026-04-30T19:53:42Z, within 24 hours.
