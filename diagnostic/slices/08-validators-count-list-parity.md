@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -58,3 +58,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` in `Gate commands`; Phase 8 slice plans must use the wrapper so baseline grading failures outside this slice do not invalidate the gate.
+- [ ] Update `Inputs` and `Changed files expected` to include `web/src/app/api/chat/route.ts`; Step 4 wires validators in the chat route, not `web/src/lib/chatRuntime.ts`.
+- [ ] Add a route-wiring test file to `Changed files expected`, `Steps`, and `Acceptance criteria` that asserts `validators.countListParity` is appended to `chat_query_trace.jsonl` on pass and fail without changing the user-facing response; the current unit-test-only plan does not verify Step 4.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-04-30T13:28:23Z`).
