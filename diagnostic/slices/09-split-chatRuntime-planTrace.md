@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-planTrace
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,19 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `cd web && bash scripts/loop/test_grading_gate.sh` so the grading gate honors the repo baseline wrapper required by audit policy.
+
+### Medium
+- [ ] Expand `## Changed files expected` to cover the direct-import rewrites from Step 3, or narrow Step 3 if only `chatRuntime.ts` and `chatRuntime/planTrace.ts` should change.
+- [ ] Add an explicit gate or acceptance check for Step 4's circular-import verification so the plan tests that requirement instead of leaving it implicit.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T15:22:22Z, so no staleness note applies.
