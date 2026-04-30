@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: blocked
-owner: user
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T09:04:31-04:00
+updated: 2026-04-30T09:15:00-04:00
 ---
 
 ## Goal
@@ -210,6 +210,20 @@ Mechanical escalation reverted: the iteration-cap trip at round 7 was not a stuc
 - `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
 - Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
 
-## Plan-revise escalation
+## Plan-audit verdict (round 9, manual PASS-WITH-DEFERRED)
 
-Hit  without converging on APPROVED. Latest audit verdict still has open items. User intervention required.
+**Status: PASS-WITH-DEFERRED**
+**Auditor: user (manual override after round-8 mechanical iter-cap re-escalation)**
+
+### High
+_None._
+
+### Medium (deferred to implementation)
+- [ ] (deferred) Rewrite Step 5 and the matching acceptance bullet for the null-contract branch so they use a route-reachable setup instead of "fake runtime returns `synthesisContract: null` (or omits it)". The implementer chooses one of: (a) call the validator directly with a constructed null-contract path test rather than through the route; (b) drive the route via a synthesis-bypass path (clarification, deterministic-template-only, or zero-row) where `synthesisContract` legitimately stays null/unassigned and the trace records the validator entry as null. Either is acceptable; document the chosen approach in the implementation Decisions section.
+
+### Low
+_None._
+
+### Notes (informational only — no action)
+- Round 7 (driver-row binding via `findRowByDriverToken`) was substantively addressed by the round-8 plan-revise. Round 8's Medium is a tactical test-design decision, not a code-correctness gap; deferring it to impl is a lower-cost path than continuing the plan-audit cycle (the slice has spent 7 codex rounds + 8 claude revises already).
+- Loop iteration cap raised to 10 going forward (`dispatch_plan_revise.sh` default + runner env) to give other slices more headroom; this slice is exempt from further plan-audit cycles via this manual PASS-WITH-DEFERRED.
