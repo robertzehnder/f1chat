@@ -19,6 +19,7 @@ import {
   type CompletenessStatus,
   type TableCheck
 } from "./chatRuntime/completeness";
+import { type ChatRuntimeStageLog } from "./chatRuntime/planTrace";
 import { isFollowUp } from "./chatRuntime/recommendations";
 import {
   buildSessionLabel,
@@ -33,6 +34,7 @@ import {
 } from "./chatRuntime/resolution";
 
 export { isFollowUp };
+export type { ChatRuntimeStageLog };
 
 type ChatContext = {
   sessionKey?: number;
@@ -85,18 +87,6 @@ type QueryPlan = {
   sampling_strategy?: string;
   risk_flags: string[];
   expected_row_count: RowVolume;
-};
-
-export type ChatRuntimeStageLog = {
-  stage:
-    | "intake"
-    | "entity_resolution"
-    | "ambiguity_manager"
-    | "completeness_check"
-    | "grain_selection"
-    | "query_planner";
-  durationMs: number;
-  details: Record<string, unknown>;
 };
 
 export type ChatRuntimeResult = {
