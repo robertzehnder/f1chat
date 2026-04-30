@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T02:55:52Z
+updated: 2026-04-30T02:57:36Z
 ---
 
 ## Goal
@@ -134,6 +134,22 @@ Rollback: `git revert <commit>`.
 
 ### High
 - [x] Tighten Step 2 and the corresponding tests so claim validation is claim-type-specific, not just "value appears somewhere in the sector numeric set": `best S1` / `fastest sector 1` must match `best_s1` (or the min of `duration_sector_1`), `average S1` must match `avg_s1` (or the mean of `duration_sector_1` if that is the intended derivation), and analogous rules must hold for S2/S3; otherwise the validator will falsely approve contradictory best-vs-average sector claims. — Step 2 now parses each claim into a typed `{kind, sector, value}` and derives a kind-specific candidate set (best/fastest → `best_s{i}`/min(`duration_sector_{i}`); avg → `avg_s{i}`/mean(`duration_sector_{i}`); per_lap → matched-row `duration_sector_{i}`); a `best`-only contract MUST fail an `avg` claim with `"no avg_s{i} or duration_sector_{i} column to derive average from"` (no fallback). Step 3 adds tests (e), (f), (g) covering the contradictory-best-vs-average case and the missing-avg-derivation case; acceptance criterion updated to reference seven cases. New Decisions bullet codifies the "claim-type-specific, not set-membership" rule.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Revise Step 2 so a `per_lap` sector claim only passes when the contract can validate the named lap specifically: if `lap_number` is absent or no row matches `lap_number === N`, fail with a lap-specific derivation reason instead of falling back to any row's `duration_sector_{i}`; otherwise `lap N S{i}` claims can be falsely approved by unrelated laps ([diagnostic/slices/08-validators-sector-consistency.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/diagnostic/slices/08-validators-sector-consistency.md:47)).
 
 ### Medium
 - [ ] None.
