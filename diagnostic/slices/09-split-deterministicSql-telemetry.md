@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-telemetry
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T16:50:18Z
+updated: 2026-04-30T12:51:12-04:00
 ---
 
 ## Goal
@@ -59,7 +59,27 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-split-deterministicSql-telemetry`
+
+**Decisions:**
+- Identified the telemetry-window block strictly per the slice spec: the only branch keyed on `templateKey: "max_leclerc_fastest_lap_telemetry_window"` and gated by `includesAny(lower, ["braked later", "carried more speed"])`. No adjacent block matched. The neighbouring `max_leclerc_top_speed` branch (raw `cd.speed`, gated on `lower.includes("higher top speed")`) was deliberately left in place — different gate phrase, different source table (`raw.car_data`), and outside the slice's scope.
+- Mirrored the `pace.ts` / `strategy.ts` / `result.ts` pattern: `buildTelemetryTemplate` accepts `{ lower, targetSession, driverPairSql, includesAny }` and returns `DeterministicSqlTemplate | null`. No additional shared helpers needed (the moved branch only uses `includesAny`, `targetSession`, and `driverPairSql`).
+- Per the Decisions section above, did **not** add a root-level `export { buildTelemetryTemplate }` from `deterministicSql.ts`. This matches `buildPaceTemplate`'s precedent and keeps the public surface minimal. The new module is internal-only; external callers continue to use `buildDeterministicSqlTemplate` from `@/lib/deterministicSql`.
+- Replaced the inlined block in `deterministicSql.ts` with a `buildTelemetryTemplate({...})` call placed at the original block's source position — preserving the evaluation/gate ordering between the preceding `max_leclerc_lap_consistency` branch and the following `max_leclerc_top_speed` branch (gate ordering rule per state notes).
+
+**Gate command exit codes (run from worktree root):**
+- `cd web && npm run build` → exit 0 (Next.js production build succeeded; demonstrates no circular module graph)
+- `cd web && npm run typecheck` → exit 0
+- `bash scripts/loop/test_grading_gate.sh` → exit 0 (`[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`)
+
+**Self-checks:**
+- Acceptance criterion 1: `web/src/lib/deterministicSql/telemetry.ts` exists and exports `buildTelemetryTemplate` — ✓.
+- Acceptance criterion 2: `web/src/lib/deterministicSql.ts` no longer contains the inline telemetry SQL body; only an `import { buildTelemetryTemplate } from "./deterministicSql/telemetry";` line and a delegating `buildTelemetryTemplate({...})` call at the original branch site remain. No `export { buildTelemetryTemplate }` is added at the root, matching `buildPaceTemplate`'s precedent — ✓ (verified by `grep -n "telemetry_lap_bridge\|max_leclerc_fastest_lap_telemetry_window\|braked later\|carried more speed" web/src/lib/deterministicSql.ts` returning no matches).
+- Acceptance criterion 3: `cd web && npm run build` succeeded; the new module imports cleanly with no circular-dependency failure between `deterministicSql.ts` and `deterministicSql/telemetry.ts` — ✓.
+- Acceptance criterion 4: all gate commands exit 0 — ✓.
+
+**Commit hashes:** filled in after `git commit` below.
 
 ## Audit verdict
 (filled by Codex)
