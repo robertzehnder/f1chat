@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T04:00:00Z
+updated: 2026-04-30T03:57:56Z
 ---
 
 ## Goal
@@ -79,3 +79,20 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` is current; no stale-state note required.
 - The latest healthcheck still shows strategy-question semantic misses (`fact_table_used` / `semantic_contract_missed`), so the slice goal is aligned with an active regression area.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite Step 4 so the validator runs where the synthesized answer and `chat_query_trace.jsonl` append actually exist today, or explicitly expand scope to carry validator output through that boundary; `buildChatRuntime` returns only planning metadata in [web/src/lib/chatRuntime.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/lib/chatRuntime.ts:99), while the current post-synthesis validator and trace logging live in [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:1026).
+
+### Medium
+- [ ] Rewrite Step 5 so the route-wiring test exercises the moved wiring path instead of mirroring harnesses that stub `@/lib/chatRuntime`; the existing pattern replaces that import with `chatRuntime.stub.mjs` in [web/scripts/tests/validator-grid-finish-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-grid-finish-route-wiring.test.mjs:205) and injects fake runtime output at [web/scripts/tests/validator-grid-finish-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-grid-finish-route-wiring.test.mjs:354), which would bypass any new validator logic moved into `chatRuntime.ts`.
+- [ ] Align `Changed files expected` with the chosen integration point; if the plan keeps validator invocation or trace attachment in the route-layer boundary exposed by [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:1035), include that file explicitly instead of implying a `chatRuntime.ts`-only change.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
+- Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
