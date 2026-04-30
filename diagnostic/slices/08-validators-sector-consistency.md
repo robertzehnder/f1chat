@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T03:07:40Z
+updated: 2026-04-29T23:08:35-04:00
 ---
 
 ## Goal
@@ -89,7 +89,37 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/08-validators-sector-consistency`
+
+**Implementation commit:** `f30e61b` — add sector-consistency synthesis-output validator
+
+### Files changed (matches `## Changed files expected`)
+- `web/src/lib/validators/sectorConsistencyValidator.ts` (new) — validator module exporting `validateSectorConsistency` and the `SectorConsistencyValidationResult` named type. Type-only import of `FactContract` from `@/lib/contracts/factContract`, mirroring the pit-stints precedent.
+- `web/src/app/api/chat/route.ts` — added the `validateSectorConsistency` import + named-type alias, declared `sectorConsistencyValidation` immediately after the existing `pitStintsValidation` line, and extended `appendQueryTrace`'s `validators` object to `{ pitStints: ..., sectorConsistency: ... }`. No other call sites in the file were touched.
+- `web/scripts/tests/validator-sector-consistency.test.mjs` (new) — eight unit cases (a)-(h) covering the matching rules required by the plan, including the claim-type-specific (e/f/g) and per-lap-no-fallback (h) cases.
+- `web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs` (new) — route-harness test asserting both a failure-case fixture and a happy-path fixture surface the validator result in the captured `chat_query_trace.jsonl` payload, that `validators.pitStints` is preserved alongside `validators.sectorConsistency`, and that the validator output does not leak into the user-facing response payload.
+
+### Decisions (vs. plan)
+- Exported type name is `SectorConsistencyValidationResult` (per Step 1 / Decisions / round-5 reconciliation). The pit-stints validator's underlying type is named `ValidationResult` and is already aliased at the route's import site to `PitStintsValidationResult`; the new validator's exported name is the consumer-facing one directly so route-side wiring uses `SectorConsistencyValidationResult` without a local alias.
+- `FactContract` is imported type-only, so the test transpile path needs no `@/lib/*` rewrite for the validator (matches the sibling pit-stints validator's transpile contract used by `validator-pit-stints.test.mjs`).
+- Tolerance for value comparison is ±0.05s, applied via absolute difference (matches plan Step 2).
+- `per_lap` parsing recognises the qualified shapes `lap N S{i} ... X`, `S{i} on lap N ... X`, and `S{i} was X on lap N`. Bare `S{i} was X` (without a kind qualifier) is intentionally NOT parsed (per plan Decisions: "every parsed claim must carry an explicit `kind` qualifier").
+
+### Self-check vs. acceptance criteria
+- [x] Eight unit cases (a)-(h) pass under `node --test`. See gate output below.
+- [x] `web/src/app/api/chat/route.ts` invokes `validateSectorConsistency` after synthesis and includes the result as `validators.sectorConsistency` in the `appendQueryTrace` payload. Confirmed in source (the diff in commit `f30e61b`) and by the route-wiring test which inspects the captured `appendJsonLog` queue from `serverLog.stub.mjs`'s `__getJsonLogCalls()`, filters for `filename === "chat_query_trace.jsonl"`, and asserts both `validators.sectorConsistency.ok === false`/non-empty `reasons` on the failure fixture and `ok === true` on the happy-path fixture.
+- [x] No new failures vs. the integration `test_grading_baseline.txt`. Gate wrapper output: `[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=24 baseline_fails=24 baseline_failures_fixed=0`.
+
+### Gate-command exit codes (run from repo root)
+- `(cd web && npm run build)` → exit `0` (Next.js production build succeeded; all 21 routes compiled).
+- `(cd web && npm run typecheck)` → exit `0` (`tsc --noEmit` clean).
+- `bash scripts/loop/test_grading_gate.sh` → exit `0` (PASS, no new failures vs. integration baseline; `slice_fails=24` matches `baseline_fails=24`).
+
+### Out-of-scope confirmations
+- No multi-contract payloads were introduced (live synthesis path remains single-contract per `web/src/lib/anthropic.ts`).
+- Validator failures are non-blocking: the user-facing response payload shape is unchanged (asserted by the route-wiring test).
+- Other validators were not refactored or merged; the local-result-type pattern from the pit-stints precedent is preserved.
 
 ## Audit verdict
 (filled by Codex)
