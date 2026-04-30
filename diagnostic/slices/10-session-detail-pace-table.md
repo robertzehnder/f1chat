@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:39:45Z
+updated: 2026-04-30T16:40:38-04:00
 ---
 
 ## Goal
@@ -77,7 +77,22 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 - **Contract choice.** `core.driver_session_summary` (a thin view over `core.driver_session_summary_mat`, see `sql/009_driver_session_summary_mat.sql:7-46`) carries every pace metric this slice needs (`best_lap`, `median_lap`, `best_s1..3`, `avg_s1..3`). Going through the public view rather than `_mat` directly keeps us aligned with the Phase 3 facade pattern.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/10-session-detail-pace-table` (branched from `integration/perf-roadmap`).
+- Commits on this branch beyond the plan-approved tip (`efca6db`):
+  - `d7a4bb7` — implementation: `getSessionDriverPace` query, `PaceTable` server component, `page.tsx` wire-up, source-string test (4 files, 167 insertions / 2 deletions, exactly the "Changed files expected" set).
+  - This commit — frontmatter flip to `status=awaiting_audit / owner=codex` and this completion note.
+- Decisions (record only — see top-of-file `## Decisions` for rationale):
+  - Imported `getSessionDriverPace` from `@/lib/queries/sessions` (the explicit second-form path in Step 4) rather than re-exporting through `web/src/lib/queries.ts`, because that re-export file is not in `Changed files expected` and Step 4's import regex `/from\s*["']@\/lib\/queries(?:\/sessions)?["']/` accepts either form.
+  - Ordered the SQL with `ORDER BY best_valid_lap ASC NULLS LAST, best_lap ASC NULLS LAST` — `ASC` is implicit in the slice's "ordered by `best_valid_lap NULLS LAST, best_lap NULLS LAST`" wording (faster pace = smaller value first), and matches the existing `getSessionLaps` style (`ORDER BY lap_number ASC NULLS LAST, ...`).
+  - Rendered `<PaceTable rows={pace} />` between the existing `Lap Preview` `<DataTable>` and the bottom Weather/Race-Control two-col, so the per-driver pace card appears after the raw lap preview and before the environmental data — additive, no existing layout removed.
+- Self-check / gate results (run from this worktree, `slice/10-session-detail-pace-table @ d7a4bb7`):
+  - `cd web && npm run typecheck` → exit 0 (`tsc --noEmit`, no diagnostics).
+  - `cd web && npm run build` → exit 0 (Next 15 production build, all 4 static pages generated; the `/sessions/[sessionKey]` route still listed as `ƒ` Dynamic).
+  - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`).
+  - The new `session-detail-pace-table.test.mjs` is part of the grading run and contributes three passing TAP entries: `ok 65 - getSessionDriverPace queries core.driver_session_summary with all required columns`, `ok 66 - PaceTable renders DataTable with a rows prop and exports a default function`, `ok 67 - page.tsx wires the awaited getSessionDriverPace result into <PaceTable rows={...}> via a shared identifier`. The destructure regex captured `pace` (Step 3's "final identifier" requirement); the inner `await Promise.all([…getSessionDriverPace(` regex matched; and `<PaceTable rows={pace}` is present in `page.tsx` — i.e. the same awaited result identifier is observed at both the call site and the rendered prop, satisfying the round-4 / round-5 audit requirements.
+  - Per-column substring loop in the test passed for every name in the SELECT list (`driver_number`, `driver_name`, `team_name`, `lap_count`, `valid_lap_count`, `best_lap`, `median_lap`, `avg_lap`, `best_valid_lap`, `median_valid_lap`, `best_s1`, `best_s2`, `best_s3`, `avg_s1`, `avg_s2`, `avg_s3`); the function body contains no `raw.laps` reference (Phase 10 contract requirement).
+- Out-of-scope check: `git diff --name-only efca6db..HEAD` lists only `diagnostic/slices/10-session-detail-pace-table.md`, `web/scripts/tests/session-detail-pace-table.test.mjs`, `web/src/app/sessions/[sessionKey]/PaceTable.tsx`, `web/src/app/sessions/[sessionKey]/page.tsx`, `web/src/lib/queries/sessions.ts` — exactly the four files in `Changed files expected` plus this slice file.
 
 ## Audit verdict
 (filled by Codex)
