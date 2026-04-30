@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-classification
 phase: 9
-status: revising_plan
+status: pending_plan_audit
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T15:30:00Z
 ---
 
 ## Goal
@@ -22,14 +22,15 @@ Extract the question-classification logic from chatRuntime.ts into chatRuntime/c
 None at author time.
 
 ## Steps
-1. Identify the target functions/types in `web/src/lib/chatRuntime.ts`.
-2. Move them to `web/src/lib/chatRuntime/classification.ts`; re-export from `web/src/lib/chatRuntime.ts` for back-compat.
-3. Update direct imports of these symbols across the codebase to point at the new file.
-4. Verify no circular imports.
+1. Identify the target functions/types in `web/src/lib/chatRuntime.ts`. Concrete targets: the `QuestionType` type alias (line 21) and the `classifyQuestion` function (line 519). Other helpers that take `QuestionType` (e.g. `shouldUseRuntimeFastPath`, `requiresResolvedSession`, `requiredTablesForQuestion`, `grainForQuestion`) stay in `chatRuntime.ts` and import `QuestionType` from the new file.
+2. Move the targets in Step 1 to `web/src/lib/chatRuntime/classification.ts`; re-export them from `web/src/lib/chatRuntime.ts` for back-compat (so `buildChatRuntime`'s call site keeps working without churn).
+3. Update direct imports of the moved symbols across the codebase to point at `@/lib/chatRuntime/classification`. Note: at author time a repo-wide grep shows no external file imports `classifyQuestion` or `QuestionType` from `@/lib/chatRuntime` (only `buildChatRuntime` / `ChatRuntimeResult` are imported externally, e.g. `web/src/app/api/chat/route.ts`). If that survey holds at implementation time, this step is a no-op for consumer files; if any new external consumer has appeared, update it.
+4. Verify no circular imports. Concrete check: `cd web && npm run build` and `cd web && npm run typecheck` both succeed (Next.js / TypeScript fail loudly on cycles in the new module). No additional tooling required.
 
 ## Changed files expected
-- `web/src/lib/chatRuntime.ts`
-- `web/src/lib/chatRuntime/classification.ts`
+- `web/src/lib/chatRuntime.ts` (extract bodies; keep re-exports for back-compat)
+- `web/src/lib/chatRuntime/classification.ts` (new file: holds `QuestionType` and `classifyQuestion`)
+- Any consumer file that directly imports `classifyQuestion` or `QuestionType` from `@/lib/chatRuntime` and is updated to import from `@/lib/chatRuntime/classification`. At author time a repo-wide grep finds zero such consumers (only `buildChatRuntime` / `ChatRuntimeResult` are imported externally). If implementation re-runs the grep and the set is still empty, this bullet collapses to zero files; otherwise enumerate them in the slice-completion note.
 
 ## Artifact paths
 None.
@@ -38,12 +39,13 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/chatRuntime/classification.ts` exists and exports the moved symbols.
+- [ ] `web/src/lib/chatRuntime/classification.ts` exists and exports the moved symbols (`QuestionType`, `classifyQuestion`).
 - [ ] `web/src/lib/chatRuntime.ts` no longer contains the moved bodies (only re-exports if needed).
+- [ ] Direct imports of `classifyQuestion` / `QuestionType` from `@/lib/chatRuntime` (if any exist) are updated to import from `@/lib/chatRuntime/classification`, matching Step 3.
 - [ ] All gate commands pass.
 
 ## Out of scope
@@ -63,14 +65,14 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate uses the required baseline-aware wrapper from `diagnostic/_state.md`.
+- [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate uses the required baseline-aware wrapper from `diagnostic/_state.md`.
 
 ### Medium
-- [ ] Expand `Changed files expected` to include the import-consumer files Step 3 says will be updated, because the current scope lists only `chatRuntime.ts` and the new `classification.ts`.
-- [ ] Make Step 4 testable by naming the concrete check for circular imports or by removing that step if build/typecheck are the intended proof.
+- [x] Expand `Changed files expected` to include the import-consumer files Step 3 says will be updated, because the current scope lists only `chatRuntime.ts` and the new `classification.ts`.
+- [x] Make Step 4 testable by naming the concrete check for circular imports or by removing that step if build/typecheck are the intended proof.
 
 ### Low
-- [ ] Add an acceptance criterion that direct imports of the moved symbols are updated to `web/src/lib/chatRuntime/classification.ts`, matching Step 3.
+- [x] Add an acceptance criterion that direct imports of the moved symbols are updated to `web/src/lib/chatRuntime/classification.ts`, matching Step 3.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T14:05:46Z, so no stale-state note applies.
