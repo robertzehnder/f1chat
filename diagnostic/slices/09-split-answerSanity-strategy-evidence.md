@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-strategy-evidence
 phase: 9
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:25:40-04:00
+updated: 2026-04-30T15:26:50-04:00
 ---
 
 ## Goal
@@ -122,3 +122,34 @@ Rationale -> Repair the typecheck gate so the declared command passes in this wo
 
 ### Notes (informational only — no action)
 - None.
+
+## Revision note (round 1)
+
+Addresses audit verdict round 1 (REVISE on `npm run typecheck` exit `2`,
+TS6053 missing `.next/types/**` entries). The implementation source
+(`web/src/lib/answerSanity.ts` + `web/src/lib/answerSanity/strategyEvidence.ts`)
+is unchanged; the prior audit found the extraction itself in-scope and
+mechanically correct, so this revision touches no code under
+`Changed files expected` beyond the slice file itself.
+
+Re-ran the three gate commands from a clean state (deleted `web/.next`
+and `web/tsconfig.tsbuildinfo` before each gate-1+gate-2 sweep). The
+typecheck failure could not be reproduced; the most likely cause of
+the audit's TS6053 was an incremental tsbuildinfo from a prior
+worktree state that referenced now-deleted `.next/types/**` entries.
+On a fresh run with no `.next/` directory and no `tsconfig.tsbuildinfo`,
+`tsc --noEmit` treats the `.next/types/**/*.ts` glob in
+`web/tsconfig.json:23` as zero matches and exits 0; on a fresh run
+*after* `npm run build`, the glob picks up the freshly generated
+route/types files and still exits 0.
+
+Re-run gate results (run from `web/` unless noted, after
+`rm -rf web/.next web/tsconfig.tsbuildinfo`):
+
+- `npm run build` → exit 0 (full Next.js production build, all 21 routes prerendered/dynamic).
+- `npm run typecheck` → exit 0 (`tsc --noEmit`, with freshly built `.next/types`).
+- `bash scripts/loop/test_grading_gate.sh` (from repo root) → exit 0; wrapper output: `PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`.
+
+Frontmatter `status` flipped revising → in_progress → awaiting_audit
+and `updated` set to 2026-04-30T15:26:50-04:00. No code files were
+modified in this revision; only this slice file changed.
