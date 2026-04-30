@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-count-list
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:47:28-04:00
+updated: 2026-04-30T20:06:00-04:00
 ---
 
 ## Goal
@@ -116,7 +116,19 @@ Rollback: `git revert <commit>`.
 **Commit hash:** `a57eff22e9c81695bcf8bfc3af9050a5ca127570` (HEAD of `slice/09-split-answerSanity-count-list`).
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/09-split-answerSanity-count-list.md`, `web/src/lib/answerSanity.ts`, `web/src/lib/answerSanity/countList.ts`, and `web/src/app/api/chat/orchestration.ts`
+- Criterion `web/src/lib/answerSanity/countList.ts` exists and exports the moved symbols -> PASS (`web/src/lib/answerSanity/countList.ts:156`, `web/src/lib/answerSanity/countList.ts:170`)
+- Criterion `web/src/lib/answerSanity.ts` no longer contains the moved bodies -> PASS; parent file only imports/re-exports the moved public bindings and keeps `applyAnswerSanityGuards` (`web/src/lib/answerSanity.ts:17`, `web/src/lib/answerSanity.ts:40`, `web/src/lib/answerSanity.ts:53`)
+- Criterion `applyAnswerSanityGuards` resolves `looksLikeStructuredRowDump` and `buildStructuredSummaryFromRows` from `./answerSanity/countList` -> PASS (`web/src/lib/answerSanity.ts:17`, `web/src/lib/answerSanity.ts:122`, `web/src/lib/answerSanity.ts:123`)
+- Criterion direct external import updated per Step 3 -> PASS (`web/src/app/api/chat/orchestration.ts:11`, `web/src/app/api/chat/orchestration.ts:12`)
+- Criterion all gate commands pass -> PASS
+
+Decision: PASS
 
 ## Plan-audit verdict (round 1)
 
