@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-30T23:13:59Z
+# Project state — last updated: 2026-04-30T23:32:00Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -18,7 +18,7 @@ accumulated context the loop carries between slices._
 | 7 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 10 | 6 | 5 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 10 | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `3318644` merge: 10-replay-viewer-mvp [pass] — 2026-04-30
 - `2bc21df` merge: 10-saved-analyses-persistence [pass] — 2026-04-30
 - `fc7e4f1` merge: 10-catalog-completeness-page [pass] — 2026-04-30
 - `454425e` merge: 10-session-detail-strategy-summary [pass] — 2026-04-30
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `9e6ffc7` merge: 09-split-answerSanity-count-list [pass] — 2026-04-30
 - `c4500a3` merge: 09-split-answerSanity-strategy-evidence [pass] — 2026-04-30
 - `ea34fad` merge: 09-split-answerSanity-grid-finish [pass] — 2026-04-30
-- `bae0374` merge: 09-split-answerSanity-sector [pass] — 2026-04-30
 
 ## Open architectural decisions
 
