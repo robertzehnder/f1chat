@@ -1,11 +1,11 @@
 ---
 slice_id: 10-catalog-completeness-page
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -54,3 +54,22 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Replace the raw `cd web && npm run test:grading` gate with `bash scripts/loop/test_grading_gate.sh` so the slice uses the baseline-aware grading wrapper required by repo protocol.
+- [ ] Rewrite Step 3 to target the repo's existing `web/scripts/tests/*.test.mjs` grading harness instead of conditional Playwright/RTL or a dev-server screenshot path, and align the acceptance criteria to those concrete gates.
+- [ ] Name the exact Phase 3 contract source(s) and the coverage fields/semantics the page must present; "appropriate semantic contracts" is too vague to implement or audit consistently.
+- [ ] Expand `Changed files expected` beyond `web/src/app/catalog/page.tsx` to cover the obvious supporting files this slice will need, including the grading test file(s) and any query/helper modules used to compute completeness.
+- [ ] Update `Required services / env` to declare the database/service prerequisites needed to validate contract-backed coverage data, or explicitly scope the slice to mocked/fixture-backed verification if it must remain env-free.
+- [ ] Make the acceptance criteria executable by naming the command or test artifact that proves the page renders and that the displayed completeness matches contract data for a defined session fixture/case.
+
+### Low
+
+### Notes (informational only — no action)
+- `web/src/app/catalog/page.tsx` already exists in the repo, so this slice is a repurpose/extension of the existing route rather than creation of a brand-new page.
