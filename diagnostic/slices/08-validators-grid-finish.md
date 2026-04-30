@@ -68,7 +68,7 @@ Rollback: `git revert <commit>`.
 ## Slice-completion note
 
 **Branch:** `slice/08-validators-grid-finish`
-**Commit:** to be filled after commit (single slice commit on this branch).
+**Commit:** `8bec432c059e380a1352a5fb08a58bd763f744a2` (single slice commit on this branch).
 
 ### What changed
 - New file `web/src/lib/validators/gridFinishValidator.ts` exports `validateGridFinish(answerText, contract): GridFinishValidationResult` covering all three claim shapes called for in Step 2:
