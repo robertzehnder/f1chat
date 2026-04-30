@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T03:01:13Z
+updated: 2026-04-30T03:02:49Z
 ---
 
 ## Goal
@@ -160,3 +160,20 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] Expand Step 2's claim parser to cover the unqualified sector-time phrasing already required by Step 3 case (b), or narrow/remove that test case; as written, `S2 was 30.000s` is an acceptance-case claim the regex plan does not classify, so the validator can miss a sector claim entirely ([diagnostic/slices/08-validators-sector-consistency.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/diagnostic/slices/08-validators-sector-consistency.md:45), [diagnostic/slices/08-validators-sector-consistency.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/diagnostic/slices/08-validators-sector-consistency.md:53)).
+
+### Medium
+- [ ] Reconcile the validator result type name between Step 1 and Step 4: the plan defines `ValidationResult` in the new validator module but Step 4 wires `SectorConsistencyValidationResult | null`, so the reviser must choose one concrete exported name and use it consistently ([diagnostic/slices/08-validators-sector-consistency.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/diagnostic/slices/08-validators-sector-consistency.md:44), [diagnostic/slices/08-validators-sector-consistency.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/diagnostic/slices/08-validators-sector-consistency.md:54)).
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
+- `rg -n 'test:grading|--test|scripts/tests' web/package.json web -g 'package.json' -g '*.json' -g '*.mjs'` exited `0`; `web/package.json:10` confirms `npm run test:grading` runs `node --test scripts/tests/*.test.mjs`, so the planned new `web/scripts/tests/*.test.mjs` files are inside the existing grading gate.
