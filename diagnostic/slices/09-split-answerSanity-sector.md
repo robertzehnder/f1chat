@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-sector
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,19 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace the raw grading gate `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the slice uses the required baseline-aware wrapper from `diagnostic/_state.md:69` instead of a repo-wide gate that can fail on unrelated known breakage (`diagnostic/slices/09-split-answerSanity-sector.md:37`).
+
+### Low
+- [ ] Reconcile Step 3 with the declared file scope: either name the concrete consumer files expected to change for import rewrites or narrow/remove the step if the split remains barrel-only, because the plan currently says it will update direct imports across the codebase while `Changed files expected` lists only the two library files (`diagnostic/slices/09-split-answerSanity-sector.md:27`, `diagnostic/slices/09-split-answerSanity-sector.md:30`).
+
+### Notes (informational only — no action)
+- The current repo search shows `@/lib/answerSanity` is imported from `web/src/app/api/chat/orchestration.ts`, but that is a barrel import, not a direct `answerSanity/sector` consumer.
