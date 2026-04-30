@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-30T18:31:51Z
+# Project state — last updated: 2026-04-30T18:46:04Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -17,7 +17,7 @@ accumulated context the loop carries between slices._
 | 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 7 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 9 | 21 | 15 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
+| 9 | 21 | 16 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
 | 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `ea080ac` merge: 09-split-answerSanity-pit-stints [pass] — 2026-04-30
 - `7c0f4be` merge: 09-split-route-orchestration [pass] — 2026-04-30
 - `ff5c36f` merge: 09-split-queries-execute [pass] — 2026-04-30
 - `d558365` merge: 09-split-queries-sessions [pass] — 2026-04-30
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `dc3b464` merge: 09-split-deterministicSql-telemetry [pass] — 2026-04-30
 - `76e1bbf` merge: 09-split-deterministicSql-result [pass] — 2026-04-30
 - `0f30d09` merge: 09-split-deterministicSql-strategy [pass] — 2026-04-30
-- `1d1a352` merge: 09-split-deterministicSql-pace [pass] — 2026-04-30
 
 ## Open architectural decisions
 
