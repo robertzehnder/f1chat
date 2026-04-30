@@ -25,11 +25,12 @@ export const NextResponse = {
 `;
 
 const ANTHROPIC_STUB = `
-const state = { generate: null, repair: null, synthesize: null };
+const state = { generate: null, repair: null, synthesize: null, synthesizeStream: null };
 export function __setGenerateSqlImpl(fn) { state.generate = fn; }
 export function __setRepairSqlImpl(fn) { state.repair = fn; }
 export function __setSynthesizeImpl(fn) { state.synthesize = fn; }
-export function __resetAnthropic() { state.generate = null; state.repair = null; state.synthesize = null; }
+export function __setSynthesizeStreamImpl(fn) { state.synthesizeStream = fn; }
+export function __resetAnthropic() { state.generate = null; state.repair = null; state.synthesize = null; state.synthesizeStream = null; }
 export async function generateSqlWithAnthropic(input) {
   if (state.generate) return state.generate(input);
   throw new Error("anthropic stub: generateSqlWithAnthropic not configured");
@@ -41,6 +42,15 @@ export async function repairSqlWithAnthropic(input) {
 export async function synthesizeAnswerWithAnthropic(input) {
   if (state.synthesize) return state.synthesize(input);
   throw new Error("anthropic stub: synthesizeAnswerWithAnthropic not configured");
+}
+export async function* synthesizeAnswerStream(input) {
+  if (!state.synthesizeStream) {
+    throw new Error("anthropic stub: synthesizeAnswerStream not configured");
+  }
+  const iterable = state.synthesizeStream(input);
+  for await (const chunk of iterable) {
+    yield chunk;
+  }
 }
 `;
 
@@ -135,6 +145,20 @@ export function assertNoLlmForDeterministic(args) {
 }
 `;
 
+const FACT_CONTRACT_STUB = `
+export function serializeRowsToFactContract(input) {
+  const result = {
+    contractName: input.contractName,
+    grain: input.grain,
+    keys: input.keys,
+    rows: input.rows,
+    rowCount: input.rows.length
+  };
+  if (input.coverage !== undefined) result.coverage = input.coverage;
+  return Object.freeze(result);
+}
+`;
+
 async function loadRouteAndCacheModule() {
   const dir = await mkdtemp(path.join(__dirname, ".tmp-answer-cache-"));
 
@@ -164,7 +188,8 @@ async function loadRouteAndCacheModule() {
     .replace(/from\s+["']@\/lib\/answerSanity["']/g, `from "./answerSanity.stub.mjs"`)
     .replace(/from\s+["']@\/lib\/serverLog["']/g, `from "./serverLog.stub.mjs"`)
     .replace(/from\s+["']@\/lib\/perfTrace["']/g, `from "./perfTrace.stub.mjs"`)
-    .replace(/from\s+["']@\/lib\/zeroLlmGuard["']/g, `from "./zeroLlmGuard.stub.mjs"`);
+    .replace(/from\s+["']@\/lib\/zeroLlmGuard["']/g, `from "./zeroLlmGuard.stub.mjs"`)
+    .replace(/from\s+["']@\/lib\/contracts\/factContract["']/g, `from "./factContract.stub.mjs"`);
   const routeTranspiled = ts.transpileModule(routeStubbed, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -183,6 +208,7 @@ async function loadRouteAndCacheModule() {
   await writeFile(path.join(dir, "serverLog.stub.mjs"), SERVER_LOG_STUB, "utf8");
   await writeFile(path.join(dir, "perfTrace.stub.mjs"), PERF_TRACE_STUB, "utf8");
   await writeFile(path.join(dir, "zeroLlmGuard.stub.mjs"), ZERO_LLM_GUARD_STUB, "utf8");
+  await writeFile(path.join(dir, "factContract.stub.mjs"), FACT_CONTRACT_STUB, "utf8");
   await writeFile(path.join(dir, "answerCache.mjs"), answerCacheTranspiled.outputText, "utf8");
   await writeFile(path.join(dir, "route.mjs"), routeTranspiled.outputText, "utf8");
 
@@ -282,7 +308,7 @@ function makeFakeRuntime({ sessionKey, driverNumbers, year } = {}) {
       fallbackOptions: []
     },
     grain: { grain: "lap", expectedRowVolume: "small", recommendedTables: [] },
-    queryPlan: { resolved_entities: {} },
+    queryPlan: { resolved_entities: {}, primary_tables: ["core.laps_enriched"] },
     stageLogs: [],
     durationMs: runtimeCounter // unique per-call value so deep-equality detects regeneration
   };

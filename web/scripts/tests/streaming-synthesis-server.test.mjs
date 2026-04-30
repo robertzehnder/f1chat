@@ -9,9 +9,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const webRoot = path.resolve(__dirname, "..", "..");
 const anthropicSourcePath = path.resolve(webRoot, "src/lib/anthropic.ts");
+const buildSynthesisPromptSourcePath = path.resolve(
+  webRoot,
+  "src/lib/synthesis/buildSynthesisPrompt.ts"
+);
 
 async function loadAnthropicModule() {
   const dir = await mkdtemp(path.join(__dirname, ".tmp-streaming-synthesis-server-"));
+
+  const buildSynthesisSource = await readFile(buildSynthesisPromptSourcePath, "utf8");
+  const buildSynthesisOut = ts.transpileModule(buildSynthesisSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true
+    }
+  });
+  await writeFile(path.join(dir, "buildSynthesisPrompt.mjs"), buildSynthesisOut.outputText, "utf8");
+
   const sourceText = await readFile(anthropicSourcePath, "utf8");
   const transpiled = ts.transpileModule(sourceText, {
     compilerOptions: {
@@ -20,7 +35,11 @@ async function loadAnthropicModule() {
       esModuleInterop: true
     }
   });
-  await writeFile(path.join(dir, "anthropic.mjs"), transpiled.outputText, "utf8");
+  const rewritten = transpiled.outputText.replace(
+    /@\/lib\/synthesis\/buildSynthesisPrompt/g,
+    "./buildSynthesisPrompt.mjs"
+  );
+  await writeFile(path.join(dir, "anthropic.mjs"), rewritten, "utf8");
   const mod = await import(path.join(dir, "anthropic.mjs"));
   return { dir, mod };
 }
@@ -69,8 +88,13 @@ function makeSseStreamingResponse(textChunks) {
 const SYNTH_INPUT = {
   question: "Who won the race?",
   sql: "SELECT 1",
-  rows: [],
-  rowCount: 0
+  contract: {
+    contractName: "core.sessions",
+    grain: "session",
+    keys: {},
+    rows: [],
+    rowCount: 0
+  }
 };
 
 test("synthesizeAnswerStream emits answer_delta then reasoning_delta then a single final frame with concatenations matching the parsed JSON", async () => {

@@ -170,6 +170,20 @@ export function assertNoLlmForDeterministic(args) {
 }
 `;
 
+const FACT_CONTRACT_STUB = `
+export function serializeRowsToFactContract(input) {
+  const result = {
+    contractName: input.contractName,
+    grain: input.grain,
+    keys: input.keys,
+    rows: input.rows,
+    rowCount: input.rows.length
+  };
+  if (input.coverage !== undefined) result.coverage = input.coverage;
+  return Object.freeze(result);
+}
+`;
+
 async function loadRouteHarness() {
   const dir = await mkdtemp(path.join(__dirname, ".tmp-streaming-synthesis-route-"));
 
@@ -197,7 +211,8 @@ async function loadRouteHarness() {
     .replace(/from\s+["']@\/lib\/answerSanity["']/g, `from "./answerSanity.stub.mjs"`)
     .replace(/from\s+["']@\/lib\/serverLog["']/g, `from "./serverLog.stub.mjs"`)
     .replace(/from\s+["']@\/lib\/perfTrace["']/g, `from "./perfTrace.stub.mjs"`)
-    .replace(/from\s+["']@\/lib\/zeroLlmGuard["']/g, `from "./zeroLlmGuard.stub.mjs"`);
+    .replace(/from\s+["']@\/lib\/zeroLlmGuard["']/g, `from "./zeroLlmGuard.stub.mjs"`)
+    .replace(/from\s+["']@\/lib\/contracts\/factContract["']/g, `from "./factContract.stub.mjs"`);
   const routeTranspiled = ts.transpileModule(routeStubbed, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -216,6 +231,7 @@ async function loadRouteHarness() {
   await writeFile(path.join(dir, "serverLog.stub.mjs"), SERVER_LOG_STUB, "utf8");
   await writeFile(path.join(dir, "perfTrace.stub.mjs"), PERF_TRACE_STUB, "utf8");
   await writeFile(path.join(dir, "zeroLlmGuard.stub.mjs"), ZERO_LLM_GUARD_STUB, "utf8");
+  await writeFile(path.join(dir, "factContract.stub.mjs"), FACT_CONTRACT_STUB, "utf8");
   await writeFile(path.join(dir, "answerCache.mjs"), answerCacheTranspiled.outputText, "utf8");
   await writeFile(path.join(dir, "route.mjs"), routeTranspiled.outputText, "utf8");
 
@@ -275,7 +291,7 @@ function makeFakeRuntime({
       fallbackOptions: []
     },
     grain: { grain: "lap", expectedRowVolume: "small", recommendedTables: [] },
-    queryPlan: { resolved_entities: {} },
+    queryPlan: { resolved_entities: {}, primary_tables: ["core.laps_enriched"] },
     stageLogs: [],
     durationMs: runtimeCounter
   };
