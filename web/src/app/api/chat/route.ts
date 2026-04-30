@@ -42,6 +42,10 @@ import {
   validateStrategyEvidence,
   type StrategyEvidenceValidationResult
 } from "@/lib/validators/strategyEvidenceValidator";
+import {
+  validateCountListParity,
+  type CountListParityValidationResult
+} from "@/lib/validators/countListParityValidator";
 
 function mapToFactContractGrain(grain: ChatRuntimeResult["grain"]["grain"]): FactContractGrain {
   switch (grain) {
@@ -1039,6 +1043,9 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       const strategyEvidenceValidation: StrategyEvidenceValidationResult | null = synthesisContract
         ? validateStrategyEvidence(answer, synthesisContract)
         : null;
+      const countListParityValidation: CountListParityValidationResult | null = synthesisContract
+        ? validateCountListParity(answer, synthesisContract)
+        : null;
       await appendQueryTrace({
         status: "success",
         cache_hit: false,
@@ -1065,7 +1072,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         totalRequestMs: Date.now() - startedAt,
         runtimeMs: runtime.durationMs,
         autoResolutionNote: autoResolutionNoteForTrace,
-        validators: { pitStints: pitStintsValidation, sectorConsistency: sectorConsistencyValidation, gridFinish: gridFinishValidation, strategyEvidence: strategyEvidenceValidation }
+        validators: { pitStints: pitStintsValidation, sectorConsistency: sectorConsistencyValidation, gridFinish: gridFinishValidation, strategyEvidence: strategyEvidenceValidation, countListParity: countListParityValidation }
       });
 
       const finalGenerationNotes = [generationNotes, sessionPinNoteForTrace]
