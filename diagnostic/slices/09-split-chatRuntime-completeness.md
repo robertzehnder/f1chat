@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-completeness
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T14:56:17Z
+updated: 2026-04-30T18:25:00Z
 ---
 
 ## Goal
@@ -112,3 +112,20 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md:1` was updated at 2026-04-30T14:46:37Z, so no stale-state note applies.
 - `rg -n 'from "@/lib/chatRuntime"' web/src` exited `0` and only found `web/src/app/api/chat/route.ts:9`, so Step 3's "audit time" assumption still matches the repo.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Add `diagnostic/slices/09-split-chatRuntime-completeness.md` to `Changed files expected`, because the implementer must update the `Slice-completion note` in this slice file and the current scope list omits that required edit.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` was updated at 2026-04-30T14:46:37Z, so no stale-state note applies.
+- `rg -n "from ['\"]@/lib/chatRuntime['\"]" web/src` exited `0` and only found `web/src/app/api/chat/route.ts:9`, so Step 3's audit-time import assumption still matches the repo.
