@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-resolver
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,19 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate is evaluated through the loop baseline wrapper required by `diagnostic/_state.md`.
+- [ ] Expand `## Changed files expected` to include the non-`queries.ts` import sites that Step 3 explicitly updates, or narrow Step 3 so the declared file scope matches the planned edits.
+
+### Low
+- [ ] Make Step 4 and its acceptance coverage concrete by naming how the slice proves the split introduces no circular import beyond the existing build/typecheck gates.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T17:22:56Z, so no staleness note applies.
