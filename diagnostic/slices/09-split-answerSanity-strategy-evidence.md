@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-strategy-evidence
 phase: 9
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:19:52-04:00
+updated: 2026-04-30T15:25:40-04:00
 ---
 
 ## Goal
@@ -82,7 +82,17 @@ Rollback: `git revert <commit>`.
   - [x] All gate commands pass.
 
 ## Audit verdict
-(filled by Codex)
+**Status: REVISE**
+
+Gate #1 `cd web && npm run build` -> exit `0`
+Gate #2 `cd web && npm run typecheck` -> exit `2`
+Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+Scope-diff -> PASS (`diagnostic/slices/09-split-answerSanity-strategy-evidence.md`, `web/src/lib/answerSanity.ts`, `web/src/lib/answerSanity/strategyEvidence.ts`; all in declared scope / implicit allow-list)
+Criterion `web/src/lib/answerSanity/strategyEvidence.ts` exists and exports moved symbols -> PASS ([web/src/lib/answerSanity/strategyEvidence.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity/strategyEvidence.ts:8), [web/src/lib/answerSanity/strategyEvidence.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity/strategyEvidence.ts:10), [web/src/lib/answerSanity/strategyEvidence.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity/strategyEvidence.ts:27), [web/src/lib/answerSanity/strategyEvidence.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity/strategyEvidence.ts:48), [web/src/lib/answerSanity/strategyEvidence.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity/strategyEvidence.ts:62))
+Criterion `web/src/lib/answerSanity.ts` no longer contains moved bodies -> PASS ([web/src/lib/answerSanity.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity.ts:11), [web/src/lib/answerSanity.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity.ts:31), [web/src/lib/answerSanity.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity.ts:272), [web/src/lib/answerSanity.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity.ts:310), [web/src/lib/answerSanity.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity.ts:315), [web/src/lib/answerSanity.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/src/lib/answerSanity.ts:320))
+Criterion all gate commands pass -> FAIL (`npm run typecheck` exit `2`; TS6053 missing `.next/types/**` entries matched by `include` in [web/tsconfig.json](/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence/web/tsconfig.json:23))
+Decision -> REVISE
+Rationale -> Repair the typecheck gate so the declared command passes in this worktree; the extraction itself is otherwise in-scope and mechanically correct.
 
 ## Plan-audit verdict (round 1)
 
