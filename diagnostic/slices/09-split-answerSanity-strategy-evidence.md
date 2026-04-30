@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-strategy-evidence
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,19 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `cd web && bash ../scripts/loop/test_grading_gate.sh` so the grading gate is evaluated against the shared failure baseline rather than raw repo-wide failures.
+
+### Medium
+- [ ] Expand `Changed files expected` to include the direct-import call sites Step 3 says will be updated; the current scope only lists the source and destination modules.
+- [ ] Make Step 4 testable by naming the concrete proof for “Verify no circular imports” in gates or acceptance criteria, or remove that step if the existing build/typecheck gates are the intended check.
+
+### Low
+
+### Notes (informational only — no action)
+- None.
