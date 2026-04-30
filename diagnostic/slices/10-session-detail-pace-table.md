@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:45:00Z
+updated: 2026-04-30T21:05:00Z
 ---
 
 ## Goal
@@ -145,6 +145,22 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 
 ### Medium
 - [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T20:16:19Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Align Step 3 with Step 4's destructure regex: either require `pace` to be the final identifier in the `Promise.all` destructure, or relax the regex/acceptance wording so any destructured `pace` position passes the promised wiring check.
 
 ### Low
 - [ ] None.
