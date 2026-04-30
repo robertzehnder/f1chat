@@ -55,7 +55,7 @@ Rollback: `git revert <commit>`.
 
 - Branch: `slice/09-split-answerSanity-sector`
 - Parent commit: `6e9275a` (plan-approved)
-- Implementation commit: filled at commit time
+- Implementation commit: `d813f71` (the slice-completion note in that commit referenced its own hash with a placeholder; this follow-up commit on the same branch records the final hash)
 - Changes:
   - Created `web/src/lib/answerSanity/sector.ts` exporting `buildSectorAnswer`. The new module also defines local copies of the helpers `buildSectorAnswer` depends on (`asNumber`, `asString`, `driverLabel`), matching the established pattern in `web/src/lib/answerSanity/pitStints.ts` (which is the only other existing sub-module).
   - Removed the `buildSectorAnswer` body from `web/src/lib/answerSanity.ts` and replaced it with `import { buildSectorAnswer } from "./answerSanity/sector";` so the existing call site in `applyAnswerSanityGuards` (the `if (lowerQuestion.includes("sector"))` branch) keeps the same identifier.
