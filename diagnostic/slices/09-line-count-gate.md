@@ -1,8 +1,8 @@
 ---
 slice_id: 09-line-count-gate
 phase: 9
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-30T16:03:28-04:00
@@ -110,7 +110,19 @@ web/src/lib/deterministicSql/pace.ts:631
 **Commit:** `3537e24` (`Add line-count gate for web/src/lib with baseline ratchet`).
 
 ## Audit verdict
-(filled by Codex)
+**Status: REVISE**
+
+- Gate #1 `bash scripts/loop/line_count_gate.sh` -> exit `0`
+- Gate #2 `cd web && npm run build` -> exit `0`
+- Gate #3 `cd web && npm run typecheck` -> exit `2`
+  `web/tsconfig.json:23` includes `.next/types/**/*.ts`; `tsc --noEmit` failed with `TS6053` missing `.next/types/app/api/admin/perf-summary/route.ts` and peer generated files.
+- Gate #4 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` returned `.github/workflows/ci.yml`, `diagnostic/slices/09-line-count-gate.md`, `scripts/loop/line_count_gate.sh`, `scripts/loop/state/line_count_baseline.txt`, all in declared scope or implicit allow-list.
+- Criterion 1 -> PASS; `bash scripts/loop/line_count_gate.sh` exited `0` against the seeded baseline.
+- Criterion 2 -> PASS; padding new file `web/src/lib/__bloat_probe.ts` to 501 lines made the gate exit `1` and print `web/src/lib/__bloat_probe.ts: 501 lines exceeds default cap 500`.
+- Criterion 3 -> PASS; padding `web/src/lib/chatRuntime.ts` to 1602 lines made the gate exit `1` and print `web/src/lib/chatRuntime.ts: 1602 lines exceeds baseline ceiling 1601`.
+- Decision -> REVISE
+- Rationale -> Required gate `cd web && npm run typecheck` is red in this worktree because `web/tsconfig.json:23` references missing generated `.next/types` inputs, so the slice cannot pass while a declared gate exits non-zero.
 
 ## Plan-audit verdict (round 1)
 
