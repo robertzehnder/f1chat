@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-classification
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:00:00Z
+updated: 2026-04-30T16:00:00Z
 ---
 
 ## Goal
@@ -113,3 +113,20 @@ _None._
 ### Notes (informational only — no action)
 - Round-1 and round-2 items are all cleanly resolved. The re-export stance is now committed to "do not re-export" with rationale (in-file callers reach the moved symbols via `import { classifyQuestion, type QuestionType } from './chatRuntime/classification'`); Step 2, AC #2, and `Changed files expected` are mutually consistent. Step 1's line-number caveat and the isolatedModules/TS1205 footnote are recorded. Step 3 + AC #3 align with the no-external-consumers grep, with implementer instructed to re-grep at impl time. Gate set uses the baseline-aware wrapper (`bash scripts/loop/test_grading_gate.sh`).
 - Round 3 is the final claude self-audit round per `LOOP_CLAUDE_PLAN_AUDIT_CAP`. Handoff to codex for final external plan audit.
+
+## Plan-audit verdict (round 4)
+
+**Status: APPROVED**
+
+### High
+_None._
+
+### Medium
+_None._
+
+### Low
+_None._
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T14:05:46Z, so no stale-state note applies.
+- Prior context is present and sufficient. Step ordering, file scope, gate set, and acceptance criteria are mutually consistent with the committed no-re-export stance.
