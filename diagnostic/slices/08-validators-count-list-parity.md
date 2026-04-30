@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T13:41:02Z
+updated: 2026-04-30T17:35:00Z
 ---
 
 ## Goal
@@ -117,6 +117,22 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Replace the non-path `Prior context` bullets with concrete existing artifact paths; `Latest healthcheck artifact under diagnostic/artifacts/healthcheck/` and `Phase 11 redo will re-baseline; this slice's bar is just "validator runs and asserts the obvious thing"` are not readable paths, so the audit protocol cannot satisfy the required prior-context read step from this slice alone.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-04-30T13:28:23Z`).
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Reconcile the plan body and acceptance criteria with the slice goal by specifying that `validateCountListParity` derives the expected count from listed items in the answer text itself, not from `FactContract.rows`; the current single-contract framing copies the existing evidence validators but does not implement “count claim matches listed items in the same answer.”
 
 ### Low
 - [ ] None.
