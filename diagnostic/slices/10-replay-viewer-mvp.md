@@ -1,11 +1,11 @@
 ---
 slice_id: 10-replay-viewer-mvp
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -55,3 +55,22 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the slice uses the required baseline-aware grading gate.
+- [ ] Make Step 3 deterministic by naming the exact automated test path this slice must add or update; do not leave test scope as “if the project has any” or fall back to a manual dev-server screenshot.
+- [ ] Rewrite the acceptance criteria as command-checkable outcomes, including the specific test session or fixture whose replay data must be rendered and the gate that proves it.
+- [ ] Expand `Changed files expected` to include the test files and any contract-facing files the stated steps necessarily modify.
+
+### Low
+- [ ] Identify the concrete Phase 3 semantic contract artifact this viewer must consume instead of the generic “appropriate semantic contracts” phrasing.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current on 2026-04-30, so no stale-state note applies.
