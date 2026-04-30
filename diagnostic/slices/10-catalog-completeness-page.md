@@ -81,6 +81,8 @@ Rollback: `git revert <commit>`. The route is purely additive at `/catalog/compl
 
 **Branch:** `slice/10-catalog-completeness-page`
 
+**Commit:** `096f2f7f99d31ea62cf3b5dc55d2b1ba93738f97` (pushed to `origin/slice/10-catalog-completeness-page`)
+
 **Files changed:**
 - `web/src/lib/queries/sessions.ts` — added `type CatalogCompletenessFilters` and new export `getCatalogCompleteness(filters?: CatalogCompletenessFilters)`. Body selects `FROM core.session_completeness` (no `raw.*` reads), projects all 24 declared columns (incl. bare `location` and `has_location`), applies the `$1::int IS NULL OR year = $1` and `$2::text IS NULL OR completeness_status = $2` predicates, orders by `date_start DESC NULLS LAST, session_key DESC`, and clamps `LIMIT` (default 200, max 500) / `OFFSET` (default 0, max 1_000_000) via the existing `safeLimit` / `clampInt` helpers — same pattern used by `getSessions`.
 - `web/src/app/catalog/completeness/CompletenessTable.tsx` — new default-exported component. Renders one `<tr data-testid="completeness-row">` per session with cells for `session_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status` (in a `<td data-testid="completeness-status">`), `completeness_score`, plus a contract-coverage `<td data-testid="completeness-coverage">` whose content is derived by filtering a `HAS_FLAGS` array that literally references each of the 14 `has_*` column identifiers.
