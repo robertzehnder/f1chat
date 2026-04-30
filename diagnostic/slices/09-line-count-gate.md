@@ -1,15 +1,15 @@
 ---
 slice_id: 09-line-count-gate
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T19:58:02Z
+updated: 2026-04-30T20:30:00Z
 ---
 
 ## Goal
-Add a CI gate asserting no single TS file in `web/src/lib/` exceeds 500 lines after all Phase 9 splits land. Catches future bloat regressions.
+Add a CI gate that asserts no NEW `.ts` file under `web/src/lib/` exceeds 500 lines, and that existing oversized files (allowlisted with their current line count as a ceiling) cannot regress further. Catches future bloat regressions without forcing immediate splits of the four currently-oversized files (`web/src/lib/chatRuntime.ts` 1601, `web/src/lib/anthropic.ts` 642, `web/src/lib/deterministicSql/pace.ts` 631, `web/src/lib/deterministicSql.ts` 511).
 
 ## Inputs
 - `web/src/lib/`
@@ -19,16 +19,38 @@ Add a CI gate asserting no single TS file in `web/src/lib/` exceeds 500 lines af
 - `diagnostic/_state.md`
 
 ## Required services / env
-None at author time.
+None at author time. The script must be runnable with `bash` only — no Node/npm dependency.
 
 ## Steps
-1. Add a script `scripts/loop/line_count_gate.sh` that fails (exit non-zero) if any `.ts` under `web/src/lib/` exceeds 500 lines, and exits 0 otherwise. Print offending file paths and their line counts on failure.
-2. Wire into the existing CI workflow `.github/workflows/ci.yml` as a new step that runs `bash scripts/loop/line_count_gate.sh`.
-3. Run `bash scripts/loop/line_count_gate.sh` locally; should exit 0 after all Phase 9 splits.
-4. Verify the failure path: temporarily pad a `web/src/lib/*.ts` file past 500 lines (or feed an oversized fixture path), confirm the script exits non-zero and prints the offending file, then revert the padding before commit.
+1. Add `scripts/loop/line_count_gate.sh` (bash, `set -euo pipefail`). Behavior:
+   - Scans every `*.ts` (recursive) under `web/src/lib/`.
+   - Reads a baseline file `scripts/loop/state/line_count_baseline.txt` containing one `<repo-relative-path>:<max_lines>` entry per non-blank, non-`#` line.
+   - For each scanned file:
+     - If its path appears in the baseline, fail when the current line count exceeds that entry's `<max_lines>` ceiling.
+     - Otherwise, fail when the current line count exceeds 500.
+   - On failure, print every offending path with its current line count and (if applicable) its baseline ceiling, then exit non-zero.
+   - On success, exit 0.
+   - The script accepts no positional arguments; the scan root and baseline path are fixed constants. (No fixture-path input mode.)
+2. Add `scripts/loop/state/line_count_baseline.txt` seeded with the four currently-oversized files, each pinned to its measured count as the ceiling. Populate by running:
+   ```bash
+   find web/src/lib -type f -name '*.ts' -print0 | xargs -0 wc -l | awk '$1>500 && $2!="total"{print $2":"$1}' | sort
+   ```
+   Expected initial contents (verify with the command above before commit):
+   ```
+   web/src/lib/anthropic.ts:642
+   web/src/lib/chatRuntime.ts:1601
+   web/src/lib/deterministicSql.ts:511
+   web/src/lib/deterministicSql/pace.ts:631
+   ```
+3. Wire the gate into `.github/workflows/ci.yml` as a new step that runs `bash scripts/loop/line_count_gate.sh` (placed before the existing build/typecheck steps so a bloat regression is caught early).
+4. Run `bash scripts/loop/line_count_gate.sh` locally; expect exit 0 against the seeded baseline.
+5. Verify the failure path twice (revert each pad before commit):
+   a. New-file path: create a throwaway `web/src/lib/__bloat_probe.ts` with 501 lines of `// pad`, run the gate, confirm non-zero exit and that the file is listed; delete the probe.
+   b. Baseline-ratchet path: append one extra line to `web/src/lib/chatRuntime.ts` so it reaches 1602 lines (over its 1601 baseline ceiling), run the gate, confirm non-zero exit naming `chatRuntime.ts` with both current count and baseline ceiling; revert the appended line.
 
 ## Changed files expected
 - `scripts/loop/line_count_gate.sh`
+- `scripts/loop/state/line_count_baseline.txt`
 - `.github/workflows/ci.yml`
 
 ## Artifact paths
@@ -43,8 +65,9 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] Gate exits 0 against current state.
-- [ ] Gate exits non-zero if a test file in lib/ is artificially padded > 500 lines.
+- [ ] `bash scripts/loop/line_count_gate.sh` exits 0 against current state with the seeded `scripts/loop/state/line_count_baseline.txt`.
+- [ ] Gate exits non-zero when a NEW `web/src/lib/*.ts` file (not in the baseline) is artificially padded > 500 lines, and the offending path + line count are printed.
+- [ ] Gate exits non-zero when a baseline-listed `web/src/lib/*.ts` file (e.g., `chatRuntime.ts`) is padded past its baseline ceiling, and the printout names the file with current count and baseline ceiling.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -79,11 +102,11 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Revise the goal, steps, gate commands, and acceptance criteria so the slice does not require `bash scripts/loop/line_count_gate.sh` to exit 0 against the current tree while `web/src/lib/chatRuntime.ts` (1601), `web/src/lib/anthropic.ts` (642), `web/src/lib/deterministicSql/pace.ts` (631), and `web/src/lib/deterministicSql.ts` (511) already exceed the proposed 500-line cap (`find web/src/lib -type f -name '*.ts' -print0 | xargs -0 wc -l | sort -nr | sed -n '1,10p'` exited 0). 
+- [x] Revise the goal, steps, gate commands, and acceptance criteria so the slice does not require `bash scripts/loop/line_count_gate.sh` to exit 0 against the current tree while `web/src/lib/chatRuntime.ts` (1601), `web/src/lib/anthropic.ts` (642), `web/src/lib/deterministicSql/pace.ts` (631), and `web/src/lib/deterministicSql.ts` (511) already exceed the proposed 500-line cap (`find web/src/lib -type f -name '*.ts' -print0 | xargs -0 wc -l | sort -nr | sed -n '1,10p'` exited 0). 
 
 ### Medium
-- [ ] Remove the unsupported "or feed an oversized fixture path" branch from Step 4 or specify the exact script interface and fixture artifact needed to test it, because Step 1 defines only a fixed scan of `web/src/lib/*.ts` and `## Artifact paths` is currently `None` ([diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:25), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:28), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:34)).
-- [ ] Correct the acceptance criterion to refer to a `web/src/lib/*.ts` file rather than a "test file in lib/" so it matches the goal and the scripted scope ([diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:12), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:47)).
+- [x] Remove the unsupported "or feed an oversized fixture path" branch from Step 4 or specify the exact script interface and fixture artifact needed to test it, because Step 1 defines only a fixed scan of `web/src/lib/*.ts` and `## Artifact paths` is currently `None` ([diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:25), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:28), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:34)).
+- [x] Correct the acceptance criterion to refer to a `web/src/lib/*.ts` file rather than a "test file in lib/" so it matches the goal and the scripted scope ([diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:12), [diagnostic/slices/09-line-count-gate.md](/Users/robertzehnder/.openf1-loop-worktrees/09-line-count-gate/diagnostic/slices/09-line-count-gate.md:47)).
 
 ### Low
 - [ ] None.
