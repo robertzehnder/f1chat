@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-pit-stints
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-29
 ---
 
 ## Goal
@@ -92,6 +92,20 @@ Rollback: `git revert <commit>`.
 
 ### Low
 - [x] Replace the prose item in `## Prior context` with an actual artifact/path or move it into a note, so the section remains machine-auditable as "paths to consult" rather than mixed path + commentary (`diagnostic/slices/08-validators-pit-stints.md:18-21`).
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated at `2026-04-30T02:05:24Z`, so no stale-state note is required for this round.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite the gate block so each `web` command runs from repo root in an isolated subshell (for example `(cd web && npm run build)` / `(cd web && npm run typecheck)`), because the current sequential `cd web && ...` lines leave the shell in `web/` after the first command and make the next `cd web` and repo-root `bash scripts/loop/test_grading_gate.sh` invocation fail.
+
+### Medium
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated at `2026-04-30T02:05:24Z`, so no stale-state note is required for this round.
