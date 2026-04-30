@@ -356,6 +356,27 @@ export async function getSessionStintTimeline(sessionKey: number): Promise<Recor
   );
 }
 
+export async function getSessionStrategySummary(sessionKey: number): Promise<Record<string, unknown>[]> {
+  return sql<Record<string, unknown>>(
+    `
+    SELECT
+      driver_number,
+      driver_name,
+      team_name,
+      total_stints,
+      pit_stop_count,
+      compounds_used,
+      strategy_type,
+      total_pit_duration_seconds,
+      pit_laps
+    FROM core.strategy_summary
+    WHERE session_key = $1
+    ORDER BY driver_number ASC
+    `,
+    [sessionKey]
+  );
+}
+
 export async function getSessionTableCounts(
   sessionKey: number,
   tableNames: string[]

@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-strategy-summary
 phase: 10
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:59:00Z
+updated: 2026-04-30T18:03:23-04:00
 ---
 
 ## Goal
@@ -71,7 +71,36 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`. The card is additive; no existing route, query, or component is modified except for the additive `Promise.all` entry and render slot in `page.tsx`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/10-session-detail-strategy-summary` (off integration/perf-roadmap @ 6b90d34 plan-approved tip)
+
+**Changed files (exactly the four scoped):**
+- `web/src/lib/queries/sessions.ts` — added `export async function getSessionStrategySummary(sessionKey: number)` after `getSessionStintTimeline`. Body selects `driver_number, driver_name, team_name, total_stints, pit_stop_count, compounds_used, strategy_type, total_pit_duration_seconds, pit_laps` `FROM core.strategy_summary WHERE session_key = $1 ORDER BY driver_number ASC`. No `raw.*` references.
+- `web/src/app/sessions/[sessionKey]/StrategySummary.tsx` — new default-exported function component `StrategySummary({ rows })`. Renders one row per driver with `data-testid="strategy-row"`, a strategy-type cell with `data-testid="strategy-type"`, and a `compounds_used` join helper. Contains all five required substrings (`data-testid="strategy-row"`, `data-testid="strategy-type"`, `compounds_used`, `pit_stop_count`, `strategy_type`).
+- `web/src/app/sessions/[sessionKey]/page.tsx` — added `getSessionStrategySummary` to the `@/lib/queries/sessions` import block (per-module path, not the barrel); added `StrategySummary` default-import from `./StrategySummary`; inserted `getSessionStrategySummary(key)` BEFORE `getSessionStintTimeline(key)` in the `Promise.all` arg list and `strategySummary` BEFORE `stints` in the destructure (preserving `stints` as the LAST destructured identifier per the round-2 plan-audit fix); rendered `<StrategySummary rows={strategySummary} />` directly into the page-level `<div className="stack">` flow, immediately after `<StintTimeline rows={stints} />` and before the `Weather Preview` two-col block (no wrapper element).
+- `web/scripts/tests/session-detail-strategy-summary.test.mjs` — new dedicated `node:test` source-inspection grading test with G1–G5 mirroring the spec. G3/G5 extract the strategy-summary binding via `/<StrategySummary\s+rows=\{(\w+)\}/` (no last-destructure-slot shortcut) and use `<StintTimeline rows={` as a generic substring landmark.
+
+**Decisions:**
+- Used per-module import path `@/lib/queries/sessions` for `getSessionStrategySummary` (round-4 plan-audit resolution); `web/src/lib/queries.ts` barrel was deliberately not modified (kept out of `Changed files expected`).
+- Added the new `Promise.all` entry and destructured binding immediately ahead of the existing `getSessionStintTimeline(key)` / `stints` slot, leaving `stints` as the trailing identifier so the existing `web/scripts/tests/session-detail-stint-timeline.test.mjs` G3/G5 (which capture the LAST destructured identifier and lookup `<StintTimeline rows={captured}>`) continue to pass — verified by running that suite directly post-edit (5/5 ok).
+- `StrategySummary.tsx` renders bare into the page-level stack (no extra `<section>`/card wrapper), matching the adjacent `<PaceTable>`/`<StintTimeline>` convention per Step 3.
+
+**Gate commands (exit codes):**
+- `cd web && npm run build` → exit 0 (Next.js 15.5.15, compiled successfully, type-checked, 4 static pages generated, all routes including `/sessions/[sessionKey]` listed).
+- `cd web && npm run typecheck` → exit 0 (`tsc --noEmit` clean).
+- `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`). New `session-detail-strategy-summary` suite: 5/5 G1–G5 pass when run in isolation. `session-detail-stint-timeline` suite: 5/5 still pass (no regression).
+
+**Self-check vs Acceptance criteria:**
+- G1 ✓ — `getSessionStrategySummary` declared in `sessions.ts`, body has `FROM core.strategy_summary`, `WHERE session_key = $1`, no `raw.stints`/`raw.pit`, all 9 columns referenced.
+- G2 ✓ — `StrategySummary.tsx` exists, default-exports a function, contains all 5 required substrings.
+- G3 ✓ — page.tsx imports `getSessionStrategySummary` from `@/lib/queries/sessions` specifically; calls `getSessionStrategySummary(` inside `Promise.all([...])`; renders `<StrategySummary rows={strategySummary}` (extracted via `/<StrategySummary\s+rows=\{(\w+)\}/`); `strategySummary` appears in the destructured identifier list (between `pace` and `stints`).
+- G4 ✓ — `import StrategySummary from "./StrategySummary"`.
+- G5 ✓ — element ordering: `<StintTimeline rows={` (literal substring) → `<StrategySummary rows={strategySummary}` → `Weather Preview`. All three indices found and ordered as required.
+- Build/typecheck/grading-gate all exit 0; baseline stint-timeline tests un-regressed.
+
+**Out-of-scope verification:** No DB migrations, no `raw.*` reads, no changes to `web/src/lib/queries.ts` barrel, no changes to other session-detail components, no edits to baseline files or other slices' artifacts.
+
+**Commit:** see `[slice:10-session-detail-strategy-summary][awaiting-audit]` commit on this branch (hash recorded in branch HEAD post-push).
 
 ## Audit verdict
 (filled by Codex)

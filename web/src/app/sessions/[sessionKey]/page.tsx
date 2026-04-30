@@ -7,9 +7,14 @@ import {
   getSessionRaceControl,
   getSessionWeather
 } from "@/lib/queries";
-import { getSessionDriverPace, getSessionStintTimeline } from "@/lib/queries/sessions";
+import {
+  getSessionDriverPace,
+  getSessionStintTimeline,
+  getSessionStrategySummary
+} from "@/lib/queries/sessions";
 import PaceTable from "./PaceTable";
 import StintTimeline from "./StintTimeline";
+import StrategySummary from "./StrategySummary";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +33,7 @@ export default async function SessionDetailPage({
     );
   }
 
-  const [session, completeness, drivers, laps, weather, raceControl, pace, stints] = await Promise.all([
+  const [session, completeness, drivers, laps, weather, raceControl, pace, strategySummary, stints] = await Promise.all([
     getSessionByKey(key),
     getSessionCompleteness(key),
     getSessionDrivers(key),
@@ -36,6 +41,7 @@ export default async function SessionDetailPage({
     getSessionWeather(key, 200),
     getSessionRaceControl(key, 200),
     getSessionDriverPace(key),
+    getSessionStrategySummary(key),
     getSessionStintTimeline(key)
   ]);
 
@@ -70,6 +76,7 @@ export default async function SessionDetailPage({
       <DataTable title="Lap Preview" rows={laps} maxHeight="380px" />
       <PaceTable rows={pace} />
       <StintTimeline rows={stints} />
+      <StrategySummary rows={strategySummary} />
       <div className="two-col">
         <DataTable title="Weather Preview" rows={weather} maxHeight="300px" />
         <DataTable title="Race Control Preview" rows={raceControl} maxHeight="300px" />
