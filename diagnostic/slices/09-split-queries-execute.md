@@ -93,7 +93,7 @@ Rollback: `git revert <commit>`.
 | `grep -nE "..." web/src/lib/queries/execute.ts; test $? -eq 1` | 0 (grep printed nothing → exit 1 → `test $? -eq 1` → 0) |
 | `(cd web && npx --yes madge --circular --extensions ts,tsx --ts-config tsconfig.json src/lib/queries/execute.ts)` | 0 (no circular dependency found) |
 
-Commit hash filled by post-commit hook below.
+**Commit:** `78db58e` (`slice/09-split-queries-execute`).
 
 ## Audit verdict
 (filled by Codex)
