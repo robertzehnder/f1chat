@@ -1,11 +1,11 @@
 ---
 slice_id: 10-catalog-completeness-page
 phase: 10
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:33:59Z
+updated: 2026-04-30T18:34:50-04:00
 ---
 
 ## Goal
@@ -78,7 +78,37 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`. The route is purely additive at `/catalog/completeness`; the existing `/catalog` Schema Catalog route, all existing query exports, all session-detail pages, and `web/src/lib/queries.ts` are untouched.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/10-catalog-completeness-page`
+
+**Files changed:**
+- `web/src/lib/queries/sessions.ts` — added `type CatalogCompletenessFilters` and new export `getCatalogCompleteness(filters?: CatalogCompletenessFilters)`. Body selects `FROM core.session_completeness` (no `raw.*` reads), projects all 24 declared columns (incl. bare `location` and `has_location`), applies the `$1::int IS NULL OR year = $1` and `$2::text IS NULL OR completeness_status = $2` predicates, orders by `date_start DESC NULLS LAST, session_key DESC`, and clamps `LIMIT` (default 200, max 500) / `OFFSET` (default 0, max 1_000_000) via the existing `safeLimit` / `clampInt` helpers — same pattern used by `getSessions`.
+- `web/src/app/catalog/completeness/CompletenessTable.tsx` — new default-exported component. Renders one `<tr data-testid="completeness-row">` per session with cells for `session_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status` (in a `<td data-testid="completeness-status">`), `completeness_score`, plus a contract-coverage `<td data-testid="completeness-coverage">` whose content is derived by filtering a `HAS_FLAGS` array that literally references each of the 14 `has_*` column identifiers.
+- `web/src/app/catalog/completeness/page.tsx` — new server sub-route. Default-imports `CompletenessTable` from `./CompletenessTable`, imports `getCatalogCompleteness` from the per-module `@/lib/queries/sessions` path (no barrel touched), declares `export const dynamic = "force-dynamic"`, awaits `const rows = await getCatalogCompleteness({})`, and renders `<CompletenessTable rows={rows} />` inside a `stack` layout. The existing `/catalog` Schema Catalog page is untouched.
+- `web/scripts/tests/catalog-completeness.test.mjs` — new source-inspection grading test (Node `node:test`, no DB/env). Asserts G1–G5 per the slice's acceptance criteria (function-body extraction with brace balancing, then literal-substring + regex checks for SQL contract, JSX bindings, and import shape).
+
+**Decisions:**
+- Used a named `type CatalogCompletenessFilters` alias rather than an inline object-type parameter, so that the `extractFunctionBody` helper in the grading test (first `{`-after-decl + brace balancing — the same helper used by `session-detail-strategy-summary.test.mjs` and `session-detail-stint-timeline.test.mjs`) lands on the function body and not the parameter type literal. The parameter is `filters?: CatalogCompletenessFilters` (optional), accessed via `filters?.…` inside the body — this avoids the `= {}` default that would also have introduced an `{}` token before the body brace.
+- Mirrored `getSessions` for `safeLimit`/`clampInt` clamping (200 default, 500 max, OFFSET capped at 1_000_000) so the new export reuses the existing bounded-pagination helpers rather than introducing a parallel mechanism.
+- The contract-coverage cell renders only the labels for `has_*` flags that are `true`, joined by `, ` (e.g. `"drivers, laps, pit, stints, weather"`), with `"—"` as the empty-set placeholder. This satisfies the slice's "names of the `has_*` flags that are true" requirement while keeping the cell readable.
+
+**Gate results (exit codes):**
+- `(cd web && npm run build)` — exit `0`. Output confirms the new `/catalog/completeness` route is registered alongside the existing `/catalog`.
+- `(cd web && npm run typecheck)` — exit `0`.
+- `bash scripts/loop/test_grading_gate.sh` — exit `0`. Wrapper output: `PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`. The 39 slice failures match the cached integration baseline exactly; this slice introduced 0 new failures.
+
+**Self-check (acceptance criteria):**
+- G1 (sessions.ts query contract) — passes. `extractFunctionBody` lands on the body `{ … }`; body contains `FROM core.session_completeness`, `WHERE`, no `raw.`, all 24 declared column identifiers, the `$1`/`$2`-bound year/status predicates, `ORDER BY date_start DESC NULLS LAST, session_key DESC`, and references both `safeLimit` and `clampInt`. The `(body.match(/location/g) ?? []).length >= 2` assertion holds (one match for the bare `location` projection, one for `has_location`).
+- G2 (CompletenessTable.tsx) — passes. File exists, matches `/export\s+default\s+function\b/`, contains all required `data-testid` literals, all 6 session-column literals (`session_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status`, `completeness_score`), and each of the 14 `has_*` identifiers (via the `HAS_FLAGS` const).
+- G3 (page.tsx wires query → JSX) — passes. Per-module import regex matches; `<CompletenessTable rows={rows}` extracts `rows`; `const rows = await getCatalogCompleteness(` is present in the same file.
+- G4 (default import path) — passes. `import CompletenessTable from "./CompletenessTable";` matches the regex.
+- G5 (force-dynamic) — passes. Literal `export const dynamic = "force-dynamic"` is present.
+
+**Out-of-scope confirmations:**
+- `web/src/app/catalog/page.tsx` (Schema Catalog) is unchanged — verified via `git status` showing only the four expected files modified/added.
+- `web/src/lib/queries.ts` is unchanged — the new export is reachable only via the per-module `@/lib/queries/sessions` specifier, as required by Step 3.
+- No `core.session_completeness` schema change; the view is consumed read-only.
+- No live-DB runtime verification was performed; that is explicitly out of scope per `Required services / env` and `Out of scope`.
 
 ## Audit verdict
 (filled by Codex)

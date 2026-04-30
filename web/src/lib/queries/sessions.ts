@@ -377,6 +377,59 @@ export async function getSessionStrategySummary(sessionKey: number): Promise<Rec
   );
 }
 
+type CatalogCompletenessFilters = {
+  year?: number;
+  status?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export async function getCatalogCompleteness(
+  filters?: CatalogCompletenessFilters
+): Promise<Record<string, unknown>[]> {
+  const limit = safeLimit(filters?.limit, 200, 500);
+  const offset = clampInt(filters?.offset ?? 0, 0, 1_000_000);
+  const status = filters?.status && filters.status.trim() ? filters.status.trim() : null;
+
+  return sql<Record<string, unknown>>(
+    `
+    SELECT
+      session_key,
+      meeting_key,
+      year,
+      meeting_name,
+      session_name,
+      normalized_session_type,
+      country_name,
+      location,
+      date_start,
+      completeness_status,
+      completeness_score,
+      has_core_analysis_pack,
+      has_drivers,
+      has_laps,
+      has_pit,
+      has_stints,
+      has_weather,
+      has_team_radio,
+      has_position_history,
+      has_intervals,
+      has_car_data,
+      has_location,
+      has_session_result,
+      has_starting_grid,
+      has_race_control
+    FROM core.session_completeness
+    WHERE
+      ($1::int IS NULL OR year = $1)
+      AND ($2::text IS NULL OR completeness_status = $2)
+    ORDER BY date_start DESC NULLS LAST, session_key DESC
+    LIMIT $3 OFFSET $4
+    `,
+    [filters?.year ?? null, status, limit, offset]
+  );
+}
+
 export async function getSessionTableCounts(
   sessionKey: number,
   tableNames: string[]
