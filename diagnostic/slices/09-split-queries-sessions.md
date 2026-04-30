@@ -92,7 +92,7 @@ Together with their session-only constants (`DEFAULT_LIST_LIMIT`, `MAX_LIST_LIMI
 - [x] `web/src/lib/queries/sessions.ts` contains no import from `'../queries'` or `'@/lib/queries'` (grep gate exit 1).
 - [x] All gate commands pass.
 
-**Commit hash:** filled in after commit.
+**Commit hash:** `68cc3be`
 
 ## Audit verdict
 (filled by Codex)
