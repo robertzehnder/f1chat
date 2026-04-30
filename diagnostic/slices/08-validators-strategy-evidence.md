@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T09:15:00-04:00
+updated: 2026-04-30T09:14:39-04:00
 ---
 
 ## Goal
@@ -74,7 +74,33 @@ Each `web` command runs inside its own subshell so the parent shell stays at rep
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/08-validators-strategy-evidence`
+**Implementation commit:** `09549b2` (`slice 08-validators-strategy-evidence: validator + route wiring + tests`)
+
+### Changed files (matches "Changed files expected")
+- `web/src/lib/validators/strategyEvidenceValidator.ts` (new — 319 lines)
+- `web/src/app/api/chat/route.ts` (+9 / -1; import added near peer validators, invocation added at line 1035 alongside `validateGridFinish`, `strategyEvidence` field added to `appendQueryTrace`'s `validators` payload at line 1064)
+- `web/scripts/tests/validator-strategy-evidence.test.mjs` (new — 5 unit-test cases)
+- `web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs` (new — 4 route-wiring cases)
+
+### Decisions
+- **Validator signature**: `(answerText: string, contract: FactContract) => StrategyEvidenceValidationResult` where the result shape `{ ok: boolean; reasons: string[] }` matches `GridFinishValidationResult` / `PitStintsValidationResult` / `SectorConsistencyValidationResult`. The validator never receives a "contract absent" case — that is handled at the route layer by passing `null` into the trace via the same `synthesisContract ? validateStrategyEvidence(...) : null` guard the peer validators already use.
+- **Driver-row binding**: ported the `findRowByDriverToken` pattern from `gridFinishValidator.ts:93` (matches on `full_name` / `driver_name` / `name`, splits on whitespace / `-` / `'` to tolerate last-name-only tokens) and resolve every claim against the matching driver's row first; an unmatched-driver claim emits a `no contract row matches this driver` reason rather than silently falling back to "any row in the contract."
+- **Recognized evidence-bearing columns**: `pit_laps`, `pit_stop_count`, `strategy_type`, `compounds_used`, `total_pit_duration_seconds` (from `core.strategy_summary` per `sql/007_semantic_summary_contracts.sql:206-236`) plus `lap_number`, `event_type`, `decision_kind`, `pit_lap` (from a future `core.strategy_evidence_summary` per-event contract). When *no* recognized column appears anywhere in the contract rows, every parsed strategy claim is treated as unsupported (rather than silently passing).
+- **Claim taxonomy**: parses three claim kinds: `strategy_name` (e.g. "Verstappen ran a two-stop strategy" → backed by `strategy_type` or `pit_stop_count`), `pit_lap` (e.g. "pitting on laps 18 and 41" → backed by `pit_laps` array entries or by `pit_lap` / `lap_number` on a per-event row), and `stop_count` (e.g. "made 2 pit stops" → backed by `pit_stop_count`). Driver token resolution uses the `nearestPriorDriverToken` lookback pattern from `gridFinishValidator.ts:131-142` so multi-clause sentences like "Hamilton ran a two-stop strategy, pitting on laps 18 and 41" attribute every clause to the same driver subject.
+- **Non-blocking failures**: validator output is appended to `chat_query_trace.jsonl` only via `appendQueryTrace`'s `validators.strategyEvidence` field. The user-facing response body is unchanged on validator failure (HTTP 200, original synthesized `answer`, no `validators` or `strategyEvidence` keys). Route-wiring tests (a) and (d) explicitly assert this.
+- **Null-contract route-reachable test (deferred Medium from round 9)**: chose option (b) per the deferral note — the route-wiring test exercises the synthesis-bypass zero-row path. When `runSql` returns `rowCount: 0`, the route skips the LLM-synthesis block entirely (where `synthesisContract` would be assigned at `route.ts:918`) and produces a hardcoded "No rows matched..." answer; the trace's `validators.strategyEvidence` is then `null` via the route's `synthesisContract ? ... : null` guard. Test 3 in `validator-strategy-evidence-route-wiring.test.mjs` drives this path through the real `route.ts` — no direct validator call, no synthetic `null` injection.
+
+### Self-checks
+- Unit tests `validator-strategy-evidence.test.mjs`: **5/5 pass** (cases (a) vacuously-ok, (b) supported claims against single-row `strategy_summary`-shaped contract, (c) unsupported-claim contradiction, (d) all-claims-unsupported on missing-evidence contract, (e) driver-binding both directions).
+- Route-wiring tests `validator-strategy-evidence-route-wiring.test.mjs`: **4/4 pass** (failure-case trace + non-blocking response, pass-case trace, null-contract zero-row branch, driver-binding mismatch).
+- All four expected files modified; no other files touched (`git diff --cached --stat` confirms exactly the four expected paths).
+
+### Gate command exit codes
+- `(cd web && npm run build)` → exit `0`
+- `(cd web && npm run typecheck)` → exit `0`
+- `bash scripts/loop/test_grading_gate.sh` → exit `0` (PASS, `slice_fails=28 baseline_fails=28 baseline_failures_fixed=0`)
 
 ## Audit verdict
 (filled by Codex)
