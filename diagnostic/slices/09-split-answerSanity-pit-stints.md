@@ -75,7 +75,7 @@ Branch: `slice/09-split-answerSanity-pit-stints` (worktree at `/Users/robertzehn
 - `cd web && npm run typecheck` → exit 0 (`tsc --noEmit` clean).
 - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`).
 
-Commit hash: filled at commit time.
+Commit hash: `28918de6c5c6ca3b5ff0e2be9d6513bb65759857`.
 
 ## Audit verdict
 (filled by Codex)
