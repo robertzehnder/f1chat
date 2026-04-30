@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-planTrace
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:28:28Z
+updated: 2026-04-30T15:30:44Z
 ---
 
 ## Goal
@@ -25,7 +25,7 @@ None at author time.
 1. Identify the target functions/types in `web/src/lib/chatRuntime.ts` (e.g., plan-trace recording helpers/types such as `recordPlanTrace`, `appendPlanTrace`, `PlanTraceEntry`, or whatever the plan-trace logic is named in the current file — the implementer enumerates the actual symbols during Step 1 and records them in the Slice-completion note).
 2. Move them to `web/src/lib/chatRuntime/planTrace.ts`; re-export from `web/src/lib/chatRuntime.ts` for back-compat.
 3. Run `rg "<moved symbol names>" web/src` to enumerate every direct import site of the moved symbols. If any external file imports them, update the import to `@/lib/chatRuntime/planTrace` and add that file to `Changed files expected` before committing. If `rg` returns only `web/src/lib/chatRuntime.ts` (i.e., the symbols are internal-only today), record that finding in the Slice-completion note and skip external import edits — the back-compat re-export keeps any future external caller working.
-4. Verify no circular imports: the new `web/src/lib/chatRuntime/planTrace.ts` must not import from `web/src/lib/chatRuntime.ts`. Confirm `cd web && npm run build` and `cd web && npm run typecheck` succeed (both fail loudly on circular ESM resolution); these are the proof-of-record for this requirement.
+4. Verify no circular imports via a source-level check: `web/src/lib/chatRuntime/planTrace.ts` must not contain any `import`/`from` statement that resolves to `web/src/lib/chatRuntime.ts` (i.e., no `'../chatRuntime'`, `'../chatRuntime.js'`, `'@/lib/chatRuntime'`, or `'@/lib/chatRuntime.js'` specifier). The grep gate below is the direct proof-of-record; `npm run build` / `npm run typecheck` remain belt-and-braces but are not the primary evidence for this requirement.
 
 ## Changed files expected
 - `web/src/lib/chatRuntime.ts`
@@ -37,6 +37,9 @@ None.
 
 ## Gate commands
 ```bash
+# Source-level no-circular-import check: planTrace.ts must NOT import from chatRuntime.ts.
+# This grep must produce zero matches (the leading `!` inverts rg's exit code).
+! rg -nP "(?:from|import)\s+['\"](?:\.\./chatRuntime|@/lib/chatRuntime)(?:\.js)?['\"]" web/src/lib/chatRuntime/planTrace.ts
 cd web && npm run build
 cd web && npm run typecheck
 bash scripts/loop/test_grading_gate.sh
@@ -46,7 +49,8 @@ bash scripts/loop/test_grading_gate.sh
 - [ ] `web/src/lib/chatRuntime/planTrace.ts` exists and exports the moved symbols.
 - [ ] `web/src/lib/chatRuntime.ts` no longer contains the moved bodies (only re-exports if needed).
 - [ ] Step 3 ripgrep is recorded in the Slice-completion note; any external `web/src/**` import sites it surfaces resolve from `web/src/lib/chatRuntime/planTrace.ts` (or, if none exist, the note states that explicitly).
-- [ ] `cd web && npm run build` and `cd web && npm run typecheck` both exit 0, proving no circular import was introduced between `web/src/lib/chatRuntime.ts` and `web/src/lib/chatRuntime/planTrace.ts`.
+- [ ] The source-level grep gate (`! rg -nP "(?:from|import)\s+['\"](?:\.\./chatRuntime|@/lib/chatRuntime)(?:\.js)?['\"]" web/src/lib/chatRuntime/planTrace.ts`) exits 0 with no matches, directly proving `web/src/lib/chatRuntime/planTrace.ts` does not import from `web/src/lib/chatRuntime.ts`.
+- [ ] `cd web && npm run build` and `cd web && npm run typecheck` both exit 0 (secondary corroboration of no circular ESM resolution).
 - [ ] All gate commands pass.
 
 ## Out of scope
@@ -84,7 +88,7 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Add a source-level gate or acceptance check that `web/src/lib/chatRuntime/planTrace.ts` does not import from `web/src/lib/chatRuntime.ts`; successful `npm run build` and `npm run typecheck` are not a direct proof for the no-circular-import requirement stated in Step 4.
+- [x] Add a source-level gate or acceptance check that `web/src/lib/chatRuntime/planTrace.ts` does not import from `web/src/lib/chatRuntime.ts`; successful `npm run build` and `npm run typecheck` are not a direct proof for the no-circular-import requirement stated in Step 4.
 
 ### Low
 
