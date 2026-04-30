@@ -86,7 +86,8 @@ Rollback: `git revert <commit>`.
 - Acceptance criterion 4: madge gate reports no circular dependency between `deterministicSql.ts` and `deterministicSql/result.ts` — ✓.
 - Acceptance criterion 5: all four gate commands above exit 0 — ✓.
 
-**Commit hashes:** filled in after `git commit` below.
+**Commit hashes:**
+- `2f004af` — split: extract result/finish SQL into deterministicSql/result.ts (slice changes + slice-note + frontmatter flip)
 
 ## Audit verdict
 (filled by Codex)
