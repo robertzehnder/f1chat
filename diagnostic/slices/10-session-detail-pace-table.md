@@ -1,7 +1,7 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -95,7 +95,17 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 - Out-of-scope check: `git diff --name-only efca6db..HEAD` lists only `diagnostic/slices/10-session-detail-pace-table.md`, `web/scripts/tests/session-detail-pace-table.test.mjs`, `web/src/app/sessions/[sessionKey]/PaceTable.tsx`, `web/src/app/sessions/[sessionKey]/page.tsx`, `web/src/lib/queries/sessions.ts` — exactly the four files in `Changed files expected` plus this slice file.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/10-session-detail-pace-table.md` plus `web/scripts/tests/session-detail-pace-table.test.mjs`, `web/src/app/sessions/[sessionKey]/PaceTable.tsx`, `web/src/app/sessions/[sessionKey]/page.tsx`, and `web/src/lib/queries/sessions.ts`.
+- Criterion: `getSessionDriverPace` selects the required contract columns from `core.driver_session_summary` and filters `WHERE session_key = $1` -> PASS ([web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/src/lib/queries/sessions.ts:302), [web/scripts/tests/session-detail-pace-table.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/scripts/tests/session-detail-pace-table.test.mjs:45)).
+- Criterion: `PaceTable` exists, imports `@/components/DataTable`, exports default, and renders `<DataTable ... rows={rows} />` -> PASS ([web/src/app/sessions/[sessionKey]/PaceTable.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/src/app/sessions/[sessionKey]/PaceTable.tsx:1), [web/scripts/tests/session-detail-pace-table.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/scripts/tests/session-detail-pace-table.test.mjs:77)).
+- Criterion: `page.tsx` binds the awaited `getSessionDriverPace(...)` result to `<PaceTable rows={...}>` through the shared final destructured identifier `pace` -> PASS ([web/src/app/sessions/[sessionKey]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/src/app/sessions/[sessionKey]/page.tsx:30), [web/src/app/sessions/[sessionKey]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/src/app/sessions/[sessionKey]/page.tsx:69), [web/scripts/tests/session-detail-pace-table.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/scripts/tests/session-detail-pace-table.test.mjs:101)).
+- Criterion: source-assertion coverage passes, including every required pace column and no `raw.laps` reference -> PASS (`cd web && node --test scripts/tests/session-detail-pace-table.test.mjs` exit `0`; [web/scripts/tests/session-detail-pace-table.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-pace-table/web/scripts/tests/session-detail-pace-table.test.mjs:8)).
+- Decision -> PASS. Slice meets scope and acceptance criteria.
 
 ## Prior audit verdict (round 1, REJECT, superseded by re-audit after _state.md revert)
 **Status: REJECT (superseded)**
