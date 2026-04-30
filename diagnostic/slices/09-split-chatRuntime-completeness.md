@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-completeness
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T15:30:00Z
 ---
 
 ## Goal
@@ -22,14 +22,15 @@ Extract completeness-checks (have we got enough data to answer?) from chatRuntim
 None at author time.
 
 ## Steps
-1. Identify the target functions/types in `web/src/lib/chatRuntime.ts`.
-2. Move them to `web/src/lib/chatRuntime/completeness.ts`; re-export from `web/src/lib/chatRuntime.ts` for back-compat.
-3. Update direct imports of these symbols across the codebase to point at the new file.
-4. Verify no circular imports.
+1. Identify the target completeness-check functions/types in `web/src/lib/chatRuntime.ts`. Lock the final list before moving.
+2. Move them verbatim to `web/src/lib/chatRuntime/completeness.ts` (a new module). Add re-exports back through `web/src/lib/chatRuntime.ts` for any symbol that another file currently imports from `@/lib/chatRuntime`, so existing public surface is preserved.
+3. Update direct imports of the moved symbols across the codebase to point at `@/lib/chatRuntime/completeness`. As of audit time, the only external file that imports from `@/lib/chatRuntime` is `web/src/app/api/chat/route.ts`, and it currently imports `buildChatRuntime` / `ChatRuntimeResult` (neither is a completeness symbol); confirm via repo-wide `grep -rn "from \"@/lib/chatRuntime\"" web/src` before/after the move and list any additional callsites discovered. If no external callsite imports a moved symbol, document that finding in the slice-completion note rather than touching unrelated files.
+4. Verify no new circular imports are introduced by the split (see Acceptance criteria for the explicit check).
 
 ## Changed files expected
-- `web/src/lib/chatRuntime.ts`
-- `web/src/lib/chatRuntime/completeness.ts`
+- `web/src/lib/chatRuntime.ts` (moved bodies removed; re-exports added if needed)
+- `web/src/lib/chatRuntime/completeness.ts` (new)
+- Any direct-import callsite of a moved symbol identified by Step 3's grep. Expected at audit time: none beyond `chatRuntime.ts` itself, since `web/src/app/api/chat/route.ts` only imports `buildChatRuntime` / `ChatRuntimeResult`. If Step 3 finds additional callsites, append them to this list in the slice-completion note.
 
 ## Artifact paths
 None.
@@ -38,7 +39,7 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
@@ -63,10 +64,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the required grading gate uses the loop baseline wrapper instead of failing on unrelated known grading regressions.
+- [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the required grading gate uses the loop baseline wrapper instead of failing on unrelated known grading regressions.
 
 ### Medium
-- [ ] Expand `Changed files expected` to cover the direct-import callsites Step 3 says will be updated; the current list only names the source and destination module files.
+- [x] Expand `Changed files expected` to cover the direct-import callsites Step 3 says will be updated; the current list only names the source and destination module files.
 
 ### Low
 - [ ] None.
