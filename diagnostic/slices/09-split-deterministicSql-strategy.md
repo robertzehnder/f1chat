@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-strategy
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T12:19:00-04:00
+updated: 2026-04-30T12:26:59-04:00
 ---
 
 ## Goal
@@ -147,7 +147,20 @@ For completeness, `rg "deterministicSql" web/src` confirms only one external imp
 - [x] All gate commands pass.
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+- Gate #1 `! rg -nP "(?:from|import)\s+['\"](?:\.\./deterministicSql|@/lib/deterministicSql)(?:\.js)?['\"]" web/src/lib/deterministicSql/strategy.ts` -> exit `0`.
+- Gate #2 `cd web && npm run build` -> exit `0`.
+- Gate #3 `cd web && npm run typecheck` -> exit `0`.
+- Gate #4 `bash scripts/loop/test_grading_gate.sh` -> exit `0`.
+- Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/09-split-deterministicSql-strategy.md`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/deterministicSql/strategy.ts`.
+- Criterion `web/src/lib/deterministicSql/strategy.ts` exists and exports the moved symbols: PASS — `buildStrategyTemplate` is exported from `web/src/lib/deterministicSql/strategy.ts:10`.
+- Criterion `web/src/lib/deterministicSql.ts` no longer contains the moved bodies: PASS — the file imports/re-exports `buildStrategyTemplate` at `web/src/lib/deterministicSql.ts:4` and `web/src/lib/deterministicSql.ts:5`, then delegates via `buildStrategyTemplate(...)` at `web/src/lib/deterministicSql.ts:559`.
+- Criterion Step 3 ripgrep is recorded and any external import sites are updated: PASS — the Slice-completion note records the ripgrep and states no external `web/src/**` importers beyond `web/src/lib/deterministicSql.ts`.
+- Criterion source-level no-circular-import grep exits `0`: PASS — gate #1 exit `0`.
+- Criterion `cd web && npm run build` and `cd web && npm run typecheck` both exit `0`: PASS — gates #2 and #3 exit `0`.
+- Criterion all gate commands pass: PASS — gates #1-#4 exit `0`.
+- Decision: PASS — the strategy SQL split is in scope, mechanically complete, and all declared gates pass.
 
 ## Plan-audit verdict (round 1)
 
