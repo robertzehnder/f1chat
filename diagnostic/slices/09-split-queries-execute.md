@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-execute
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:45:00Z
+updated: 2026-04-30T18:07:34Z
 ---
 
 ## Goal
@@ -117,3 +117,17 @@ Rollback: `git revert <commit>`.
 - Round-2 Medium and both Lows are resolved: Step 4 now correctly identifies grep + madge as the cycle guards (no more tsc/next overclaim), the grep alternation covers any-depth `../`, optional `lib/`, optional `/index`, and the `@/lib/queries` alias, and Step 1 enumerates exactly five symbols with an explicit do-NOT-move list.
 - Caveat for codex: `npx --yes madge --circular --extensions ts,tsx src/lib/queries/execute.ts` runs without `--ts-config`, so madge's resolver may drop `@/lib/...` alias imports from the dependency graph and under-report transitive cycles routed through alias paths. The grep gate still guards the direct re-entry from `execute.ts` itself, and for a five-symbol mechanical extraction the residual risk is low; flagging as a note rather than escalating.
 - Frontmatter, Steps, Acceptance criteria, Changed files, and Out of scope are internally consistent; gate commands are idempotent.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Make the transitive-cycle gate alias-aware by passing the project's TypeScript path config to `madge` (or explicitly narrow Step 4 and the acceptance criterion to relative-path cycles only); the current `npx --yes madge --circular --extensions ts,tsx src/lib/queries/execute.ts` invocation can under-report cycles that traverse `@/lib/*` imports.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-30T17:55:28Z, so no stale-state note applies.
