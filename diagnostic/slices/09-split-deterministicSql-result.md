@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-result
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,20 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the slice uses the required baseline-aware grading gate instead of failing on known unrelated test debt.
+
+### Medium
+- [ ] Expand `## Changed files expected` to include every direct-import consumer Step 3 may retarget, not only `web/src/lib/deterministicSql.ts` and `web/src/lib/deterministicSql/result.ts`.
+- [ ] Add an acceptance criterion that makes Step 3 testable by requiring all direct imports of the moved symbols to resolve from `web/src/lib/deterministicSql/result.ts` after the split.
+
+### Low
+- [ ] Add an acceptance criterion or explicit gate note for Step 4 that no circular import is introduced, instead of leaving that verification implicit.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T16:28:16Z, so no stale-state note is needed.
