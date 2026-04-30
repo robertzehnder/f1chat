@@ -1,11 +1,11 @@
 ---
 slice_id: 10-saved-analyses-persistence
 phase: 10
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T19:02:55-04:00
+updated: 2026-04-30T19:12:40-04:00
 ---
 
 ## Goal
@@ -359,7 +359,30 @@ bash scripts/loop/test_grading_gate.sh
 - `git status` confirms only the six expected files are modified or added (slice md + the five files listed under "Changed files expected"); no other files were touched.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/021_saved_analysis.sql` -> exit `0`
+Gate #1 repeat `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/021_saved_analysis.sql` -> exit `0`
+Gate #2 schema assertion `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL' ... DO $$ ... $$; SQL` -> exit `0`
+Gate #2b CHECK-enforcement probe `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL' ... DO $$ ... $$; SQL` -> exit `0`
+Gate #3 round-trip probe `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL' ... DO $$ ... $$; SQL` -> exit `0`
+Gate #4 `(cd web && npm run build)` -> exit `0`
+Gate #5 `(cd web && npm run typecheck)` -> exit `0`
+Gate #6 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/10-saved-analyses-persistence.md`, `sql/021_saved_analysis.sql`, `web/scripts/tests/saved-analyses.test.mjs`, `web/src/app/api/saved-analyses/route.ts`, `web/src/app/saved-analyses/SavedAnalysesList.tsx`, and `web/src/app/saved-analyses/page.tsx`.
+Criterion migration/idempotency -> PASS; the migration wraps `BEGIN; ... COMMIT;`, creates `core.saved_analysis`, adds the named CHECK idempotently, creates the descending index, and a second apply also exits `0` at `sql/021_saved_analysis.sql:1`, `sql/021_saved_analysis.sql:3`, `sql/021_saved_analysis.sql:11`, `sql/021_saved_analysis.sql:28`, `sql/021_saved_analysis.sql:30`.
+Criterion live schema contract -> PASS; gate #2 verified base-table relkind, `PRIMARY KEY (id)`, required columns, required `NOT NULL` flags, `bigint`/`text`/`jsonb`/`timestamptz` types, `DEFAULT NOW()` on both timestamps, the `saved_analysis_created_at_idx` index, and `saved_analysis_name_nonempty` enforcing `length(btrim(name)) > 0` from `sql/021_saved_analysis.sql:3` and `sql/021_saved_analysis.sql:22`.
+Criterion DB-level empty-name rejection -> PASS; gate #2b exited `0`, confirming whitespace-only `name` raises `check_violation` (`23514`) against the CHECK installed at `sql/021_saved_analysis.sql:23`.
+Criterion persistence round-trip -> PASS; gate #3 exited `0`, confirming `INSERT ... RETURNING id`, `SELECT ... WHERE id = inserted_id`, and cleanup `DELETE` all succeed against `core.saved_analysis`.
+Criterion G1 -> PASS; the route keeps `dynamic = "force-dynamic"`, imports `sql` from `@/lib/db`, exports `GET` and `POST`, issues the required `SELECT`/`INSERT` statements, and removes the stub placeholder at `web/src/app/api/saved-analyses/route.ts:1`, `web/src/app/api/saved-analyses/route.ts:5`, `web/src/app/api/saved-analyses/route.ts:15`, `web/src/app/api/saved-analyses/route.ts:41`.
+Criterion G2 -> PASS; the list component default-exports the required table/empty-state rendering with `data-testid="saved-analysis-row"` and `data-testid="saved-analysis-empty"` and displays `id`, `name`, and `created_at` at `web/src/app/saved-analyses/SavedAnalysesList.tsx:7`, `web/src/app/saved-analyses/SavedAnalysesList.tsx:9`, `web/src/app/saved-analyses/SavedAnalysesList.tsx:22`.
+Criterion G3 -> PASS; the page imports `SavedAnalysesList`, awaits `const rows = await sql(...)`, and passes that binding into `<SavedAnalysesList rows={rows} />` at `web/src/app/saved-analyses/page.tsx:1`, `web/src/app/saved-analyses/page.tsx:6`, `web/src/app/saved-analyses/page.tsx:16`.
+Criterion G4 -> PASS; the grading test asserts the SQL file contains the required table, column, CHECK, index, and transaction substrings at `web/scripts/tests/saved-analyses.test.mjs:116` and those substrings are present in `sql/021_saved_analysis.sql:3`, `sql/021_saved_analysis.sql:23`, `sql/021_saved_analysis.sql:28`.
+Criterion G5 -> PASS; the route contains both validation tokens `invalid_name` and `invalid_payload` at `web/src/app/api/saved-analyses/route.ts:44` and `web/src/app/api/saved-analyses/route.ts:47`, and the grading assertion exists at `web/scripts/tests/saved-analyses.test.mjs:141`.
+Criterion web build -> PASS; `(cd web && npm run build)` exited `0` and registered `/api/saved-analyses` plus `/saved-analyses`.
+Criterion web typecheck -> PASS; `(cd web && npm run typecheck)` exited `0` after the build-generated `.next/types` artifacts were present, matching the slice's declared gate order.
+Criterion grading wrapper -> PASS; `bash scripts/loop/test_grading_gate.sh` exited `0` with `PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`.
+Decision -> PASS; all acceptance criteria verified, all declared gates passed, and the diff stayed within declared scope.
 
 ## Plan-audit verdict (round 1)
 
