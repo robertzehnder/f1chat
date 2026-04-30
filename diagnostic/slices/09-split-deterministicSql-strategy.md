@@ -66,7 +66,8 @@ Rollback: `git revert <commit>`.
 
 **Branch:** `slice/09-split-deterministicSql-strategy`
 
-**Commit hash:** `cfdeb6e2733c90b5e033f7eafb43db1ca50886a0` (short: `cfdeb6e`).
+**Commit hashes:**
+- `3d37b2a1801b8f253a2c083c2bddffe43f2119b4` (short: `3d37b2a`) — slice 09: extract strategy deterministic SQL into `deterministicSql/strategy.ts` (the squashed code+slice-note commit). A trailing follow-up commit on this branch updates the same slice file with the final commit hash for traceability.
 
 ### Step 1 — symbols identified and moved
 
