@@ -1,7 +1,7 @@
 ---
 slice_id: 09-split-deterministicSql-result
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -91,7 +91,19 @@ Rollback: `git revert <commit>`.
 - `4372ca8` — slice: record commit hash in completion note (this slice file update)
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Gate #4 `cd web && npx madge --circular --extensions ts,tsx src/lib/deterministicSql.ts src/lib/deterministicSql/result.ts` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` contains only `diagnostic/slices/09-split-deterministicSql-result.md`, `web/src/lib/deterministicSql.ts`, `web/src/lib/deterministicSql/result.ts`
+- Acceptance criterion 1 -> PASS; `web/src/lib/deterministicSql/result.ts:10` exports `buildResultTemplate`
+- Acceptance criterion 2 -> PASS; `web/src/lib/deterministicSql.ts:6-7` only imports/re-exports `buildResultTemplate`, and the call site remains at `web/src/lib/deterministicSql.ts:587`
+- Acceptance criterion 3 -> PASS; repo import survey shows only the barrel consumer at `web/src/app/api/chat/route.ts:8`, with no direct importer of the moved helper requiring retargeting
+- Acceptance criterion 4 -> PASS; `madge` reports no circular dependency between `web/src/lib/deterministicSql.ts` and `web/src/lib/deterministicSql/result.ts`
+- Acceptance criterion 5 -> PASS; all gate commands exited `0`
+- Decision -> PASS; the diff stays in scope and the split is mechanical
 
 ## Plan-audit verdict (round 1)
 
