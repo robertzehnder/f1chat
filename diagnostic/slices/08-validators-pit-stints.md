@@ -80,6 +80,7 @@ Rollback: `git revert <commit>`.
 
 **Commits (this slice, ahead of `integration/perf-roadmap`):**
 - `0b2af6b` — feat(validators): wire pit-stints synthesis validator into chat route
+- `99cf632` — slice 08-validators-pit-stints: completion note + awaiting_audit
 
 **Changed files (matches the slice's "Changed files expected" exactly):**
 - `web/src/lib/validators/pitStintsValidator.ts` (new)
