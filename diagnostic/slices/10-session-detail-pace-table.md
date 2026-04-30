@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:30:46Z
+updated: 2026-04-30T20:32:20Z
 ---
 
 ## Goal
@@ -129,6 +129,22 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 ### Medium
 - [x] Tighten Step 4 and the acceptance criteria so the automated check proves `page.tsx` both calls `getSessionDriverPace(...)` and passes that result into `<PaceTable rows={...} />`; the current import-plus-`<PaceTable` assertion can pass without the promised `Promise.all` wiring.
 - [x] Specify the required visible `PaceTable` columns (or explicitly narrow the goal) and add an observable check for them; the plan currently claims a per-driver pace section for median lap, fastest lap, and sector splits, but neither the steps nor the acceptance criteria make that user-facing output verifiable.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T20:16:19Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] Rewrite Step 4 and the matching acceptance criteria to prove the same awaited `getSessionDriverPace(...)` result is passed into `<PaceTable rows={...} />`; separate substring checks for a call site and a rendered `rows={` prop still allow dead or unrelated dataflow.
+
+### Medium
+- [ ] None.
 
 ### Low
 - [ ] None.
