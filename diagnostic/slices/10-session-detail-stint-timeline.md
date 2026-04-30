@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-stint-timeline
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:35:00Z
+updated: 2026-04-30T22:10:00Z
 ---
 
 ## Goal
@@ -122,6 +122,22 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 
 ### Medium
 - [x] Align Step 2, Step 4 G2, and the matching acceptance wording so the automated check proves the bars actually expose the promised stint descriptors; either assert a concrete observable binding for `compound_name` and `stint_length_laps` (for example the `title` content or equivalent rendered text) or narrow the plan so it no longer claims those values are cited in visible/accessible bar content.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T21:15:31Z, so no staleness note applies.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Align Step 3 with Step 4/G3 or the acceptance criteria so the automated checks prove `<StintTimeline rows={stints} />` is rendered after `<PaceTable rows={pace} />` and before the existing weather/race-control `two-col` block, or narrow Step 3 so it no longer makes that placement claim.
 
 ### Low
 - [ ] None.
