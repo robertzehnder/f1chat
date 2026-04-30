@@ -72,7 +72,7 @@ Branch: `slice/09-split-route-orchestration` (worktree at `/Users/robertzehnder/
 - `cd web && npm run build` → exit 0 (Next.js compiled, `/api/chat` route emitted).
 - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`).
 
-Commit hash: filled at commit time.
+Commit hash: `f1dc05b2af382cb508bb2a7fb031f9905661549d`.
 
 ## Audit verdict
 (filled by Codex)
