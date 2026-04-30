@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-grid-finish
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,19 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `cd web && bash ../scripts/loop/test_grading_gate.sh` in Gate commands so the slice uses the required grading wrapper baseline instead of hard-failing on known unrelated grading failures (`diagnostic/_state.md:52`, `diagnostic/slices/09-split-answerSanity-grid-finish.md:36`).
+
+### Medium
+- [ ] Reconcile Step 3 with the repo’s current import surface: either remove the repo-wide direct-import migration step or name the concrete files to update, because the current tree only imports the barrel `@/lib/answerSanity` and does not show any direct imports of a future `gridFinish` module (`web/src/app/api/chat/orchestration.ts:11`, `diagnostic/slices/09-split-answerSanity-grid-finish.md:25`).
+
+### Low
+- [ ] Expand `Changed files expected` if Step 3 remains, because a plan that updates direct imports across the codebase cannot list only the source barrel and the new module as touched files (`diagnostic/slices/09-split-answerSanity-grid-finish.md:25-30`).
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T18:56:33Z, so the required audit context is fresh.
