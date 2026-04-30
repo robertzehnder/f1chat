@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-stint-timeline
 phase: 10
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T17:33:39-04:00
+updated: 2026-04-30T17:39:44-04:00
 ---
 
 ## Goal
@@ -117,7 +117,17 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 - The `title={...}` brace-balanced extraction over the new `StintTimeline.tsx` yields the expression `` `${row.compound_name} • ${row.stint_length_laps} laps` `` which contains both `compound_name` and `stint_length_laps` substrings (G2's tooltip-binding assertion holds).
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/10-session-detail-stint-timeline.md` plus `web/scripts/tests/session-detail-stint-timeline.test.mjs`, `web/src/app/sessions/[sessionKey]/StintTimeline.tsx`, `web/src/app/sessions/[sessionKey]/page.tsx`, and `web/src/lib/queries/sessions.ts`.
+- Criterion: `getSessionStintTimeline` selects all required columns from `core.stint_summary`, filters `WHERE session_key = $1`, and avoids `raw.stints` -> PASS ([web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/src/lib/queries/sessions.ts:330), [web/scripts/tests/session-detail-stint-timeline.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/scripts/tests/session-detail-stint-timeline.test.mjs:58)).
+- Criterion: `StintTimeline` is a server component with empty-state card, grouped stint rows, self-closing `data-testid="stint-bar"` bars, `title={...}` binding for both `compound_name` and `stint_length_laps`, and lap-based inline positioning -> PASS ([web/src/app/sessions/[sessionKey]/StintTimeline.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/src/app/sessions/[sessionKey]/StintTimeline.tsx:17), [web/src/app/sessions/[sessionKey]/StintTimeline.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/src/app/sessions/[sessionKey]/StintTimeline.tsx:67), [web/scripts/tests/session-detail-stint-timeline.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/scripts/tests/session-detail-stint-timeline.test.mjs:89)).
+- Criterion: `page.tsx` imports `getSessionStintTimeline` and `StintTimeline`, appends `getSessionStintTimeline(key)` as the last `Promise.all` entry, binds the final destructured identifier `stints`, and renders `<StintTimeline rows={stints} />` after `<PaceTable rows={pace} />` and before `Weather Preview` -> PASS ([web/src/app/sessions/[sessionKey]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/src/app/sessions/[sessionKey]/page.tsx:10), [web/src/app/sessions/[sessionKey]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/src/app/sessions/[sessionKey]/page.tsx:31), [web/src/app/sessions/[sessionKey]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/src/app/sessions/[sessionKey]/page.tsx:71), [web/scripts/tests/session-detail-stint-timeline.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/scripts/tests/session-detail-stint-timeline.test.mjs:141), [web/scripts/tests/session-detail-stint-timeline.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/scripts/tests/session-detail-stint-timeline.test.mjs:176)).
+- Criterion: all five assertion groups G1-G5 pass in the added source-string test -> PASS (`cd web && node --test scripts/tests/session-detail-stint-timeline.test.mjs` exit `0`; [web/scripts/tests/session-detail-stint-timeline.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-session-detail-stint-timeline/web/scripts/tests/session-detail-stint-timeline.test.mjs:58)).
+- Decision -> PASS. Slice meets scope and acceptance criteria.
 
 ## Plan-audit verdict (round 1)
 
