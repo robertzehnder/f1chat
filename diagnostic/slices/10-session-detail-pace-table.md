@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:05:00Z
+updated: 2026-04-30T21:25:00Z
 ---
 
 ## Goal
@@ -30,7 +30,7 @@ contract.
 ## Steps
 1. Add `getSessionDriverPace(sessionKey: number)` to `web/src/lib/queries/sessions.ts` that selects `driver_number, driver_name, team_name, lap_count, valid_lap_count, best_lap, median_lap, avg_lap, best_valid_lap, median_valid_lap, best_s1, best_s2, best_s3, avg_s1, avg_s2, avg_s3` from `core.driver_session_summary` filtered by `session_key`, ordered by `best_valid_lap NULLS LAST, best_lap NULLS LAST`.
 2. Add a server component `web/src/app/sessions/[sessionKey]/PaceTable.tsx` that takes the rows from step 1 and renders them via the existing `@/components/DataTable` with `title="Per-driver Pace"`. No client-side hooks; no new charting libs. The visible column set is the row-key set returned by `getSessionDriverPace` because `DataTable` derives column headers from `Object.keys(rows[0])` (`web/src/components/DataTable.tsx:17`); therefore the visible-column list equals the SQL SELECT list in Step 1 — `driver_number, driver_name, team_name, lap_count, valid_lap_count, best_lap, median_lap, avg_lap, best_valid_lap, median_valid_lap, best_s1, best_s2, best_s3, avg_s1, avg_s2, avg_s3`. The Goal-required metrics (median lap = `median_lap`, fastest lap = `best_lap`, sector splits = `best_s1`/`best_s2`/`best_s3`) are part of that set.
-3. Wire it into `web/src/app/sessions/[sessionKey]/page.tsx`: import `getSessionDriverPace` and `PaceTable`, add the call to the existing `Promise.all` so its result is destructured as `pace` (i.e. the awaited tuple includes `pace`), and render `<PaceTable rows={pace} />` inside the existing layout.
+3. Wire it into `web/src/app/sessions/[sessionKey]/page.tsx`: import `getSessionDriverPace` and `PaceTable`, add the `getSessionDriverPace(sessionKey)` call as the **last** entry in the existing `Promise.all([...])` argument array, destructure its awaited result as `pace` so that `pace` is the **final identifier** in the destructure pattern (i.e. `const [..., pace] = await Promise.all([..., getSessionDriverPace(sessionKey)])`), and render `<PaceTable rows={pace} />` inside the existing layout. The "final identifier" requirement is what Step 4's regex `/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/` enforces (it captures only the identifier immediately before the closing `]`), so positioning `pace` last is required for the source-string wiring test to pass.
 4. Add an automated source-assertion test at `web/scripts/tests/session-detail-pace-table.test.mjs` (pattern: `web/scripts/tests/db-stmt-cache.test.mjs`) that uses `node:fs.readFileSync` + `node:assert/strict` to assert:
    - `web/src/lib/queries/sessions.ts` source contains both `export async function getSessionDriverPace` and `FROM core.driver_session_summary` within the same function body, plus `WHERE session_key = $1`.
    - `web/src/app/sessions/[sessionKey]/PaceTable.tsx` exists, exports a default function, imports from `@/components/DataTable`, and renders `<DataTable` with a `rows={` prop (i.e. the source contains both substrings) so the visible-column set is delegated to `DataTable`'s `Object.keys(rows[0])` derivation.
@@ -160,7 +160,7 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 - [ ] None.
 
 ### Medium
-- [ ] Align Step 3 with Step 4's destructure regex: either require `pace` to be the final identifier in the `Promise.all` destructure, or relax the regex/acceptance wording so any destructured `pace` position passes the promised wiring check.
+- [x] Align Step 3 with Step 4's destructure regex: either require `pace` to be the final identifier in the `Promise.all` destructure, or relax the regex/acceptance wording so any destructured `pace` position passes the promised wiring check.
 
 ### Low
 - [ ] None.
