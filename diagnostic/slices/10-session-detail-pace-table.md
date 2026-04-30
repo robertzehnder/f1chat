@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:30:00Z
+updated: 2026-04-30T20:27:09Z
 ---
 
 ## Goal
@@ -110,6 +110,23 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 
 ### Medium
 - [x] Make the final acceptance criterion and Step 4 use the same observable check: either assert the full `SELECT` column list/order from Step 1 in `session-detail-pace-table.test.mjs`, or narrow the criterion so it no longer claims the test proves the query references only the enumerated columns.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T20:16:19Z, so no stale-state note is needed.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Tighten Step 4 and the acceptance criteria so the automated check proves `page.tsx` both calls `getSessionDriverPace(...)` and passes that result into `<PaceTable rows={...} />`; the current import-plus-`<PaceTable` assertion can pass without the promised `Promise.all` wiring.
+- [ ] Specify the required visible `PaceTable` columns (or explicitly narrow the goal) and add an observable check for them; the plan currently claims a per-driver pace section for median lap, fastest lap, and sector splits, but neither the steps nor the acceptance criteria make that user-facing output verifiable.
 
 ### Low
 - [ ] None.
