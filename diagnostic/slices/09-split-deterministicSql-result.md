@@ -87,7 +87,8 @@ Rollback: `git revert <commit>`.
 - Acceptance criterion 5: all four gate commands above exit 0 — ✓.
 
 **Commit hashes:**
-- `2f004af` — split: extract result/finish SQL into deterministicSql/result.ts (slice changes + slice-note + frontmatter flip)
+- `2f004af` — split: extract result/finish SQL into deterministicSql/result.ts (code split + slice-note + frontmatter flip)
+- `4372ca8` — slice: record commit hash in completion note (this slice file update)
 
 ## Audit verdict
 (filled by Codex)
