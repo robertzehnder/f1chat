@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-execute
 phase: 9
-status: revising_plan
+status: pending_plan_audit
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T19:30:00Z
+updated: 2026-04-30T20:15:00Z
 ---
 
 ## Goal
@@ -22,10 +22,15 @@ Extract the query-execute wrapper from queries.ts into queries/execute.ts.
 None at author time.
 
 ## Steps
-1. Identify the target query-execute wrapper symbols in `web/src/lib/queries.ts` (the `runReadOnlySql` execute path plus any execute-only helpers/constants it depends on).
-2. Move them to `web/src/lib/queries/execute.ts`; re-export from `web/src/lib/queries.ts` for back-compat.
-3. Leave existing consumers importing from `web/src/lib/queries.ts` (the back-compat re-exports cover them). Consumer-import migration is out of scope for this slice; defer to a follow-up so the declared file scope matches the work done.
-4. Verify no circular import by confirming the new file does not re-enter `queries.ts`: `grep -nE "from ['\"](\\.\\./queries|@/lib/queries)['\"]" web/src/lib/queries/execute.ts` must return zero matches. The `(cd web && npm run build)` and `(cd web && npm run typecheck)` gates also fail on a runtime/type-detectable cycle.
+1. Identify the target query-execute wrapper symbols in `web/src/lib/queries.ts`. After the prior Phase 9 splits (sessions/resolver/catalog), the residual move-set is small and enumerable. Move exactly these symbols:
+   - `runReadOnlySql` (exported async function — the read-only execute path)
+   - `safeLimit` (private helper used only by `runReadOnlySql`)
+   - `DEFAULT_QUERY_MAX_ROWS`, `DEFAULT_PREVIEW_MAX_ROWS`, `DEFAULT_QUERY_TIMEOUT_MS` (module-private constants consumed by `runReadOnlySql`)
+
+   Do NOT move `getOverviewStats`, `getGlobalTableCounts`, `parseCountValue`, `GLOBAL_TABLE_COUNT_SQL`, or `buildHeuristicSql` — they are not part of the execute wrapper and stay in `queries.ts` (or are handled by separate slices).
+2. Move them to `web/src/lib/queries/execute.ts`; re-export `runReadOnlySql` from `web/src/lib/queries.ts` for back-compat. The private helper and constants do not need re-exports.
+3. Leave existing consumers importing from `web/src/lib/queries.ts` (the back-compat re-export covers them). Consumer-import migration is out of scope for this slice; defer to a follow-up so the declared file scope matches the work done.
+4. Verify no circular import by confirming the new file does not re-enter `queries.ts`. The grep gate (see Gate commands) is the authoritative direct-import guard; the madge gate covers transitive cycles. The `(cd web && npm run build)` / `(cd web && npm run typecheck)` gates do NOT reliably reject import cycles (tsc allows them and Next.js silently accepts them, often surfacing only as undefined-at-init runtime bindings), so the grep + madge pair is required.
 
 ## Changed files expected
 - `web/src/lib/queries.ts`
@@ -35,18 +40,20 @@ None at author time.
 None.
 
 ## Gate commands
-Run from the repo root. Each `web` gate is wrapped in a subshell so the parent shell's CWD does not drift; the final `grep` is intentionally repo-rooted.
+Run from the repo root. Each `web` gate is wrapped in a subshell so the parent shell's CWD does not drift; the final `grep` is intentionally repo-rooted. The grep alternation covers the direct-import patterns the implementer might accidentally introduce: any depth of relative parents (`../queries`, `../../queries`, `../../lib/queries`, …), with optional `lib/` segment and optional trailing `/index`, plus the `@/lib/queries` alias form. The madge invocation backs the transitive-cycle claim in Step 4.
 ```bash
 (cd web && npm run build)
 (cd web && npm run typecheck)
 bash scripts/loop/test_grading_gate.sh
-grep -nE "from ['\"](\.\./queries|@/lib/queries)['\"]" web/src/lib/queries/execute.ts; test $? -eq 1
+grep -nE "from ['\"]((\.\./)+(lib/)?queries(/index)?|@/lib/queries(/index)?)['\"]" web/src/lib/queries/execute.ts; test $? -eq 1
+(cd web && npx --yes madge --circular --extensions ts,tsx src/lib/queries/execute.ts)
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/queries/execute.ts` exists and exports the moved symbols.
-- [ ] `web/src/lib/queries.ts` no longer contains the moved bodies (only re-exports if needed).
-- [ ] `web/src/lib/queries/execute.ts` contains no import from `'../queries'` or `'@/lib/queries'` (verified via the grep gate above; circular-import guard).
+- [ ] `web/src/lib/queries/execute.ts` exists and exports `runReadOnlySql`; the private `safeLimit` helper and the three `DEFAULT_*` constants live in the new file (not re-exported).
+- [ ] `web/src/lib/queries.ts` no longer contains the moved bodies (`runReadOnlySql`, `safeLimit`, the three `DEFAULT_*` constants); a `runReadOnlySql` re-export from `./queries/execute` remains for back-compat.
+- [ ] `web/src/lib/queries/execute.ts` contains no import that re-enters `queries.ts` via any depth of relative path or via the `@/lib/queries` alias (verified via the broadened grep gate above; direct-import guard).
+- [ ] `madge --circular` reports zero cycles through `web/src/lib/queries/execute.ts` (transitive-cycle guard).
 - [ ] All gate commands pass.
 
 ## Out of scope
@@ -85,11 +92,11 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Step 4's claim that `(cd web && npm run build)` and `(cd web && npm run typecheck)` "also fail on a runtime/type-detectable cycle" overstates the guarantees: `tsc --noEmit` does not error on import cycles, and `next build` does not statically reject them either (cycles silently produce undefined-at-init bindings). The grep is therefore the only real cycle guard. Either delete the misleading sentence or add a concrete transitive-cycle gate (e.g., `npx --yes madge --circular web/src/lib/queries/execute.ts` invoked from `web/`) to back the claim.
+- [x] Step 4's claim that `(cd web && npm run build)` and `(cd web && npm run typecheck)` "also fail on a runtime/type-detectable cycle" overstates the guarantees: `tsc --noEmit` does not error on import cycles, and `next build` does not statically reject them either (cycles silently produce undefined-at-init bindings). The grep is therefore the only real cycle guard. Either delete the misleading sentence or add a concrete transitive-cycle gate (e.g., `npx --yes madge --circular web/src/lib/queries/execute.ts` invoked from `web/`) to back the claim.
 
 ### Low
-- [ ] The circular-import grep alternation `(\.\./queries|@/lib/queries)` does not catch deeper relative paths such as `'../../lib/queries'` or trailing `/index` forms; broaden the pattern (e.g., `(\.\./)+(lib/)?queries(/index)?` plus `@/lib/queries`) to harden the direct-import guard against unconventional resolution paths.
-- [ ] Step 1's "execute-only helpers/constants it depends on" is a discovery instruction; with prior splits already moving sessions/resolver/catalog out, the residual move-set in `queries.ts` is now small and enumerable — naming the expected symbols inline would remove ambiguity for the implementer and the impl auditor.
+- [x] The circular-import grep alternation `(\.\./queries|@/lib/queries)` does not catch deeper relative paths such as `'../../lib/queries'` or trailing `/index` forms; broaden the pattern (e.g., `(\.\./)+(lib/)?queries(/index)?` plus `@/lib/queries`) to harden the direct-import guard against unconventional resolution paths.
+- [x] Step 1's "execute-only helpers/constants it depends on" is a discovery instruction; with prior splits already moving sessions/resolver/catalog out, the residual move-set in `queries.ts` is now small and enumerable — naming the expected symbols inline would remove ambiguity for the implementer and the impl auditor.
 
 ### Notes (informational only — no action)
 - Round-1 High and both Mediums are addressed; Medium #1 was resolved by deferring consumer-import migration in Step 3 (Changed files now matches Steps), which is internally consistent.
