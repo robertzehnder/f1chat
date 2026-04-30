@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:25:00Z
+updated: 2026-04-30T23:10:00Z
 ---
 
 ## Goal
@@ -28,9 +28,16 @@ Validator: every numerical count claim must match the count derived from the lis
 None at author time.
 
 ## Steps
-1. Define the validator interface as `validateCountListParity(answerText: string, contract: FactContract) → CountListParityValidationResult` (shape: `{ ok: boolean; reasons: string[] }`), matching the single-`FactContract` pattern used by the existing four validators (`pitStintsValidator`, `sectorConsistencyValidator`, `gridFinishValidator`, `strategyEvidenceValidator`) so it slots into the same call site in `web/src/app/api/chat/route.ts` without introducing a multi-contract plumbing layer. **Both the count claim and the list whose length is compared against it MUST come from `answerText` itself** (not from `contract.rows` or any contract-derived count): the validator parses `answerText` for numerical count claims (e.g. "3 pit stops", "2 sectors", "5 laps") and for the corresponding listed items appearing in the same answer (markdown bullet lists, numbered lists, or inline comma-separated enumerations), then asserts that for each parsed claim the parsed list length matches. The `contract` parameter is accepted only to match the existing single-`FactContract` validator signature and is NOT the source of truth for either the claim or the list.
+1. Define the validator interface as `validateCountListParity(answerText: string, contract: FactContract) → CountListParityValidationResult` (shape: `{ ok: boolean; reasons: string[] }`), matching the single-`FactContract` pattern used by the existing four validators (`pitStintsValidator`, `sectorConsistencyValidator`, `gridFinishValidator`, `strategyEvidenceValidator`) so it slots into the same call site in `web/src/app/api/chat/route.ts` without introducing a multi-contract plumbing layer. **Both the count claim and the list whose length is compared against it MUST come from `answerText` itself** (not from `contract.rows` or any contract-derived count): the validator parses `answerText` for numerical count claims (e.g. "3 pit stops", "2 sectors", "5 laps") and for the corresponding listed items appearing in the same answer (markdown bullet lists, numbered lists, or inline comma-separated enumerations), then asserts that for each parsed claim the parsed list length matches. The `contract` parameter is accepted only to match the existing single-`FactContract` validator signature and is NOT the source of truth for either the claim or the list. **Per-claim outcome is defined as follows** (the validator returns `ok: false` if ANY parsed claim resolves to fail, with one entry per failing claim in `reasons`):
+   - **Claim parsed AND corresponding list parsed in the same answer** → compare lengths. Match → that claim passes. Mismatch → that claim fails with reason `"Count claim '<N> <entity>' disagrees with listed-item count <M>"`.
+   - **Claim parsed but NO corresponding list/enumeration parsed in the same answer** → that claim fails with reason `"Count claim '<N> <entity>' has no corresponding listed enumeration in the answer to verify against"`. Rationale: the slice goal requires every numerical count claim to be substantiated by a list in the same answer; an unsubstantiated count claim cannot be verified and therefore must not be silently passed.
+   - **No parseable count claim in `answerText`** → returns `ok: true` with empty `reasons` (no-claim case).
 2. Implement the validator in `web/src/lib/validators/countListParityValidator.ts`. The implementation derives both the claimed count and the comparison list length from `answerText` parsing (per Step 1); it MUST NOT read `contract.rows.length` (or any other contract field) as the comparison count.
-3. Add unit tests covering pass + fail cases — where pass = a count claim in the answer matches the length of the listed items parsed from the same answer, and fail = the parsed claim and parsed list length disagree — plus a no-claim case (answer text contains no parseable numerical count claim) that returns `ok: true` with empty `reasons`. At least one fail-case test MUST construct an `answerText` whose parsed list length disagrees with its claimed count while passing a `contract` whose `rows.length` matches the claim, to confirm the validator fails on the answer-text mismatch and is not silently reading from the contract.
+3. Add unit tests covering all four outcomes from the per-claim outcome spec in Step 1:
+   - **Pass case**: a count claim in the answer matches the length of the listed items parsed from the same answer → `ok: true`, empty `reasons`.
+   - **Fail case (mismatch)**: the parsed claim and parsed list length disagree → `ok: false`, `reasons` contains the mismatch entry. At least one such fail-case test MUST construct an `answerText` whose parsed list length disagrees with its claimed count while passing a `contract` whose `rows.length` matches the claim, to confirm the validator fails on the answer-text mismatch and is not silently reading from the contract.
+   - **Fail case (claim with no list)**: `answerText` contains a parseable numerical count claim but NO parseable corresponding list/enumeration in the same answer → `ok: false`, `reasons` contains the `"...no corresponding listed enumeration..."` entry per Step 1.
+   - **No-claim case**: answer text contains no parseable numerical count claim → returns `ok: true` with empty `reasons`.
 4. Wire into the synthesis post-step in `web/src/app/api/chat/route.ts` alongside the existing four validators (the block that builds `pitStintsValidation`, `sectorConsistencyValidation`, `gridFinishValidation`, `strategyEvidenceValidation`). Add `countListParityValidation` computed via the same `synthesisContract ? validateCountListParity(answer, synthesisContract) : null` ternary, and extend the `validators` object passed to `appendQueryTrace` to include `countListParity` **without removing or renaming** the existing four keys (`pitStints`, `sectorConsistency`, `gridFinish`, `strategyEvidence`). Validation failures are logged to `chat_query_trace.jsonl` under `validators.countListParity` but don't reject the answer in this phase; the user-facing response is unchanged. When `synthesisContract` is `null` (zero-row branch and `deterministic_template` branch), `validators.countListParity` MUST be the literal `null` (matching the existing four validators' behavior on that branch).
 5. Add a route-wiring test (`web/scripts/tests/validator-count-list-route-wiring.test.mjs`) that drives `web/src/app/api/chat/route.ts` for both a pass case and a fail case and asserts:
    - `trace.validators.countListParity` is appended to `chat_query_trace.jsonl` and reflects the pass/fail outcome.
@@ -55,7 +62,7 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] `validateCountListParity(answerText, contract)` returns `{ ok: boolean; reasons: string[] }` for pass, fail, and no-claim test cases (single `FactContract` argument — matches the existing validator interface; no multi-contract plumbing introduced). The `ok` and `reasons` values are derived **exclusively from parsing `answerText`** for numerical count claims and listed items in the same answer; the validator does NOT consult `contract.rows.length` (or any other contract field) as the comparison count.
+- [ ] `validateCountListParity(answerText, contract)` returns `{ ok: boolean; reasons: string[] }` for the four outcomes specified in Step 1: (a) pass — claim and list both parsed and lengths match, (b) fail-mismatch — claim and list both parsed but lengths disagree, (c) fail-no-list — claim parsed but no corresponding list parsed in the answer (returns `ok: false` with the `"...no corresponding listed enumeration..."` reason), and (d) no-claim — no parseable count claim in answer (returns `ok: true` with empty `reasons`). Single `FactContract` argument — matches the existing validator interface; no multi-contract plumbing introduced. The `ok` and `reasons` values are derived **exclusively from parsing `answerText`** for numerical count claims and listed items in the same answer; the validator does NOT consult `contract.rows.length` (or any other contract field) as the comparison count.
 - [ ] At least one fail-case unit test demonstrates this answer-text-only sourcing by constructing an `answerText` whose parsed list length disagrees with its parsed count claim while supplying a `contract` whose `rows.length` matches the claim, and asserting `ok === false` — confirming the validator fails on the answer-text mismatch rather than reading from the contract.
 - [ ] Synthesis post-step in `web/src/app/api/chat/route.ts` computes `countListParityValidation` via `synthesisContract ? validateCountListParity(answer, synthesisContract) : null`, and the `validators` object on the success-path `appendQueryTrace` call now contains exactly the keys `pitStints`, `sectorConsistency`, `gridFinish`, `strategyEvidence`, and `countListParity` (no existing key removed or renamed).
 - [ ] Route-wiring test drives `web/src/app/api/chat/route.ts` and, on both a pass and a fail case, asserts (a) `trace.validators.countListParity` reflects the validator outcome, (b) `trace.validators.pitStints`, `trace.validators.sectorConsistency`, `trace.validators.gridFinish`, and `trace.validators.strategyEvidence` are all still present on the same trace record, and (c) the user-facing response payload is unchanged.
@@ -149,7 +156,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Define the validator outcome for the case where `answerText` contains a parseable numerical count claim but no parseable corresponding list/enumeration; without this, Step 1 and the acceptance criteria leave implementers free to either fail, silently pass, or skip the claim.
+- [x] Define the validator outcome for the case where `answerText` contains a parseable numerical count claim but no parseable corresponding list/enumeration; without this, Step 1 and the acceptance criteria leave implementers free to either fail, silently pass, or skip the claim.
 
 ### Low
 - [ ] None.
