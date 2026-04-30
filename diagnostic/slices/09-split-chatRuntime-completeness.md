@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-completeness
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:01:07Z
+updated: 2026-04-30T11:02:03-04:00
 ---
 
 ## Goal
@@ -76,7 +76,27 @@ cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts 
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/09-split-chatRuntime-completeness` off `integration/perf-roadmap`.
+- Locked move list (Step 1):
+  - Types: `CompletenessStatus`, `TableCheck` (previously at `web/src/lib/chatRuntime.ts:33,62`).
+  - Functions: `requiredTablesForQuestion` (previously at `web/src/lib/chatRuntime.ts:615`), `fallbackOptionsForTables` (previously at `web/src/lib/chatRuntime.ts:770`).
+  - Local helpers (Step 2 duplication, mirroring the `resolution.ts` precedent): `unique`, `includesAnyPhrase`. The originals at `web/src/lib/chatRuntime.ts:222-228` were left in place because they are also used by other code that stays in `chatRuntime.ts`.
+- Move boundary respected: `web/src/lib/chatRuntime/completeness.ts` only imports `QuestionType` from `./classification`; no `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `QueryPlan`, `grainForQuestion`, or `buildQueryPlan` are referenced. Verified by `grep -n "from \"@/lib/chatRuntime\"\|from \"\\.\\./chatRuntime\"" web/src/lib/chatRuntime/completeness.ts` returning no matches (exit 1).
+- Step 3 callsite scan: `grep -rn 'from ["\x27]@/lib/chatRuntime["\x27]' web/src` (run before and after the move) returned only `web/src/app/api/chat/route.ts:9`, which imports `buildChatRuntime` and `ChatRuntimeResult` (neither moved). No external file imports any of the moved symbols, so no callsites needed updating and no re-exports were added through `chatRuntime.ts` (Step 2 only requires re-exports when an external file already imports a moved symbol — none exist).
+- `chatRuntime.ts` now imports the moved symbols from `./chatRuntime/completeness` and the inline completeness use-site inside `buildChatRuntime` (`web/src/lib/chatRuntime.ts:1481-1538` after the move) keeps its prior shape, just consuming the imported helpers.
+- Gate command exit codes (run from this worktree):
+  - `cd web && npm run build` → exit 0.
+  - `cd web && npm run typecheck` → exit 0.
+  - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`).
+  - `cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime` → exit 0 (`No circular dependency found!`, processed 4 files). This confirms `chatRuntime.ts → chatRuntime/completeness.ts` remains a one-way edge.
+- Self-check vs Acceptance criteria:
+  - [x] `web/src/lib/chatRuntime/completeness.ts` exists and exports the moved symbols (`CompletenessStatus`, `TableCheck`, `requiredTablesForQuestion`, `fallbackOptionsForTables`).
+  - [x] `web/src/lib/chatRuntime.ts` no longer contains the moved bodies; only an `import { … } from "./chatRuntime/completeness"` declaration remains.
+  - [x] `web/src/lib/chatRuntime/completeness.ts` does not import any of `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `QueryPlan`, `grainForQuestion`, or `buildQueryPlan` from `@/lib/chatRuntime` (grep returned no matches).
+  - [x] `madge --circular` reports no circular dependency involving `chatRuntime.ts ↔ chatRuntime/completeness.ts`.
+  - [x] All four gate commands pass (exit 0).
+- Commit hash: filled at commit time below.
 
 ## Audit verdict
 (filled by Codex)
