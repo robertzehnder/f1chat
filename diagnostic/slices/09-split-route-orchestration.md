@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-route-orchestration
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,18 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Make the target file path consistent across Goal, Inputs, Steps, Changed files expected, and Acceptance criteria; the Goal says `route/orchestration.ts` while the rest of the plan says `web/src/app/api/chat/orchestration.ts`.
+
+### Medium
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` in Gate commands so the slice uses the loop-required grading wrapper and baseline diff behavior.
+- [ ] Expand Changed files expected to include the import-site files Step 3 says will be updated, or narrow Step 3 so the stated file scope matches the actual work.
+
+### Low
+
+### Notes (informational only — no action)
