@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-strategy-evidence
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T15:19:52-04:00
 ---
 
 ## Goal
@@ -59,7 +59,27 @@ SSR/RSC analysis). No separate gate is added.
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/09-split-answerSanity-strategy-evidence` (worktree at `/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-strategy-evidence`).
+- Implementation commit: `f563bc6` "split(answerSanity): extract strategy/evidence guards into answerSanity/strategyEvidence".
+- Decisions:
+  - Step 1 audit: the strategy/evidence guard branches in `applyAnswerSanityGuards` (one-stop/two-stop, stint+stop strategy, pit-cycle-evidence, undercut/overcut-evidence) had no strategy-evidence-only helpers left in `web/src/lib/answerSanity.ts`; their helpers (`buildStrategyTypeAnswer`, `summarizeStrategyRows`, `hasPitPositionEvidence`, `hasUndercutOvercutEvidence`) already live in `web/src/lib/answerSanity/pitStints.ts`. So the move surface was the four branch wrappers themselves.
+  - Created `web/src/lib/answerSanity/strategyEvidence.ts` exporting four small functions — `applyStrategyTypeGuard`, `applyStintStopStrategyGuard`, `applyPitCycleEvidenceGuard`, `applyUndercutOvercutEvidenceGuard` — and a `StrategyEvidenceGuardResult` type alias. Each returns `null` on no-match (preserving the original fall-through semantics for the strategy/one-stop and stint+stop branches when their helper returns falsy) or `{ answer, notes }` on match (matching the original literal answer strings and `answer_guard:*` / `evidence_required_for_strategy_claim` / `stop_count_consistent_with_stints` notes byte-for-byte).
+  - The strategy-evidence module imports its helpers directly from `./pitStints` (not from `../answerSanity`), so there is no `strategyEvidence.ts → answerSanity.ts → strategyEvidence.ts` cycle.
+  - The barrel `web/src/lib/answerSanity.ts` now (a) imports the four wrappers and calls them inside `applyAnswerSanityGuards`, and (b) re-exports them plus the `StrategyEvidenceGuardResult` type for back-compat. Step 3 grep confirmed there are zero existing direct importers of these new symbols, so the re-export is purely defensive.
+- Self-check:
+  - `grep -rn "applyStrategyTypeGuard\|applyStintStopStrategyGuard\|applyPitCycleEvidenceGuard\|applyUndercutOvercutEvidenceGuard\|StrategyEvidenceGuardResult" web/src web/tests` returns only the new module's exports (`web/src/lib/answerSanity/strategyEvidence.ts`) and the barrel's import + re-export + call sites in `web/src/lib/answerSanity.ts`. No other importers existed at plan time and none were discovered at implementation time, so the `Changed files expected` set is unchanged from the plan (only `web/src/lib/answerSanity.ts` and `web/src/lib/answerSanity/strategyEvidence.ts`).
+  - `grep -rn "from .*answerSanity" web/src web/tests` shows only the prior barrel consumer `web/src/app/api/chat/orchestration.ts:11` (importing `applyAnswerSanityGuards` and `buildStructuredSummaryFromRows`, neither moved) and the barrel's own intra-folder imports — no test or app file directly imports the moved branch wrappers.
+  - The four guard branches no longer appear as inline `if`-blocks in `web/src/lib/answerSanity.ts`; only single-line wrapper invocations and early returns remain at lines 272–275 and 310–323. The literal answer strings and notes for the matched branches are now exclusively in `web/src/lib/answerSanity/strategyEvidence.ts`.
+  - No circular-import surface: a successful `next build` (which performs SSR/RSC graph analysis) and `tsc --noEmit` both exited 0, satisfying the proof-of-no-circular-imports check the slice plan calls out under Gate commands.
+- Gate results (run from `web/` unless noted):
+  - `npm run build` → exit 0 (full Next.js production build, all 21 routes prerendered/dynamic as before).
+  - `npm run typecheck` → exit 0 (`tsc --noEmit`).
+  - `bash scripts/loop/test_grading_gate.sh` (run from repo root) → exit 0; wrapper output: `PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`.
+- Acceptance criteria:
+  - [x] `web/src/lib/answerSanity/strategyEvidence.ts` exists and exports the moved symbols (`applyStrategyTypeGuard`, `applyStintStopStrategyGuard`, `applyPitCycleEvidenceGuard`, `applyUndercutOvercutEvidenceGuard`, `StrategyEvidenceGuardResult`).
+  - [x] `web/src/lib/answerSanity.ts` no longer contains the moved bodies; `applyAnswerSanityGuards` invokes the wrappers and the barrel re-exports them.
+  - [x] All gate commands pass.
 
 ## Audit verdict
 (filled by Codex)
