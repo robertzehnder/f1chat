@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-strategy-summary
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -55,3 +55,22 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the slice uses the loop's baseline-aware grading gate instead of the raw repo-wide test script.
+
+### Medium
+- [ ] Fix the `Changed files expected` paths to use the real session-detail route segment `web/src/app/sessions/[sessionKey]/...` instead of nonexistent `[id]` paths.
+- [ ] Expand `Changed files expected` to include the query-layer and grading-test files this slice will need, at minimum the `web/src/lib/queries/sessions.ts` contract reader and a dedicated `web/scripts/tests/session-detail-strategy-summary.test.mjs` gate file.
+- [ ] Replace the Playwright/RTL-or-screenshot fallback in Step 3 with the repo's actual grading-test approach, since this codebase already uses source-inspection node tests for adjacent session-detail slices and does not rely on Playwright/RTL here.
+- [ ] Rewrite the acceptance criteria as command-verifiable outcomes that name the required `core.strategy_summary` wiring and the concrete grading assertion(s), rather than broad statements like "renders without runtime errors" and "matches the underlying contract for at least one test session."
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T21:41:07Z, so the loop context is current.
+- Adjacent implemented session-detail slices already follow the `[sessionKey]` route shape and dedicated grading-test pattern in `web/scripts/tests/session-detail-*.test.mjs`.
