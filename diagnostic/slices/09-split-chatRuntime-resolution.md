@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-resolution
 phase: 9
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T10:39:07-04:00
+updated: 2026-04-30T10:40:52-04:00
 ---
 
 ## Goal
@@ -126,6 +126,21 @@ Grading-gate baseline check: `[test_grading_gate] PASS (no new failures vs integ
 - `web/src/lib/chatRuntime.ts` — moved bodies removed; new import block added; no behavioral edits.
 - `web/src/lib/chatRuntime/resolution.ts` — new module containing the moved symbols verbatim plus two trivially duplicated local helpers (`unique`, `containsWholePhrase`).
 - No additional callsites were touched (Step 3 grep confirmed none exist).
+
+### Round-2 re-verification (2026-04-30T10:40:52-04:00)
+
+After the round-1 audit verdict (REVISE), no code changes were required — the round-1 audit confirmed the refactor stays in scope, criteria 1/2/4 PASS, the only failure was Gate #2 `cd web && npm run typecheck` exiting `2` with `TS6053` errors about missing `.next/types/app/api/{admin/perf-summary,chat,query/preview}/route.ts`. Those files are emitted by `next build` into `web/.next/types/...`, and tsc uses them via the Next.js TS plugin. Re-ran the four gates in the documented order in this worktree:
+
+| Gate | Round-2 exit code |
+|---|---:|
+| `cd web && npm run build` | 0 |
+| `cd web && npm run typecheck` | 0 |
+| `bash scripts/loop/test_grading_gate.sh` | 0 (`slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`) |
+| `cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime` | 0 (`✔ No circular dependency found!`, 3 files processed) |
+
+After Gate #1, `ls web/.next/types/app/api/{admin/perf-summary,chat,query/preview}/route.ts` lists all three files — i.e. `next build` does emit them. The most likely cause of the round-1 typecheck failure is that Gate #2 was run against a `.next/` directory that had been cleared (or never freshly built) between gates rather than the one Gate #1 just produced. Running the gate sequence end-to-end in one shell session in this worktree produces a clean exit `0` for typecheck, satisfying acceptance criteria 3 and 5 from `diagnostic/slices/09-split-chatRuntime-resolution.md:49,51`.
+
+No additional commits were needed beyond the existing implementation commit `157314f` (`refactor(chatRuntime): extract entity-resolution helpers into chatRuntime/resolution.ts`); only the slice file frontmatter and this note are updated to advance the slice back to `awaiting_audit`.
 
 ## Audit verdict
 **Status: REVISE**
