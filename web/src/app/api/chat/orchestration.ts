@@ -8,7 +8,8 @@ import { buildHeuristicSql, runReadOnlySql } from "@/lib/queries";
 import { buildDeterministicSqlTemplate } from "@/lib/deterministicSql";
 import { buildChatRuntime, type ChatRuntimeResult } from "@/lib/chatRuntime";
 import { assessChatQuality } from "@/lib/chatQuality";
-import { applyAnswerSanityGuards, buildStructuredSummaryFromRows } from "@/lib/answerSanity";
+import { applyAnswerSanityGuards } from "@/lib/answerSanity";
+import { buildStructuredSummaryFromRows } from "@/lib/answerSanity/countList";
 import { appendJsonLog, logServer } from "@/lib/serverLog";
 import { startSpan, flushTrace, type Span, type SpanRecord } from "@/lib/perfTrace";
 import {

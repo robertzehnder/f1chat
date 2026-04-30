@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-count-list
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T19:46:25Z
+updated: 2026-04-30T15:47:28-04:00
 ---
 
 ## Goal
@@ -90,7 +90,30 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-split-answerSanity-count-list`
+
+**Implementation summary:**
+- Created `web/src/lib/answerSanity/countList.ts` containing the moved symbols. Public exports: `buildStructuredSummaryFromRows`, `looksLikeStructuredRowDump`. Internal helpers (private to the module): `summarizeComparisonRows`, `summarizeRankedRows`, `summarizeGenericRows`, `formatScalarForNarrative`, `prettyMetricName`, `formatMetricValue`, `metricFromRows`. Shared utilities relocated per per-submodule duplication convention: `asNumber`, `asString`, `driverLabel`, `hasAnyKey`. The new module imports `summarizePitCycleRows`, `summarizeStintRows`, `summarizeStrategyRows`, `summarizeUndercutOvercutRows` from `./pitStints` (no circular import — pitStints has no imports of its own).
+- `web/src/lib/answerSanity.ts`: removed all moved bodies; added `import { buildStructuredSummaryFromRows, looksLikeStructuredRowDump } from "./answerSanity/countList"` so the in-file caller `applyAnswerSanityGuards` keeps the local bindings it needs; added `export { buildStructuredSummaryFromRows } from "./answerSanity/countList"` for public-API back-compat. `looksLikeStructuredRowDump` is not re-exported (no external caller).
+- `web/src/app/api/chat/orchestration.ts:11`: split the single import line into two — `applyAnswerSanityGuards` continues to come from `@/lib/answerSanity`; `buildStructuredSummaryFromRows` now comes from `@/lib/answerSanity/countList`.
+- Verified by `grep` that `web/scripts/tests/*.test.mjs` matches are local stub re-declarations (`export function buildStructuredSummaryFromRows(args) { … }`), not imports of the module under test, and are out of scope per the slice.
+
+**Decisions:**
+- Followed the sibling-slice convention of duplicating tiny shared helpers (`asNumber`, `asString`, `driverLabel`, `hasAnyKey`) per submodule rather than centralizing — matches `sector.ts`, `pitStints.ts` patterns. `answerSanity.ts` no longer references any of these utilities directly after the split, so relocation is safe.
+- Kept `looksLikeStructuredRowDump` exported from `countList.ts` (rather than file-local) so `answerSanity.ts` can import it for `applyAnswerSanityGuards`.
+
+**Self-checks:**
+- No circular imports: `pitStints.ts`, `sector.ts`, `gridFinish.ts` are leaves; `strategyEvidence.ts` only imports from `pitStints`; `countList.ts` only imports from `pitStints`. `answerSanity.ts` (the parent) imports from all submodules; no submodule imports from the parent.
+- `applyAnswerSanityGuards` calls `looksLikeStructuredRowDump` and `buildStructuredSummaryFromRows` — both resolve via the local import bindings from `./answerSanity/countList`. Confirmed by `npm run typecheck` (exit 0).
+- Diff stat: 3 modified files + 1 new file. Net `web/src/lib/answerSanity.ts` deletions: 209 lines moved out, 7 lines added back (import + re-export).
+
+**Gate command exit codes:**
+- `cd web && npm run build` — exit 0 (Next.js production build succeeded; all routes generated).
+- `cd web && npm run typecheck` — exit 0 (`tsc --noEmit` clean).
+- `bash scripts/loop/test_grading_gate.sh` — exit 0 (PASS, slice_fails=38 baseline_fails=38, no new failures vs integration baseline).
+
+**Commit hash:** filled after commit.
 
 ## Audit verdict
 (filled by Codex)
