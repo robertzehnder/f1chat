@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:30:00Z
+updated: 2026-04-30T22:05:00Z
 ---
 
 ## Goal
@@ -115,6 +115,22 @@ Rollback: `git revert <commit>`.
 
 ### Low
 - [x] Clarify Step 4 to name concrete importable symbols or delete it, because `templateKey` strings and function-local helper variables are not direct imports and the current wording is not actionable.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T15:40:29Z, so no stale-state note applies.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Remove the Step 4 / acceptance-criteria requirement to re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts`, because repo context shows no existing public `buildPaceTemplate` import to preserve and that re-export would expand API surface in a slice scoped as a pure mechanical split with no behavior change.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T15:40:29Z, so no stale-state note applies.
