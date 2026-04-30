@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-strategy-summary
 phase: 10
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T22:15:00Z
 ---
 
 ## Goal
@@ -90,3 +90,23 @@ Rollback: `git revert <commit>`. The card is additive; no existing route, query,
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T21:41:07Z, so the loop context is current.
 - Adjacent implemented session-detail slices already follow the `[sessionKey]` route shape and dedicated grading-test pattern in `web/scripts/tests/session-detail-*.test.mjs`.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — High item identified)**
+
+### High
+- [ ] The slice will introduce NEW (non-baseline) regressions in `web/scripts/tests/session-detail-stint-timeline.test.mjs` G3 and G5. Those existing tests use the regex `/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/` and assert on `<StintTimeline rows={${captured}}` — `captured` is the LAST destructured identifier in `page.tsx`'s `await Promise.all([...])`. Today the last identifier is `stints`, so G3 and G5 pass. Adding `getSessionStrategySummary` as a new entry per Steps 1+3 makes the new strategy identifier the last destructured slot, so `captured` becomes that new identifier, and both G3's `<StintTimeline rows={strategySummary}>` lookup and G5's same-binding ordering check will fail. Verified against the current `page.tsx` (regex captures `stints`; the analogous `<PaceTable rows={stints}` lookup already returns false — that's the existing baseline failure for `getSessionDriverPace`'s G3, present in `scripts/loop/state/test_grading_baseline.txt`); the same shape will newly catch the stint-timeline tests, and stint-timeline G3/G5 are NOT in the baseline. Resolve by either (a) adding `web/scripts/tests/session-detail-stint-timeline.test.mjs` to `## Changed files expected` with an explicit Step that rewrites its G3/G5 to extract the StintTimeline binding directly from JSX (e.g. `/<StintTimeline\s+rows=\{(\w+)\}/`) instead of recomputing the captured destructure tail, OR (b) restructuring this slice's wiring so `stints` remains the last destructure entry and changing this slice's own G3 to extract its identifier the same JSX-binding way.
+
+### Medium
+- [ ] G3 of the new test inherits the same "capture the LAST destructure identifier" shortcut. This locks `getSessionStrategySummary` as the trailing slot and propagates the same fragility — any future Phase 10 slice that bolts onto the shared `Promise.all` will repeat the regression cascade. Specify that G3 must extract the strategy-summary binding directly from the JSX (e.g. `/<StrategySummary\s+rows=\{(\w+)\}/`), then verify that identifier is one of the destructured names and that `getSessionStrategySummary(` appears in the `Promise.all` argument list.
+- [ ] G5 wording (`<StrategySummary rows={...}> appears AFTER <StintTimeline rows={...}> and BEFORE the Weather Preview two-col block`) does not say HOW to locate the StintTimeline element. If the implementer mirrors the existing stint-timeline G5 verbatim and uses the captured-tail identifier for the `<StintTimeline rows={…}>` index, the lookup will fail. Pin the spec: locate `<StintTimeline rows={` as a generic literal substring (no captured binding) and the strategy-summary element via the binding extracted in G3.
+
+### Low
+- [ ] Step 3's render-slot phrase ("immediately after `<StintTimeline rows={...}>` and before the weather/race-control two-col block") is unambiguous about position but does not name the section wrapper or class. Adjacent slices render directly into the page-level `<div className="stack">` flow with no wrapper; state that explicitly so the implementer does not introduce a new `<section>`/card wrapper that would also need its own gate assertion.
+
+### Notes (informational only — no action)
+- The pace-table G3 failure (`page.tsx wires the awaited getSessionDriverPace result into <PaceTable rows={...}> via a shared identifier`) is already in `scripts/loop/state/test_grading_baseline.txt`, so it stays as a tolerated baseline failure regardless of which identifier ends up last after this slice.
+- Slice scope, column inventory (matches `sql/012_strategy_summary_mat.sql`), no-`raw.*` rule, dedicated grading-test pattern, and use of `bash scripts/loop/test_grading_gate.sh` are all correctly aligned with the round-1 revisions.
+- `web/src/app/sessions/[sessionKey]/page.tsx` and `web/src/lib/queries/sessions.ts` were inspected only to verify the regression claim above; no other file was modified during this audit.
