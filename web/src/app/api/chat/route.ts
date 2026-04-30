@@ -30,6 +30,10 @@ import {
   validatePitStints,
   type ValidationResult as PitStintsValidationResult
 } from "@/lib/validators/pitStintsValidator";
+import {
+  validateSectorConsistency,
+  type SectorConsistencyValidationResult
+} from "@/lib/validators/sectorConsistencyValidator";
 
 function mapToFactContractGrain(grain: ChatRuntimeResult["grain"]["grain"]): FactContractGrain {
   switch (grain) {
@@ -1018,6 +1022,9 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       const pitStintsValidation: PitStintsValidationResult | null = synthesisContract
         ? validatePitStints(answer, synthesisContract)
         : null;
+      const sectorConsistencyValidation: SectorConsistencyValidationResult | null = synthesisContract
+        ? validateSectorConsistency(answer, synthesisContract)
+        : null;
       await appendQueryTrace({
         status: "success",
         cache_hit: false,
@@ -1044,7 +1051,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         totalRequestMs: Date.now() - startedAt,
         runtimeMs: runtime.durationMs,
         autoResolutionNote: autoResolutionNoteForTrace,
-        validators: { pitStints: pitStintsValidation }
+        validators: { pitStints: pitStintsValidation, sectorConsistency: sectorConsistencyValidation }
       });
 
       const finalGenerationNotes = [generationNotes, sessionPinNoteForTrace]
