@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -33,8 +33,8 @@ None at author time.
 
 ## Steps
 1. Define the validator interface in `web/src/lib/validators/gridFinishValidator.ts`: `(answerText: string, contract: FactContract) → GridFinishValidationResult` with shape `{ ok: boolean; reasons: string[] }`, matching the precedent in `sectorConsistencyValidator.ts`.
-2. Implement the validator: parse grid/finish claims from `answerText` and assert consistency against the `grid_vs_finish` rows in the attached `FactContract`.
-3. Add unit tests at `web/scripts/tests/validator-grid-finish.test.mjs` covering pass + fail cases (mirror the structure of `validator-sector-consistency.test.mjs`).
+2. Implement the validator: parse grid/finish claims from `answerText` — covering BOTH (a) explicit grid-position / finish-position statements (e.g. "started P5", "finished P3", "from grid 7 to P2") AND (b) position-change claims derivable from `grid_vs_finish` (e.g. "gained 4 places", "lost 2 positions", "moved up/down N spots", "climbed/dropped N places", and equivalent wording) — and assert consistency against the `grid_vs_finish` rows in the attached `FactContract`. Position-change claims are validated by computing `grid_position - finish_position` for the named driver from the contract row and comparing against the parsed claim's signed magnitude.
+3. Add unit tests at `web/scripts/tests/validator-grid-finish.test.mjs` covering pass + fail cases for BOTH claim shapes: (a) explicit grid/finish position statements and (b) position-change claims (e.g. "gained 4 places" pass, "gained 4 places" fail when actual delta differs, "lost 2 positions" pass/fail) (mirror the structure of `validator-sector-consistency.test.mjs`).
 4. Wire into the synthesis post-step in `web/src/app/api/chat/route.ts` alongside the existing pit-stints and sector-consistency validators (after answer comes back, before returning to user): call `validateGridFinish(answer, synthesisContract)` and add a `gridFinish` field to the `validators` object passed to `appendQueryTrace` (line ~1054). Validation failures get logged in `chat_query_trace.jsonl` but don't reject the answer in this phase.
 5. Add a route-wiring test at `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (mirror `validator-sector-consistency-route-wiring.test.mjs`) asserting the trace event includes `validators.gridFinish`.
 
@@ -55,7 +55,7 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] Validator returns structured pass/fail with reason on test cases.
+- [ ] Validator returns structured pass/fail with reason on test cases for BOTH (a) explicit grid/finish position statements and (b) position-change claims (e.g. "gained/lost N places", "moved up/down N positions").
 - [ ] Synthesis post-step runs validators; failures surface in `chat_query_trace.jsonl` under the `validators.gridFinish` field.
 
 ## Out of scope
@@ -96,7 +96,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Tighten Step 2, Step 3, and the Acceptance criteria to explicitly cover position-change claims derivable from `grid_vs_finish` (for example "gained/lost N places" and equivalent wording), not only explicit grid-position / finish-position statements, because the slice goal says every grid/finish claim must be validated and the benchmark prior context includes that claim shape.
+- [x] Tighten Step 2, Step 3, and the Acceptance criteria to explicitly cover position-change claims derivable from `grid_vs_finish` (for example "gained/lost N places" and equivalent wording), not only explicit grid-position / finish-position statements, because the slice goal says every grid/finish claim must be validated and the benchmark prior context includes that claim shape.
 
 ### Low
 - [ ] None.
