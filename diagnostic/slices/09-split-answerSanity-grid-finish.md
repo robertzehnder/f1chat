@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-grid-finish
 phase: 9
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:07:21-04:00
+updated: 2026-04-30T15:08:36-04:00
 ---
 
 ## Goal
@@ -65,6 +65,11 @@ Rollback: `git revert <commit>`.
   - `npm run build` → exit 0.
   - `npm run typecheck` → exit 0.
   - `bash ../scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`).
+- Revision (round 2, 2026-04-30T15:08:36-04:00): the round-1 audit reported `npm run typecheck` exit 1 (TS6053 missing `web/.next/types/app/api/admin/perf-summary/route.ts`). Reproducing on this worktree after `rm -rf web/.next web/tsconfig.tsbuildinfo` and re-running the declared gate sequence yields all-green:
+  - `cd web && npm run build` → exit 0 (regenerated `web/.next/types/app/api/admin/perf-summary/route.ts`, confirmed via `ls`).
+  - `cd web && npm run typecheck` → exit 0.
+  - `cd web && bash ../scripts/loop/test_grading_gate.sh` → exit 0 (`slice_fails=38 baseline_fails=38`).
+  No source changes were required to make the gates green; the round-1 typecheck failure was a stale incremental-TS state (tsconfig has `"incremental": true`) that did not survive a clean rerun. No files outside `Changed files expected` were touched in this revision (`git diff --name-only origin/integration/perf-roadmap...HEAD` returns only the slice file plus the two declared sources).
 - Acceptance criteria:
   - [x] `web/src/lib/answerSanity/gridFinish.ts` exists and exports `buildPositionsAnswer`.
   - [x] `web/src/lib/answerSanity.ts` no longer contains the moved body; it imports the function from the new module.
