@@ -61,7 +61,7 @@ Rollback: `git revert <commit>`.
 
 ## Slice-completion note
 
-**Branch:** `slice/09-split-chatRuntime-planTrace`
+**Branch:** `slice/09-split-chatRuntime-planTrace` (commit `5d0e346`)
 
 **Symbols identified (Step 1):** The only plan-trace recording symbol in
 `web/src/lib/chatRuntime.ts` was the type `ChatRuntimeStageLog` (the entry
