@@ -1,11 +1,11 @@
 ---
 slice_id: 09-line-count-gate
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T20:30:00Z
 ---
 
 ## Goal
@@ -22,9 +22,10 @@ Add a CI gate asserting no single TS file in `web/src/lib/` exceeds 500 lines af
 None at author time.
 
 ## Steps
-1. Add a script `scripts/loop/line_count_gate.sh` that fails if any `.ts` under `web/src/lib/` exceeds 500 lines.
-2. Wire into the existing CI workflow.
-3. Run locally; should pass after all Phase 9 splits.
+1. Add a script `scripts/loop/line_count_gate.sh` that fails (exit non-zero) if any `.ts` under `web/src/lib/` exceeds 500 lines, and exits 0 otherwise. Print offending file paths and their line counts on failure.
+2. Wire into the existing CI workflow `.github/workflows/ci.yml` as a new step that runs `bash scripts/loop/line_count_gate.sh`.
+3. Run `bash scripts/loop/line_count_gate.sh` locally; should exit 0 after all Phase 9 splits.
+4. Verify the failure path: temporarily pad a `web/src/lib/*.ts` file past 500 lines (or feed an oversized fixture path), confirm the script exits non-zero and prints the offending file, then revert the padding before commit.
 
 ## Changed files expected
 - `scripts/loop/line_count_gate.sh`
@@ -35,9 +36,10 @@ None.
 
 ## Gate commands
 ```bash
+bash scripts/loop/line_count_gate.sh
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
@@ -61,10 +63,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Add the new line-count gate command itself to `## Gate commands` so the slice can verify `scripts/loop/line_count_gate.sh` exits 0 on current state and fails when a `web/src/lib/*.ts` file is padded past 500 lines, matching the acceptance criteria.
+- [x] Add the new line-count gate command itself to `## Gate commands` so the slice can verify `scripts/loop/line_count_gate.sh` exits 0 on current state and fails when a `web/src/lib/*.ts` file is padded past 500 lines, matching the acceptance criteria.
 
 ### Medium
-- [ ] Replace raw `cd web && npm run test:grading` in `## Gate commands` with `bash scripts/loop/test_grading_gate.sh` per the repository audit note, so pre-existing grading failures do not make this slice's verification nondeterministic.
+- [x] Replace raw `cd web && npm run test:grading` in `## Gate commands` with `bash scripts/loop/test_grading_gate.sh` per the repository audit note, so pre-existing grading failures do not make this slice's verification nondeterministic.
 
 ### Low
 - [ ] None.
