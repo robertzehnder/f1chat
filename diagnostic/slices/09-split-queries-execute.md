@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-execute
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,19 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate is evaluated through the loop baseline wrapper required by current audit policy.
+
+### Medium
+- [ ] Expand `Changed files expected` to include the direct-import call sites from Step 3, because the plan currently scopes edits to only two files while explicitly requiring repo-wide import updates.
+- [ ] Add a concrete gate or acceptance check for Step 4's circular-import requirement; "Verify no circular imports" is currently untestable from the listed commands and criteria.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current on 2026-04-30, so no stale-state note applies.
