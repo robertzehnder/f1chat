@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-dataHealth
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,20 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` in Gate commands so the slice uses the required grading baseline wrapper from `diagnostic/_state.md` ([diagnostic/slices/09-split-deterministicSql-dataHealth.md:41]).
+
+### Medium
+- [ ] Expand `Changed files expected` to include the direct-import call sites that Step 3 says will be updated, or narrow Step 3 if those files are intentionally out of scope ([diagnostic/slices/09-split-deterministicSql-dataHealth.md:27], [diagnostic/slices/09-split-deterministicSql-dataHealth.md:30]).
+- [ ] Make the "Verify no circular imports" step testable by naming the concrete gate or acceptance criterion that proves it, instead of leaving it as an unbound manual check ([diagnostic/slices/09-split-deterministicSql-dataHealth.md:28], [diagnostic/slices/09-split-deterministicSql-dataHealth.md:44]).
+
+### Low
+- [ ] Name the target symbols or symbol group being moved so the split scope is deterministic for the implementer and auditor ([diagnostic/slices/09-split-deterministicSql-dataHealth.md:12], [diagnostic/slices/09-split-deterministicSql-dataHealth.md:25]).
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T16:57:30Z, so no stale-state note is required.
