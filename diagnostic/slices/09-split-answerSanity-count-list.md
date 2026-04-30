@@ -113,7 +113,7 @@ Rollback: `git revert <commit>`.
 - `cd web && npm run typecheck` — exit 0 (`tsc --noEmit` clean).
 - `bash scripts/loop/test_grading_gate.sh` — exit 0 (PASS, slice_fails=38 baseline_fails=38, no new failures vs integration baseline).
 
-**Commit hash:** filled after commit.
+**Commit hash:** `a57eff22e9c81695bcf8bfc3af9050a5ca127570` (HEAD of `slice/09-split-answerSanity-count-list`).
 
 ## Audit verdict
 (filled by Codex)
