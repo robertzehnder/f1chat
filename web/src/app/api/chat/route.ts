@@ -38,6 +38,10 @@ import {
   validateGridFinish,
   type GridFinishValidationResult
 } from "@/lib/validators/gridFinishValidator";
+import {
+  validateStrategyEvidence,
+  type StrategyEvidenceValidationResult
+} from "@/lib/validators/strategyEvidenceValidator";
 
 function mapToFactContractGrain(grain: ChatRuntimeResult["grain"]["grain"]): FactContractGrain {
   switch (grain) {
@@ -1032,6 +1036,9 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       const gridFinishValidation: GridFinishValidationResult | null = synthesisContract
         ? validateGridFinish(answer, synthesisContract)
         : null;
+      const strategyEvidenceValidation: StrategyEvidenceValidationResult | null = synthesisContract
+        ? validateStrategyEvidence(answer, synthesisContract)
+        : null;
       await appendQueryTrace({
         status: "success",
         cache_hit: false,
@@ -1058,7 +1065,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         totalRequestMs: Date.now() - startedAt,
         runtimeMs: runtime.durationMs,
         autoResolutionNote: autoResolutionNoteForTrace,
-        validators: { pitStints: pitStintsValidation, sectorConsistency: sectorConsistencyValidation, gridFinish: gridFinishValidation }
+        validators: { pitStints: pitStintsValidation, sectorConsistency: sectorConsistencyValidation, gridFinish: gridFinishValidation, strategyEvidence: strategyEvidenceValidation }
       });
 
       const finalGenerationNotes = [generationNotes, sessionPinNoteForTrace]
