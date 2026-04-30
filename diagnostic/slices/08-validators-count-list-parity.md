@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:00:00Z
+updated: 2026-04-30T13:38:46Z
 ---
 
 ## Goal
@@ -98,6 +98,22 @@ Rollback: `git revert <commit>`.
 - [x] Require the route-wiring test and acceptance criteria to assert that `trace.validators` still preserves the existing `pitStints`, `sectorConsistency`, `gridFinish`, and `strategyEvidence` keys when `countListParity` is added; the current “appended” wording permits replacing the whole validators object with only the new key.
 - [x] Resolve the validator interface mismatch by either scoping Step 1 to the existing single-`FactContract` validator pattern used in `web/src/app/api/chat/route.ts` or explicitly adding any new multi-contract plumbing/files to `Inputs`, `Steps`, and `Changed files expected`; `(answerText, attachedContracts) -> ValidationResult` does not match the single `synthesisContract` currently available in-route.
 - [x] Define the expected `validators.countListParity` value for the no-synthesis-contract / zero-row branch and cover it in acceptance criteria plus route-wiring tests; existing validators in `web/src/app/api/chat/route.ts` log `null` on that branch, but the current pass/fail-only plan leaves the new trace shape ambiguous.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-04-30T13:28:23Z`).
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace the non-path `Prior context` bullets with concrete existing artifact paths; `Latest healthcheck artifact under diagnostic/artifacts/healthcheck/` and `Phase 11 redo will re-baseline; this slice's bar is just "validator runs and asserts the obvious thing"` are not readable paths, so the audit protocol cannot satisfy the required prior-context read step from this slice alone.
 
 ### Low
 - [ ] None.
