@@ -2,10 +2,10 @@
 slice_id: 09-split-chatRuntime-classification
 phase: 9
 status: pending_plan_audit
-owner: claude
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T14:14:34Z
+updated: 2026-04-30T15:00:00Z
 ---
 
 ## Goal
@@ -95,3 +95,21 @@ _None._
 ### Notes (informational only — no action)
 - Round-2 forced-findings ratchet applied: round 1's items are all resolved cleanly and the plan is in genuinely good shape; the Medium above is escalated from Low to ensure the reviser receives concrete guidance per the role prompt. If the planner picks the "drop re-exports" stance, recheck that no external consumer of `classifyQuestion` / `QuestionType` lands between plan-revise and impl.
 - Gate command order (`build` then `typecheck`) is suboptimal (typecheck is faster and `next build` already runs its own type pass), but not a correctness bug — leaving as-is.
+
+## Plan-audit verdict (round 3)
+
+**Status: APPROVED**
+**Auditor: claude-plan-audit (round-3 forced-findings ratchet: not applicable)**
+
+### High
+_None._
+
+### Medium
+_None._
+
+### Low
+_None._
+
+### Notes (informational only — no action)
+- Round-1 and round-2 items are all cleanly resolved. The re-export stance is now committed to "do not re-export" with rationale (in-file callers reach the moved symbols via `import { classifyQuestion, type QuestionType } from './chatRuntime/classification'`); Step 2, AC #2, and `Changed files expected` are mutually consistent. Step 1's line-number caveat and the isolatedModules/TS1205 footnote are recorded. Step 3 + AC #3 align with the no-external-consumers grep, with implementer instructed to re-grep at impl time. Gate set uses the baseline-aware wrapper (`bash scripts/loop/test_grading_gate.sh`).
+- Round 3 is the final claude self-audit round per `LOOP_CLAUDE_PLAN_AUDIT_CAP`. Handoff to codex for final external plan audit.
