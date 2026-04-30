@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-completeness
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:30:00Z
+updated: 2026-04-30T14:52:55Z
 ---
 
 ## Goal
@@ -74,3 +74,20 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T14:46:37Z, so no stale-state note applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Define the split boundary so `completeness.ts` does not import private completeness/query-plan types or helpers back from `chatRuntime.ts`; `web/src/lib/chatRuntime.ts:33-86` and `web/src/lib/chatRuntime.ts:760-957` show the likely dependencies (`CompletenessStatus`, `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `TableCheck`, `QueryPlan`, `fallbackOptionsForTables`, `grainForQuestion`, `buildQueryPlan`), and leaving them behind would force a circular back-import or a non-verbatim rewrite.
+
+### Medium
+- [ ] Add an explicit circular-dependency gate and matching acceptance criterion for Step 4; precedent already exists at `diagnostic/slices/09-split-chatRuntime-resolution.md:43-50` (`cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime`), while this slice currently names the check in `diagnostic/slices/09-split-chatRuntime-completeness.md:28,47-50` but does not make it executable.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md:1` was updated at 2026-04-30T14:46:37Z, so no stale-state note applies.
+- `rg -n 'from "@/lib/chatRuntime"' web/src` exited `0` and only found `web/src/app/api/chat/route.ts:9`, so Step 3's "audit time" assumption still matches the repo.
