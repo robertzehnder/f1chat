@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-pit-stints
 phase: 8
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:16:31-04:00
+updated: 2026-04-29T22:26:35-04:00
 ---
 
 ## Goal
@@ -113,6 +113,18 @@ Rollback: `git revert <commit>`.
 **Out-of-scope items deliberately not touched:** multi-contract validator payloads (the live synthesis path is single-contract per `web/src/lib/anthropic.ts:35-38`); rejecting answers based on validation failures (this phase logs only); validators for any contract other than pit-stop claims.
 
 ## Audit verdict
+
+**Status: REVISE**
+
+- Gate #1 `(cd web && npm run build)` -> exit `0`
+- Gate #2 `(cd web && npm run typecheck)` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/08-validators-pit-stints.md`, `web/src/lib/validators/pitStintsValidator.ts`, `web/src/app/api/chat/route.ts`, `web/scripts/tests/validator-pit-stints.test.mjs`, and `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs`.
+- Criterion 1 -> FAIL; `validatePitStints` does not verify that a claimed pit-stop count matches contract values, only that related columns exist (`web/src/lib/validators/pitStintsValidator.ts:92`). Audit probe: `validatePitStints("Verstappen made 5 pit stops in this race.", { rows: [{ stints: 2, pit_stops: 1 }] ... })` returned `{"ok":true,"reasons":[]}`.
+- Criterion 2 -> PASS; route wiring invokes the validator after synthesis and logs `validators.pitStints` in the trace payload (`web/src/app/api/chat/route.ts:909`, `web/src/app/api/chat/route.ts:1018`, `web/src/app/api/chat/route.ts:1047`), and `node --test web/scripts/tests/validator-pit-stints-route-wiring.test.mjs` exits `0`.
+- Criterion 3 -> PASS; `bash scripts/loop/test_grading_gate.sh` exits `0` with no new failures vs `scripts/loop/state/test_grading_baseline.txt`.
+- Decision -> REVISE
+- Rationale -> The slice goal says every pit-stop claim must be derivable from the attached `FactContract`; unsupported numeric claims currently pass validation.
 
 ## Plan-audit verdict (round 1)
 
