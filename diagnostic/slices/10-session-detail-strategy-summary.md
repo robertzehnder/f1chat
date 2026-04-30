@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-strategy-summary
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:57:33Z
+updated: 2026-04-30T22:20:00Z
 ---
 
 ## Goal
@@ -135,3 +135,18 @@ Rollback: `git revert <commit>`. The card is additive; no existing route, query,
 - Step 3 is now explicit that the render slot is bare into the page-level `<div className="stack">` flow (no wrapper `<section>`/card), matching the adjacent `<PaceTable>` and `<StintTimeline>` convention.
 - Gate set (`cd web && npm run build` → `cd web && npm run typecheck` → `bash scripts/loop/test_grading_gate.sh`) is well-formed; the build/typecheck order is non-blocking since both run independently against the same source tree, and the wrapper handles baseline-tolerance (or strict fallback when the baseline file is absent).
 - This is the round-3 (final) Claude self-audit per `LOOP_CLAUDE_PLAN_AUDIT_CAP=3`. Slice now hands off to codex for the gating external plan audit.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Resolve the query import surface inconsistency: either constrain Step 3 and Acceptance G3 to import `getSessionStrategySummary` from `@/lib/queries/sessions`, or add an explicit step plus `web/src/lib/queries.ts` to `Changed files expected` so the barrel exports the new function before allowing `@/lib/queries`.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T21:41:07Z, so the loop context is current.
+- Repository context check: `web/src/app/sessions/[sessionKey]/page.tsx` currently imports `getSessionDriverPace` and `getSessionStintTimeline` from `@/lib/queries/sessions`, and the only barrel file is `web/src/lib/queries.ts`.
