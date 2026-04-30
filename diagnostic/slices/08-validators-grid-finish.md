@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -87,3 +87,19 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was readable and its timestamp did not block this audit.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Tighten Step 2, Step 3, and the Acceptance criteria to explicitly cover position-change claims derivable from `grid_vs_finish` (for example "gained/lost N places" and equivalent wording), not only explicit grid-position / finish-position statements, because the slice goal says every grid/finish claim must be validated and the benchmark prior context includes that claim shape.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was readable on 2026-04-29; its advisory timestamp (`2026-04-30T03:18:23Z`) did not block this audit.
