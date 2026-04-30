@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:05:00Z
+updated: 2026-04-30T22:30:00Z
 ---
 
 ## Goal
@@ -44,11 +44,11 @@ Out of scope for this slice: pit, position, sector, tire-compound, fastest-lap, 
 1. Create `web/src/lib/deterministicSql/types.ts` exporting `export type DeterministicSqlTemplate = { templateKey: string; sql: string };`. In `web/src/lib/deterministicSql.ts`, replace the inline `export type DeterministicSqlTemplate = …` (lines 1–4) with `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` so the existing public surface (`import { DeterministicSqlTemplate } from "@/lib/deterministicSql"` if any) is preserved.
 2. In `web/src/lib/deterministicSql/pace.ts`, `import type { DeterministicSqlTemplate } from "./types";` and export a single function `buildPaceTemplate(input)` returning `DeterministicSqlTemplate | null`. `input` carries the shared locals listed above plus `lower`. Move the pace-only helper computations (`mentionsRacePaceComparison`, `practiceVsRaceDriver`, `mentionsPractice`) as locals inside `buildPaceTemplate`. The new module imports nothing from `deterministicSql.ts` (only from `./types`), so no cycle is possible.
 3. In `web/src/lib/deterministicSql.ts`, replace the nine return-blocks listed above with a single early-return: `const pace = buildPaceTemplate({ lower, targetSession, driverPairSql, ... }); if (pace) return pace;`. Place the call at the original first-pace-branch position (line 186 region) so dispatch order is unchanged.
-4. Re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts` for back-compat (`export { buildPaceTemplate } from "./deterministicSql/pace";`). This is the sole back-compat shim; the only existing external caller (`web/src/app/api/chat/route.ts`, which imports `buildDeterministicSqlTemplate`) needs no edit, and grep confirms no external callers import the per-branch `templateKey` strings or pace-only helper locals being moved (those locals were never exported). No caller-file edits are therefore expected in `Changed files expected`.
+4. Do not re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts`. `buildPaceTemplate` is a new internal helper with no existing public callers (grep confirms zero importers; the symbol did not exist before this slice). Keeping it private to `web/src/lib/deterministicSql/pace.ts` matches the “pure mechanical split, no behavior change” scope and avoids speculatively expanding the public API surface of `deterministicSql.ts`. The only existing external caller of the file (`web/src/app/api/chat/route.ts`, which imports `buildDeterministicSqlTemplate`) needs no edit, and grep confirms no external callers import the per-branch `templateKey` strings or pace-only helper locals being moved (those locals were never exported). No caller-file edits are therefore expected in `Changed files expected`.
 5. Verify no circular imports between `deterministicSql.ts` and `deterministicSql/pace.ts` (build will fail loudly if introduced; see Acceptance criteria).
 
 ## Changed files expected
-- `web/src/lib/deterministicSql.ts` (inline `DeterministicSqlTemplate` type replaced with a re-export from `./deterministicSql/types`; nine pace branches removed; one delegating call inserted; `buildPaceTemplate` re-exported)
+- `web/src/lib/deterministicSql.ts` (inline `DeterministicSqlTemplate` type replaced with a re-export from `./deterministicSql/types`; nine pace branches removed; one delegating `import { buildPaceTemplate } from "./deterministicSql/pace";` plus the early-return call inserted at the original first-pace-branch position; `buildPaceTemplate` is NOT re-exported)
 - `web/src/lib/deterministicSql/types.ts` (new; sole owner of `export type DeterministicSqlTemplate`)
 - `web/src/lib/deterministicSql/pace.ts` (new; `import type { DeterministicSqlTemplate } from "./types";` and exports `buildPaceTemplate`)
 
@@ -68,7 +68,7 @@ bash scripts/loop/test_grading_gate.sh
 ## Acceptance criteria
 - [ ] `web/src/lib/deterministicSql/types.ts` exists and is the sole declaration site of `export type DeterministicSqlTemplate`; `deterministicSql.ts` re-exports it via `export type { DeterministicSqlTemplate } from "./deterministicSql/types";`.
 - [ ] `web/src/lib/deterministicSql/pace.ts` exists, imports its template type only from `./types` (no runtime import from `../deterministicSql`), and exports `buildPaceTemplate`, which covers all nine `templateKey` values listed in **Scope — exact symbols to move**.
-- [ ] `web/src/lib/deterministicSql.ts` no longer contains the nine pace return-blocks; it instead delegates to `buildPaceTemplate` and re-exports it for back-compat.
+- [ ] `web/src/lib/deterministicSql.ts` no longer contains the nine pace return-blocks; it instead imports `buildPaceTemplate` from `./deterministicSql/pace` and delegates to it via a single early-return. `buildPaceTemplate` is NOT re-exported from `deterministicSql.ts` (no existing callers, and this slice does not expand public API surface).
 - [ ] No circular import between `deterministicSql.ts` and `deterministicSql/pace.ts` (confirmed by `(cd web && npm run build)` succeeding; the shared `./types` module makes the cycle structurally impossible).
 - [ ] All gate commands pass; `bash scripts/loop/test_grading_gate.sh` exits zero against `scripts/loop/state/test_grading_baseline.txt`.
 
@@ -127,7 +127,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Remove the Step 4 / acceptance-criteria requirement to re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts`, because repo context shows no existing public `buildPaceTemplate` import to preserve and that re-export would expand API surface in a slice scoped as a pure mechanical split with no behavior change.
+- [x] Remove the Step 4 / acceptance-criteria requirement to re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts`, because repo context shows no existing public `buildPaceTemplate` import to preserve and that re-export would expand API surface in a slice scoped as a pure mechanical split with no behavior change.
 
 ### Low
 - [ ] None.
