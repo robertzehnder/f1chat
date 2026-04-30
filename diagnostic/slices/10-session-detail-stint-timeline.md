@@ -1,34 +1,56 @@
 ---
 slice_id: 10-session-detail-stint-timeline
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T22:05:00Z
 ---
 
 ## Goal
-Add a stint-timeline visualization (Gantt-style) to the session-detail page.
+Add a stint-timeline visualization (Gantt-style horizontal bars per
+driver/stint) to the session-detail page, sourced from the Phase 3
+`core.stint_summary` contract.
 
 ## Inputs
-- `web/src/app/`
-- `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 10
+- `web/src/app/sessions/[sessionKey]/page.tsx`
+- `web/src/lib/queries/sessions.ts`
+- `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 10 (item 1: "stint timeline … backed by `core.*_mat`")
+- `sql/011_stint_summary_mat.sql` (column list of the underlying `core.stint_summary` view → `core.stint_summary_mat`)
+- `web/src/app/sessions/[sessionKey]/PaceTable.tsx` (sister slice — established pattern for server-component + source-string test gating)
 
 ## Prior context
 - `diagnostic/_state.md`
+- `diagnostic/slices/10-session-detail-pace-table.md` (the established template this slice follows: query function, server component, page wire-up, source-assertion test under `bash scripts/loop/test_grading_gate.sh`)
+- `web/scripts/tests/session-detail-pace-table.test.mjs` (the concrete source-string test pattern this slice mirrors)
 
 ## Required services / env
-None at author time.
+- The `bash scripts/loop/test_grading_gate.sh` gate runs `node --test scripts/tests/*.test.mjs`. The test added by this slice is a **source-string assertion** test (no DB / network) following the pattern of `web/scripts/tests/session-detail-pace-table.test.mjs`, so no DB env is required at gate time.
+- `cd web && npm run build` and `cd web && npm run typecheck` run statically and require no DB.
+- The page itself reads `core.stint_summary` at request time; rendering it in a real browser additionally requires the standard repo DB env (`POSTGRES_URL` / `*_DATABASE_URL` / `NEON_DB_HOST` per `web/src/lib/db.ts`). Live render-against-DB is **not** part of the gate; it is only required for an optional manual smoke check.
 
 ## Steps
-1. Build the page/component per the goal.
-2. Wire to the appropriate semantic contracts from Phase 3.
-3. Add basic Playwright/RTL tests if the project has any; otherwise visual smoke check via dev-server screenshot.
+1. Add `getSessionStintTimeline(sessionKey: number)` to `web/src/lib/queries/sessions.ts` that selects `driver_number, driver_name, team_name, stint_number, compound_name, lap_start, lap_end, tyre_age_at_start, fresh_tyre, stint_length_laps, lap_count, valid_lap_count, avg_lap, best_lap, avg_valid_lap, best_valid_lap, degradation_per_lap` from `core.stint_summary` filtered by `session_key`, ordered by `driver_number ASC, stint_number ASC`.
+2. Add a server component `web/src/app/sessions/[sessionKey]/StintTimeline.tsx` (no client hooks; no new charting libs; styled with inline `style={{...}}` so we do not add CSS files). The component takes `rows: Record<string, unknown>[]` from step 1 and:
+   - Computes `maxLap = Math.max(1, ...rows.map(r => Number(r.lap_end ?? 0)))` once.
+   - Groups rows by `driver_number` (preserving the SQL order so each driver's stints render in stint_number order).
+   - For the empty-rows case renders a `<section className="card">` containing `<h3>Stint Timeline</h3>` and a `<p className="muted">` empty message (mirrors `DataTable.tsx:8-15`).
+   - For the non-empty case renders one outer `<section className="card">` with `<h3>Stint Timeline</h3>`, then a per-driver `<div data-testid="stint-row">` containing a label (driver_number / driver_name / team_name) and a track `<div data-testid="stint-track">` of per-stint bars `<div data-testid="stint-bar">`.
+   - Each `data-testid="stint-bar"` is positioned with inline `style={{ left: '<pct>%', width: '<pct>%' }}` where `left = ((Number(lap_start) - 1) / maxLap) * 100` and `width = (Number(stint_length_laps) / maxLap) * 100` (clamped to non-negative).
+   - The bar's `title` attribute references both `compound_name` and `stint_length_laps` so the visible/accessible content cites them. Bar background color is keyed off `compound_name` (e.g. `SOFT`/`MEDIUM`/`HARD`/`INTERMEDIATE`/`WET`) via a small literal mapping inside the component; unknown compounds fall back to a neutral grey.
+3. Wire it into `web/src/app/sessions/[sessionKey]/page.tsx`: import `getSessionStintTimeline` and `StintTimeline`, add the `getSessionStintTimeline(key)` call as the **last** entry in the existing `Promise.all([...])` argument array, destructure its awaited result as `stints` so that `stints` is the **final identifier** in the destructure pattern (i.e. `const [..., stints] = await Promise.all([..., getSessionStintTimeline(key)])`), and render `<StintTimeline rows={stints} />` inside the existing layout. The "final identifier" requirement is what Step 4's regex `/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/` enforces (it captures only the identifier immediately before the closing `]`), so positioning `stints` last is required for the source-string wiring test to pass. Place the `<StintTimeline rows={stints} />` element **after** `<PaceTable rows={pace} />` and **before** the existing weather/race-control `two-col` block, so the visualization appears between the per-driver pace card and the environmental data.
+4. Add an automated source-assertion test at `web/scripts/tests/session-detail-stint-timeline.test.mjs` (pattern: `web/scripts/tests/session-detail-pace-table.test.mjs`) that uses `node:fs.readFileSync` + `node:assert/strict` to assert four observable groups:
+   - **G1 (query shape).** `web/src/lib/queries/sessions.ts` source contains `export async function getSessionStintTimeline`. Extract that function's body via brace-matching (mirroring the sister test's `extractFunctionBody` helper). The body must include `FROM core.stint_summary` and `WHERE session_key = $1`, must NOT reference `raw.stints` (Phase 10 contract requirement: read the materialized `core.*` contract, not the raw layer), and must contain every column listed in Step 1 — `driver_number`, `driver_name`, `team_name`, `stint_number`, `compound_name`, `lap_start`, `lap_end`, `tyre_age_at_start`, `fresh_tyre`, `stint_length_laps`, `lap_count`, `valid_lap_count`, `avg_lap`, `best_lap`, `avg_valid_lap`, `best_valid_lap`, `degradation_per_lap`. The test iterates the column list and asserts each as a substring, so the SELECT-shape stays in lock-step with Step 1.
+   - **G2 (Gantt-style component).** `web/src/app/sessions/[sessionKey]/StintTimeline.tsx` exists, exports a default function (regex `/export\s+default\s+function\b/`), and the source contains all of these literal substrings: `data-testid="stint-row"`, `data-testid="stint-bar"`, `lap_start`, `stint_length_laps`, `compound_name`. Together these five substrings are the observable proof that the component is a Gantt-style per-stint visualization (rows + bars positioned by `lap_start` / `stint_length_laps`, colored/labelled by `compound_name`) rather than a tabular fall-back. The test must fail if any of the five substrings is missing.
+   - **G3 (page → component shared-identifier wiring).** `web/src/app/sessions/[sessionKey]/page.tsx` source must (a) import `getSessionStintTimeline` from `@/lib/queries` or the sessions submodule — regex `/import\s*\{[^}]*\bgetSessionStintTimeline\b[^}]*\}\s*from\s*["']@\/lib\/queries(?:\/sessions)?["']/`; (b) bind the awaited query result to the `<StintTimeline>` `rows` prop via a **shared identifier** — extract a destructured identifier with `/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/` (capture group 1 — the **last** name in the Promise.all destructure, which Step 3 fixes as `stints`); (c) assert the matched `Promise.all` argument list contains `getSessionStintTimeline(` (regex `/await\s+Promise\.all\(\[[\s\S]*?getSessionStintTimeline\(/`); (d) assert the literal `<StintTimeline rows={<captured>}` appears in the same source, where `<captured>` is interpolated from capture group 1 of the destructure regex. The destructure-regex match, the inner-`Promise.all`-call regex match, and the interpolated `<StintTimeline rows={<captured>}` substring being present together are the observable proof that the same awaited `getSessionStintTimeline(...)` result is the value passed into `<StintTimeline rows={...}/>`. Two independent substring assertions (one for the call site, one for `rows={`) are explicitly **not** sufficient and the test must fail if the destructure regex captures nothing or the captured identifier does not appear inside `<StintTimeline rows={...}`.
+   - **G4 (component sibling-import pin).** `page.tsx` source must contain a default-import of `StintTimeline` from the sibling component path — regex `/import\s+StintTimeline\s+from\s+["']\.\/StintTimeline["']/`. This pins the sibling module path so the wire-up cannot accidentally re-route through an unrelated re-export.
 
 ## Changed files expected
-- `web/src/app/sessions/[id]/StintTimeline.tsx`
-- `web/src/app/sessions/[id]/page.tsx`
+- `web/src/lib/queries/sessions.ts` (new exported function `getSessionStintTimeline`)
+- `web/src/app/sessions/[sessionKey]/StintTimeline.tsx` (new file)
+- `web/src/app/sessions/[sessionKey]/page.tsx` (wire-up edits)
+- `web/scripts/tests/session-detail-stint-timeline.test.mjs` (new file)
 
 ## Artifact paths
 None.
@@ -37,18 +59,34 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] Page renders without runtime errors.
-- [ ] Data displayed matches the underlying contract for at least one test session.
+- [ ] `cd web && npm run typecheck` exits 0.
+- [ ] `cd web && npm run build` exits 0.
+- [ ] `bash scripts/loop/test_grading_gate.sh` exits 0 (no new failures vs `scripts/loop/state/test_grading_baseline.txt`); the new `session-detail-stint-timeline.test.mjs` is part of the run and passes.
+- [ ] All four assertion groups (G1–G4) inside `web/scripts/tests/session-detail-stint-timeline.test.mjs` (listed in Step 4) pass — together they are the observable check that (a) the page is wired to `core.stint_summary` rather than to `raw.stints`, (b) `StintTimeline` is a Gantt-style per-stint visualization (presence of `data-testid="stint-row"` / `data-testid="stint-bar"` plus references to `lap_start`, `stint_length_laps`, `compound_name`), and (c) the awaited `getSessionStintTimeline(...)` result is the value passed into `<StintTimeline rows={...}>` via a shared destructured identifier — not via two independent substring matches.
+- [ ] The `getSessionStintTimeline` SQL string in `web/src/lib/queries/sessions.ts` contains every column listed in Step 1; this is enforced by the per-column substring loop in G1, so the test and this criterion are the same observable check.
+- [ ] `page.tsx` binds the awaited `getSessionStintTimeline(...)` result to `<StintTimeline rows={...}>` through a **shared identifier** captured from the `Promise.all` destructure — not via two independent substring matches. This is enforced by G3 as described in Step 4 (destructure regex captures the final identifier, the matched Promise.all arg list contains `getSessionStintTimeline(`, and the captured identifier appears in `<StintTimeline rows={<captured>}`).
 
 ## Out of scope
-- Anything outside the slice's declared scope.
+- Per-driver pace table — covered by sibling slice `10-session-detail-pace-table.md` (already merged).
+- Strategy summary block — covered by sibling slice `10-session-detail-strategy-summary.md`.
+- Adding new columns to `core.stint_summary_mat`.
+- Modifying `core.stint_summary` view or the `core_build` source-definition layer.
+- Client-side interactivity (hover-to-zoom, drag-to-scrub, etc.); the component is server-rendered with static inline styles only.
+- Adopting a charting library (d3, Recharts, vis.js, etc.) — the Gantt visualization is plain HTML/CSS so no new dependency is added.
 
 ## Risk / rollback
-Rollback: `git revert <commit>`.
+Rollback: `git revert <commit>`. The change is additive (new query function, new component, new test, one wire-up in `page.tsx`); reverting restores the prior page render.
+
+## Decisions
+- **Test strategy.** The repo's only automated UI-adjacent gate is `node --test scripts/tests/*.test.mjs` (no Playwright, no RTL setup). Existing precedents (`session-detail-pace-table.test.mjs`, `db-stmt-cache.test.mjs`, `prompt-prefix-split.test.mjs`) assert structural properties via source-string reads. We follow that pattern instead of introducing a new test runner. This is what addresses the round-1 Medium item that called out "Playwright/RTL tests if the project has any … fallback screenshot" as not verifying the goal.
+- **Route path.** The actual session-detail route is `web/src/app/sessions/[sessionKey]/page.tsx`. The seed plan's `web/src/app/sessions/[id]/...` paths in `Changed files expected` were wrong; this revision uses `[sessionKey]` throughout.
+- **Contract choice (round-1 Medium-3).** The named Phase 3 semantic contract this slice consumes is `core.stint_summary` — a thin view over `core.stint_summary_mat` (see `sql/011_stint_summary_mat.sql:54-55`), itself a Phase 3 materialization. It carries every column this slice needs (`stint_number`, `compound_name`, `lap_start`, `lap_end`, `tyre_age_at_start`, `fresh_tyre`, `stint_length_laps`, plus pace metrics). Going through the public view rather than `_mat` directly keeps us aligned with the Phase 3 facade pattern and matches what the sister `10-session-detail-pace-table` slice does for `core.driver_session_summary`.
+- **Visualization shape.** A Gantt-style horizontal-bar layout (one `data-testid="stint-row"` per driver, one `data-testid="stint-bar"` per stint, width proportional to `stint_length_laps`, colored by `compound_name`) implemented with plain divs and inline styles. We do not add a charting library because the goal is one fixed-shape visualization, not a generic charting surface.
+- **Gate command (round-1 High).** Switched from raw `cd web && npm run test:grading` to `bash scripts/loop/test_grading_gate.sh` per the loop policy lesson recorded in `diagnostic/_state.md` (slice:08-synthesis-payload-cutover): the wrapper diffs failures against `scripts/loop/state/test_grading_baseline.txt` so pre-existing integration failures do not auto-REJECT.
 
 ## Slice-completion note
 (filled by Claude)
@@ -61,15 +99,15 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the declared gate matches loop policy and does not fail on known baseline grading cases.
+- [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the declared gate matches loop policy and does not fail on known baseline grading cases.
 
 ### Medium
-- [ ] Rewrite Step 3 and the acceptance criteria to require a deterministic automated check for the stint timeline; `if the project has any` plus a fallback screenshot does not verify the goal or the contract-parity claim.
-- [ ] Add the expected test file and any artifact path the plan intends to create, or remove the screenshot path entirely; the current Changed files expected / Artifact paths blocks do not cover Step 3.
-- [ ] Name the concrete Phase 3 semantic contract source this slice will consume so Step 2 is auditable and the implementer is not left to guess which contract defines stint data.
+- [x] Rewrite Step 3 and the acceptance criteria to require a deterministic automated check for the stint timeline; `if the project has any` plus a fallback screenshot does not verify the goal or the contract-parity claim.
+- [x] Add the expected test file and any artifact path the plan intends to create, or remove the screenshot path entirely; the current Changed files expected / Artifact paths blocks do not cover Step 3.
+- [x] Name the concrete Phase 3 semantic contract source this slice will consume so Step 2 is auditable and the implementer is not left to guess which contract defines stint data.
 
 ### Low
-- [ ] Tighten `Page renders without runtime errors` into a command- or assertion-based acceptance criterion tied to the declared gates.
+- [x] Tighten `Page renders without runtime errors` into a command- or assertion-based acceptance criterion tied to the declared gates.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T21:15:31Z, so no staleness note applies.
