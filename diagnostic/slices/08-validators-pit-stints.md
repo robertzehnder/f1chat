@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-pit-stints
 phase: 8
-status: pending
+status: in_progress
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29
+updated: 2026-04-29T22:16:31-04:00
 ---
 
 ## Goal

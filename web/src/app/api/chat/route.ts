@@ -26,6 +26,10 @@ import {
   type FactContractGrain,
   type FactContractRow
 } from "@/lib/contracts/factContract";
+import {
+  validatePitStints,
+  type ValidationResult as PitStintsValidationResult
+} from "@/lib/validators/pitStintsValidator";
 
 function mapToFactContractGrain(grain: ChatRuntimeResult["grain"]["grain"]): FactContractGrain {
   switch (grain) {
@@ -881,6 +885,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         result.rowCount === 0
           ? `No rows matched this question with the current context.${caveatText}`
           : "";
+      let synthesisContract: FactContract | null = null;
 
       if (result.rowCount > 0) {
         if (generationSource === "deterministic_template") {
@@ -901,10 +906,11 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
             let synthAnswer: string;
             let synthReasoning: string | undefined;
             try {
+              const contract = buildSynthesisContract({ runtime, rows: result.rows });
+              synthesisContract = contract;
               if (ctx.sseRequested) {
                 let streamedAnswer = "";
                 let streamedReasoning: string | undefined;
-                const contract = buildSynthesisContract({ runtime, rows: result.rows });
                 for await (const chunk of synthesizeAnswerStream({
                   question: message,
                   sql: result.sql,
@@ -922,7 +928,6 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 synthAnswer = streamedAnswer;
                 synthReasoning = streamedReasoning;
               } else {
-                const contract = buildSynthesisContract({ runtime, rows: result.rows });
                 const synthesis = await cachedSynthesize({
                   question: message,
                   sql: result.sql,
@@ -1010,6 +1015,9 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         },
         runtime
       });
+      const pitStintsValidation: PitStintsValidationResult | null = synthesisContract
+        ? validatePitStints(answer, synthesisContract)
+        : null;
       await appendQueryTrace({
         status: "success",
         cache_hit: false,
@@ -1035,7 +1043,8 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         sessionPinNote: sessionPinNoteForTrace,
         totalRequestMs: Date.now() - startedAt,
         runtimeMs: runtime.durationMs,
-        autoResolutionNote: autoResolutionNoteForTrace
+        autoResolutionNote: autoResolutionNoteForTrace,
+        validators: { pitStints: pitStintsValidation }
       });
 
       const finalGenerationNotes = [generationNotes, sessionPinNoteForTrace]
