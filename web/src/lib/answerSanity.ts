@@ -1,8 +1,5 @@
 import {
   buildPitStopCountAnswer,
-  buildStrategyTypeAnswer,
-  hasPitPositionEvidence,
-  hasUndercutOvercutEvidence,
   summarizePitCycleRows,
   summarizeStintLengthRows,
   summarizeStintRows,
@@ -11,6 +8,12 @@ import {
 } from "./answerSanity/pitStints";
 import { buildSectorAnswer } from "./answerSanity/sector";
 import { buildPositionsAnswer } from "./answerSanity/gridFinish";
+import {
+  applyPitCycleEvidenceGuard,
+  applyStintStopStrategyGuard,
+  applyStrategyTypeGuard,
+  applyUndercutOvercutEvidenceGuard
+} from "./answerSanity/strategyEvidence";
 
 export {
   buildPitStopCountAnswer,
@@ -24,6 +27,14 @@ export {
   summarizeStrategyRows,
   summarizeUndercutOvercutRows
 } from "./answerSanity/pitStints";
+
+export {
+  applyPitCycleEvidenceGuard,
+  applyStintStopStrategyGuard,
+  applyStrategyTypeGuard,
+  applyUndercutOvercutEvidenceGuard
+} from "./answerSanity/strategyEvidence";
+export type { StrategyEvidenceGuardResult } from "./answerSanity/strategyEvidence";
 
 type AnswerSanityInput = {
   question: string;
@@ -258,14 +269,9 @@ export function applyAnswerSanityGuards(input: AnswerSanityInput): AnswerSanityR
     return { answer, notes };
   }
 
-  if (lowerQuestion.includes("one-stop") || lowerQuestion.includes("two-stop")) {
-    const strategyAnswer = buildStrategyTypeAnswer(input.rows);
-    if (strategyAnswer) {
-      answer = strategyAnswer;
-      notes.push("answer_guard:strategy_stop_count_consistency");
-      notes.push("stop_count_consistent_with_stints");
-      return { answer, notes };
-    }
+  const strategyTypeResult = applyStrategyTypeGuard(lowerQuestion, input.rows);
+  if (strategyTypeResult) {
+    return strategyTypeResult;
   }
 
   if (
@@ -301,33 +307,19 @@ export function applyAnswerSanityGuards(input: AnswerSanityInput): AnswerSanityR
     }
   }
 
-  if (
-    (lowerQuestion.includes("stint") && lowerQuestion.includes("stop")) ||
-    (answer.toLowerCase().includes("stint") && answer.toLowerCase().includes("stop"))
-  ) {
-    const strategySummary = summarizeStrategyRows(input.rows);
-    if (strategySummary) {
-      answer = strategySummary;
-      notes.push("answer_guard:strategy_stop_count_consistency");
-      notes.push("stop_count_consistent_with_stints");
-      return { answer, notes };
-    }
+  const stintStopStrategyResult = applyStintStopStrategyGuard(lowerQuestion, answer, input.rows);
+  if (stintStopStrategyResult) {
+    return stintStopStrategyResult;
   }
 
-  if (lowerQuestion.includes("pit cycle") && !hasPitPositionEvidence(input.rows)) {
-    answer =
-      "The available rows do not include reliable pre- and post-pit position pairs, so pit-cycle position gain cannot be determined confidently.";
-    notes.push("answer_guard:pit_cycle_evidence_gate");
-    notes.push("evidence_required_for_strategy_claim");
-    return { answer, notes };
+  const pitCycleEvidenceResult = applyPitCycleEvidenceGuard(lowerQuestion, input.rows);
+  if (pitCycleEvidenceResult) {
+    return pitCycleEvidenceResult;
   }
 
-  if ((lowerQuestion.includes("undercut") || lowerQuestion.includes("overcut")) && !hasUndercutOvercutEvidence(input.rows)) {
-    answer =
-      "The rows do not provide sufficient relative position evidence around pit windows to confirm an undercut or overcut benefit.";
-    notes.push("answer_guard:undercut_overcut_evidence_gate");
-    notes.push("evidence_required_for_strategy_claim");
-    return { answer, notes };
+  const undercutOvercutEvidenceResult = applyUndercutOvercutEvidenceGuard(lowerQuestion, input.rows);
+  if (undercutOvercutEvidenceResult) {
+    return undercutOvercutEvidenceResult;
   }
 
   if (looksLikeStructuredRowDump(answer)) {
