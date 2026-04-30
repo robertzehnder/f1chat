@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-dataHealth
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T13:04:23-04:00
 ---
 
 ## Goal
@@ -77,7 +77,25 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/09-split-deterministicSql-dataHealth`.
+- Commit hash: `ea11077` (single commit on this branch over `0c9c9de` plan-approved tip; pushed to `origin`).
+- Commit summary: extract the two pre-`targetSession` data-health template blocks (`canonical_id_lookup_abu_dhabi_2025_race`, `sessions_most_complete_downstream_coverage`) from `web/src/lib/deterministicSql.ts` into a new internal helper `buildDataHealthTemplate` in `web/src/lib/deterministicSql/dataHealth.ts`, mirroring the `pace`/`telemetry` precedent.
+- Decisions honored:
+  - Helper accepts only `{ lower, abuDhabi2025, includesAny }`; imports only `DeterministicSqlTemplate` from `./types` (no `../deterministicSql` / `../deterministicSql.js` / `@/lib/deterministicSql` import). Source-level acyclic by construction.
+  - Helper is **not** re-exported from `web/src/lib/deterministicSql.ts` (matches `pace`, `telemetry`).
+  - Guard order preserved (canonical-id first, then downstream-coverage); `templateKey` strings and SQL bodies copied verbatim.
+  - Delegation inserted at exact former position of inline blocks: `const dataHealth = buildDataHealthTemplate({ lower, abuDhabi2025, includesAny }); if (dataHealth) return dataHealth;` immediately before the `if (!targetSession) return null;` short-circuit.
+  - No call-site migration: `buildDataHealthTemplate` is a brand-new symbol; the only consumer is the new internal call site inside `buildDeterministicSqlTemplate`.
+- Gate results (run from the slice worktree):
+  - `cd web && npm run build` → exit 0 (Next.js production build compiled successfully; ran after `npm ci` since the worktree had no `node_modules`). Per the slice's "build-level" criterion this is the executable corroboration that no circular module graph was introduced.
+  - `cd web && npm run typecheck` → exit 0 (`tsc --noEmit` clean).
+  - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`; no new failures vs `scripts/loop/state/test_grading_baseline.txt`).
+- Acceptance-criteria self-checks:
+  - `grep -nE 'canonical_id_lookup_abu_dhabi_2025_race|sessions_most_complete_downstream_coverage' web/src/lib/deterministicSql.ts` → 0 matches (exit 1).
+  - `grep -nE "from ['\"](\.\./)?deterministicSql(\.js)?['\"]|from ['\"]@/lib/deterministicSql(\.js)?['\"]" web/src/lib/deterministicSql/dataHealth.ts` → 0 matches (exit 1).
+  - `web/src/lib/deterministicSql/dataHealth.ts` exists and exports `buildDataHealthTemplate`; both `templateKey` strings and SQL bodies are byte-identical to the previously inline versions.
+- Files changed (matches "Changed files expected"): `web/src/lib/deterministicSql.ts` (delete two inline blocks; add import + 3-line delegation), `web/src/lib/deterministicSql/dataHealth.ts` (new). No other source files modified.
 
 ## Audit verdict
 (filled by Codex)
