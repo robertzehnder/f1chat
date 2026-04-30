@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T04:14:31Z
+updated: 2026-04-30T04:30:00Z
 ---
 
 ## Goal
@@ -50,10 +50,11 @@ None.
 
 ## Gate commands
 ```bash
-cd web && npm run build
-cd web && npm run typecheck
+(cd web && npm run build)
+(cd web && npm run typecheck)
 bash scripts/loop/test_grading_gate.sh
 ```
+Each `web` command runs inside its own subshell so the parent shell stays at repo root, ensuring the final `bash scripts/loop/test_grading_gate.sh` invocation resolves against the repo-root path.
 
 ## Acceptance criteria
 - [ ] Validator returns `{ ok: boolean; reasons: string[] }` (matching the peer `GridFinishValidationResult` / `PitStintsValidationResult` / `SectorConsistencyValidationResult` shape) on all four unit-test cases in `web/scripts/tests/validator-strategy-evidence.test.mjs` (vacuously-ok, supported-claims, unsupported-claim with evidence-bearing columns, and unsupported-claim against a contract whose rows lack evidence-bearing columns — i.e. the realistic `core.strategy_summary` case).
@@ -144,7 +145,7 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite the `Gate commands` block so each `web` command runs in its own subshell from repo root (for example `(cd web && npm run build)` / `(cd web && npm run typecheck)`), because the current sequential `cd web && ...` lines leave the shell in `web/` after the first command and make the second `cd web` plus the repo-root `bash scripts/loop/test_grading_gate.sh` invocation fail.
+- [x] Rewrite the `Gate commands` block so each `web` command runs in its own subshell from repo root (for example `(cd web && npm run build)` / `(cd web && npm run typecheck)`), because the current sequential `cd web && ...` lines leave the shell in `web/` after the first command and make the second `cd web` plus the repo-root `bash scripts/loop/test_grading_gate.sh` invocation fail.
 
 ### Medium
 
