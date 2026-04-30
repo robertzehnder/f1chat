@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-resolution
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T10:30:38-04:00
 ---
 
 ## Goal
@@ -57,7 +57,75 @@ cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts 
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-split-chatRuntime-resolution` (from `integration/perf-roadmap`).
+
+**Commit:** HEAD of `slice/09-split-chatRuntime-resolution` — single commit `refactor(chatRuntime): extract entity-resolution helpers into chatRuntime/resolution.ts` tagged `[slice:09-split-chatRuntime-resolution][awaiting-audit]`. Inspect with `git log -1 slice/09-split-chatRuntime-resolution`.
+
+### Final moved-symbol list (Step 1 lock)
+
+Locked the move list before edits to:
+- Type: `ResolutionStatus` (now exported from `resolution.ts`)
+- Constant (helper-only-internal): `SESSION_REQUIRED_TYPES` (private to `resolution.ts`; only `requiresResolvedSession` referenced it)
+- Functions:
+  - `requiresResolvedSession` (exported)
+  - `sessionRecencyValue` (exported; only consumer was `compareScoredSessions`, but exported for symmetry with the other named moves)
+  - `compareScoredSessions` (exported; the slice referred to it as `compareSessionScored` — confirmed the actual identifier is `compareScoredSessions`, no other symbol of that name exists)
+  - `buildSessionLabel` (exported)
+  - `mergeSessionRows` (exported)
+  - `mergeDriverRows` (exported)
+  - `deriveResolutionStatus` (exported)
+  - `scoreDriverCandidate` (exported)
+- Helper-only-internal: `isBroadSessionDiscoveryQuestion` (private to `resolution.ts`; only `requiresResolvedSession` referenced it)
+- Co-moved (`isWarehouseWideQuestion`): `requiresResolvedSession` calls it, but `buildChatRuntime` also calls it directly at the completeness-gate site. Rather than duplicate the body or create a circular `chatRuntime.ts` ↔ `resolution.ts` import, moved it to `resolution.ts` and re-imported it into `chatRuntime.ts`.
+- Local helpers in `resolution.ts` (kept private; same precedent as `classification.ts` carrying its own `normalize`):
+  - `unique<T>` (used by `scoreDriverCandidate`)
+  - `containsWholePhrase` (used by `scoreDriverCandidate`)
+
+Decisions:
+- No `export *` re-exports added to `chatRuntime.ts`. Step 3 grep showed no external file imports any moved symbol from `@/lib/chatRuntime`, so no back-compat surface had to be preserved.
+- Trivial helpers `unique` / `containsWholePhrase` were duplicated locally rather than imported from `chatRuntime.ts`, to avoid creating a `chatRuntime.ts` ↔ `resolution.ts` circular import (which madge would flag); duplication is consistent with how `chatRuntime/classification.ts` already keeps its own private `normalize`.
+
+### Step 3 grep result (direct importers of moved symbols)
+
+`grep -rn "from \"@/lib/chatRuntime\"" web/src` returned exactly one match:
+
+```
+web/src/app/api/chat/route.ts:9:import { buildChatRuntime, type ChatRuntimeResult } from "@/lib/chatRuntime";
+```
+
+`buildChatRuntime` and `ChatRuntimeResult` are NOT in the moved set, so `route.ts` was left untouched. No additional callsites were discovered.
+
+`grep -rn "from \"@/lib/chatRuntime/resolution\"" web/src` returned no matches; the only importer of `resolution.ts` is `web/src/lib/chatRuntime.ts` (relative import `./chatRuntime/resolution`), which is the expected single internal consumer.
+
+### Step 4 — circularity check
+
+`npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime` (run from `web/`) reports `✔ No circular dependency found!` (3 files processed). `chatRuntime.ts → chatRuntime/resolution.ts` is a one-way edge.
+
+### Gate command exit codes
+
+| Gate | Exit code |
+|---|---:|
+| `cd web && npm run build` | 0 |
+| `cd web && npm run typecheck` | 0 |
+| `bash scripts/loop/test_grading_gate.sh` | 0 |
+| `cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime` | 0 |
+
+Grading-gate baseline check: `[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`.
+
+### Self-checks against acceptance criteria
+
+- [x] `web/src/lib/chatRuntime/resolution.ts` exists and exports the moved symbols.
+- [x] `web/src/lib/chatRuntime.ts` no longer contains the moved bodies — only the new import statement that re-binds `ResolutionStatus`, `requiresResolvedSession`, `isWarehouseWideQuestion`, `buildSessionLabel`, `mergeSessionRows`, `mergeDriverRows`, `compareScoredSessions`, `deriveResolutionStatus`, `scoreDriverCandidate` from `./chatRuntime/resolution`. `git diff --stat web/src/lib/chatRuntime.ts` shows `11 insertions(+), 167 deletions(-)` and `grep -n "isBroadSessionDiscoveryQuestion\|sessionRecencyValue\|SESSION_REQUIRED_TYPES" web/src/lib/chatRuntime.ts` returns no matches.
+- [x] No external direct importer of a moved symbol exists. `web/src/app/api/chat/route.ts` continues to import only `buildChatRuntime` / `ChatRuntimeResult` from `@/lib/chatRuntime`; `npm run typecheck` passes without modifying that file. The repo-wide grep `from "@/lib/chatRuntime/resolution"` returned no matches outside the new module itself, confirming there are no external direct importers to update.
+- [x] Madge reports no circular dependency between `chatRuntime.ts` and `chatRuntime/resolution.ts`.
+- [x] All four gate commands exit 0.
+
+### Changed files (matches "Changed files expected")
+
+- `web/src/lib/chatRuntime.ts` — moved bodies removed; new import block added; no behavioral edits.
+- `web/src/lib/chatRuntime/resolution.ts` — new module containing the moved symbols verbatim plus two trivially duplicated local helpers (`unique`, `containsWholePhrase`).
+- No additional callsites were touched (Step 3 grep confirmed none exist).
 
 ## Audit verdict
 (filled by Codex)
