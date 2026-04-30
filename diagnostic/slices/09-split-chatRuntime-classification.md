@@ -1,7 +1,7 @@
 ---
 slice_id: 09-split-chatRuntime-classification
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -81,7 +81,17 @@ Rollback: `git revert <commit>`.
 - `bash scripts/loop/test_grading_gate.sh` — exit 0. Output: `[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`. Pre-existing baseline failures (e.g. `driver-fallback.test.mjs` Cases A/B/E) remain unchanged, matching the auditor-note guidance from `_state.md`.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/09-split-chatRuntime-classification.md`, `web/src/lib/chatRuntime.ts`, and `web/src/lib/chatRuntime/classification.ts`, all in scope.
+- AC #1 -> PASS; [web/src/lib/chatRuntime/classification.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-classification/web/src/lib/chatRuntime/classification.ts:1) exports `QuestionType` and [web/src/lib/chatRuntime/classification.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-classification/web/src/lib/chatRuntime/classification.ts:14) exports `classifyQuestion`.
+- AC #2 -> PASS; [web/src/lib/chatRuntime.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-classification/web/src/lib/chatRuntime.ts:15) imports `classifyQuestion` / `QuestionType` from `./chatRuntime/classification`, and `rg -n "export .*QuestionType|export .*classifyQuestion|function classifyQuestion|type QuestionType =" web/src/lib/chatRuntime.ts` exited `1` (no local moved bodies or re-exports).
+- AC #3 -> PASS; `rg -n "from ['\\\"]@/lib/chatRuntime['\\\"].*(classifyQuestion|QuestionType)|(classifyQuestion|QuestionType).*from ['\\\"]@/lib/chatRuntime['\\\"]" web/src` exited `1` (no direct imports from `@/lib/chatRuntime` to update).
+- AC #4 -> PASS; all declared gate commands passed.
+- Decision -> PASS; the diff is a pure mechanical split with no scope creep and all acceptance criteria verified.
 
 ## Plan-audit verdict (round 1)
 
