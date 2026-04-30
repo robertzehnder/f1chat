@@ -1,11 +1,11 @@
 ---
 slice_id: 10-saved-analyses-persistence
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:30:00Z
+updated: 2026-04-30T22:51:59Z
 ---
 
 ## Goal
@@ -227,6 +227,22 @@ bash scripts/loop/test_grading_gate.sh
 
 ### Low
 - [x] Expand Changed files expected to include the test file(s) and any additional contract/server modules the steps necessarily touch so slice scope matches the planned work (`diagnostic/slices/10-saved-analyses-persistence.md:24-32`).
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current at audit time (`last updated: 2026-04-30T22:43:30Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace every planned use of an existing `query` helper from `@/lib/db` with the repo's actual DB API and align the page/route/test contracts to that API; `web/src/lib/db/index.ts` exports `sql`/`pool`/helpers, not `query`, and `sql()` returns row arrays, so Steps 2-3 and acceptance G1/G3 currently describe code that cannot be implemented against the current repo surface.
+
+### Medium
+- [ ] Extend the live-DB schema gate to assert the database-level `CHECK (length(btrim(name)) > 0)` contract from Step 1, because the current gates prove only route-level `invalid_name` handling and can pass while the table silently omits the non-empty-name constraint.
+- [ ] Make gate #2 actually verify the live table's declared column types/defaults that the acceptance text claims it proves, or narrow the acceptance wording; `CREATE TABLE IF NOT EXISTS` plus source-grep G4 does not catch a pre-existing `core.saved_analysis` with drifted runtime schema.
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current at audit time (`last updated: 2026-04-30T22:43:30Z`).
