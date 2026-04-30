@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-planTrace
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:31:53Z
+updated: 2026-04-30T11:32:48-04:00
 ---
 
 ## Goal
@@ -60,7 +60,58 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-split-chatRuntime-planTrace` (commit `5d0e346`)
+
+**Symbols identified (Step 1):** The only plan-trace recording symbol in
+`web/src/lib/chatRuntime.ts` was the type `ChatRuntimeStageLog` (the entry
+type pushed onto the local `stageLogs` array during runtime stage tracing).
+There were no exported helpers like `recordPlanTrace`/`appendPlanTrace`;
+recording is performed via inline `stageLogs.push(...)` calls within
+`buildChatRuntime`. The `stageLogs` local array and its `push` sites stay
+in `chatRuntime.ts` because they are scoped to `buildChatRuntime`'s body
+and are not standalone helpers. Per the slice's "pure mechanical split"
+directive (no behavioral changes), only the type was moved. `QueryPlan`
+and `buildQueryPlan` represent the plan output (not its trace) and were
+left in place to keep this slice scoped to plan-trace recording.
+
+**Step 3 ripgrep result:** `rg -n "ChatRuntimeStageLog" web/src` returned
+matches only in `web/src/lib/chatRuntime.ts` (the import + re-export + two
+internal usages) and `web/src/lib/chatRuntime/planTrace.ts` (the
+declaration). No external `web/src/**` files import the symbol directly,
+so the back-compat re-export from `chatRuntime.ts` is sufficient and no
+additional `Changed files expected` entries were needed.
+
+**Changes:**
+- New file `web/src/lib/chatRuntime/planTrace.ts`: contains the moved
+  `export type ChatRuntimeStageLog`.
+- `web/src/lib/chatRuntime.ts`: removed the inline `ChatRuntimeStageLog`
+  declaration; added `import { type ChatRuntimeStageLog } from "./chatRuntime/planTrace"`
+  and `export type { ChatRuntimeStageLog }` for back-compat re-export.
+
+**Step 4 self-check (no circular import):** The grep gate
+`! rg -nP "(?:from|import)\s+['\"](?:\.\./chatRuntime|@/lib/chatRuntime)(?:\.js)?['\"]" web/src/lib/chatRuntime/planTrace.ts`
+exited 0 (no matches in `planTrace.ts`), directly proving the new file
+does not import back from `chatRuntime.ts`.
+
+**Gate exit codes (all 0):**
+- `! rg -nP "(?:from|import)\s+['\"](?:\.\./chatRuntime|@/lib/chatRuntime)(?:\.js)?['\"]" web/src/lib/chatRuntime/planTrace.ts` → 0
+- `cd web && npm run build` → 0
+- `cd web && npm run typecheck` → 0
+- `bash scripts/loop/test_grading_gate.sh` → 0 (slice_fails=34, baseline_fails=34, baseline_failures_fixed=0 — no new failures vs baseline)
+
+**Decisions:**
+- Conservative scope: moved only `ChatRuntimeStageLog`. No behavioral
+  changes; no new helpers introduced (slice "Out of scope" forbids it).
+- Back-compat re-export preserved so no other call sites needed updates.
+
+**Self-check vs Acceptance criteria:**
+- [x] `web/src/lib/chatRuntime/planTrace.ts` exists and exports `ChatRuntimeStageLog`.
+- [x] `web/src/lib/chatRuntime.ts` no longer contains the moved body — only the re-export.
+- [x] Step 3 ripgrep recorded above; no external import sites found.
+- [x] Step 4 source-level grep gate exits 0.
+- [x] `npm run build` and `npm run typecheck` both exit 0.
+- [x] All gate commands pass (commit hash will be filled by the runner after commit).
 
 ## Audit verdict
 (filled by Codex)
