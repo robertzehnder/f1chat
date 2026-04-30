@@ -1,7 +1,7 @@
 ---
 slice_id: 09-split-chatRuntime-completeness
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -101,7 +101,20 @@ Rollback: `git revert <commit>`.
   - Follow-up commit on this branch records this commit-hash line in the Slice-completion note (no code changes).
 
 ## Audit verdict
-(filled by Codex)
+
+**PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Gate #4 `cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime` -> exit `0`
+- Scope diff -> exit `0`; changed paths limited to `diagnostic/slices/09-split-chatRuntime-completeness.md`, `web/src/lib/chatRuntime.ts`, `web/src/lib/chatRuntime/completeness.ts`
+- Criterion: `web/src/lib/chatRuntime/completeness.ts` exists and exports `CompletenessStatus`, `TableCheck`, `requiredTablesForQuestion`, `fallbackOptionsForTables` at `web/src/lib/chatRuntime/completeness.ts:3-10,20-211` -> PASS
+- Criterion: `web/src/lib/chatRuntime.ts` no longer contains the moved bodies; it imports the moved symbols from `./chatRuntime/completeness` at `web/src/lib/chatRuntime.ts:16-21`, and remaining use sites are at `web/src/lib/chatRuntime.ts:788,1139,1481` -> PASS
+- Criterion: `grep -n "from \"@/lib/chatRuntime\"\|from \"\.\./chatRuntime\"" web/src/lib/chatRuntime/completeness.ts` -> exit `1` -> PASS
+- Criterion: madge reports no `chatRuntime.ts` <-> `chatRuntime/completeness.ts` cycle -> PASS
+- Criterion: all gate commands pass -> PASS
+- Decision: PASS
 
 ## Plan-audit verdict (round 1)
 
