@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-resolution
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,20 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate is baseline-aware per loop protocol.
+
+### Medium
+- [ ] Expand `Changed files expected` to include the direct-import callsites Step 3 says will be updated, not only `chatRuntime.ts` and `chatRuntime/resolution.ts`.
+- [ ] Add an acceptance criterion that makes Step 3 testable by requiring direct imports of the moved symbols to resolve from `web/src/lib/chatRuntime/resolution.ts` while back-compat re-exports from `web/src/lib/chatRuntime.ts` remain intact.
+
+### Low
+- [ ] Add an explicit gate or acceptance check for the “no circular imports” requirement in Step 4 instead of leaving it as an unverified instruction.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T14:25:18Z, so its auditor notes are current.
