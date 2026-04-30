@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-stint-timeline
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:30:00Z
+updated: 2026-04-30T21:32:43Z
 ---
 
 ## Goal
@@ -139,6 +139,22 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 
 ### Medium
 - [x] Align Step 3 with Step 4/G3 or the acceptance criteria so the automated checks prove `<StintTimeline rows={stints} />` is rendered after `<PaceTable rows={pace} />` and before the existing weather/race-control `two-col` block, or narrow Step 3 so it no longer makes that placement claim.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T21:15:31Z, so no staleness note applies.
+
+## Plan-audit verdict (round 4)
+
+**Status: APPROVED**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] None.
 
 ### Low
 - [ ] None.
