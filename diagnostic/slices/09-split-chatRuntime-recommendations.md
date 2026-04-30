@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-recommendations
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,20 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace `cd web && npm run test:grading` in Gate commands with `bash scripts/loop/test_grading_gate.sh` so the slice uses the loop-approved grading wrapper instead of failing on known baseline issues.
+- [ ] Expand `Changed files expected` to cover the import sites Step 3 requires, or narrow Step 3 so the declared file scope matches the planned edits.
+
+### Low
+- [ ] Add an acceptance criterion that makes Step 3 and Step 4 auditable by requiring all direct imports to resolve from `web/src/lib/chatRuntime/recommendations.ts` and the referenced gate(s) to be the proof that no circular import was introduced.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T15:09:50Z, so no stale-state note is needed.
