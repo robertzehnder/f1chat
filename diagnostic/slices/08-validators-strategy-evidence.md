@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T01:15:00-04:00
+updated: 2026-04-30T09:03:27-04:00
 ---
 
 ## Goal
@@ -194,3 +194,18 @@ Rollback: `git revert <commit>`.
 ## Plan-revise unblock note (2026-04-30T00:35 EDT)
 
 Mechanical escalation reverted: the iteration-cap trip at round 7 was not a stuck-on-same-item pathology — codex's round-7 finding (driver-row binding via `findRowByDriverToken` per peer pattern in `gridFinishValidator.ts:93`) is a substantive, novel item with concrete file:line references, not a recurrence of a prior round. Bumping `LOOP_MAX_PLAN_ITERATIONS` from 6 to 8 gives one more revise + audit cycle to address this finding. If codex's round-8 audit lands a NEW substantive finding (rather than a repeat of round 7), the slice will re-escalate at iteration 9 and require user judgment on whether to split or continue.
+
+## Plan-audit verdict (round 8)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Rewrite Step 5 and the matching acceptance bullet for the null-contract branch so they use a route-reachable setup instead of “fake runtime returns `synthesisContract: null` (or omits it)”: in the real route, `synthesisContract` is built locally from `result.rows` plus `runtime.queryPlan.primary_tables[0]` in [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:72) and assigned only inside the synthesis path at [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:918), so a `chatRuntime.stub.mjs` fake cannot directly inject `null` there.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
+- Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
