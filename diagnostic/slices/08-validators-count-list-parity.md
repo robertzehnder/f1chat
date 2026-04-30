@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:05:00Z
+updated: 2026-04-30T22:25:00Z
 ---
 
 ## Goal
@@ -134,6 +134,22 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Reconcile the plan body and acceptance criteria with the slice goal by specifying that `validateCountListParity` derives the expected count from listed items in the answer text itself, not from `FactContract.rows`; the current single-contract framing copies the existing evidence validators but does not implement “count claim matches listed items in the same answer.”
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-04-30T13:28:23Z`).
+ 
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Define the validator outcome for the case where `answerText` contains a parseable numerical count claim but no parseable corresponding list/enumeration; without this, Step 1 and the acceptance criteria leave implementers free to either fail, silently pass, or skip the claim.
 
 ### Low
 - [ ] None.
