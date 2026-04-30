@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T16:35:00Z
+updated: 2026-04-30T16:00:15Z
 ---
 
 ## Goal
@@ -162,6 +162,22 @@ Rollback: `git revert <commit>`.
 
 ### High
 - [x] Amend Step 1 and the matching acceptance criterion so `web/src/lib/deterministicSql.ts` keeps a local type binding for `DeterministicSqlTemplate` after the extraction, for example by adding a type-only import alongside the re-export (or an equivalent local alias), because `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` alone does not let the same file use `DeterministicSqlTemplate` in `buildDeterministicSqlTemplate`'s return type.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T15:40:29Z, so no stale-state note applies.
+
+## Plan-audit verdict (round 6)
+
+**Status: APPROVED**
+
+### High
+- [ ] None.
 
 ### Medium
 - [ ] None.
