@@ -70,7 +70,7 @@ log_event() {
 # between codex REJECT and triage fix on the same slice.
 attempt_cap="${LOOP_TRIAGE_ATTEMPTS_PER_SLICE:-2}"
 if [[ -f "$ATTEMPT_HISTORY" ]]; then
-  prior=$(grep -c "\"slice\":\"$slice_id\"" "$ATTEMPT_HISTORY" 2>/dev/null || echo 0)
+  prior=$(grep -c "\"slice\":\"$slice_id\"" "$ATTEMPT_HISTORY" 2>/dev/null) || prior=0
   if (( prior >= attempt_cap )); then
     log_event "skip-attempt-cap" "prior_attempts=$prior cap=$attempt_cap" "escalating to user"
     exit 1
