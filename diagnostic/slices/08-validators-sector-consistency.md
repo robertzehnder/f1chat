@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T23:08:35-04:00
+updated: 2026-04-29T23:59:00-04:00
 ---
 
 ## Goal
@@ -122,7 +122,17 @@ Rollback: `git revert <commit>`.
 - Other validators were not refactored or merged; the local-result-type pattern from the pit-stints precedent is preserved.
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+- Gate #1 `(cd web && npm run build)` -> exit `0`
+- Gate #2 `(cd web && npm run typecheck)` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `web/src/lib/validators/sectorConsistencyValidator.ts`, `web/src/app/api/chat/route.ts`, `web/scripts/tests/validator-sector-consistency.test.mjs`, `web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs`, and the implicit allow-list file `diagnostic/slices/08-validators-sector-consistency.md`.
+- Criterion 1 -> PASS; validator exports structured `{ ok, reasons }`, uses type-only `FactContract` import, enforces kind-specific best/avg/per-lap derivations with ±0.05s tolerance, and the eight required unit cases are present at [web/src/lib/validators/sectorConsistencyValidator.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/web/src/lib/validators/sectorConsistencyValidator.ts:1), [web/scripts/tests/validator-sector-consistency.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/web/scripts/tests/validator-sector-consistency.test.mjs:52); `cd web && node --test scripts/tests/validator-sector-consistency.test.mjs` -> exit `0`.
+- Criterion 2 -> PASS; route wires `validateSectorConsistency` immediately after `validatePitStints` and logs `validators.sectorConsistency` in `appendQueryTrace` without changing the user-facing payload at [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/web/src/app/api/chat/route.ts:29), [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/web/src/app/api/chat/route.ts:1022), and the route harness asserts both failure and success payloads plus no response leakage at [web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-sector-consistency/web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs:352); `cd web && node --test scripts/tests/validator-sector-consistency-route-wiring.test.mjs` -> exit `0`.
+- Criterion 3 -> PASS; `bash scripts/loop/test_grading_gate.sh` reported `PASS (no new failures vs integration baseline) slice_fails=24 baseline_fails=24 baseline_failures_fixed=0`.
+
+Ready to merge.
 
 ## Plan-audit verdict (round 1)
 
