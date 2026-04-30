@@ -1,11 +1,11 @@
 ---
 slice_id: 09-line-count-gate
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:05:00Z
+updated: 2026-04-30T16:03:28-04:00
 ---
 
 ## Goal
@@ -76,7 +76,38 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-line-count-gate`
+
+**Files changed (3, all listed in scope):**
+- `scripts/loop/line_count_gate.sh` (new, executable, bash-3.2 compatible — uses parallel arrays, not `declare -A`)
+- `scripts/loop/state/line_count_baseline.txt` (new; force-added because `scripts/loop/state/*` is gitignored as ephemeral runtime state — `.gitignore` itself was deliberately not modified to stay in scope)
+- `.github/workflows/ci.yml` (added `line-count-gate` job; existing `web-typecheck`, `web-tests`, `web-build` now `needs: line-count-gate` so a bloat regression fails fast before downstream jobs run)
+
+**Baseline contents** (verified via `find web/src/lib -type f -name '*.ts' -print0 | xargs -0 wc -l | awk '$1>500 && $2!="total"{print $2":"$1}' | sort`):
+```
+web/src/lib/anthropic.ts:642
+web/src/lib/chatRuntime.ts:1601
+web/src/lib/deterministicSql.ts:511
+web/src/lib/deterministicSql/pace.ts:631
+```
+
+**Decisions:**
+- Bash 3.2 compatibility: macOS ships bash 3.2, so the script avoids `declare -A` (associative arrays) and uses two parallel arrays (`baseline_paths`, `baseline_ceilings`) with a linear-scan `lookup_ceiling` helper. Linear scan is fine — the baseline currently has 4 entries.
+- CI wiring: implemented as a separate top-level `line-count-gate` job that the three downstream jobs (`web-typecheck`, `web-tests`, `web-build`) declare via `needs:`. Catches bloat regressions before slow Node-based steps run.
+- Baseline path: kept at the slice-specified `scripts/loop/state/line_count_baseline.txt`. Used `git add -f` (one-time force) rather than editing `.gitignore`, because `.gitignore` is outside the slice's declared scope. Once tracked, future modifications to the baseline file show up normally.
+
+**Gate-command results (exit codes):**
+- `bash scripts/loop/line_count_gate.sh` → 0 (`line_count_gate: OK`)
+- `cd web && npm run build` → 0 (Next.js build succeeded; route table printed)
+- `cd web && npm run typecheck` → 0 (`tsc --noEmit` clean)
+- `bash scripts/loop/test_grading_gate.sh` → 0 (`PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`)
+
+**Self-checks (failure paths verified, both reverted before commit):**
+1. **New-file path:** Created `web/src/lib/__bloat_probe.ts` with 501 lines of `// pad` (`awk 'BEGIN { for(i=1;i<=501;i++) print "// pad" }'`). Gate exited 1 with output: `web/src/lib/__bloat_probe.ts: 501 lines exceeds default cap 500`. Probe deleted; `ls` confirms removal.
+2. **Baseline-ratchet path:** Saved `web/src/lib/chatRuntime.ts` to `/tmp/chatRuntime.ts.bak`, appended one newline (1601→1602 lines), ran gate. Gate exited 1 with output: `web/src/lib/chatRuntime.ts: 1602 lines exceeds baseline ceiling 1601` (current count + ceiling both named, as required). Restored from backup; `wc -l` confirms back to 1601.
+
+**Commit:** `3537e24` (`Add line-count gate for web/src/lib with baseline ratchet`).
 
 ## Audit verdict
 (filled by Codex)
