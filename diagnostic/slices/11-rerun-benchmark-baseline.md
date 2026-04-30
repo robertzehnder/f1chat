@@ -146,7 +146,9 @@ Note: `cd web && npm install` was run once before gate 1 because the worktree's 
 - `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` (new, comparison summary)
 - `diagnostic/slices/11-rerun-benchmark-baseline.md` (frontmatter status + this note)
 
-Commit hash: filled in after commit.
+Commit hashes:
+- `f4b1cd1` — slice 11-rerun-benchmark-baseline: capture new healthcheck baseline + delta (artifacts + frontmatter + this note).
+- This trailing commit records the hash above into the note for auditor traceability.
 
 ## Audit verdict
 (filled by Codex)
