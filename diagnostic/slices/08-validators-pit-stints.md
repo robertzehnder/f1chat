@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-pit-stints
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -54,9 +54,10 @@ None at author time.
 None.
 
 ## Gate commands
+Run from the repo root. Each `web` command is wrapped in its own subshell so the parent shell stays in the repo root and the final `bash scripts/loop/test_grading_gate.sh` resolves correctly.
 ```bash
-cd web && npm run build
-cd web && npm run typecheck
+(cd web && npm run build)
+(cd web && npm run typecheck)
 bash scripts/loop/test_grading_gate.sh
 ```
 
@@ -101,7 +102,7 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite the gate block so each `web` command runs from repo root in an isolated subshell (for example `(cd web && npm run build)` / `(cd web && npm run typecheck)`), because the current sequential `cd web && ...` lines leave the shell in `web/` after the first command and make the next `cd web` and repo-root `bash scripts/loop/test_grading_gate.sh` invocation fail.
+- [x] Rewrite the gate block so each `web` command runs from repo root in an isolated subshell (for example `(cd web && npm run build)` / `(cd web && npm run typecheck)`), because the current sequential `cd web && ...` lines leave the shell in `web/` after the first command and make the next `cd web` and repo-root `bash scripts/loop/test_grading_gate.sh` invocation fail.
 
 ### Medium
 
