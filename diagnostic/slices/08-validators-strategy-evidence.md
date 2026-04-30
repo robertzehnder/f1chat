@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T04:35:00Z
+updated: 2026-04-30T04:24:34Z
 ---
 
 ## Goal
@@ -168,6 +168,21 @@ Rollback: `git revert <commit>`.
 
 ### Medium
 - [x] Remove or fulfill the Step 3 claim that the route-wiring test exercises the `synthesisContract === null` guard: Step 5 currently specifies only fail-case and pass-case requests against a real contract, so add a concrete null-contract assertion there or stop claiming that coverage exists.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
+- Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
+
+## Plan-audit verdict (round 7)
+
+**Status: REVISE**
+
+### High
+- [ ] Require strategy-claim validation to bind evidence to the claimed driver row, not just any row in the contract: `core.strategy_summary` is driver-grained (`driver_number`, `driver_name`, `team_name`) in `sql/007_semantic_summary_contracts.sql:214-216`, and the peer validator pattern already resolves claims against the matching driver row via `findRowByDriverToken` in `web/src/lib/validators/gridFinishValidator.ts:93`; add a concrete multi-row test in Step 3 (and corresponding route-harness coverage in Step 5 if driver names appear there) that fails when one driver's unsupported pit/strategy claim would otherwise be "backed" by another driver's row.
+
+### Medium
 
 ### Low
 
