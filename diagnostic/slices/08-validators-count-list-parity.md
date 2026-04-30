@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-30
@@ -75,6 +75,24 @@ Rollback: `git revert <commit>`.
 - [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` in `Gate commands`; Phase 8 slice plans must use the wrapper so baseline grading failures outside this slice do not invalidate the gate.
 - [x] Update `Inputs` and `Changed files expected` to include `web/src/app/api/chat/route.ts`; Step 4 wires validators in the chat route, not `web/src/lib/chatRuntime.ts`.
 - [x] Add a route-wiring test file to `Changed files expected`, `Steps`, and `Acceptance criteria` that asserts `validators.countListParity` is appended to `chat_query_trace.jsonl` on pass and fail without changing the user-facing response; the current unit-test-only plan does not verify Step 4.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-04-30T13:28:23Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Require the route-wiring test and acceptance criteria to assert that `trace.validators` still preserves the existing `pitStints`, `sectorConsistency`, `gridFinish`, and `strategyEvidence` keys when `countListParity` is added; the current “appended” wording permits replacing the whole validators object with only the new key.
+- [ ] Resolve the validator interface mismatch by either scoping Step 1 to the existing single-`FactContract` validator pattern used in `web/src/app/api/chat/route.ts` or explicitly adding any new multi-contract plumbing/files to `Inputs`, `Steps`, and `Changed files expected`; `(answerText, attachedContracts) -> ValidationResult` does not match the single `synthesisContract` currently available in-route.
+- [ ] Define the expected `validators.countListParity` value for the no-synthesis-contract / zero-row branch and cover it in acceptance criteria plus route-wiring tests; existing validators in `web/src/app/api/chat/route.ts` log `null` on that branch, but the current pass/fail-only plan leaves the new trace shape ambiguous.
 
 ### Low
 - [ ] None.
