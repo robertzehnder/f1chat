@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T09:14:39-04:00
+updated: 2026-04-30T09:27:08-04:00
 ---
 
 ## Goal
@@ -103,7 +103,20 @@ Rollback: `git revert <commit>`.
 - `bash scripts/loop/test_grading_gate.sh` → exit `0` (PASS, `slice_fails=28 baseline_fails=28 baseline_failures_fixed=0`)
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate 1 `(cd web && npm run build)` -> exit `0`
+- Gate 2 `(cd web && npm run typecheck)` -> exit `0`
+- Gate 3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope-diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` stays within declared scope plus the implicit allow-list: `diagnostic/slices/08-validators-strategy-evidence.md`, `web/src/lib/validators/strategyEvidenceValidator.ts`, `web/src/app/api/chat/route.ts`, `web/scripts/tests/validator-strategy-evidence.test.mjs`, `web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs`.
+- Acceptance 1 [web/src/lib/validators/strategyEvidenceValidator.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/lib/validators/strategyEvidenceValidator.ts:3), [web/scripts/tests/validator-strategy-evidence.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-strategy-evidence.test.mjs:53), `cd web && node --test scripts/tests/validator-strategy-evidence.test.mjs` -> PASS, exit `0`
+- Acceptance 2 [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:41), [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:1039) -> PASS
+- Acceptance 3 [web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs:409), `cd web && node --test scripts/tests/validator-strategy-evidence-route-wiring.test.mjs` -> PASS, exit `0`
+- Acceptance 4 [web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs:446) -> PASS
+- Acceptance 5 [web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs:488) -> PASS
+- Acceptance 6 [web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs:552) -> PASS
+- Decision -> PASS
+- Rationale -> Ordered gates pass, scope stays within the declared file set, and direct execution of the new unit and route-wiring suites verifies the validator shape, route trace wiring, non-blocking behavior, null-contract branch, and driver-binding mismatch handling.
 
 ## Plan-audit verdict (round 1)
 
