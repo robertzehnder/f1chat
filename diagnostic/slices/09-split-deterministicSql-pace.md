@@ -86,7 +86,7 @@ Rollback: `git revert <commit>`.
 ## Slice-completion note
 
 - Branch: `slice/09-split-deterministicSql-pace`
-- Implementation commit: `<hash recorded in follow-up commit>`
+- Implementation commit: `13ecf3d`
 - Files touched (matches "Changed files expected"):
   - `web/src/lib/deterministicSql.ts` — modified: lines 1–4 inline `export type DeterministicSqlTemplate` replaced with `import type { DeterministicSqlTemplate } from "./deterministicSql/types";` plus `export type { DeterministicSqlTemplate } from "./deterministicSql/types";`; added `import { buildPaceTemplate } from "./deterministicSql/pace";`; removed pace-only locals (`mentionsPractice`, `mentionsRacePaceComparison`, `practiceVsRaceDriver`); removed nine pace return-blocks; inserted single early-return `const pace = buildPaceTemplate({ ... }); if (pace) return pace;` at the original first-pace-branch position (immediately after the `if (!targetSession) return null;` guard, where branch 1 used to live).
   - `web/src/lib/deterministicSql/types.ts` — new file; sole owner of `export type DeterministicSqlTemplate = { templateKey: string; sql: string };`.
