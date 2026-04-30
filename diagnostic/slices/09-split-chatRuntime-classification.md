@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-classification
 phase: 9
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:30:00Z
+updated: 2026-04-30T14:11:48Z
 ---
 
 ## Goal
@@ -76,3 +76,22 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T14:05:46Z, so no stale-state note applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: applied)**
+
+### High
+_None._
+
+### Medium
+- [ ] Resolve the internal contradiction between Step 2 ("re-export them from `chatRuntime.ts` for back-compat (so `buildChatRuntime`'s call site keeps working without churn)") and AC #2 ("only re-exports if needed"): pick one stance. Note that `buildChatRuntime` is itself defined inside `chatRuntime.ts`, so its call site is protected by the in-file `import` from `./chatRuntime/classification`, not by a re-export — the re-exports only matter for external consumers, and Step 3 documents that none currently exist. Either commit to "always re-export `QuestionType` and `classifyQuestion` for forward-compat" (and update AC #2 to match) or commit to "drop the re-exports because no external consumers exist" (and update Step 2 + the `Changed files expected` line accordingly). Forced-findings ratchet escalation: this is the round-2 escalated item from Low — flagged because the implementer reading Step 2's parenthetical may keep re-exports for the wrong reason and propagate the same confusion into the slice-completion note.
+
+### Low
+- [ ] Step 1 cites concrete line numbers (`QuestionType` at line 21, `classifyQuestion` at line 519). Add a one-liner that line numbers are approximate at author time and the implementer should locate by symbol name; no behavioral change required.
+- [ ] If TypeScript's `isolatedModules` is enabled in the web tsconfig (it usually is for Next.js apps), re-exporting a type alias requires `export type { QuestionType } from './chatRuntime/classification'` (or `export { type QuestionType, classifyQuestion } from ...`). Consider naming the expected re-export syntax in Step 2 so the implementer doesn't hit TS1205 mid-impl.
+
+### Notes (informational only — no action)
+- Round-2 forced-findings ratchet applied: round 1's items are all resolved cleanly and the plan is in genuinely good shape; the Medium above is escalated from Low to ensure the reviser receives concrete guidance per the role prompt. If the planner picks the "drop re-exports" stance, recheck that no external consumer of `classifyQuestion` / `QuestionType` lands between plan-revise and impl.
+- Gate command order (`build` then `typecheck`) is suboptimal (typecheck is faster and `next build` already runs its own type pass), but not a correctness bug — leaving as-is.
