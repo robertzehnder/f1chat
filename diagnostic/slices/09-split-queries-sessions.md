@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-sessions
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T18:00:00Z
 ---
 
 ## Goal
@@ -35,9 +35,10 @@ None at author time.
 None.
 
 ## Gate commands
+Run from the repo root. Each `web` gate is wrapped in a subshell so the parent shell's CWD does not drift; the final `grep` is intentionally repo-rooted.
 ```bash
-cd web && npm run build
-cd web && npm run typecheck
+(cd web && npm run build)
+(cd web && npm run typecheck)
 bash scripts/loop/test_grading_gate.sh
 grep -nE "from ['\"](\.\./queries|@/lib/queries)['\"]" web/src/lib/queries/sessions.ts; test $? -eq 1
 ```
@@ -83,7 +84,7 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite the `Gate commands` block so it can be executed as a single shell snippet without directory drift; the current `cd web && ...` lines leave the shell in `web/`, so the next `cd web ...` and the final `grep web/src/...` command break when run sequentially from one shell.
+- [x] Rewrite the `Gate commands` block so it can be executed as a single shell snippet without directory drift; the current `cd web && ...` lines leave the shell in `web/`, so the next `cd web ...` and the final `grep web/src/...` command break when run sequentially from one shell.
 
 ### Medium
 - [ ] None.
