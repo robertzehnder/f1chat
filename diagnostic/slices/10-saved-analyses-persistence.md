@@ -1,11 +1,11 @@
 ---
 slice_id: 10-saved-analyses-persistence
 phase: 10
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:01:48Z
+updated: 2026-04-30T19:02:55-04:00
 ---
 
 ## Goal
@@ -309,7 +309,54 @@ bash scripts/loop/test_grading_gate.sh
 - Rollback: `git revert <commit>` reverts the SQL file and the web changes. To return the live DB to its pre-slice state, run `DROP TABLE IF EXISTS core.saved_analysis;` (the table has no SQL dependents in `core` / `core_build` / `raw`; the only consumer is the web route, which the same revert removes).
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/10-saved-analyses-persistence` (pushed to `origin/slice/10-saved-analyses-persistence`).
+
+**Commit:** the single `[slice:10-saved-analyses-persistence][awaiting-audit]` commit at the HEAD of `slice/10-saved-analyses-persistence`. Run `git log -1 slice/10-saved-analyses-persistence` to read the hash and full message.
+
+**Files changed (all within declared scope):**
+- `sql/021_saved_analysis.sql` — new single `BEGIN; … COMMIT;` migration. `CREATE TABLE IF NOT EXISTS core.saved_analysis (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());` plus a `DO $$ … IF NOT EXISTS (SELECT … FROM pg_constraint WHERE conname = 'saved_analysis_name_nonempty') THEN ALTER TABLE … ADD CONSTRAINT saved_analysis_name_nonempty CHECK (length(btrim(name)) > 0); END IF; $$` block (idempotent because Postgres <17 lacks `ADD CONSTRAINT IF NOT EXISTS` for CHECK), and `CREATE INDEX IF NOT EXISTS saved_analysis_created_at_idx ON core.saved_analysis (created_at DESC);` written on a single line (so the grading test G4 substring assertion sees the whole `CREATE INDEX … (created_at DESC)` clause as one literal token).
+- `web/src/app/api/saved-analyses/route.ts` — rewrote the stub. New body imports `import { sql } from "@/lib/db"` and `clampInt` from `@/lib/querySafety`, keeps `export const dynamic = "force-dynamic"`, exports async `GET` and async `POST`. `GET` branches on `?id=`: integer-shaped id → `await sql<SavedAnalysisRow>("SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis WHERE id = $1", [id])` returning the row or `{ error: "not_found" }` 404; otherwise list mode with `clampInt(Number(limit), 1, 200)` and `await sql<…>("SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis ORDER BY created_at DESC LIMIT $1", [limit])` returning `{ rows, count }`. `POST` validates `body.name` (string, non-empty after trim → `invalid_name` 400) and `body.payload` (not undefined/null → `invalid_payload` 400), then `await sql<…>("INSERT INTO core.saved_analysis (name, payload) VALUES ($1, $2::jsonb) RETURNING id, name, payload, created_at, updated_at", [name.trim(), JSON.stringify(payload)])` returning `inserted[0]` with status 201. The placeholder string `Saved analyses persistence is not wired yet.` is gone.
+- `web/src/app/saved-analyses/page.tsx` — new server component. `import { sql } from "@/lib/db"` + default-import `SavedAnalysesList from "./SavedAnalysesList"`, `export const dynamic = "force-dynamic"`. Body declares `const rows = await sql<{ id: number; name: string; created_at: string }>("SELECT id, name, created_at FROM core.saved_analysis ORDER BY created_at DESC LIMIT 200", [])` (uses the rows-array result directly per `web/src/lib/db/driver.ts:188-199` — no `.rows` indirection) and renders `<div className="stack"><section className="card"><h2 className="panel-title">Saved Analyses</h2></section><SavedAnalysesList rows={rows} /></div>`.
+- `web/src/app/saved-analyses/SavedAnalysesList.tsx` — new default-exported function component. Empty state is `<p data-testid="saved-analysis-empty">No saved analyses yet.</p>`; populated state renders one `<tr data-testid="saved-analysis-row">` per row with `id`, `name`, and `created_at` cells.
+- `web/scripts/tests/saved-analyses.test.mjs` — new source-inspection grading test (Node `node:test`, `node:fs`, no DB/env). Implements G1-G5 exactly: G1 = route imports `sql` from `@/lib/db`, exports async `GET`+`POST`, contains all six required SQL substrings, no stub message; G2 = `SavedAnalysesList.tsx` default function with `data-testid` literals + `id`/`name`/`created_at`; G3 = `page.tsx` per-module `sql` import + invocation, `FROM core.saved_analysis`, JSX rows binding extracted via the `<SavedAnalysesList\s+rows=\{(\w+)\}` regex matched against a `const <name> = await sql\s*[<(]` declaration; G4 = SQL file substrings incl. `BEGIN;` … `COMMIT;`; G5 = `invalid_name` and `invalid_payload` literals.
+
+**Decisions:**
+- The `DO $$ … IF NOT EXISTS (SELECT … FROM pg_constraint …) THEN ALTER TABLE … ADD CONSTRAINT … END IF $$;` form was used for the named CHECK rather than embedding the constraint in the `CREATE TABLE` body, so re-applying the migration on a database where the table was created in an earlier slice/iteration WITHOUT the constraint still installs it (and re-applying with the constraint already present is a no-op). This is what the slice's Step 1 explicitly calls out.
+- The `CREATE INDEX IF NOT EXISTS …` clause is intentionally written on a single line so the G4 grading-test substring assertion (`CREATE INDEX IF NOT EXISTS saved_analysis_created_at_idx ON core.saved_analysis (created_at DESC)`) matches as one contiguous token. An initial draft used a line-broken form and tripped G4; the single-line form is functionally equivalent.
+- The route's `sql<T>(text, values)` calls bind their result directly to a `const rows = await sql<…>(…)` (or `inserted` for the POST INSERT) because `web/src/lib/db/driver.ts:188-199` declares `sql<T extends QueryResultRow>(text, values?: unknown[]): Promise<T[]>` — i.e. it returns the rows array, not a `{ rows, rowCount }` PG result object. No `.rows` indirection is used anywhere in the new code, matching the pattern in `web/src/lib/queries/sessions.ts`.
+- `JSON.stringify(body.payload)` is passed for the JSONB column with the explicit `$2::jsonb` cast in the INSERT. This avoids relying on driver-side JSON serialization heuristics for the unknown-shape payload and makes the typed shape explicit in the SQL.
+- The page's `LIMIT 200` is hard-coded (not exposed via a query string); per the slice's Out-of-scope section, filter/sort UI controls and pagination affordances are deferred. The list endpoint (route GET, list mode) does still expose `?limit=` clamped 1..200 via `clampInt`.
+
+**Gate results (exit codes):**
+- Gate #1 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/021_saved_analysis.sql` — exit `0` on first apply (`BEGIN; CREATE TABLE; DO; CREATE INDEX; COMMIT`); exit `0` on second apply (`relation "saved_analysis" already exists, skipping` + `relation "saved_analysis_created_at_idx" already exists, skipping` notices, both `CREATE TABLE` and `CREATE INDEX` no-op, the DO block's `IF NOT EXISTS` skips the ALTER) — idempotency confirmed.
+- Gate #2 (live schema/types/defaults/CHECK assertions in a `DO $$ … $$` block) — exit `0`. Every assertion (a)–(h) holds: relkind=`r`, PK=`{id}`, all five expected columns present, NOT NULL on `name`/`payload`/`created_at`/`updated_at`, `saved_analysis_created_at_idx` exists, declared types match (`bigint`, `text`, `jsonb`, `timestamp with time zone`×2), `created_at`/`updated_at` defaults contain `now()`, and `saved_analysis_name_nonempty` exists with constraintdef containing `length(btrim(name))>0` after whitespace strip.
+- Gate #2b (negative-path `INSERT … VALUES ('   ', …)` probe) — exit `0`. The INSERT raises `check_violation` (SQLSTATE `23514`), the outer `DO` block confirms exactly that SQLSTATE and exits cleanly.
+- Gate #3 (round-trip INSERT → SELECT → DELETE with a `txid_current()`-keyed probe name) — exit `0`. `name` and `payload` round-trip equal under `IS NOT DISTINCT FROM`; the cleanup `DELETE` removes the probe row.
+- Gate #4 `(cd web && npm run build)` — exit `0`. New `/saved-analyses` route registered alongside `/api/saved-analyses` in the build summary.
+- Gate #4 `(cd web && npm run typecheck)` — exit `0`.
+- Gate #4 `bash scripts/loop/test_grading_gate.sh` — exit `0`. Wrapper output: `PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`. Direct run of `node --test scripts/tests/saved-analyses.test.mjs` shows `# tests 5 # pass 5 # fail 0` (G1–G5 all green).
+
+**Self-check (acceptance criteria):**
+- Gate #1 idempotent — passes (two consecutive applies, both exit 0).
+- Schema/PK/NOT NULL/types/defaults/CHECK existence — passes (Gate #2 exit 0).
+- Live empty-name CHECK rejection — passes (Gate #2b exit 0; SQLSTATE 23514 captured).
+- Round-trip persistence — passes (Gate #3 exit 0; probe row inserted, read back with matching name+payload, deleted).
+- G1 (route SQL contract + `sql` import + GET/POST + no stub message) — passes.
+- G2 (SavedAnalysesList default function + testids + id/name/created_at) — passes.
+- G3 (page wires `await sql<…>(…)` to `<SavedAnalysesList rows={…}>` by name binding) — passes.
+- G4 (SQL file substrings incl. BEGIN;…COMMIT;) — passes.
+- G5 (`invalid_name` + `invalid_payload` literals in route) — passes.
+- `(cd web && npm run build)` exit 0 — passes.
+- `(cd web && npm run typecheck)` exit 0 — passes.
+- `bash scripts/loop/test_grading_gate.sh` exit 0, no new non-baseline failures — passes (slice_fails=39 == baseline_fails=39).
+
+**Out-of-scope confirmations:**
+- No `user_id` column added; the table is single-tenant per the slice's Out of scope.
+- No PATCH/DELETE handlers on the route; only GET (list + by-id) and POST.
+- The `/chat` page's "Save" button is not wired to the new POST; UI integration is a later slice.
+- No JSON-schema validation of the JSONB payload; the route accepts any non-null JSON value.
+- `git status` confirms only the six expected files are modified or added (slice md + the five files listed under "Changed files expected"); no other files were touched.
 
 ## Audit verdict
 (filled by Codex)
