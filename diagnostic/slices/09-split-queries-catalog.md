@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-catalog
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T17:16:41Z
+updated: 2026-04-30T13:17:24-04:00
 ---
 
 ## Goal
@@ -60,7 +60,26 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+Branch: `slice/09-split-queries-catalog`
+Commit: see `[slice:09-split-queries-catalog][awaiting-audit]` HEAD on this branch.
+
+### Decisions
+- Created `web/src/lib/queries/catalog.ts` with `getSchemaCatalog`. The function only depends on the `sql` helper, so the new file imports `from "../db"` (a leaf module) — never from `web/src/lib/queries.ts`, so no circular import is possible.
+- `web/src/lib/queries.ts` line 759 now reads `export { getSchemaCatalog } from "./queries/catalog";` — back-compat re-export retained, body removed.
+- Direct-import sites updated: `web/src/app/catalog/page.tsx` and `web/src/app/api/schema/route.ts` both now import from `@/lib/queries/catalog`.
+- Pure mechanical move; no behavioral change to the SQL or the function signature.
+
+### Self-check (acceptance criteria)
+- `grep -n "export async function getSchemaCatalog" web/src/lib/queries/catalog.ts` → matches at line 3.
+- `grep -n "export async function getSchemaCatalog" web/src/lib/queries.ts` → no match (only the `export { ... } from` re-export remains).
+- Circular-import grep `grep -n "from \"@/lib/queries\"\|from \"\.\./queries\"\|from \"\.\./\.\./lib/queries\"" web/src/lib/queries/catalog.ts` → no match.
+- `grep -rn "getSchemaCatalog" web/src` shows the two callers resolved to `@/lib/queries/catalog`, the new file definition, and the re-export in `queries.ts`. No residual references to a missing symbol.
+
+### Gates (exit codes)
+- `cd web && npm run build` → 0
+- `cd web && npm run typecheck` → 0
+- `bash scripts/loop/test_grading_gate.sh` → 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`)
 
 ## Audit verdict
 (filled by Codex)
