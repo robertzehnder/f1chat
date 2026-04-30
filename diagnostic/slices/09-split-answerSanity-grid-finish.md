@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-grid-finish
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T19:01:32Z
+updated: 2026-04-30T15:02:47-04:00
 ---
 
 ## Goal
@@ -52,7 +52,23 @@ cd web && bash ../scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/09-split-answerSanity-grid-finish` (worktree at `/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-grid-finish`).
+- Implementation commit: `769e28b` "split(answerSanity): extract grid/finish into answerSanity/gridFinish".
+- Decisions:
+  - Moved `buildPositionsAnswer` and the helpers it needs (`asNumber`, `asString`, `driverLabel`) into `web/src/lib/answerSanity/gridFinish.ts`. Helpers were duplicated rather than imported, matching the established `web/src/lib/answerSanity/sector.ts` pattern (each split module owns its own copies; the barrel keeps its own copies for the still-resident summarizers).
+  - `web/src/lib/answerSanity.ts` now imports `buildPositionsAnswer` from `./answerSanity/gridFinish` and uses it inside `applyAnswerSanityGuards`. No re-export through the barrel was added because `buildPositionsAnswer` was never part of the previous public surface (only the in-tree consumer `web/src/app/api/chat/orchestration.ts:11` uses the barrel, and it imports `applyAnswerSanityGuards` / `buildStructuredSummaryFromRows` only). This matches how `buildSectorAnswer` is wired in.
+- Self-check:
+  - `rg -n "buildPositionsAnswer" web/src` returns three hits: the new export in `web/src/lib/answerSanity/gridFinish.ts:28`, the import in `web/src/lib/answerSanity.ts:13`, and the call site in `web/src/lib/answerSanity.ts:276`. The function body no longer lives in `answerSanity.ts`.
+  - `rg -n "from .*answerSanity" web/src` shows only the barrel’s three intra-folder imports plus the existing `orchestration.ts:11` consumer; no new direct imports were introduced and no circular import path exists (`gridFinish.ts` does not import from `answerSanity.ts`).
+- Gate results (run from `web/`):
+  - `npm run build` → exit 0.
+  - `npm run typecheck` → exit 0.
+  - `bash ../scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`).
+- Acceptance criteria:
+  - [x] `web/src/lib/answerSanity/gridFinish.ts` exists and exports `buildPositionsAnswer`.
+  - [x] `web/src/lib/answerSanity.ts` no longer contains the moved body; it imports the function from the new module.
+  - [x] All gate commands pass.
 
 ## Audit verdict
 (filled by Codex)
