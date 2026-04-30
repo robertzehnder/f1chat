@@ -1,11 +1,11 @@
 ---
 slice_id: 10-saved-analyses-persistence
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:51:59Z
+updated: 2026-04-30T23:30:00Z
 ---
 
 ## Goal
@@ -13,7 +13,8 @@ Wire the existing `/api/saved-analyses` stub (currently a hard-coded `{ rows: []
 
 ## Inputs
 - `web/src/app/api/saved-analyses/route.ts` (existing stub — `GET` returns `{ rows: [], count: 0, message: "Saved analyses persistence is not wired yet." }`; this slice replaces the body)
-- `web/src/lib/db.ts` / `web/src/lib/db/index.ts` (existing `query<T>(sql, params)` helper — used by all other API routes; this slice consumes it without modification)
+- `web/src/lib/db/index.ts` (re-exports `sql`, `pool`, `chooseDriver`, `bootPglite`, `withTransaction` from `./driver`) and `web/src/lib/db/driver.ts` (defines `export async function sql<T extends QueryResultRow>(text: string, values: unknown[] = []): Promise<T[]>` — returns the rows array directly, NOT a `{ rows, rowCount }` object). The pattern used by every other consumer (e.g. `web/src/lib/queries/sessions.ts`) is `import { sql } from "../db"` then `const rows = await sql<RowShape>(text, values)`. This slice consumes the same export without modification. (Note: `web/src/lib/db.ts` is the legacy sibling that exists alongside the `db/` directory; consumers import from `@/lib/db` which resolves to `web/src/lib/db/index.ts` because Next/TS module resolution prefers the directory's `index.ts`.)
+- `web/src/lib/querySafety.ts` — `export function clampInt(value: number, min: number, max: number): number` is the existing helper for clamping/parsing query-string limits; the new route uses it instead of inlining `Math.min(Math.max(...))`.
 - `sql/005_helper_tables.sql` (precedent for `core.*` lookup table layout — `created_at` / `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` pattern)
 - `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 10 line 346 ("Saved analyses: persist SQL + typed fact payload + answer + chart config (existing `/api/saved-analyses` is a stub).")
 
@@ -27,30 +28,30 @@ Wire the existing `/api/saved-analyses` stub (currently a hard-coded `{ rows: []
   - `CREATE` on schema `core` (to add `core.saved_analysis`).
   - `INSERT`, `SELECT`, `UPDATE` on `core.saved_analysis` (implicit via ownership of the table the migration creates).
 - `psql` available on `PATH` for the SQL apply, schema-existence, and round-trip gate commands below (same prerequisite as Phase 3 materialization slices).
-- The web grading test (`web/scripts/tests/saved-analyses.test.mjs`) is a pure source-inspection Node `node:test` suite (no live DB, no env vars at test time). Live-DB persistence is verified by a separate `psql` heredoc gate (gate #4 below), not by the grading test itself, so the grading test stays env-free and matches the existing `web/scripts/tests/*.test.mjs` harness.
+- The web grading test (`web/scripts/tests/saved-analyses.test.mjs`) is a pure source-inspection Node `node:test` suite (no live DB, no env vars at test time). Live-DB persistence is verified by separate `psql` heredoc gates — gate #3 (round-trip INSERT/SELECT/DELETE) plus gates #2 and #2b (schema/types/defaults/CHECK) — not by the grading test itself, so the grading test stays env-free and matches the existing `web/scripts/tests/*.test.mjs` harness.
 
 ## Steps
 1. Add `sql/021_saved_analysis.sql` as a single `BEGIN; … COMMIT;` migration that creates `core.saved_analysis` with the following column list and constraints (mirrors the `created_at` / `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` pattern from `sql/005_helper_tables.sql`):
    - `id BIGSERIAL PRIMARY KEY`
-   - `name TEXT NOT NULL` (user-supplied label for the persisted chat thread; non-empty enforced by `CHECK (length(btrim(name)) > 0)`)
+   - `name TEXT NOT NULL CONSTRAINT saved_analysis_name_nonempty CHECK (length(btrim(name)) > 0)` — user-supplied label for the persisted chat thread; the named CHECK enforces a non-empty trimmed string at the DB layer (not only at the route's `invalid_name` 400 path), so accidental writes (e.g. via `psql` or a future endpoint) cannot bypass the validation.
    - `payload JSONB NOT NULL` (the typed chat-thread payload — SQL string, fact payload, answer markdown, chart config, message list — opaque to the SQL layer; the route handler is the only writer/reader)
    - `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
    - `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
    - `CREATE INDEX IF NOT EXISTS saved_analysis_created_at_idx ON core.saved_analysis (created_at DESC)` so the list endpoint can return newest-first without a sort scan.
-   The migration is idempotent: every DDL statement uses `IF NOT EXISTS` and the file may be re-applied without error.
-2. Replace the body of `web/src/app/api/saved-analyses/route.ts` with three handlers (default-import the existing `query` helper from `@/lib/db`):
-   - `export async function GET(req: NextRequest)` — if the URL has `?id=<digits>`, calls `query("SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis WHERE id = $1", [id])` and returns the single row (404 with `{ error: "not_found" }` if `rows.length === 0`); otherwise calls `query("SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis ORDER BY created_at DESC LIMIT $1", [limit])` (default 50, max 200 via the existing `safeLimit` helper if available, else inline `Math.min(Math.max(parseInt(...) || 50, 1), 200)`) and returns `{ rows, count: rows.length }`.
-   - `export async function POST(req: NextRequest)` — parses JSON body `{ name: string, payload: unknown }`; rejects with 400 `{ error: "invalid_name" }` if `typeof name !== "string"` or `name.trim() === ""`; rejects with 400 `{ error: "invalid_payload" }` if `payload === undefined` or `payload === null`; otherwise calls `query("INSERT INTO core.saved_analysis (name, payload) VALUES ($1, $2::jsonb) RETURNING id, name, payload, created_at, updated_at", [name.trim(), JSON.stringify(payload)])` and returns the inserted row with status 201.
-   - The file must keep `export const dynamic = "force-dynamic"` and must reference each of these literal substrings (so the grading test can statically prove the persistence wiring): `core.saved_analysis`, `INSERT INTO core.saved_analysis`, `SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis`, `WHERE id = $1`, `ORDER BY created_at DESC`, and `RETURNING id, name, payload, created_at, updated_at`. The handler must NOT keep the `"Saved analyses persistence is not wired yet."` placeholder string from the existing stub (the grading test asserts this substring is absent).
+   The migration is idempotent: the `CREATE TABLE` uses `IF NOT EXISTS`, the index uses `IF NOT EXISTS`, and the named CHECK constraint is added via `ALTER TABLE … ADD CONSTRAINT saved_analysis_name_nonempty CHECK (length(btrim(name)) > 0)` wrapped in a `DO $$ … IF NOT EXISTS (SELECT … FROM pg_constraint WHERE conname = 'saved_analysis_name_nonempty') THEN … END IF; $$` block so re-applying the file on a database that already has the constraint is a no-op (a bare `ALTER TABLE … ADD CONSTRAINT` would error on the second apply because Postgres has no `ADD CONSTRAINT IF NOT EXISTS` for CHECK constraints in versions <17). Bundling the CHECK into the `CREATE TABLE` body would also satisfy idempotency on first apply, but the post-table `DO` form keeps the slice safe for an environment where a previous apply already created the table without the constraint.
+2. Replace the body of `web/src/app/api/saved-analyses/route.ts` with three handlers, named-importing the existing `sql<T>` helper from `@/lib/db` (the helper signature is `sql<T extends QueryResultRow>(text: string, values?: unknown[]): Promise<T[]>` — it returns the rows array directly, NOT a `{ rows, rowCount }` PG result object, so all call sites bind the awaited value as `const rows = await sql<RowShape>(...)`). Imports: `import { NextRequest, NextResponse } from "next/server"; import { sql } from "@/lib/db"; import { clampInt } from "@/lib/querySafety";`.
+   - `export async function GET(req: NextRequest)` — if `req.nextUrl.searchParams.get("id")` is present and matches `/^\d+$/`, parse it to a number and call `const rows = await sql<{ id: number; name: string; payload: unknown; created_at: string; updated_at: string }>("SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis WHERE id = $1", [id])`, then return `NextResponse.json(rows[0])` — or `NextResponse.json({ error: "not_found" }, { status: 404 })` if `rows.length === 0`. Otherwise compute `const limit = clampInt(Number(req.nextUrl.searchParams.get("limit") ?? "50"), 1, 200);` and call `const rows = await sql<{ id: number; name: string; payload: unknown; created_at: string; updated_at: string }>("SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis ORDER BY created_at DESC LIMIT $1", [limit])`, then return `NextResponse.json({ rows, count: rows.length })`.
+   - `export async function POST(req: NextRequest)` — `const body = await req.json();` then validate: reject with `NextResponse.json({ error: "invalid_name" }, { status: 400 })` if `typeof body?.name !== "string"` or `body.name.trim() === ""`; reject with `NextResponse.json({ error: "invalid_payload" }, { status: 400 })` if `body?.payload === undefined` or `body.payload === null`; otherwise call `const inserted = await sql<{ id: number; name: string; payload: unknown; created_at: string; updated_at: string }>("INSERT INTO core.saved_analysis (name, payload) VALUES ($1, $2::jsonb) RETURNING id, name, payload, created_at, updated_at", [body.name.trim(), JSON.stringify(body.payload)])` and return `NextResponse.json(inserted[0], { status: 201 })`.
+   - The file must keep `export const dynamic = "force-dynamic"` and must reference each of these literal substrings (so the grading test can statically prove the persistence wiring): `import { sql } from "@/lib/db"`, `core.saved_analysis`, `INSERT INTO core.saved_analysis`, `SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis`, `WHERE id = $1`, `ORDER BY created_at DESC`, and `RETURNING id, name, payload, created_at, updated_at`. The handler must NOT keep the `"Saved analyses persistence is not wired yet."` placeholder string from the existing stub (the grading test asserts this substring is absent).
 3. Add `web/src/app/saved-analyses/page.tsx` as a server component:
    - `export const dynamic = "force-dynamic"`.
-   - Default-imports a new client component `SavedAnalysesList` from `./SavedAnalysesList`.
-   - Inside the default-exported async function, call `query("SELECT id, name, created_at FROM core.saved_analysis ORDER BY created_at DESC LIMIT 200", [])` against `@/lib/db`, bind to `const rows = await …`, and render `<div className="stack"><section className="card"><h2 className="panel-title">Saved Analyses</h2></section><SavedAnalysesList rows={rows} /></div>`.
+   - Imports `import { sql } from "@/lib/db";` and default-imports a new client component `SavedAnalysesList` from `./SavedAnalysesList`.
+   - Inside the default-exported async function, call `const rows = await sql<{ id: number; name: string; created_at: string }>("SELECT id, name, created_at FROM core.saved_analysis ORDER BY created_at DESC LIMIT 200", []);` (note: `sql` returns the rows array directly per the helper signature in `web/src/lib/db/driver.ts`, so no `.rows` indirection), and render `<div className="stack"><section className="card"><h2 className="panel-title">Saved Analyses</h2></section><SavedAnalysesList rows={rows} /></div>`.
 4. Add `web/src/app/saved-analyses/SavedAnalysesList.tsx` as a default-exported function component taking `{ rows: Array<{ id: number; name: string; created_at: string }> }`. Render a table with one `<tr data-testid="saved-analysis-row">` per row showing `id`, `name`, and `created_at`, plus an empty-state `<p data-testid="saved-analysis-empty">No saved analyses yet.</p>` when `rows.length === 0`. The component must contain the literal substrings `data-testid="saved-analysis-row"`, `data-testid="saved-analysis-empty"`, `id`, `name`, and `created_at`.
 5. Add the source-inspection grading test `web/scripts/tests/saved-analyses.test.mjs` (Node built-in `node:test` and `node:fs` only — no transpile, no DB, no env), mirroring the structure of `web/scripts/tests/catalog-completeness.test.mjs`. Required assertions G1–G5 are spelled out under Acceptance criteria below.
 
 ## Changed files expected
-- `sql/021_saved_analysis.sql` (new — single `BEGIN; … COMMIT;` migration; `CREATE TABLE IF NOT EXISTS core.saved_analysis (…)` plus `CREATE INDEX IF NOT EXISTS saved_analysis_created_at_idx`)
+- `sql/021_saved_analysis.sql` (new — single `BEGIN; … COMMIT;` migration; `CREATE TABLE IF NOT EXISTS core.saved_analysis (…)`, named CHECK constraint `saved_analysis_name_nonempty` (`length(btrim(name)) > 0`) added idempotently via an `ALTER TABLE … ADD CONSTRAINT` wrapped in a `DO $$ … IF NOT EXISTS … THEN … END IF $$` block, plus `CREATE INDEX IF NOT EXISTS saved_analysis_created_at_idx`)
 - `web/src/app/api/saved-analyses/route.ts` (rewrite — replaces the stub `GET` body; adds `POST`; keeps `export const dynamic = "force-dynamic"`)
 - `web/src/app/saved-analyses/page.tsx` (new — server component)
 - `web/src/app/saved-analyses/SavedAnalysesList.tsx` (new — client/list component)
@@ -64,14 +65,26 @@ Each line below is intended to be runnable independently from the repo root. The
 ```bash
 set -euo pipefail
 
-# 1. Apply the migration. Must exit 0. Idempotent (re-applying is a no-op
-#    because every DDL uses IF NOT EXISTS).
+# 1. Apply the migration. Must exit 0. Idempotent: CREATE TABLE and
+#    CREATE INDEX use IF NOT EXISTS, and the named CHECK constraint is
+#    added via an ALTER TABLE … ADD CONSTRAINT wrapped in a DO $$ … IF
+#    NOT EXISTS (SELECT … FROM pg_constraint WHERE conname =
+#    'saved_analysis_name_nonempty') THEN … END IF; $$ block, so a
+#    second apply is a no-op rather than erroring on the duplicate
+#    CHECK (Postgres <17 has no ADD CONSTRAINT IF NOT EXISTS for CHECK).
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/021_saved_analysis.sql
 
 # 2. Confirm core.saved_analysis exists as a base table with the required
-#    columns, types, NOT NULL flags, primary key, and the
-#    saved_analysis_created_at_idx index. The DO block raises (and
-#    ON_ERROR_STOP=1 forces non-zero exit) unless every assertion holds.
+#    columns, declared column types, NOT NULL flags, NOW() defaults on
+#    created_at/updated_at, primary key, the named CHECK constraint
+#    saved_analysis_name_nonempty, and the saved_analysis_created_at_idx
+#    index. Together (a)-(h) prove the live runtime schema matches what
+#    the migration declares — a pre-existing core.saved_analysis with a
+#    drifted column type (e.g. payload as JSON instead of JSONB), a
+#    missing CHECK, or a missing NOW() default will fail this gate even
+#    though `CREATE TABLE IF NOT EXISTS` was a no-op. The DO block
+#    raises (and ON_ERROR_STOP=1 forces non-zero exit) unless every
+#    assertion holds.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE
@@ -81,6 +94,7 @@ DECLARE
   expected_cols text[] := ARRAY['id','name','payload','created_at','updated_at']::text[];
   found_cols text[];
   idx_exists boolean;
+  check_def text;
 BEGIN
   -- (a) base table exists
   SELECT c.relkind::text INTO table_kind
@@ -136,6 +150,93 @@ BEGIN
   IF NOT idx_exists THEN
     RAISE EXCEPTION 'expected index core.saved_analysis_created_at_idx';
   END IF;
+
+  -- (f) declared column types match the migration (catches drifted
+  --     pre-existing tables where CREATE TABLE IF NOT EXISTS was a
+  --     no-op but the live schema diverges from this slice's spec).
+  FOR col_record IN
+    SELECT a.attname::text AS attname,
+           format_type(a.atttypid, a.atttypmod) AS data_type
+    FROM pg_attribute a
+    WHERE a.attrelid = 'core.saved_analysis'::regclass
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+      AND a.attname IN ('id','name','payload','created_at','updated_at')
+  LOOP
+    IF col_record.attname = 'id' AND col_record.data_type <> 'bigint' THEN
+      RAISE EXCEPTION 'expected core.saved_analysis.id type bigint, got %', col_record.data_type;
+    ELSIF col_record.attname = 'name' AND col_record.data_type <> 'text' THEN
+      RAISE EXCEPTION 'expected core.saved_analysis.name type text, got %', col_record.data_type;
+    ELSIF col_record.attname = 'payload' AND col_record.data_type <> 'jsonb' THEN
+      RAISE EXCEPTION 'expected core.saved_analysis.payload type jsonb, got %', col_record.data_type;
+    ELSIF col_record.attname IN ('created_at','updated_at')
+          AND col_record.data_type <> 'timestamp with time zone' THEN
+      RAISE EXCEPTION 'expected core.saved_analysis.% type timestamp with time zone, got %',
+        col_record.attname, col_record.data_type;
+    END IF;
+  END LOOP;
+
+  -- (g) created_at and updated_at default to now() (or equivalent)
+  FOR col_record IN
+    SELECT a.attname::text AS attname,
+           pg_get_expr(d.adbin, d.adrelid) AS default_expr
+    FROM pg_attribute a
+    LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+    WHERE a.attrelid = 'core.saved_analysis'::regclass
+      AND a.attname IN ('created_at','updated_at')
+  LOOP
+    IF col_record.default_expr IS NULL
+       OR lower(col_record.default_expr) NOT LIKE '%now()%' THEN
+      RAISE EXCEPTION 'expected core.saved_analysis.% DEFAULT now(), got %',
+        col_record.attname, col_record.default_expr;
+    END IF;
+  END LOOP;
+
+  -- (h) named CHECK constraint saved_analysis_name_nonempty exists and
+  --     enforces length(btrim(name)) > 0 (proves the DB-level
+  --     non-empty-name contract from Step 1; route-level invalid_name
+  --     handling alone is not sufficient because direct INSERTs would
+  --     bypass it).
+  SELECT pg_get_constraintdef(c.oid) INTO check_def
+  FROM pg_constraint c
+  JOIN pg_class cl ON cl.oid = c.conrelid
+  JOIN pg_namespace n ON n.oid = cl.relnamespace
+  WHERE n.nspname = 'core'
+    AND cl.relname = 'saved_analysis'
+    AND c.contype = 'c'
+    AND c.conname = 'saved_analysis_name_nonempty';
+  IF check_def IS NULL THEN
+    RAISE EXCEPTION 'expected CHECK constraint saved_analysis_name_nonempty on core.saved_analysis';
+  END IF;
+  IF lower(regexp_replace(check_def, '\s+', '', 'g'))
+     NOT LIKE '%length(btrim(name))>0%' THEN
+    RAISE EXCEPTION 'expected saved_analysis_name_nonempty to enforce length(btrim(name)) > 0, got %', check_def;
+  END IF;
+END $$;
+SQL
+
+# 2b. Negative-path probe: confirm the CHECK constraint actually rejects
+#     an empty/whitespace-only name at the DB layer (not just that the
+#     constraint definition string is present). The probe wraps the
+#     INSERT in a subtransaction so the failure does not abort the
+#     outer DO block, then asserts the SQLSTATE was a check_violation
+#     (23514). Any other outcome (the INSERT succeeded, or failed with
+#     a different SQLSTATE) raises and ON_ERROR_STOP=1 fails the gate.
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE
+  caught_sqlstate text := NULL;
+BEGIN
+  BEGIN
+    INSERT INTO core.saved_analysis (name, payload)
+    VALUES ('   ', jsonb_build_object('probe', 'empty-name'));
+  EXCEPTION WHEN check_violation THEN
+    caught_sqlstate := SQLSTATE;
+  END;
+  IF caught_sqlstate IS DISTINCT FROM '23514' THEN
+    RAISE EXCEPTION 'expected check_violation (SQLSTATE 23514) when inserting whitespace-only name, got %',
+      COALESCE(caught_sqlstate, '<INSERT succeeded — CHECK not enforced>');
+  END IF;
 END $$;
 SQL
 
@@ -182,13 +283,14 @@ bash scripts/loop/test_grading_gate.sh
 
 ## Acceptance criteria
 - [ ] `psql … -f sql/021_saved_analysis.sql` (gate #1) exits `0` and is idempotent (re-running produces no error and no schema drift).
-- [ ] `core.saved_analysis` exists as a base table with `PRIMARY KEY (id)`, columns `id`, `name`, `payload`, `created_at`, `updated_at`, `name`/`payload`/`created_at`/`updated_at` declared `NOT NULL`, and index `saved_analysis_created_at_idx` — gate #2 exits `0` (its DO block raises unless every assertion holds).
+- [ ] `core.saved_analysis` exists as a base table with `PRIMARY KEY (id)`; columns `id` (type `bigint`), `name` (type `text`), `payload` (type `jsonb`), `created_at` (type `timestamp with time zone` with `DEFAULT now()`), `updated_at` (type `timestamp with time zone` with `DEFAULT now()`); `name`/`payload`/`created_at`/`updated_at` declared `NOT NULL`; named CHECK constraint `saved_analysis_name_nonempty` enforcing `length(btrim(name)) > 0`; and index `saved_analysis_created_at_idx` — gate #2 exits `0` (its DO block raises unless every assertion (a)–(h) holds, including the column-type and default-now() checks).
+- [ ] Live DB-level rejection of empty/whitespace-only `name`: gate #2b (the `INSERT … VALUES ('   ', …)` probe) exits `0` because the INSERT raises `check_violation` (SQLSTATE `23514`) and the outer DO block confirms that exact SQLSTATE — proving the CHECK is enforced at the DB layer, not only at the route's `invalid_name` 400 path.
 - [ ] Persistence round-trip: a row inserted into `core.saved_analysis` with a unique probe `name` and a `jsonb` `payload` round-trips by id with `name` and `payload` equal under `IS NOT DISTINCT FROM`, then is deleted to leave table state unchanged — gate #3 exits `0` (its DO block does not raise; the cleanup `DELETE` removes the probe row).
 - [ ] `web/scripts/tests/saved-analyses.test.mjs` exists and passes under `bash scripts/loop/test_grading_gate.sh` with these assertions:
-  - **G1**: `web/src/app/api/saved-analyses/route.ts` exists, contains `export const dynamic = "force-dynamic"`, exports both `GET` and `POST` (`/export\s+async\s+function\s+GET\b/` and `/export\s+async\s+function\s+POST\b/`), references each of these literal substrings — `core.saved_analysis`, `INSERT INTO core.saved_analysis`, `SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis`, `WHERE id = $1`, `ORDER BY created_at DESC`, `RETURNING id, name, payload, created_at, updated_at` — and does NOT contain the placeholder substring `Saved analyses persistence is not wired yet.` (the test asserts the stub message is gone, proving the route was rewired and not just appended to).
+  - **G1**: `web/src/app/api/saved-analyses/route.ts` exists, contains `export const dynamic = "force-dynamic"`, exports both `GET` and `POST` (`/export\s+async\s+function\s+GET\b/` and `/export\s+async\s+function\s+POST\b/`), imports the repo's `sql` helper via the regex `/import\s*\{[^}]*\bsql\b[^}]*\}\s*from\s*["']@\/lib\/db["']/` (proving the route is wired to the actual `sql<T>(text, values): Promise<T[]>` export from `web/src/lib/db/index.ts`, not the non-existent `query` helper named in earlier drafts), references each of these literal substrings — `core.saved_analysis`, `INSERT INTO core.saved_analysis`, `SELECT id, name, payload, created_at, updated_at FROM core.saved_analysis`, `WHERE id = $1`, `ORDER BY created_at DESC`, `RETURNING id, name, payload, created_at, updated_at` — and does NOT contain the placeholder substring `Saved analyses persistence is not wired yet.` (the test asserts the stub message is gone, proving the route was rewired and not just appended to).
   - **G2**: `web/src/app/saved-analyses/SavedAnalysesList.tsx` exists, matches `/export\s+default\s+function\b/`, and contains literal substrings `data-testid="saved-analysis-row"`, `data-testid="saved-analysis-empty"`, `id`, `name`, and `created_at`.
-  - **G3**: `web/src/app/saved-analyses/page.tsx` (a) imports `SavedAnalysesList` via `/import\s+SavedAnalysesList\s+from\s+["']\.\/SavedAnalysesList["']/`, (b) declares `export const dynamic = "force-dynamic"` (literal substring), (c) calls `query(` somewhere in the file body and references the literal substring `FROM core.saved_analysis`, (d) contains a `<SavedAnalysesList rows={<binding>}` JSX element from which `<binding>` is extracted via `/<SavedAnalysesList\s+rows=\{(\w+)\}/`, and (e) `<binding>` matches the `<name>` in some `const <name>\s*=\s*await\s+query\(` declaration in the same file (i.e. the JSX rows prop is bound to the awaited query result, by name).
-  - **G4**: `sql/021_saved_analysis.sql` exists and contains the literal substrings `CREATE TABLE IF NOT EXISTS core.saved_analysis`, `id BIGSERIAL PRIMARY KEY`, `name TEXT NOT NULL`, `payload JSONB NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, and `CREATE INDEX IF NOT EXISTS saved_analysis_created_at_idx ON core.saved_analysis (created_at DESC)`. The file is wrapped in `BEGIN;` … `COMMIT;`.
+  - **G3**: `web/src/app/saved-analyses/page.tsx` (a) imports `SavedAnalysesList` via `/import\s+SavedAnalysesList\s+from\s+["']\.\/SavedAnalysesList["']/`, (b) declares `export const dynamic = "force-dynamic"` (literal substring), (c) imports the repo's `sql` helper via `/import\s*\{[^}]*\bsql\b[^}]*\}\s*from\s*["']@\/lib\/db["']/`, invokes the helper via `/\bsql\s*[<(]/` (matches both bare `sql(...)` and the typed `sql<RowShape>(...)` form used throughout the repo, e.g. `web/src/lib/queries/sessions.ts:129`), and references the literal substring `FROM core.saved_analysis`, (d) contains a `<SavedAnalysesList rows={<binding>}` JSX element from which `<binding>` is extracted via `/<SavedAnalysesList\s+rows=\{(\w+)\}/`, and (e) `<binding>` matches the `<name>` in some `/const\s+<name>\s*=\s*await\s+sql\s*[<(]/` declaration in the same file (i.e. the JSX rows prop is bound to the awaited rows-array result of the `sql<...>(...)` call, by name — `sql` returns `Promise<T[]>` so the bound value IS the rows array, no `.rows` indirection).
+  - **G4**: `sql/021_saved_analysis.sql` exists and contains the literal substrings `CREATE TABLE IF NOT EXISTS core.saved_analysis`, `id BIGSERIAL PRIMARY KEY`, `name TEXT NOT NULL`, `payload JSONB NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `CREATE INDEX IF NOT EXISTS saved_analysis_created_at_idx ON core.saved_analysis (created_at DESC)`, the named CHECK constraint substring `saved_analysis_name_nonempty` together with `CHECK (length(btrim(name)) > 0)`, and is wrapped in `BEGIN;` … `COMMIT;`.
   - **G5**: `web/src/app/api/saved-analyses/route.ts` rejects an empty `name` with the literal substring `invalid_name` and a missing `payload` with the literal substring `invalid_payload` (the test grep-asserts the route source contains both error tokens, proving the validation branches are present without requiring a live HTTP fetch).
 - [ ] `(cd web && npm run build)` exits `0`.
 - [ ] `(cd web && npm run typecheck)` exits `0`.
@@ -236,11 +338,11 @@ bash scripts/loop/test_grading_gate.sh
 **Status: REVISE**
 
 ### High
-- [ ] Replace every planned use of an existing `query` helper from `@/lib/db` with the repo's actual DB API and align the page/route/test contracts to that API; `web/src/lib/db/index.ts` exports `sql`/`pool`/helpers, not `query`, and `sql()` returns row arrays, so Steps 2-3 and acceptance G1/G3 currently describe code that cannot be implemented against the current repo surface.
+- [x] Replace every planned use of an existing `query` helper from `@/lib/db` with the repo's actual DB API and align the page/route/test contracts to that API; `web/src/lib/db/index.ts` exports `sql`/`pool`/helpers, not `query`, and `sql()` returns row arrays, so Steps 2-3 and acceptance G1/G3 currently describe code that cannot be implemented against the current repo surface.
 
 ### Medium
-- [ ] Extend the live-DB schema gate to assert the database-level `CHECK (length(btrim(name)) > 0)` contract from Step 1, because the current gates prove only route-level `invalid_name` handling and can pass while the table silently omits the non-empty-name constraint.
-- [ ] Make gate #2 actually verify the live table's declared column types/defaults that the acceptance text claims it proves, or narrow the acceptance wording; `CREATE TABLE IF NOT EXISTS` plus source-grep G4 does not catch a pre-existing `core.saved_analysis` with drifted runtime schema.
+- [x] Extend the live-DB schema gate to assert the database-level `CHECK (length(btrim(name)) > 0)` contract from Step 1, because the current gates prove only route-level `invalid_name` handling and can pass while the table silently omits the non-empty-name constraint.
+- [x] Make gate #2 actually verify the live table's declared column types/defaults that the acceptance text claims it proves, or narrow the acceptance wording; `CREATE TABLE IF NOT EXISTS` plus source-grep G4 does not catch a pre-existing `core.saved_analysis` with drifted runtime schema.
 
 ### Low
 
