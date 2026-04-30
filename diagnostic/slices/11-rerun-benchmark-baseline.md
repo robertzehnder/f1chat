@@ -1,11 +1,11 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:59:00Z
+updated: 2026-04-30T23:59:30Z
 ---
 
 ## Goal
@@ -34,8 +34,8 @@ Re-run the full chat-quality benchmark against the post-Phase-10 build to captur
 
 ## Steps
 1. Ensure required services are up (DB pooled URL reachable, web dev server running, `ANTHROPIC_API_KEY` exported).
-2. Run the healthcheck suite end-to-end (50 questions across categories) via `cd web && npm run healthcheck:chat`. The script writes the graded JSON to `web/logs/chat_health_check_<stamp>.json`.
-3. Copy the most recent `web/logs/chat_health_check_*.json` to `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (the slice artifact).
+2. Run the healthcheck suite end-to-end (50 questions across categories) via `cd web && npm run healthcheck:chat`. The script writes the graded 50-row JSON array to `web/logs/chat_health_check_<stamp>.json` and a separate aggregate object to `web/logs/chat_health_check_<stamp>.summary.json` — only the former is the slice artifact.
+3. Copy the most recent **raw** `web/logs/chat_health_check_*.json` (excluding any `*.summary.json` sidecar, which is the aggregate object and not the 50-row array) to `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (the slice artifact).
 4. Generate a sibling `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` summary file containing:
    - **New-run per-category A/B/C counts** — derived from the per-question rows in `11-rerun_2026-04-30.json` (each row exposes `id` and the graded fields written by `gradeHealthCheckResults`).
    - **Prior-baseline per-category A/B/C counts** — copied from `00-fresh-benchmark_2026-04-26.json`'s `summary.gradeCounts` / `summary.answerGradeCounts` / `summary.semanticConformanceGradeCounts` aggregates.
@@ -62,7 +62,10 @@ bash scripts/loop/test_grading_gate.sh
 # Benchmark gate: produce the artifact and verify all 50 questions answered.
 # Assumes web dev server is running and OPENF1_CHAT_BASE_URL / ANTHROPIC_API_KEY / DATABASE_URL are set.
 cd web && npm run healthcheck:chat
-LATEST_JSON=$(ls -t web/logs/chat_health_check_*.json | head -1)
+# Exclude *.summary.json (aggregate sidecar) so we always pick the raw 50-row
+# graded array, not the summary object that the script writes alongside it.
+LATEST_JSON=$(ls -t web/logs/chat_health_check_*.json 2>/dev/null | grep -v '\.summary\.json$' | head -1)
+test -n "$LATEST_JSON" || { echo "no raw chat_health_check_<stamp>.json produced"; exit 1; }
 ARTIFACT=diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json
 cp "$LATEST_JSON" "$ARTIFACT"
 node -e '
@@ -154,7 +157,7 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Narrow step 3 and the benchmark gate copy command to the raw results file (`web/logs/chat_health_check_<stamp>.json`) and exclude `*.summary.json`, because `ls -t web/logs/chat_health_check_*.json` will usually pick the later-written summary object instead of the 50-row graded array and make the artifact copy/validation fail.
+- [x] Narrow step 3 and the benchmark gate copy command to the raw results file (`web/logs/chat_health_check_<stamp>.json`) and exclude `*.summary.json`, because `ls -t web/logs/chat_health_check_*.json` will usually pick the later-written summary object instead of the 50-row graded array and make the artifact copy/validation fail.
 
 ### Medium
 
