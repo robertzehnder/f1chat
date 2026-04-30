@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T13:38:46Z
+updated: 2026-04-30T13:41:02Z
 ---
 
 ## Goal
@@ -18,8 +18,11 @@ Validator: every numerical count claim must match the count derived from the lis
 
 ## Prior context
 - `diagnostic/_state.md`
-- Latest healthcheck artifact under `diagnostic/artifacts/healthcheck/`
-- Phase 11 redo will re-baseline; this slice's bar is just "validator runs and asserts the obvious thing"
+- `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json`
+- `web/src/lib/validators/pitStintsValidator.ts`
+- `web/src/lib/validators/sectorConsistencyValidator.ts`
+- `web/src/lib/validators/gridFinishValidator.ts`
+- `web/src/lib/validators/strategyEvidenceValidator.ts`
 
 ## Required services / env
 None at author time.
@@ -113,7 +116,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Replace the non-path `Prior context` bullets with concrete existing artifact paths; `Latest healthcheck artifact under diagnostic/artifacts/healthcheck/` and `Phase 11 redo will re-baseline; this slice's bar is just "validator runs and asserts the obvious thing"` are not readable paths, so the audit protocol cannot satisfy the required prior-context read step from this slice alone.
+- [x] Replace the non-path `Prior context` bullets with concrete existing artifact paths; `Latest healthcheck artifact under diagnostic/artifacts/healthcheck/` and `Phase 11 redo will re-baseline; this slice's bar is just "validator runs and asserts the obvious thing"` are not readable paths, so the audit protocol cannot satisfy the required prior-context read step from this slice alone.
 
 ### Low
 - [ ] None.
