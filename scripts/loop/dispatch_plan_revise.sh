@@ -42,13 +42,18 @@ counter_file="$LOOP_STATE_DIR/plan_iter_count_${slice_id}"
 # Plan-iteration cap. Empirical observation (06-cu-rightsize 2026-04-28):
 # at cap=10 codex peel-the-onion'd through 11 rounds finding progressively
 # finer contract refinements that mostly didn't matter and burned ~$5+
-# in claude reviser tokens. Lowering the default to 6 surfaces the
-# escalation sooner so user can adjudicate; the persistence detector
-# (check_iteration_quality.sh) catches the stuck-on-same-item pathology
+# in claude reviser tokens. The original lowered-default of 6 surfaced
+# escalations sooner but proved too tight in Phase 8 — slices like
+# 08-validators-strategy-evidence had legitimate substantive findings at
+# rounds 6-7 (codex grounding plans against real contract code) and
+# escalated mechanically rather than converging. Raising the default to
+# 10 (2026-04-30) gives those slices room to converge without triggering
+# the peel-the-onion runaway, since persistence detection
+# (check_iteration_quality.sh) handles the stuck-on-same-item pathology
 # separately. Override via LOOP_MAX_PLAN_ITERATIONS=N for slices that
-# legitimately need more depth.
+# legitimately need more depth or for cost-constrained runs.
 # At iteration MAX_ITERATIONS-1 the auditor may issue PASS-WITH-DEFERRED.
-MAX_ITERATIONS="${LOOP_MAX_PLAN_ITERATIONS:-6}"
+MAX_ITERATIONS="${LOOP_MAX_PLAN_ITERATIONS:-10}"
 
 [[ -f "$slice_file_main" ]]  || { echo "missing $slice_file_main"  >&2; exit 2; }
 [[ -f "$prompt_file" ]] || { echo "missing $prompt_file" >&2; exit 2; }
