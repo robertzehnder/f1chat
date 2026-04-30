@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-execute
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:07:34Z
+updated: 2026-04-30T18:09:24Z
 ---
 
 ## Goal
@@ -40,20 +40,20 @@ None at author time.
 None.
 
 ## Gate commands
-Run from the repo root. Each `web` gate is wrapped in a subshell so the parent shell's CWD does not drift; the final `grep` is intentionally repo-rooted. The grep alternation covers the direct-import patterns the implementer might accidentally introduce: any depth of relative parents (`../queries`, `../../queries`, `../../lib/queries`, …), with optional `lib/` segment and optional trailing `/index`, plus the `@/lib/queries` alias form. The madge invocation backs the transitive-cycle claim in Step 4.
+Run from the repo root. Each `web` gate is wrapped in a subshell so the parent shell's CWD does not drift; the final `grep` is intentionally repo-rooted. The grep alternation covers the direct-import patterns the implementer might accidentally introduce: any depth of relative parents (`../queries`, `../../queries`, `../../lib/queries`, …), with optional `lib/` segment and optional trailing `/index`, plus the `@/lib/queries` alias form. The madge invocation backs the transitive-cycle claim in Step 4 and is wired to the project's `tsconfig.json` (which declares `paths: { "@/*": ["src/*"] }`) via `--ts-config tsconfig.json` so cycles routed through `@/lib/*` alias imports are included in the dependency graph rather than silently dropped.
 ```bash
 (cd web && npm run build)
 (cd web && npm run typecheck)
 bash scripts/loop/test_grading_gate.sh
 grep -nE "from ['\"]((\.\./)+(lib/)?queries(/index)?|@/lib/queries(/index)?)['\"]" web/src/lib/queries/execute.ts; test $? -eq 1
-(cd web && npx --yes madge --circular --extensions ts,tsx src/lib/queries/execute.ts)
+(cd web && npx --yes madge --circular --extensions ts,tsx --ts-config tsconfig.json src/lib/queries/execute.ts)
 ```
 
 ## Acceptance criteria
 - [ ] `web/src/lib/queries/execute.ts` exists and exports `runReadOnlySql`; the private `safeLimit` helper and the three `DEFAULT_*` constants live in the new file (not re-exported).
 - [ ] `web/src/lib/queries.ts` no longer contains the moved bodies (`runReadOnlySql`, `safeLimit`, the three `DEFAULT_*` constants); a `runReadOnlySql` re-export from `./queries/execute` remains for back-compat.
 - [ ] `web/src/lib/queries/execute.ts` contains no import that re-enters `queries.ts` via any depth of relative path or via the `@/lib/queries` alias (verified via the broadened grep gate above; direct-import guard).
-- [ ] `madge --circular` reports zero cycles through `web/src/lib/queries/execute.ts` (transitive-cycle guard).
+- [ ] `madge --circular` (invoked with `--ts-config tsconfig.json` so `@/*` alias imports are resolved against the project's TS path config) reports zero cycles through `web/src/lib/queries/execute.ts` for both relative and alias-routed imports (transitive-cycle guard).
 - [ ] All gate commands pass.
 
 ## Out of scope
@@ -125,7 +125,7 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Make the transitive-cycle gate alias-aware by passing the project's TypeScript path config to `madge` (or explicitly narrow Step 4 and the acceptance criterion to relative-path cycles only); the current `npx --yes madge --circular --extensions ts,tsx src/lib/queries/execute.ts` invocation can under-report cycles that traverse `@/lib/*` imports.
+- [x] Make the transitive-cycle gate alias-aware by passing the project's TypeScript path config to `madge` (or explicitly narrow Step 4 and the acceptance criterion to relative-path cycles only); the current `npx --yes madge --circular --extensions ts,tsx src/lib/queries/execute.ts` invocation can under-report cycles that traverse `@/lib/*` imports.
 
 ### Low
 
