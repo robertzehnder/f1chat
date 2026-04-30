@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T12:01:06-04:00
+updated: 2026-04-30T16:15:00-04:00
 ---
 
 ## Goal
@@ -107,7 +107,19 @@ Rollback: `git revert <commit>`.
   - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`)
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+- Gate #1 `(cd web && npm run build)` -> exit `0`
+- Gate #2 `(cd web && npm run typecheck)` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/09-split-deterministicSql-pace.md`, `web/src/lib/deterministicSql.ts`, `web/src/lib/deterministicSql/pace.ts`, and `web/src/lib/deterministicSql/types.ts`
+- Acceptance criterion 1 -> PASS; [web/src/lib/deterministicSql/types.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-deterministicSql-pace/web/src/lib/deterministicSql/types.ts:1) is the sole declaration site, and [web/src/lib/deterministicSql.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-deterministicSql-pace/web/src/lib/deterministicSql.ts:1) both locally type-imports and re-exports `DeterministicSqlTemplate`
+- Acceptance criterion 2 -> PASS; [web/src/lib/deterministicSql/pace.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-deterministicSql-pace/web/src/lib/deterministicSql/pace.ts:1) imports only from `./types`, exports `buildPaceTemplate`, and preserves the nine moved pace branches in required order at lines 71, 168, 220, 262, 307, 351, 500, 542, and 593
+- Acceptance criterion 3 -> PASS; [web/src/lib/deterministicSql.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-deterministicSql-pace/web/src/lib/deterministicSql.ts:3) imports `buildPaceTemplate`, delegates via the single early return at line 148, and no longer contains the nine moved pace template branches
+- Acceptance criterion 4 -> PASS; no circular import is present, confirmed by Gate #1 exit `0` and `pace.ts` importing only `./types`
+- Acceptance criterion 5 -> PASS; all gate commands exited `0`
+
+Ready to merge.
 
 ## Plan-audit verdict (round 1)
 
