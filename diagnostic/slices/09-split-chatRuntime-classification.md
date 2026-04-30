@@ -58,7 +58,8 @@ Rollback: `git revert <commit>`.
 
 **Branch:** `slice/09-split-chatRuntime-classification`
 
-**Commits:** to be filled below post-commit (single implementation commit on top of plan-approved history `4b4a7db`).
+**Commits:**
+- `64d7d80` — slice 09: extract classifyQuestion + QuestionType into chatRuntime/classification.ts (single implementation commit on top of plan-approved history `4b4a7db`).
 
 **Files changed:**
 - `web/src/lib/chatRuntime/classification.ts` (new) — exports `QuestionType` and `classifyQuestion`. A private `normalize` helper duplicates the one-line text-normalize regex from `chatRuntime.ts`; this avoids a circular import (since `chatRuntime.ts` now imports from `./chatRuntime/classification`) and keeps the new module self-contained. The helper is unexported so it does not widen public surface area.
