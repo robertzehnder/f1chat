@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-sessions
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30
 ---
 
 ## Goal
@@ -57,3 +57,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` in Gate commands so the slice uses the repo-required grading wrapper rather than the raw repo-wide gate.
+- [ ] Expand `Changed files expected` to include the direct-import consumer files Step 3 will modify, or narrow Step 3 so the declared file scope matches the work.
+- [ ] Make Step 4 and the acceptance criteria name a concrete circular-import verification method or gate; "Verify no circular imports" is not currently testable from this slice.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-30T17:38:27Z, so no staleness note is needed.
