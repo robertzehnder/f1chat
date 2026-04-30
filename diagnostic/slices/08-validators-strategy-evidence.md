@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T04:30:00Z
+updated: 2026-04-30T04:19:00Z
 ---
 
 ## Goal
@@ -148,6 +148,22 @@ Rollback: `git revert <commit>`.
 - [x] Rewrite the `Gate commands` block so each `web` command runs in its own subshell from repo root (for example `(cd web && npm run build)` / `(cd web && npm run typecheck)`), because the current sequential `cd web && ...` lines leave the shell in `web/` after the first command and make the second `cd web` plus the repo-root `bash scripts/loop/test_grading_gate.sh` invocation fail.
 
 ### Medium
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
+- Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] Reconcile Steps 2-3 with the real `core.strategy_summary` contract: it already exposes strategy evidence columns such as `pit_laps`, `pit_stop_count`, and `strategy_type` in [sql/007_semantic_summary_contracts.sql](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/sql/007_semantic_summary_contracts.sql:159), so the plan must either treat those as valid backing evidence for the matching pit/stop/strategy claims or explicitly narrow the validator away from those claim types instead of describing today’s `core.strategy_summary` path as “no recognized evidence-bearing columns.”
+
+### Medium
+- [ ] Remove or fulfill the Step 3 claim that the route-wiring test exercises the `synthesisContract === null` guard: Step 5 currently specifies only fail-case and pass-case requests against a real contract, so add a concrete null-contract assertion there or stop claiming that coverage exists.
 
 ### Low
 
