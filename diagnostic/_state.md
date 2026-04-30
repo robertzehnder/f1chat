@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-30T20:16:19Z
+# Project state — last updated: 2026-04-30T21:15:31Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -18,7 +18,7 @@ accumulated context the loop carries between slices._
 | 7 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
+| 10 | 6 | 1 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `d732597` merge: 10-session-detail-pace-table [pass] — 2026-04-30
 - `8909d6a` merge: 09-line-count-gate [pass] — 2026-04-30
 - `9e6ffc7` merge: 09-split-answerSanity-count-list [pass] — 2026-04-30
 - `c4500a3` merge: 09-split-answerSanity-strategy-evidence [pass] — 2026-04-30
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `7c0f4be` merge: 09-split-route-orchestration [pass] — 2026-04-30
 - `ff5c36f` merge: 09-split-queries-execute [pass] — 2026-04-30
 - `d558365` merge: 09-split-queries-sessions [pass] — 2026-04-30
-- `4f37881` merge: 09-split-queries-resolver [pass] — 2026-04-30
 
 ## Open architectural decisions
 
