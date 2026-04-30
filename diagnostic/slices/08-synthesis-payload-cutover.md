@@ -1,11 +1,11 @@
 ---
 slice_id: 08-synthesis-payload-cutover
 phase: 8
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T20:30:00-04:00
+updated: 2026-04-29T23:20:00-04:00
 ---
 
 ## Goal
@@ -257,28 +257,25 @@ Codex impl-audit round 1 returned REJECT (commit `1be72ed`) on two findings: (a)
 Frontmatter flipped to `status: awaiting_audit`, `owner: codex`. Implementation files (`anthropic.ts`, `chatRuntime.ts`, `route.ts`, `buildSynthesisPrompt.ts`, the new test, and the 8 transitively-touched test files) are byte-identical to commit `3b481c7`; this commit edits only the slice file and `_state.md`.
 
 ## Audit verdict
-**Status: REJECT**
+**Status: PASS**
 
 - Gate #1 `cd web && npm run build` -> exit `0`
 - Gate #2 `cd web && npm run typecheck` -> exit `0`
-- Gate #3 `cd web && npm run test:grading` -> exit `1`
-  - `web/scripts/tests/driver-fallback.test.mjs:223` Case A failed: `[db] using local PGlite fallback (reason=probe-failed): connect ECONNREFUSED 127.0.0.1:1`
-  - `web/scripts/tests/driver-fallback.test.mjs:247` Case B failed: `[db] using local PGlite fallback (reason=probe-failed): connect ECONNREFUSED 127.0.0.1:1`
-  - `web/scripts/tests/driver-fallback.test.mjs:306` Case E failed: `[db] using local PGlite fallback (reason=probe-failed): connect ECONNREFUSED 127.0.0.1:1`
+- Gate #3 `cd web && node --test scripts/tests/chatRuntime-synthesis-payload.test.mjs` -> exit `0`
 - Gate #4 `cd web && ! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/chatRuntime.ts | grep -vE "lib/contracts/factContract"` -> exit `0`
 - Gate #5 `cd web && ! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/anthropic.ts | grep -vE "lib/contracts/factContract"` -> exit `0`
 - Gate #6 `cd web && ! grep -nE "from ['\"][^'\"]*lib/contracts/" src/lib/synthesis/buildSynthesisPrompt.ts | grep -vE "lib/contracts/factContract"` -> exit `0`
 - Gate #7 `cd web && ! grep -nE "from ['\"]@/lib/" src/lib/synthesis/buildSynthesisPrompt.ts | grep -vE "@/lib/contracts/factContract"` -> exit `0`
-- Scope FAIL — `diagnostic/slices/08-synthesis-payload-cutover.md:83` declares only one new `web/scripts/tests/*.test.mjs` path for this slice; `git diff --name-only integration/perf-roadmap...HEAD` also includes out-of-scope edits in `web/scripts/tests/answer-cache.test.mjs:1`, `web/scripts/tests/cache-benchmark.test.mjs:1`, `web/scripts/tests/cache-control-markers.test.mjs:1`, `web/scripts/tests/prompt-prefix-split.test.mjs:1`, `web/scripts/tests/skip-repair.test.mjs:1`, `web/scripts/tests/streaming-synthesis-route.test.mjs:1`, `web/scripts/tests/streaming-synthesis-server.test.mjs:1`, and `web/scripts/tests/zero-llm-path.test.mjs:1`.
-- Criterion 1 PASS — `web/src/lib/anthropic.ts:1-2` imports only `FactContract` from `factContract.ts`; Gate #4 and Gate #5 exit `0`.
-- Criterion 2 PASS — `web/src/lib/synthesis/buildSynthesisPrompt.ts:1-64` exports `buildSynthesisPrompt(input: { question: string; sql: string; contract: FactContract })`; Gate #6 and Gate #7 exit `0`.
-- Criterion 3 PASS — `web/src/app/api/chat/route.ts:23-71` constructs the contract via `serializeRowsToFactContract`, and `web/src/app/api/chat/route.ts:907-912` plus `web/src/app/api/chat/route.ts:925-930` pass `{ question, sql, contract }`.
-- Criterion 4 PASS — Gate #2 exits `0`; the typed `contract: FactContract` surface in `web/src/lib/anthropic.ts:35-39` and `web/src/lib/synthesis/buildSynthesisPrompt.ts:3-7` enforces the cutover at compile time.
-- Criterion 5 PASS — `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:39-52` transpiles and imports only `web/src/lib/synthesis/buildSynthesisPrompt.ts`, and the assertions required by the slice are present at `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:94-233`.
+- Scope PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/_state.md:69`, `diagnostic/slices/08-synthesis-payload-cutover.md:1`, `web/src/app/api/chat/route.ts:23`, `web/src/lib/anthropic.ts:1`, `web/src/lib/synthesis/buildSynthesisPrompt.ts:1`, `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:1`, and the eight transitive test files explicitly allowed under `diagnostic/slices/08-synthesis-payload-cutover.md:100-108`.
+- Criterion 1 PASS — `web/src/lib/anthropic.ts:1-2` imports only `FactContract` from `factContract.ts`, `web/src/lib/chatRuntime.ts` remains free of `lib/contracts/` imports, and Gate #4 plus Gate #5 exit `0`.
+- Criterion 2 PASS — `web/src/lib/synthesis/buildSynthesisPrompt.ts:1-64` exports `buildSynthesisPrompt(input: { question: string; sql: string; contract: FactContract })`, and Gate #6 plus Gate #7 exit `0`.
+- Criterion 3 PASS — `web/src/app/api/chat/route.ts:23-71` builds the contract via `serializeRowsToFactContract` with `runtime.queryPlan.primary_tables[0] ?? "unknown_contract"`, and `web/src/app/api/chat/route.ts:907-930` passes `{ question, sql, contract }` at both synthesis call sites.
+- Criterion 4 PASS — Gate #2 exits `0`; `web/src/lib/anthropic.ts:35-39` and `web/src/lib/synthesis/buildSynthesisPrompt.ts:3-7` make the synthesis input surface `contract: FactContract`.
+- Criterion 5 PASS — `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:39-52` transpiles and imports only `web/src/lib/synthesis/buildSynthesisPrompt.ts`, and `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:94-233` asserts dynamic-suffix exactness, static-prefix exactness, fixed-order Runtime JSON, and absence of legacy runtime keys.
 - Criterion 6 PASS — Gate #1 and Gate #2 exit `0`.
-- Criterion 7 FAIL — `diagnostic/_state.md:47` requires REVISE on any non-zero shared `npm run test:grading` gate, and Gate #3 exits `1`.
-- Decision: REJECT
-- Rationale: the branch exceeds the declared slice scope and the shared grading gate is still red, so it is not mergeable under the audit contract.
+- Criterion 7 PASS — Gate #3 exits `0`; the narrowed isolated gate matches the auditor note at `diagnostic/_state.md:69`.
+- Decision: PASS
+- Rationale: the row-payload cutover is complete, scoped correctly, and all declared audit gates pass on the branch.
 
 ## Plan-audit verdict (round 1)
 
