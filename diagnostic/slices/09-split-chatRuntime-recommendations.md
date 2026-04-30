@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-recommendations
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T11:15:30-04:00
+updated: 2026-04-30T11:21:16-0400
 ---
 
 ## Goal
@@ -91,7 +91,18 @@ Rollback: `git revert <commit>`.
 No other files were touched. The Step 3 ripgrep confirmed no external import sites exist, so the "expected to be zero" branch of the scope spec applied and no additional files were added to the changed-files list.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+Gate #1 `cd web && npm run build` -> exit `0`
+Gate #2 `cd web && npm run typecheck` -> exit `0`
+Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+Scope diff -> PASS (`diagnostic/slices/09-split-chatRuntime-recommendations.md`, `web/src/lib/chatRuntime.ts`, `web/src/lib/chatRuntime/recommendations.ts` only)
+Criterion 1 -> PASS [web/src/lib/chatRuntime/recommendations.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-recommendations/web/src/lib/chatRuntime/recommendations.ts:1) exports `isFollowUp` at line 5.
+Criterion 2 -> PASS [web/src/lib/chatRuntime.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-recommendations/web/src/lib/chatRuntime.ts:22) imports and line 35 re-exports `isFollowUp`; the local body is absent at line 402 onward.
+Criterion 3 -> PASS `rg -n "isFollowUp" web/src` -> exit `0`; only [web/src/lib/chatRuntime.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-recommendations/web/src/lib/chatRuntime.ts:22) and [web/src/lib/chatRuntime/recommendations.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-recommendations/web/src/lib/chatRuntime/recommendations.ts:5) matched, so no external `web/src/**` import site exists.
+Criterion 4 -> PASS [web/src/lib/chatRuntime/recommendations.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-recommendations/web/src/lib/chatRuntime/recommendations.ts:1) has no import from `chatRuntime.ts`; Gate #1 and Gate #2 exit `0`.
+Criterion 5 -> PASS all declared gates exit `0`.
+Decision -> PASS
 
 ## Plan-audit verdict (round 1)
 
