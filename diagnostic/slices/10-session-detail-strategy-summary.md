@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-strategy-summary
 phase: 10
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:03:23-04:00
+updated: 2026-04-30T22:09:00-04:00
 ---
 
 ## Goal
@@ -103,7 +103,20 @@ Rollback: `git revert <commit>`. The card is additive; no existing route, query,
 **Commit:** see `[slice:10-session-detail-strategy-summary][awaiting-audit]` commit on this branch (hash recorded in branch HEAD post-push).
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is exactly `diagnostic/slices/10-session-detail-strategy-summary.md`, `web/scripts/tests/session-detail-strategy-summary.test.mjs`, `web/src/app/sessions/[sessionKey]/StrategySummary.tsx`, `web/src/app/sessions/[sessionKey]/page.tsx`, `web/src/lib/queries/sessions.ts`
+- Criterion G1 -> PASS; `getSessionStrategySummary` is declared and queries `core.strategy_summary` with `WHERE session_key = $1`, no `raw.stints`/`raw.pit`, and all required projected columns are present at `web/src/lib/queries/sessions.ts:359`
+- Criterion G2 -> PASS; `StrategySummary.tsx` exists, default-exports a function, and contains the required substrings at `web/src/app/sessions/[sessionKey]/StrategySummary.tsx:1`, `web/src/app/sessions/[sessionKey]/StrategySummary.tsx:6`, `web/src/app/sessions/[sessionKey]/StrategySummary.tsx:24`, `web/src/app/sessions/[sessionKey]/StrategySummary.tsx:25`, `web/src/app/sessions/[sessionKey]/StrategySummary.tsx:30`, `web/src/app/sessions/[sessionKey]/StrategySummary.tsx:48`
+- Criterion G3 -> PASS; `page.tsx` imports `getSessionStrategySummary` from `@/lib/queries/sessions`, calls it inside `Promise.all([...])`, renders `<StrategySummary rows={strategySummary} />`, and destructures `strategySummary` from the same `Promise.all` at `web/src/app/sessions/[sessionKey]/page.tsx:10`, `web/src/app/sessions/[sessionKey]/page.tsx:36`, `web/src/app/sessions/[sessionKey]/page.tsx:44`, `web/src/app/sessions/[sessionKey]/page.tsx:79`
+- Criterion G4 -> PASS; `page.tsx` default-imports `StrategySummary` from `./StrategySummary` at `web/src/app/sessions/[sessionKey]/page.tsx:17`
+- Criterion G5 -> PASS; `<StrategySummary rows={strategySummary} />` appears after `<StintTimeline rows={stints} />` and before `Weather Preview` at `web/src/app/sessions/[sessionKey]/page.tsx:78`, `web/src/app/sessions/[sessionKey]/page.tsx:79`, `web/src/app/sessions/[sessionKey]/page.tsx:81`
+- Criterion `web/scripts/tests/session-detail-strategy-summary.test.mjs` -> PASS; direct check `node --test web/scripts/tests/session-detail-strategy-summary.test.mjs` exit `0`
+- Criterion stint-timeline non-regression -> PASS; direct check `node --test web/scripts/tests/session-detail-stint-timeline.test.mjs` exit `0`
+- Decision -> PASS; all declared gates passed in order, scope stayed within the declared allow-list, and the implementation matches the slice contract.
 
 ## Plan-audit verdict (round 1)
 
