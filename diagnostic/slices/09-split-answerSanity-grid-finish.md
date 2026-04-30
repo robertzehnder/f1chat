@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-grid-finish
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T19:00:01Z
 ---
 
 ## Goal
@@ -22,10 +22,9 @@ Extract grid/finish sanity checks from answerSanity.ts into answerSanity/gridFin
 None at author time.
 
 ## Steps
-1. Identify the target functions/types in `web/src/lib/answerSanity.ts`.
+1. Identify the target grid/finish functions/types in `web/src/lib/answerSanity.ts`.
 2. Move them to `web/src/lib/answerSanity/gridFinish.ts`; re-export from `web/src/lib/answerSanity.ts` for back-compat.
-3. Update direct imports of these symbols across the codebase to point at the new file.
-4. Verify no circular imports.
+3. Verify no circular imports. (No direct-import migration step is needed: the only consumer in-tree is the barrel `@/lib/answerSanity` via `web/src/app/api/chat/orchestration.ts:11`, which the re-export in step 2 keeps stable.)
 
 ## Changed files expected
 - `web/src/lib/answerSanity.ts`
@@ -38,7 +37,7 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+cd web && bash ../scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
@@ -63,13 +62,13 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace `cd web && npm run test:grading` with `cd web && bash ../scripts/loop/test_grading_gate.sh` in Gate commands so the slice uses the required grading wrapper baseline instead of hard-failing on known unrelated grading failures (`diagnostic/_state.md:52`, `diagnostic/slices/09-split-answerSanity-grid-finish.md:36`).
+- [x] Replace `cd web && npm run test:grading` with `cd web && bash ../scripts/loop/test_grading_gate.sh` in Gate commands so the slice uses the required grading wrapper baseline instead of hard-failing on known unrelated grading failures (`diagnostic/_state.md:52`, `diagnostic/slices/09-split-answerSanity-grid-finish.md:36`).
 
 ### Medium
-- [ ] Reconcile Step 3 with the repo’s current import surface: either remove the repo-wide direct-import migration step or name the concrete files to update, because the current tree only imports the barrel `@/lib/answerSanity` and does not show any direct imports of a future `gridFinish` module (`web/src/app/api/chat/orchestration.ts:11`, `diagnostic/slices/09-split-answerSanity-grid-finish.md:25`).
+- [x] Reconcile Step 3 with the repo’s current import surface: either remove the repo-wide direct-import migration step or name the concrete files to update, because the current tree only imports the barrel `@/lib/answerSanity` and does not show any direct imports of a future `gridFinish` module (`web/src/app/api/chat/orchestration.ts:11`, `diagnostic/slices/09-split-answerSanity-grid-finish.md:25`).
 
 ### Low
-- [ ] Expand `Changed files expected` if Step 3 remains, because a plan that updates direct imports across the codebase cannot list only the source barrel and the new module as touched files (`diagnostic/slices/09-split-answerSanity-grid-finish.md:25-30`).
+- [x] Expand `Changed files expected` if Step 3 remains, because a plan that updates direct imports across the codebase cannot list only the source barrel and the new module as touched files (`diagnostic/slices/09-split-answerSanity-grid-finish.md:25-30`). (Step 3’s direct-import migration was removed per the Medium item, so the existing two-file `Changed files expected` list is correct as-is.)
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T18:56:33Z, so the required audit context is fresh.
