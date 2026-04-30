@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T16:20:00Z
+updated: 2026-04-30T16:35:00Z
 ---
 
 ## Goal
@@ -41,14 +41,19 @@ Pace-detection helper locals computed inside `buildDeterministicSqlTemplate` tha
 Out of scope for this slice: pit, position, sector, tire-compound, fastest-lap, and canonical-ID branches — none are moved here.
 
 ## Steps
-1. Create `web/src/lib/deterministicSql/types.ts` exporting `export type DeterministicSqlTemplate = { templateKey: string; sql: string };`. In `web/src/lib/deterministicSql.ts`, replace the inline `export type DeterministicSqlTemplate = …` (lines 1–4) with `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` so the existing public surface (`import { DeterministicSqlTemplate } from "@/lib/deterministicSql"` if any) is preserved.
+1. Create `web/src/lib/deterministicSql/types.ts` exporting `export type DeterministicSqlTemplate = { templateKey: string; sql: string };`. In `web/src/lib/deterministicSql.ts`, replace the inline `export type DeterministicSqlTemplate = …` (lines 1–4) with BOTH a local type-only import AND a re-export, so the same file can still use `DeterministicSqlTemplate` as a return-type annotation on `buildDeterministicSqlTemplate` while preserving the existing public surface (`import { DeterministicSqlTemplate } from "@/lib/deterministicSql"` if any). Concretely, replace those four lines with the following two lines:
+   ```ts
+   import type { DeterministicSqlTemplate } from "./deterministicSql/types";
+   export type { DeterministicSqlTemplate } from "./deterministicSql/types";
+   ```
+   The `import type` brings the symbol into the file's local scope so `buildDeterministicSqlTemplate(...): DeterministicSqlTemplate` continues to type-check; the `export type { ... } from` keeps the symbol re-exported from `@/lib/deterministicSql` for any external importer. Both lines are erased at compile time, so no runtime import is added.
 2. In `web/src/lib/deterministicSql/pace.ts`, `import type { DeterministicSqlTemplate } from "./types";` and export a single function `buildPaceTemplate(input)` returning `DeterministicSqlTemplate | null`. `input` carries the shared locals listed above plus `lower`. Move the pace-only helper computations (`mentionsRacePaceComparison`, `practiceVsRaceDriver`, `mentionsPractice`) as locals inside `buildPaceTemplate`. The body of `buildPaceTemplate` MUST evaluate the nine moved branches in the same relative order they currently appear in `buildDeterministicSqlTemplate` — the source-line ordering already enumerated in **Scope — exact symbols to move** (1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9, i.e. lines 186, 337, 553, 595, 796, 1063, 1212, 1349, 1440). First-match-wins dispatch must produce the same `templateKey` for every prompt that any pair of these branches could match — preserving order is what guarantees that. The new module imports nothing from `deterministicSql.ts` (only from `./types`), so no cycle is possible.
 3. In `web/src/lib/deterministicSql.ts`, replace the nine return-blocks listed above with a single early-return: `const pace = buildPaceTemplate({ lower, targetSession, driverPairSql, ... }); if (pace) return pace;`. Place the call at the original first-pace-branch position (line 186 region) so dispatch order is unchanged.
 4. Do not re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts`. `buildPaceTemplate` is a new internal helper with no existing public callers (grep confirms zero importers; the symbol did not exist before this slice). Keeping it private to `web/src/lib/deterministicSql/pace.ts` matches the “pure mechanical split, no behavior change” scope and avoids speculatively expanding the public API surface of `deterministicSql.ts`. The only existing external caller of the file (`web/src/app/api/chat/route.ts`, which imports `buildDeterministicSqlTemplate`) needs no edit, and grep confirms no external callers import the per-branch `templateKey` strings or pace-only helper locals being moved (those locals were never exported). No caller-file edits are therefore expected in `Changed files expected`.
 5. Verify no circular imports between `deterministicSql.ts` and `deterministicSql/pace.ts` (build will fail loudly if introduced; see Acceptance criteria).
 
 ## Changed files expected
-- `web/src/lib/deterministicSql.ts` (inline `DeterministicSqlTemplate` type replaced with a re-export from `./deterministicSql/types`; nine pace branches removed; one delegating `import { buildPaceTemplate } from "./deterministicSql/pace";` plus the early-return call inserted at the original first-pace-branch position; `buildPaceTemplate` is NOT re-exported)
+- `web/src/lib/deterministicSql.ts` (inline `DeterministicSqlTemplate` type replaced with both a local `import type { DeterministicSqlTemplate } from "./deterministicSql/types";` — needed so `buildDeterministicSqlTemplate(...): DeterministicSqlTemplate` still type-checks — and `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` to preserve the public surface; nine pace branches removed; one delegating `import { buildPaceTemplate } from "./deterministicSql/pace";` plus the early-return call inserted at the original first-pace-branch position; `buildPaceTemplate` is NOT re-exported)
 - `web/src/lib/deterministicSql/types.ts` (new; sole owner of `export type DeterministicSqlTemplate`)
 - `web/src/lib/deterministicSql/pace.ts` (new; `import type { DeterministicSqlTemplate } from "./types";` and exports `buildPaceTemplate`)
 
@@ -66,7 +71,7 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/deterministicSql/types.ts` exists and is the sole declaration site of `export type DeterministicSqlTemplate`; `deterministicSql.ts` re-exports it via `export type { DeterministicSqlTemplate } from "./deterministicSql/types";`.
+- [ ] `web/src/lib/deterministicSql/types.ts` exists and is the sole declaration site of `export type DeterministicSqlTemplate`; `deterministicSql.ts` BOTH locally imports the type (`import type { DeterministicSqlTemplate } from "./deterministicSql/types";`) so `buildDeterministicSqlTemplate(...): DeterministicSqlTemplate` still type-checks AND re-exports it via `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` so external importers of `@/lib/deterministicSql` see no API change.
 - [ ] `web/src/lib/deterministicSql/pace.ts` exists, imports its template type only from `./types` (no runtime import from `../deterministicSql`), and exports `buildPaceTemplate`, which covers all nine `templateKey` values listed in **Scope — exact symbols to move** AND evaluates them in the same relative order they currently have in `buildDeterministicSqlTemplate` (source-line ascending: 186 → 337 → 553 → 595 → 796 → 1063 → 1212 → 1349 → 1440), so first-match-wins dispatch returns the same `templateKey` as before for every overlapping prompt.
 - [ ] `web/src/lib/deterministicSql.ts` no longer contains the nine pace return-blocks; it instead imports `buildPaceTemplate` from `./deterministicSql/pace` and delegates to it via a single early-return. `buildPaceTemplate` is NOT re-exported from `deterministicSql.ts` (no existing callers, and this slice does not expand public API surface).
 - [ ] No circular import between `deterministicSql.ts` and `deterministicSql/pace.ts` (confirmed by `(cd web && npm run build)` succeeding; the shared `./types` module makes the cycle structurally impossible).
@@ -156,7 +161,7 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Amend Step 1 and the matching acceptance criterion so `web/src/lib/deterministicSql.ts` keeps a local type binding for `DeterministicSqlTemplate` after the extraction, for example by adding a type-only import alongside the re-export (or an equivalent local alias), because `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` alone does not let the same file use `DeterministicSqlTemplate` in `buildDeterministicSqlTemplate`'s return type.
+- [x] Amend Step 1 and the matching acceptance criterion so `web/src/lib/deterministicSql.ts` keeps a local type binding for `DeterministicSqlTemplate` after the extraction, for example by adding a type-only import alongside the re-export (or an equivalent local alias), because `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` alone does not let the same file use `DeterministicSqlTemplate` in `buildDeterministicSqlTemplate`'s return type.
 
 ### Medium
 - [ ] None.
