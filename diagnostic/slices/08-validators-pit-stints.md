@@ -1,7 +1,7 @@
 ---
 slice_id: 08-validators-pit-stints
 phase: 8
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -118,17 +118,16 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 
-**Status: REVISE**
+**Status: PASS**
 
 - Gate #1 `(cd web && npm run build)` -> exit `0`
 - Gate #2 `(cd web && npm run typecheck)` -> exit `0`
 - Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
 - Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/08-validators-pit-stints.md`, `web/src/lib/validators/pitStintsValidator.ts`, `web/src/app/api/chat/route.ts`, `web/scripts/tests/validator-pit-stints.test.mjs`, and `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs`.
-- Criterion 1 -> FAIL; `validatePitStints` does not verify that a claimed pit-stop count matches contract values, only that related columns exist (`web/src/lib/validators/pitStintsValidator.ts:92`). Audit probe: `validatePitStints("Verstappen made 5 pit stops in this race.", { rows: [{ stints: 2, pit_stops: 1 }] ... })` returned `{"ok":true,"reasons":[]}`.
-- Criterion 2 -> PASS; route wiring invokes the validator after synthesis and logs `validators.pitStints` in the trace payload (`web/src/app/api/chat/route.ts:909`, `web/src/app/api/chat/route.ts:1018`, `web/src/app/api/chat/route.ts:1047`), and `node --test web/scripts/tests/validator-pit-stints-route-wiring.test.mjs` exits `0`.
-- Criterion 3 -> PASS; `bash scripts/loop/test_grading_gate.sh` exits `0` with no new failures vs `scripts/loop/state/test_grading_baseline.txt`.
-- Decision -> REVISE
-- Rationale -> The slice goal says every pit-stop claim must be derivable from the attached `FactContract`; unsupported numeric claims currently pass validation.
+- Criterion 1 -> PASS; `validatePitStints` returns `{ ok, reasons }` and rejects unsupported pit-stop/stint-count and undercut/overcut claims using derivable contract values and position evidence (`web/src/lib/validators/pitStintsValidator.ts:73-154`), and `node --test scripts/tests/validator-pit-stints.test.mjs` exits `0`.
+- Criterion 2 -> PASS; the route captures the synthesis contract, runs `validatePitStints(answer, synthesisContract)`, and logs `validators: { pitStints: ... }` in the trace payload (`web/src/app/api/chat/route.ts:888-910`, `web/src/app/api/chat/route.ts:1018-1047`), and `node --test scripts/tests/validator-pit-stints-route-wiring.test.mjs` exits `0`.
+- Criterion 3 -> PASS; `bash scripts/loop/test_grading_gate.sh` exits `0` with `PASS (no new failures vs integration baseline)`.
+- Decision -> PASS
 
 ## Plan-audit verdict (round 1)
 
