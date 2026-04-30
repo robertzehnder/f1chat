@@ -299,6 +299,34 @@ export async function getSessionCompleteness(sessionKey: number): Promise<Sessio
   return rows[0] ?? null;
 }
 
+export async function getSessionDriverPace(sessionKey: number): Promise<Record<string, unknown>[]> {
+  return sql<Record<string, unknown>>(
+    `
+    SELECT
+      driver_number,
+      driver_name,
+      team_name,
+      lap_count,
+      valid_lap_count,
+      best_lap,
+      median_lap,
+      avg_lap,
+      best_valid_lap,
+      median_valid_lap,
+      best_s1,
+      best_s2,
+      best_s3,
+      avg_s1,
+      avg_s2,
+      avg_s3
+    FROM core.driver_session_summary
+    WHERE session_key = $1
+    ORDER BY best_valid_lap ASC NULLS LAST, best_lap ASC NULLS LAST
+    `,
+    [sessionKey]
+  );
+}
+
 export async function getSessionTableCounts(
   sessionKey: number,
   tableNames: string[]

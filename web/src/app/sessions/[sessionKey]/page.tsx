@@ -7,6 +7,8 @@ import {
   getSessionRaceControl,
   getSessionWeather
 } from "@/lib/queries";
+import { getSessionDriverPace } from "@/lib/queries/sessions";
+import PaceTable from "./PaceTable";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +27,14 @@ export default async function SessionDetailPage({
     );
   }
 
-  const [session, completeness, drivers, laps, weather, raceControl] = await Promise.all([
+  const [session, completeness, drivers, laps, weather, raceControl, pace] = await Promise.all([
     getSessionByKey(key),
     getSessionCompleteness(key),
     getSessionDrivers(key),
     getSessionLaps({ sessionKey: key, limit: 300 }),
     getSessionWeather(key, 200),
-    getSessionRaceControl(key, 200)
+    getSessionRaceControl(key, 200),
+    getSessionDriverPace(key)
   ]);
 
   if (!session) {
@@ -63,6 +66,7 @@ export default async function SessionDetailPage({
       </div>
 
       <DataTable title="Lap Preview" rows={laps} maxHeight="380px" />
+      <PaceTable rows={pace} />
       <div className="two-col">
         <DataTable title="Weather Preview" rows={weather} maxHeight="300px" />
         <DataTable title="Race Control Preview" rows={raceControl} maxHeight="300px" />
