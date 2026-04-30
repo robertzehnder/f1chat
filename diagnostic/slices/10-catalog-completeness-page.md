@@ -1,11 +1,11 @@
 ---
 slice_id: 10-catalog-completeness-page
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:35:00-04:00
+updated: 2026-04-30T18:27:06-04:00
 ---
 
 ## Goal
@@ -125,6 +125,20 @@ Rollback: `git revert <commit>`. The route is purely additive at `/catalog/compl
 
 ### Medium
 - [x] Tighten G1 so the grading test proves `getCatalogCompleteness` implements the required SQL contract from Step 1 rather than merely mentioning `WHERE`: assert the source contains the year/status filter predicates (or equivalent `$1`/`$2`-bound checks), the `ORDER BY date_start DESC NULLS LAST, session_key DESC` clause, and the `safeLimit` / `clampInt` bounded `LIMIT`/`OFFSET` helpers.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated at `2026-04-30T22:11:15Z`, which is within 24 hours of this audit.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Extend G1 so the grading test also asserts the `getCatalogCompleteness` source references `session_name`, `country_name`, `location`, and `date_start`; Step 1 requires those columns in the projection, but the current acceptance criteria never verify them, so the implementation can omit part of the declared query contract and still pass all listed gates.
 
 ### Low
 
