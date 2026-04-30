@@ -1,11 +1,11 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T23:55:00Z
 ---
 
 ## Goal
@@ -36,7 +36,10 @@ Re-run the full chat-quality benchmark against the post-Phase-10 build to captur
 1. Ensure required services are up (DB pooled URL reachable, web dev server running, `ANTHROPIC_API_KEY` exported).
 2. Run the healthcheck suite end-to-end (50 questions across categories) via `cd web && npm run healthcheck:chat`. The script writes the graded JSON to `web/logs/chat_health_check_<stamp>.json`.
 3. Copy the most recent `web/logs/chat_health_check_*.json` to `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (the slice artifact).
-4. Generate a sibling `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` summary file containing: per-category A/B/C counts for the new run, per-category A/B/C counts for the prior baseline (`00-fresh-benchmark_2026-04-26.json`), and an explicit delta table (improved / unchanged / regressed question IDs).
+4. Generate a sibling `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` summary file containing:
+   - **New-run per-category A/B/C counts** — derived from the per-question rows in `11-rerun_2026-04-30.json` (each row exposes `id` and the graded fields written by `gradeHealthCheckResults`).
+   - **Prior-baseline per-category A/B/C counts** — copied from `00-fresh-benchmark_2026-04-26.json`'s `summary.gradeCounts` / `summary.answerGradeCounts` / `summary.semanticConformanceGradeCounts` aggregates.
+   - **Per-question delta table (improved / unchanged / regressed)** — built by joining each `id` in `11-rerun_2026-04-30.json` against the per-question matrix in `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` (the `| ID | Baseline | Answer Grade | Semantic Grade | …` table — that is the only per-question record of the prior baseline; the prior `.json` is summary-aggregate-only and cannot drive a question-level diff).
 5. Commit both artifacts.
 
 ## Changed files expected
@@ -70,6 +73,27 @@ node -e '
   if (missing.length) { console.error("rows with missing answer: " + missing.length); process.exit(1); }
   console.log("OK: 50/50 answered");
 '
+
+# Comparison-summary gate: assert the .md deliverable from step 4 exists and
+# carries each required section (new-run counts, prior-baseline counts, and
+# the improved/unchanged/regressed per-question delta produced by joining
+# 11-rerun_2026-04-30.json against 00-fresh-benchmark_2026-04-26.md).
+ARTIFACT_MD=diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md
+test -f "$ARTIFACT_MD" || { echo "missing $ARTIFACT_MD"; exit 1; }
+grep -qiE "new[ -]run.*(A/B/C|grade)" "$ARTIFACT_MD" \
+  || { echo "$ARTIFACT_MD missing new-run per-category A/B/C counts"; exit 1; }
+grep -qiE "prior[ -]baseline.*(A/B/C|grade|00-fresh-benchmark)" "$ARTIFACT_MD" \
+  || { echo "$ARTIFACT_MD missing prior-baseline per-category A/B/C counts"; exit 1; }
+grep -qi "improved" "$ARTIFACT_MD" \
+  && grep -qi "unchanged" "$ARTIFACT_MD" \
+  && grep -qi "regressed" "$ARTIFACT_MD" \
+  || { echo "$ARTIFACT_MD missing improved/unchanged/regressed delta listing"; exit 1; }
+# At least one explicit question-id reference (e.g. "Q6" / "id 6") in the
+# delta listing — proves the delta was actually computed per-question, not
+# left as a placeholder header.
+grep -qiE "(^|[^A-Za-z])(Q[0-9]+|id[ _]?[0-9]+)" "$ARTIFACT_MD" \
+  || { echo "$ARTIFACT_MD delta does not list any per-question ids"; exit 1; }
+echo "OK: $ARTIFACT_MD has new-run counts, prior-baseline counts, and per-question delta"
 ```
 
 ## Acceptance criteria
@@ -117,8 +141,8 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Add a gate command that generates `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` and asserts it contains the required new-run counts, prior-baseline counts, and improved / unchanged / regressed question IDs, because the current gate block never produces or validates that required deliverable.
-- [ ] Specify the row-level source for step 4’s improved / unchanged / regressed question-ID delta by referencing `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` or another per-question artifact, because `00-fresh-benchmark_2026-04-26.json` only exposes summary/actionable aggregates and cannot support question-level comparison by itself.
+- [x] Add a gate command that generates `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` and asserts it contains the required new-run counts, prior-baseline counts, and improved / unchanged / regressed question IDs, because the current gate block never produces or validates that required deliverable.
+- [x] Specify the row-level source for step 4’s improved / unchanged / regressed question-ID delta by referencing `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` or another per-question artifact, because `00-fresh-benchmark_2026-04-26.json` only exposes summary/actionable aggregates and cannot support question-level comparison by itself.
 
 ### Low
 
