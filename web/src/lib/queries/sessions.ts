@@ -356,6 +356,51 @@ export async function getSessionStintTimeline(sessionKey: number): Promise<Recor
   );
 }
 
+export async function getSessionRaceProgression(sessionKey: number): Promise<Record<string, unknown>[]> {
+  return sql<Record<string, unknown>>(
+    `
+    SELECT
+      driver_number,
+      driver_name,
+      team_name,
+      lap_number,
+      frame_time,
+      position_end_of_lap,
+      previous_position,
+      positions_gained_this_lap,
+      opening_position,
+      latest_position,
+      best_position,
+      worst_position
+    FROM core.race_progression_summary
+    WHERE session_key = $1
+    ORDER BY lap_number ASC, position_end_of_lap ASC NULLS LAST
+    `,
+    [sessionKey]
+  );
+}
+
+export async function getSessionReplayFrames(sessionKey: number): Promise<Record<string, unknown>[]> {
+  return sql<Record<string, unknown>>(
+    `
+    SELECT
+      lap_number,
+      frame_time,
+      leader_driver_number,
+      leader_position,
+      best_valid_lap_on_lap,
+      avg_valid_lap_on_lap,
+      weather_track_temperature,
+      weather_air_temperature,
+      race_control_flag
+    FROM core.replay_lap_frames
+    WHERE session_key = $1
+    ORDER BY lap_number ASC
+    `,
+    [sessionKey]
+  );
+}
+
 export async function getSessionStrategySummary(sessionKey: number): Promise<Record<string, unknown>[]> {
   return sql<Record<string, unknown>>(
     `
