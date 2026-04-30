@@ -107,7 +107,7 @@ web/src/lib/deterministicSql/pace.ts:631
 1. **New-file path:** Created `web/src/lib/__bloat_probe.ts` with 501 lines of `// pad` (`awk 'BEGIN { for(i=1;i<=501;i++) print "// pad" }'`). Gate exited 1 with output: `web/src/lib/__bloat_probe.ts: 501 lines exceeds default cap 500`. Probe deleted; `ls` confirms removal.
 2. **Baseline-ratchet path:** Saved `web/src/lib/chatRuntime.ts` to `/tmp/chatRuntime.ts.bak`, appended one newline (1601→1602 lines), ran gate. Gate exited 1 with output: `web/src/lib/chatRuntime.ts: 1602 lines exceeds baseline ceiling 1601` (current count + ceiling both named, as required). Restored from backup; `wc -l` confirms back to 1601.
 
-**Commit:** to be filled after the commit is created.
+**Commit:** `3537e24` (`Add line-count gate for web/src/lib with baseline ratchet`).
 
 ## Audit verdict
 (filled by Codex)
