@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T04:00:52Z
+updated: 2026-04-30T05:07:00Z
 ---
 
 ## Goal
@@ -95,6 +95,22 @@ Rollback: `git revert <commit>`.
 ### Medium
 - [x] Rewrite Step 5 so the route-wiring test exercises the moved wiring path instead of mirroring harnesses that stub `@/lib/chatRuntime`; the existing pattern replaces that import with `chatRuntime.stub.mjs` in [web/scripts/tests/validator-grid-finish-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-grid-finish-route-wiring.test.mjs:205) and injects fake runtime output at [web/scripts/tests/validator-grid-finish-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/scripts/tests/validator-grid-finish-route-wiring.test.mjs:354), which would bypass any new validator logic moved into `chatRuntime.ts`.
 - [x] Align `Changed files expected` with the chosen integration point; if the plan keeps validator invocation or trace attachment in the route-layer boundary exposed by [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-strategy-evidence/web/src/app/api/chat/route.ts:1035), include that file explicitly instead of implying a `chatRuntime.ts`-only change.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` is current as of 2026-04-30T03:50:46Z; no stale-state note required.
+- Prior-context artifact `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md` exists and still shows strategy-question semantic misses in the active benchmark set.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Resolve the `skipped` contract-absent contradiction by either widening the validator/route contract to emit a structured skipped result when `strategy_evidence_summary` is absent, or by removing the “contract absent” skipped case from Steps 2-4 and Step 3’s test scope; the current Step 1 signature requires `contract: FactContract` while Step 4 still only invokes validators when `synthesisContract` exists.
+- [ ] Add an explicit failure-case assertion to Step 5 and the acceptance criteria that `validateStrategyEvidence` failures remain non-blocking at the route layer (for example, HTTP 200, unchanged answer text, and no validator payload leak into the user-facing response), because Step 4 makes that a required behavior but the current test description only checks the trace payload.
 
 ### Low
 
