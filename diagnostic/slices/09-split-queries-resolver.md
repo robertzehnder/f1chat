@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-resolver
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T23:05:00Z
+updated: 2026-04-30T13:31:18-04:00
 ---
 
 ## Goal
@@ -58,7 +58,28 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+Branch: `slice/09-split-queries-resolver`
+Commit: see `[slice:09-split-queries-resolver][awaiting-audit]` HEAD on this branch.
+
+### Decisions
+- Created `web/src/lib/queries/resolver.ts` containing the resolution-related types and functions: `SessionResolutionRow`, `DriverResolutionRow`, helper `normalizeAliasList`, and the four resolver functions `getSessionsForResolution`, `getDriversForResolution`, `getSessionsFromSearchLookup`, `getDriversFromIdentityLookup`.
+- `resolver.ts` imports only from leaf modules: `sql` from `"../db"` and `clampInt` from `"../querySafety"`. It does NOT import from `"../queries"` or `"@/lib/queries"`, so the queries.ts → queries/resolver.ts back-compat re-export forms no cycle.
+- Local helpers `nullableLike` and `safeLimit` are tiny (2–3 lines each) and were duplicated into `resolver.ts` rather than imported from queries.ts; this is the only way to keep the new file importable from queries.ts (the re-export side) without creating a cycle, and keeps the slice scope to exactly the two declared files.
+- `web/src/lib/queries.ts` removes the moved bodies and adds two re-exports (`export { ... } from "./queries/resolver"` for the four functions, plus `export type { ... } from "./queries/resolver"` for the two types). All existing call sites continue to resolve through these re-exports — no other import sites were touched.
+- Pure mechanical move; SQL bodies, parameter shapes, and return types are unchanged.
+
+### Self-check (acceptance criteria)
+- `web/src/lib/queries/resolver.ts` exists and exports the moved symbols (4 functions + 2 types) — verified by `grep -n "^export" web/src/lib/queries/resolver.ts`.
+- `web/src/lib/queries.ts` no longer contains the moved bodies. `grep -n "^export async function getSessionsForResolution\|^export async function getDriversForResolution\|^export async function getSessionsFromSearchLookup\|^export async function getDriversFromIdentityLookup\|^export type SessionResolutionRow\|^export type DriverResolutionRow\|^function normalizeAliasList" web/src/lib/queries.ts` returns no matches; only the `export { ... } from "./queries/resolver"` and `export type { ... } from "./queries/resolver"` re-exports remain.
+- Circular-import guard: `grep -n "from ['\"]\(\.\./queries\|@/lib/queries\)['\"]" web/src/lib/queries/resolver.ts` returns no matches; the negated-grep gate exits 0.
+- `grep -rn "SessionResolutionRow\|DriverResolutionRow\|getSessionsForResolution\|getDriversForResolution\|getSessionsFromSearchLookup\|getDriversFromIdentityLookup" web/src` confirms `resolverCache.ts` (`./queries`), `chatRuntime.ts` (`@/lib/queries`), and `chatRuntime/resolution.ts` (`@/lib/queries`) all continue to resolve through queries.ts re-exports — no broken imports.
+
+### Gates (exit codes)
+- `cd web && npm run build` → 0
+- `cd web && npm run typecheck` → 0
+- `bash scripts/loop/test_grading_gate.sh` → 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`)
+- `! grep -n "from ['\"]\(\.\./queries\|@/lib/queries\)['\"]" web/src/lib/queries/resolver.ts` → 0 (no match)
 
 ## Audit verdict
 (filled by Codex)
