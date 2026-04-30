@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:44:49Z
+updated: 2026-04-30T20:18:00Z
 ---
 
 ## Goal
@@ -93,6 +93,23 @@ Rollback: `git revert <commit>`.
 
 ### Low
 - [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T15:40:29Z, so no stale-state note applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Specify where `DeterministicSqlTemplate` will live or how `pace.ts` will type it without importing runtime symbols from `deterministicSql.ts`, so the new helper can satisfy the no-circular-import acceptance criterion by construction.
+- [ ] Resolve the contradiction between Step 3 and Step 4: either rely on the `deterministicSql.ts` re-export for back-compat and drop importer updates, or enumerate any expected caller-file edits in `Changed files expected` and acceptance criteria.
+
+### Low
+- [ ] Clarify Step 4 to name concrete importable symbols or delete it, because `templateKey` strings and function-local helper variables are not direct imports and the current wording is not actionable.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T15:40:29Z, so no stale-state note applies.
