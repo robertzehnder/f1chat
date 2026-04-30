@@ -19,6 +19,7 @@ import {
   type CompletenessStatus,
   type TableCheck
 } from "./chatRuntime/completeness";
+import { isFollowUp } from "./chatRuntime/recommendations";
 import {
   buildSessionLabel,
   compareScoredSessions,
@@ -30,6 +31,8 @@ import {
   scoreDriverCandidate,
   type ResolutionStatus
 } from "./chatRuntime/resolution";
+
+export { isFollowUp };
 
 type ChatContext = {
   sessionKey?: number;
@@ -403,11 +406,6 @@ function parseDriverNumberMentions(text: string): number[] {
     .filter((value) => Number.isFinite(value))
     .map((value) => Math.trunc(value));
   return unique(values);
-}
-
-function isFollowUp(message: string): boolean {
-  const lower = normalize(message);
-  return /^(and|also|now|then|what about|how about|just)\b/.test(lower);
 }
 
 function extractSessionNameHint(normalizedText: string): string | undefined {
