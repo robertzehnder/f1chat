@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-sessions
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T13:46:22-04:00
+updated: 2026-04-30T13:54:07-04:00
 ---
 
 ## Goal
@@ -95,7 +95,21 @@ Together with their session-only constants (`DEFAULT_LIST_LIMIT`, `MAX_LIST_LIMI
 **Commit hash:** `68cc3be`
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+Gate #1 `(cd web && npm run build)` -> exit `0`
+Gate #2 `(cd web && npm run typecheck)` -> exit `0`
+Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+Gate #4 `grep -nE "from ['\"](\.\./queries|@/lib/queries)['\"]" web/src/lib/queries/sessions.ts; test $? -eq 1` -> exit `0`
+
+Scope diff -> PASS (`diagnostic/slices/09-split-queries-sessions.md`, `web/src/lib/queries.ts`, `web/src/lib/queries/sessions.ts`)
+
+Criterion 1 -> PASS: `web/src/lib/queries/sessions.ts` exists and exports all nine moved session-query functions at [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:82), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:128), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:141), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:153), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:184), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:197), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:219), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:254), [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:302).
+Criterion 2 -> PASS: `web/src/lib/queries.ts` retains only re-exports for the moved symbols at [web/src/lib/queries.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries.ts:17) and no longer defines their bodies.
+Criterion 3 -> PASS: `web/src/lib/queries/sessions.ts` imports `../db`, `../querySafety`, and `../types` only at [web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/09-split-queries-sessions/web/src/lib/queries/sessions.ts:1); Gate #4 confirmed no `../queries` or `@/lib/queries` import.
+Criterion 4 -> PASS: all declared gates passed.
+
+Decision -> PASS
 
 ## Plan-audit verdict (round 1)
 
