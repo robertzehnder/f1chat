@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-30T15:09:50Z
+# Project state — last updated: 2026-04-30T15:22:22Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -17,7 +17,7 @@ accumulated context the loop carries between slices._
 | 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 7 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 9 | 21 | 3 | 0 | 18 | 0 | 0 | 0 | 0 | 0 |
+| 9 | 21 | 4 | 0 | 17 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
 | 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `0fb6b6a` merge: 09-split-chatRuntime-recommendations [pass] — 2026-04-30
 - `6fcb0c0` merge: 09-split-chatRuntime-completeness [pass] — 2026-04-30
 - `39a5a04` merge: 09-split-chatRuntime-resolution [pass] — 2026-04-30
 - `a9e3f2a` merge: 09-split-chatRuntime-classification [pass] — 2026-04-30
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `b28d3d8` merge: 08-validators-sector-consistency [pass] — 2026-04-29
 - `0be2784` merge: 08-validators-pit-stints [pass] — 2026-04-29
 - `b655a6f` merge: 08-synthesis-payload-cutover [pass] — 2026-04-29
-- `804aa07` merge: 08-fact-contract-shape [pass] — 2026-04-29
 
 ## Open architectural decisions
 
