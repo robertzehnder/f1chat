@@ -2,10 +2,10 @@
 slice_id: 10-session-detail-strategy-summary
 phase: 10
 status: pending_plan_audit
-owner: claude
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:45:00Z
+updated: 2026-04-30T21:57:33Z
 ---
 
 ## Goal
@@ -113,3 +113,25 @@ Rollback: `git revert <commit>`. The card is additive; no existing route, query,
 - The pace-table G3 failure (`page.tsx wires the awaited getSessionDriverPace result into <PaceTable rows={...}> via a shared identifier`) is already in `scripts/loop/state/test_grading_baseline.txt`, so it stays as a tolerated baseline failure regardless of which identifier ends up last after this slice.
 - Slice scope, column inventory (matches `sql/012_strategy_summary_mat.sql`), no-`raw.*` rule, dedicated grading-test pattern, and use of `bash scripts/loop/test_grading_gate.sh` are all correctly aligned with the round-1 revisions.
 - `web/src/app/sessions/[sessionKey]/page.tsx` and `web/src/lib/queries/sessions.ts` were inspected only to verify the regression claim above; no other file was modified during this audit.
+
+## Plan-audit verdict (round 3)
+
+**Status: APPROVED**
+**Auditor: claude-plan-audit (round-3 forced-findings ratchet: not applicable)**
+
+### High
+(none)
+
+### Medium
+(none)
+
+### Low
+(none)
+
+### Notes (informational only — no action)
+- Round 1 (1 High + 4 Mediums) and round 2 (1 High + 2 Mediums + 1 Low) are all resolved.
+- Step 3 explicitly preserves `stints` as the LAST destructured identifier in `await Promise.all([...])` by inserting `getSessionStrategySummary(key)` BEFORE `getSessionStintTimeline(key)` and the matching binding BEFORE `stints`; this keeps the existing `web/scripts/tests/session-detail-stint-timeline.test.mjs` G3/G5 (NOT in baseline, currently green) passing, and decouples this slice's new G3/G5 from destructure-trailing-slot ordering by extracting the strategy-summary binding via `/<StrategySummary\s+rows=\{(\w+)\}/` and using `<StintTimeline rows={` as a generic substring landmark.
+- Step 1's column projection (`driver_number`, `driver_name`, `team_name`, `total_stints`, `pit_stop_count`, `compounds_used`, `strategy_type`, `total_pit_duration_seconds`, `pit_laps`) all exist on `core.strategy_summary_mat` per `sql/012_strategy_summary_mat.sql:14-32`, and the contract is read via the `core.strategy_summary` facade view, satisfying the "no `raw.*`" rule.
+- Step 3 is now explicit that the render slot is bare into the page-level `<div className="stack">` flow (no wrapper `<section>`/card), matching the adjacent `<PaceTable>` and `<StintTimeline>` convention.
+- Gate set (`cd web && npm run build` → `cd web && npm run typecheck` → `bash scripts/loop/test_grading_gate.sh`) is well-formed; the build/typecheck order is non-blocking since both run independently against the same source tree, and the wrapper handles baseline-tolerance (or strict fallback when the baseline file is absent).
+- This is the round-3 (final) Claude self-audit per `LOOP_CLAUDE_PLAN_AUDIT_CAP=3`. Slice now hands off to codex for the gating external plan audit.
