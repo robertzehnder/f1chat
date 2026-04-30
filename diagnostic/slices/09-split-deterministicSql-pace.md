@@ -1,18 +1,19 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T20:18:00Z
+updated: 2026-04-30T21:30:00Z
 ---
 
 ## Goal
 Extract pace-related deterministic SQL branches from `web/src/lib/deterministicSql.ts` into a new helper module `web/src/lib/deterministicSql/pace.ts`. Pure mechanical split; no behavior change.
 
 ## Inputs
-- `web/src/lib/deterministicSql.ts` (currently the source of truth — contains `buildDeterministicSqlTemplate` plus shared helpers)
+- `web/src/lib/deterministicSql.ts` (currently the source of truth — contains `buildDeterministicSqlTemplate` plus shared helpers; also currently `export type DeterministicSqlTemplate`)
+- `web/src/lib/deterministicSql/types.ts` (new file — owns `DeterministicSqlTemplate` so both modules can import it without forming a cycle)
 - `web/src/lib/deterministicSql/pace.ts` (new file)
 
 ## Prior context
@@ -40,15 +41,18 @@ Pace-detection helper locals computed inside `buildDeterministicSqlTemplate` tha
 Out of scope for this slice: pit, position, sector, tire-compound, fastest-lap, and canonical-ID branches — none are moved here.
 
 ## Steps
-1. In `web/src/lib/deterministicSql/pace.ts`, export a single function `buildPaceTemplate(input)` returning `DeterministicSqlTemplate | null`. `input` carries the shared locals listed above plus `lower`. Re-export the pace-only helper computations (`mentionsRacePaceComparison`, etc.) as locals inside `buildPaceTemplate`.
-2. In `web/src/lib/deterministicSql.ts`, replace the nine return-blocks listed above with a single early-return: `const pace = buildPaceTemplate({ lower, targetSession, driverPairSql, ... }); if (pace) return pace;`. Place the call at the original first-pace-branch position (line 186 region) so dispatch order is unchanged.
-3. Re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts` for back-compat (`export { buildPaceTemplate } from "./deterministicSql/pace"`).
-4. Search the codebase for direct imports of any of the moved `templateKey` strings or symbols and update them to point at the new module if they referenced internals (callers of `buildDeterministicSqlTemplate` itself need no change).
-5. Verify no circular imports between `deterministicSql.ts` and `deterministicSql/pace.ts`.
+1. Create `web/src/lib/deterministicSql/types.ts` exporting `export type DeterministicSqlTemplate = { templateKey: string; sql: string };`. In `web/src/lib/deterministicSql.ts`, replace the inline `export type DeterministicSqlTemplate = …` (lines 1–4) with `export type { DeterministicSqlTemplate } from "./deterministicSql/types";` so the existing public surface (`import { DeterministicSqlTemplate } from "@/lib/deterministicSql"` if any) is preserved.
+2. In `web/src/lib/deterministicSql/pace.ts`, `import type { DeterministicSqlTemplate } from "./types";` and export a single function `buildPaceTemplate(input)` returning `DeterministicSqlTemplate | null`. `input` carries the shared locals listed above plus `lower`. Move the pace-only helper computations (`mentionsRacePaceComparison`, `practiceVsRaceDriver`, `mentionsPractice`) as locals inside `buildPaceTemplate`. The new module imports nothing from `deterministicSql.ts` (only from `./types`), so no cycle is possible.
+3. In `web/src/lib/deterministicSql.ts`, replace the nine return-blocks listed above with a single early-return: `const pace = buildPaceTemplate({ lower, targetSession, driverPairSql, ... }); if (pace) return pace;`. Place the call at the original first-pace-branch position (line 186 region) so dispatch order is unchanged.
+4. Re-export `buildPaceTemplate` from `web/src/lib/deterministicSql.ts` for back-compat (`export { buildPaceTemplate } from "./deterministicSql/pace";`). This is the sole back-compat shim; the only existing external caller (`web/src/app/api/chat/route.ts`, which imports `buildDeterministicSqlTemplate`) needs no edit, and grep confirms no external callers import the per-branch `templateKey` strings or pace-only helper locals being moved (those locals were never exported). No caller-file edits are therefore expected in `Changed files expected`.
+5. Verify no circular imports between `deterministicSql.ts` and `deterministicSql/pace.ts` (build will fail loudly if introduced; see Acceptance criteria).
 
 ## Changed files expected
-- `web/src/lib/deterministicSql.ts` (nine pace branches removed; one delegating call inserted; re-export added)
-- `web/src/lib/deterministicSql/pace.ts` (new; exports `buildPaceTemplate`)
+- `web/src/lib/deterministicSql.ts` (inline `DeterministicSqlTemplate` type replaced with a re-export from `./deterministicSql/types`; nine pace branches removed; one delegating call inserted; `buildPaceTemplate` re-exported)
+- `web/src/lib/deterministicSql/types.ts` (new; sole owner of `export type DeterministicSqlTemplate`)
+- `web/src/lib/deterministicSql/pace.ts` (new; `import type { DeterministicSqlTemplate } from "./types";` and exports `buildPaceTemplate`)
+
+No caller-file edits are expected: `web/src/app/api/chat/route.ts` (the only external importer of `buildDeterministicSqlTemplate`) is unchanged; the moved `templateKey` strings and helper locals were never exported.
 
 ## Artifact paths
 None.
@@ -62,9 +66,10 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] `web/src/lib/deterministicSql/pace.ts` exists and exports `buildPaceTemplate`, which covers all nine `templateKey` values listed in **Scope — exact symbols to move**.
+- [ ] `web/src/lib/deterministicSql/types.ts` exists and is the sole declaration site of `export type DeterministicSqlTemplate`; `deterministicSql.ts` re-exports it via `export type { DeterministicSqlTemplate } from "./deterministicSql/types";`.
+- [ ] `web/src/lib/deterministicSql/pace.ts` exists, imports its template type only from `./types` (no runtime import from `../deterministicSql`), and exports `buildPaceTemplate`, which covers all nine `templateKey` values listed in **Scope — exact symbols to move**.
 - [ ] `web/src/lib/deterministicSql.ts` no longer contains the nine pace return-blocks; it instead delegates to `buildPaceTemplate` and re-exports it for back-compat.
-- [ ] No circular import between `deterministicSql.ts` and `deterministicSql/pace.ts` (confirmed by `(cd web && npm run build)` succeeding).
+- [ ] No circular import between `deterministicSql.ts` and `deterministicSql/pace.ts` (confirmed by `(cd web && npm run build)` succeeding; the shared `./types` module makes the cycle structurally impossible).
 - [ ] All gate commands pass; `bash scripts/loop/test_grading_gate.sh` exits zero against `scripts/loop/state/test_grading_baseline.txt`.
 
 ## Out of scope
@@ -105,11 +110,11 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Specify where `DeterministicSqlTemplate` will live or how `pace.ts` will type it without importing runtime symbols from `deterministicSql.ts`, so the new helper can satisfy the no-circular-import acceptance criterion by construction.
-- [ ] Resolve the contradiction between Step 3 and Step 4: either rely on the `deterministicSql.ts` re-export for back-compat and drop importer updates, or enumerate any expected caller-file edits in `Changed files expected` and acceptance criteria.
+- [x] Specify where `DeterministicSqlTemplate` will live or how `pace.ts` will type it without importing runtime symbols from `deterministicSql.ts`, so the new helper can satisfy the no-circular-import acceptance criterion by construction.
+- [x] Resolve the contradiction between Step 3 and Step 4: either rely on the `deterministicSql.ts` re-export for back-compat and drop importer updates, or enumerate any expected caller-file edits in `Changed files expected` and acceptance criteria.
 
 ### Low
-- [ ] Clarify Step 4 to name concrete importable symbols or delete it, because `templateKey` strings and function-local helper variables are not direct imports and the current wording is not actionable.
+- [x] Clarify Step 4 to name concrete importable symbols or delete it, because `templateKey` strings and function-local helper variables are not direct imports and the current wording is not actionable.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T15:40:29Z, so no stale-state note applies.
