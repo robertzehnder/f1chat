@@ -1,11 +1,11 @@
 ---
 slice_id: 10-catalog-completeness-page
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:19:47-04:00
+updated: 2026-04-30T18:21:52-04:00
 ---
 
 ## Goal
@@ -29,7 +29,7 @@ None at author time. The grading test is a pure source-inspection Node `node:tes
 
 ## Steps
 1. Add `export async function getCatalogCompleteness(filters?: { year?: number; status?: string; limit?: number; offset?: number })` to `web/src/lib/queries/sessions.ts`. The body must `SELECT ... FROM core.session_completeness` (no `raw.*` reads). Project these columns (all sourced from `core.session_completeness` per `sql/005_helper_tables.sql:648-699`): `session_key`, `meeting_key`, `year`, `meeting_name`, `session_name`, `normalized_session_type`, `country_name`, `location`, `date_start`, `completeness_status`, `completeness_score`, `has_core_analysis_pack`, `has_drivers`, `has_laps`, `has_pit`, `has_stints`, `has_weather`, `has_team_radio`, `has_position_history`, `has_intervals`, `has_car_data`, `has_location`, `has_session_result`, `has_starting_grid`, `has_race_control`. Apply optional parameterized filters `($1::int IS NULL OR year = $1)` and `($2::text IS NULL OR completeness_status = $2)`, order by `date_start DESC NULLS LAST, session_key DESC`, and clamp `LIMIT` (default 200, max 500) + `OFFSET` (default 0) via the existing `safeLimit` / `clampInt` helpers already used by `getSessions`.
-2. Create `web/src/app/catalog/completeness/CompletenessTable.tsx` as a default-exported function component taking `{ rows: Record<string, unknown>[] }`. Render a table with one row per session showing: `session_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status`, `completeness_score`, plus a contract-coverage cell that renders the names of the `has_*` flags that are `true` (e.g. "drivers, laps, pit, stints, weather"). Mark each session row with `data-testid="completeness-row"` and the status cell with `data-testid="completeness-status"`. The component must contain the literal substrings `data-testid="completeness-row"`, `data-testid="completeness-status"`, `completeness_status`, `completeness_score`, and `meeting_name` (G2 below).
+2. Create `web/src/app/catalog/completeness/CompletenessTable.tsx` as a default-exported function component taking `{ rows: Record<string, unknown>[] }`. Render a table with one row per session showing: `session_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status`, `completeness_score`, plus a contract-coverage cell that renders the names of the `has_*` flags that are `true` (e.g. "drivers, laps, pit, stints, weather"). The contract-coverage cell MUST be marked with `data-testid="completeness-coverage"` and its content MUST be derived in source from each of the `has_*` flag identifiers (`has_core_analysis_pack`, `has_drivers`, `has_laps`, `has_pit`, `has_stints`, `has_weather`, `has_team_radio`, `has_position_history`, `has_intervals`, `has_car_data`, `has_location`, `has_session_result`, `has_starting_grid`, `has_race_control`) — i.e. the source of `CompletenessTable.tsx` must literally reference each of those 14 column identifiers so the grading test can prove (statically) that the cell consumes the contract booleans rather than fabricating output. Mark each session row with `data-testid="completeness-row"` and the status cell with `data-testid="completeness-status"`. The component must contain the literal substrings `data-testid="completeness-row"`, `data-testid="completeness-status"`, `data-testid="completeness-coverage"`, `completeness_status`, `completeness_score`, `meeting_name`, and each of the 14 `has_*` column identifiers listed above (G2 below).
 3. Create `web/src/app/catalog/completeness/page.tsx` as a server component:
    - Default-import `CompletenessTable` from `./CompletenessTable`.
    - Import `getCatalogCompleteness` from `@/lib/queries/sessions` (per-module path; do NOT import from the `@/lib/queries` barrel — `web/src/lib/queries.ts` is not modified by this slice and the new export is only reachable via the per-module specifier).
@@ -48,16 +48,17 @@ None at author time. The grading test is a pure source-inspection Node `node:tes
 None.
 
 ## Gate commands
+Each line below is intended to be runnable independently from the repo root. The first two are wrapped in subshells so a `cd web` inside one line does NOT bleed into the next line's working directory (otherwise pasting the block would leave the shell in `web/` and the second `cd web && npm run typecheck` would resolve against `web/web` and fail before the gate ran).
 ```bash
-cd web && npm run build
-cd web && npm run typecheck
+(cd web && npm run build)
+(cd web && npm run typecheck)
 bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
 - [ ] `web/scripts/tests/catalog-completeness.test.mjs` exists and passes under `bash scripts/loop/test_grading_gate.sh` with these assertions:
   - **G1**: `getCatalogCompleteness` is declared in `web/src/lib/queries/sessions.ts` (`export async function getCatalogCompleteness`); its body contains the literal substrings `FROM core.session_completeness` and `WHERE` (so the parameterized `$1`/`$2` filters apply); it does NOT reference any `raw.` table (the test asserts the body string does not include `raw.`); and it references each of these column identifiers as literal substrings: `session_key`, `meeting_key`, `year`, `meeting_name`, `normalized_session_type`, `completeness_status`, `completeness_score`, `has_core_analysis_pack`, `has_drivers`, `has_laps`, `has_pit`, `has_stints`, `has_weather`, `has_team_radio`, `has_position_history`, `has_intervals`, `has_car_data`, `has_location`, `has_session_result`, `has_starting_grid`, `has_race_control`.
-  - **G2**: `web/src/app/catalog/completeness/CompletenessTable.tsx` exists, exports a default function (`/export\s+default\s+function\b/`), and contains the literal substrings `data-testid="completeness-row"`, `data-testid="completeness-status"`, `completeness_status`, `completeness_score`, and `meeting_name`.
+  - **G2**: `web/src/app/catalog/completeness/CompletenessTable.tsx` exists, exports a default function (`/export\s+default\s+function\b/`), and contains the literal substrings `data-testid="completeness-row"`, `data-testid="completeness-status"`, `data-testid="completeness-coverage"`, `completeness_status`, `completeness_score`, and `meeting_name`. **G2 also asserts that the file's source references EACH of the 14 `has_*` contract-coverage column identifiers** (`has_core_analysis_pack`, `has_drivers`, `has_laps`, `has_pit`, `has_stints`, `has_weather`, `has_team_radio`, `has_position_history`, `has_intervals`, `has_car_data`, `has_location`, `has_session_result`, `has_starting_grid`, `has_race_control`) as literal substrings. This proves (statically, without a live DB) that the contract-coverage cell consumes the `has_*` flags from `core.session_completeness` rather than omitting the goal-critical "which contracts populated this session" output.
   - **G3**: `web/src/app/catalog/completeness/page.tsx` (a) imports `getCatalogCompleteness` from `@/lib/queries/sessions` specifically (per-module path; the `@/lib/queries` barrel form is NOT accepted because this slice does not modify `web/src/lib/queries.ts` to re-export the new function); (b) calls `getCatalogCompleteness(` somewhere in the file body; (c) contains a `<CompletenessTable rows={<binding>}` JSX element from which `<binding>` is extracted via `/<CompletenessTable\s+rows=\{(\w+)\}/`; and (d) `<binding>` matches the `<name>` in some `const <name>\s*=\s*await\s+getCatalogCompleteness(` declaration in the same file (i.e., the JSX rows prop is bound to the awaited query result, by name).
   - **G4**: `page.tsx` default-imports `CompletenessTable` from `./CompletenessTable` (`/import\s+CompletenessTable\s+from\s+["']\.\/CompletenessTable["']/`).
   - **G5**: `page.tsx` declares `export const dynamic = "force-dynamic"` (literal substring; matches the convention of the existing `web/src/app/catalog/page.tsx`).
@@ -108,8 +109,8 @@ Rollback: `git revert <commit>`. The route is purely additive at `/catalog/compl
 ### High
 
 ### Medium
-- [ ] Make the `## Gate commands` block shell-safe when run as a pasted multi-line block by wrapping the `cd web && ...` entries in subshells or switching to an equivalent root-safe form; as written, the first `cd web && npm run build` leaves the shell in `web/`, so the next `cd web && npm run typecheck` resolves against `web/web` and fails before the intended gate runs.
-- [ ] Extend the grading-test contract so G2 (or a new assertion) proves `CompletenessTable.tsx` actually renders the contract-coverage cell from the `has_*` booleans; the current acceptance criteria only require `completeness_status`, `completeness_score`, and `meeting_name` substrings, so the slice can pass while omitting the goal-critical “which contracts populated this session” output entirely.
+- [x] Make the `## Gate commands` block shell-safe when run as a pasted multi-line block by wrapping the `cd web && ...` entries in subshells or switching to an equivalent root-safe form; as written, the first `cd web && npm run build` leaves the shell in `web/`, so the next `cd web && npm run typecheck` resolves against `web/web` and fails before the intended gate runs.
+- [x] Extend the grading-test contract so G2 (or a new assertion) proves `CompletenessTable.tsx` actually renders the contract-coverage cell from the `has_*` booleans; the current acceptance criteria only require `completeness_status`, `completeness_score`, and `meeting_name` substrings, so the slice can pass while omitting the goal-critical “which contracts populated this session” output entirely.
 
 ### Low
 
