@@ -1,11 +1,11 @@
 ---
 slice_id: 09-line-count-gate
 phase: 9
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T16:03:28-04:00
+updated: 2026-04-30T16:10:24-04:00
 ---
 
 ## Goal
@@ -108,6 +108,20 @@ web/src/lib/deterministicSql/pace.ts:631
 2. **Baseline-ratchet path:** Saved `web/src/lib/chatRuntime.ts` to `/tmp/chatRuntime.ts.bak`, appended one newline (1601→1602 lines), ran gate. Gate exited 1 with output: `web/src/lib/chatRuntime.ts: 1602 lines exceeds baseline ceiling 1601` (current count + ceiling both named, as required). Restored from backup; `wc -l` confirms back to 1601.
 
 **Commit:** `3537e24` (`Add line-count gate for web/src/lib with baseline ratchet`).
+
+**Re-verification after audit REVISE (2026-04-30T16:10):**
+The audit's gate-#3 failure (TS6053 missing `.next/types`) reproduces only when `tsc --noEmit` runs without a prior `next build` in the same tree, because `web/tsconfig.json:23` includes `.next/types/**/*.ts`. The slice's declared gate-command order runs `cd web && npm run build` immediately before `cd web && npm run typecheck`, so a clean sequential run produces the generated types ahead of typecheck. Re-ran the full gate sequence from a clean state (`rm -rf web/.next web/tsconfig.tsbuildinfo`) in the order specified by the slice; all four exited 0:
+
+- `bash scripts/loop/line_count_gate.sh` → 0 (`line_count_gate: OK`)
+- `cd web && npm run build` → 0 (Next.js 15.5.15 build succeeded; `.next/types/{cache-life.d.ts,routes.d.ts,validator.ts,app/...}` generated)
+- `cd web && npm run typecheck` → 0 (`tsc --noEmit` clean; consumes the just-generated `.next/types`)
+- `bash scripts/loop/test_grading_gate.sh` → 0 (`PASS slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`)
+
+Self-checks re-verified after the gate run, both reverted before commit:
+1. New-file path: `web/src/lib/__bloat_probe.ts` (501 `// pad` lines) → gate exit 1, message `web/src/lib/__bloat_probe.ts: 501 lines exceeds default cap 500`. Probe deleted.
+2. Baseline-ratchet path: appended one newline to `web/src/lib/chatRuntime.ts` (1601→1602) → gate exit 1, message `web/src/lib/chatRuntime.ts: 1602 lines exceeds baseline ceiling 1601`. Restored from `/tmp/chatRuntime.ts.bak`; back to 1601.
+
+No source changes were required to address the audit — the failure was a stale-tree artifact from running typecheck without build first. No files outside the original three (`scripts/loop/line_count_gate.sh`, `scripts/loop/state/line_count_baseline.txt`, `.github/workflows/ci.yml`) were modified.
 
 ## Audit verdict
 **Status: REVISE**
