@@ -78,7 +78,8 @@ Rollback: `git revert <commit>`.
 
 ## Slice-completion note
 
-- Branch: `slice/09-split-deterministicSql-dataHealth` (single commit pending push at note-write time; hash recorded in commit message tag).
+- Branch: `slice/09-split-deterministicSql-dataHealth`.
+- Commit hash: `ea11077` (single commit on this branch over `0c9c9de` plan-approved tip; pushed to `origin`).
 - Commit summary: extract the two pre-`targetSession` data-health template blocks (`canonical_id_lookup_abu_dhabi_2025_race`, `sessions_most_complete_downstream_coverage`) from `web/src/lib/deterministicSql.ts` into a new internal helper `buildDataHealthTemplate` in `web/src/lib/deterministicSql/dataHealth.ts`, mirroring the `pace`/`telemetry` precedent.
 - Decisions honored:
   - Helper accepts only `{ lower, abuDhabi2025, includesAny }`; imports only `DeterministicSqlTemplate` from `./types` (no `../deterministicSql` / `../deterministicSql.js` / `@/lib/deterministicSql` import). Source-level acyclic by construction.
