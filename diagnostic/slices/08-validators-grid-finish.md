@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -33,8 +33,8 @@ None at author time.
 
 ## Steps
 1. Define the validator interface in `web/src/lib/validators/gridFinishValidator.ts`: `(answerText: string, contract: FactContract) → GridFinishValidationResult` with shape `{ ok: boolean; reasons: string[] }`, matching the precedent in `sectorConsistencyValidator.ts`.
-2. Implement the validator: parse grid/finish claims from `answerText` — covering BOTH (a) explicit grid-position / finish-position statements (e.g. "started P5", "finished P3", "from grid 7 to P2") AND (b) position-change claims derivable from `grid_vs_finish` (e.g. "gained 4 places", "lost 2 positions", "moved up/down N spots", "climbed/dropped N places", and equivalent wording) — and assert consistency against the `grid_vs_finish` rows in the attached `FactContract`. Position-change claims are validated by computing `grid_position - finish_position` for the named driver from the contract row and comparing against the parsed claim's signed magnitude.
-3. Add unit tests at `web/scripts/tests/validator-grid-finish.test.mjs` covering pass + fail cases for BOTH claim shapes: (a) explicit grid/finish position statements and (b) position-change claims (e.g. "gained 4 places" pass, "gained 4 places" fail when actual delta differs, "lost 2 positions" pass/fail) (mirror the structure of `validator-sector-consistency.test.mjs`).
+2. Implement the validator: parse grid/finish claims from `answerText` — covering (a) explicit grid-position / finish-position statements (e.g. "started P5", "finished P3", "from grid 7 to P2"), (b) position-change claims derivable from `grid_vs_finish` (e.g. "gained 4 places", "lost 2 positions", "moved up/down N spots", "climbed/dropped N places", and equivalent wording), AND (c) comparative claims between two named drivers derivable from `grid_vs_finish` (e.g. "Verstappen gained more positions than Leclerc", "Leclerc lost fewer places than Hamilton", "X moved up more spots than Y", and equivalent winner/ordering wording) — and assert consistency against the `grid_vs_finish` rows in the attached `FactContract`. Position-change claims are validated by computing `grid_position - finish_position` for the named driver from the contract row and comparing against the parsed claim's signed magnitude. Comparative claims are validated by computing the signed delta for each named driver from their contract rows and asserting the claimed ordering (e.g. `delta_A > delta_B`, `|loss_A| < |loss_B|`) holds.
+3. Add unit tests at `web/scripts/tests/validator-grid-finish.test.mjs` covering pass + fail cases for ALL three claim shapes: (a) explicit grid/finish position statements, (b) position-change claims (e.g. "gained 4 places" pass, "gained 4 places" fail when actual delta differs, "lost 2 positions" pass/fail), AND (c) comparative claims (e.g. "Verstappen gained more positions than Leclerc" pass when Verstappen's delta exceeds Leclerc's, fail when Leclerc's delta is actually greater; "Leclerc lost fewer places than Hamilton" pass/fail) (mirror the structure of `validator-sector-consistency.test.mjs`).
 4. Wire into the synthesis post-step in `web/src/app/api/chat/route.ts` alongside the existing pit-stints and sector-consistency validators (after answer comes back, before returning to user): call `validateGridFinish(answer, synthesisContract)` and add a `gridFinish` field to the `validators` object passed to `appendQueryTrace` (line ~1054). Validation failures get logged in `chat_query_trace.jsonl` but don't reject the answer in this phase.
 5. Add a route-wiring test at `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (mirror `validator-sector-consistency-route-wiring.test.mjs`) asserting (a) the trace event written to `chat_query_trace.jsonl` includes the `validators.gridFinish` field, AND (b) when `validateGridFinish` returns `ok: false` for the synthesized answer, the user-facing route response is unchanged/unblocked — i.e., the HTTP response status and answer-text payload are identical to the pass case (validation failure logs to the trace but does not reject, alter, or strip the response), matching the non-blocking behavior already exercised by the sector-consistency route-wiring test.
 
@@ -55,7 +55,7 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] Validator returns structured pass/fail with reason on test cases for BOTH (a) explicit grid/finish position statements and (b) position-change claims (e.g. "gained/lost N places", "moved up/down N positions").
+- [ ] Validator returns structured pass/fail with reason on test cases for ALL three shapes: (a) explicit grid/finish position statements, (b) position-change claims (e.g. "gained/lost N places", "moved up/down N positions"), and (c) comparative claims between two named drivers (e.g. "X gained more positions than Y", "X lost fewer places than Y").
 - [ ] Synthesis post-step runs validators; failures surface in `chat_query_trace.jsonl` under the `validators.gridFinish` field.
 - [ ] Route-wiring test asserts that when `validateGridFinish` returns `ok: false`, the user-facing response payload (HTTP status and answer text) is unchanged versus the pass case — failing validation is non-blocking in this phase.
 
@@ -129,7 +129,7 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Expand Step 2, Step 3, and the Acceptance criteria to cover comparative grid/finish claims derivable from `grid_vs_finish` (for example "Verstappen gained more positions than Leclerc", "Leclerc lost fewer places", or equivalent winner/ordering wording), because the slice goal says every grid/finish claim must be consistent with `grid_vs_finish` and the prior-context benchmark includes that claim shape.
+- [x] Expand Step 2, Step 3, and the Acceptance criteria to cover comparative grid/finish claims derivable from `grid_vs_finish` (for example "Verstappen gained more positions than Leclerc", "Leclerc lost fewer places", or equivalent winner/ordering wording), because the slice goal says every grid/finish claim must be consistent with `grid_vs_finish` and the prior-context benchmark includes that claim shape.
 
 ### Low
 - [ ] None.
