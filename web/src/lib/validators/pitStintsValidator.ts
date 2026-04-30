@@ -38,6 +38,24 @@ function rowsHaveAnyKey(
   return false;
 }
 
+function collectNumericValues(
+  rows: FactContract["rows"],
+  keys: ReadonlyArray<string>
+): number[] {
+  const values: number[] = [];
+  for (const row of rows) {
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(row, key)) {
+        const raw = (row as Record<string, unknown>)[key];
+        if (typeof raw === "number" && Number.isFinite(raw)) {
+          values.push(raw);
+        }
+      }
+    }
+  }
+  return values;
+}
+
 function rowsHavePositionPair(rows: FactContract["rows"]): boolean {
   for (const row of rows) {
     for (const [a, b] of POSITION_PAIR_KEY_PAIRS) {
@@ -90,13 +108,46 @@ export function validatePitStints(
   }
 
   if (claimedPitStops !== null && Number.isFinite(claimedPitStops)) {
-    const hasPitStopEvidence =
-      rowsHaveAnyKey(rows, PIT_STOP_ROW_KEYS) ||
-      rowsHaveAnyKey(rows, STINT_ROW_KEYS);
-    if (!hasPitStopEvidence) {
+    const hasPitStopColumn = rowsHaveAnyKey(rows, PIT_STOP_ROW_KEYS);
+    const hasStintColumn = rowsHaveAnyKey(rows, STINT_ROW_KEYS);
+    if (!hasPitStopColumn && !hasStintColumn) {
       reasons.push(
         `answer asserts ${claimedPitStops} pit stops but contract rows expose no pit_stops/stints column to derive the count`
       );
+    } else {
+      const derivable = new Set<number>();
+      for (const v of collectNumericValues(rows, PIT_STOP_ROW_KEYS)) {
+        derivable.add(v);
+      }
+      for (const v of collectNumericValues(rows, STINT_ROW_KEYS)) {
+        if (v >= 1) derivable.add(v - 1);
+      }
+      if (derivable.size > 0 && !derivable.has(claimedPitStops)) {
+        const sorted = Array.from(derivable).sort((a, b) => a - b);
+        reasons.push(
+          `answer asserts ${claimedPitStops} pit stops but contract rows expose only [${sorted.join(", ")}] derivable pit-stop counts`
+        );
+      }
+    }
+  }
+
+  if (claimedStints !== null && Number.isFinite(claimedStints)) {
+    const hasStintColumn = rowsHaveAnyKey(rows, STINT_ROW_KEYS);
+    const hasPitStopColumn = rowsHaveAnyKey(rows, PIT_STOP_ROW_KEYS);
+    if (hasStintColumn || hasPitStopColumn) {
+      const derivable = new Set<number>();
+      for (const v of collectNumericValues(rows, STINT_ROW_KEYS)) {
+        derivable.add(v);
+      }
+      for (const v of collectNumericValues(rows, PIT_STOP_ROW_KEYS)) {
+        derivable.add(v + 1);
+      }
+      if (derivable.size > 0 && !derivable.has(claimedStints)) {
+        const sorted = Array.from(derivable).sort((a, b) => a - b);
+        reasons.push(
+          `answer asserts ${claimedStints} stints but contract rows expose only [${sorted.join(", ")}] derivable stint counts`
+        );
+      }
     }
   }
 

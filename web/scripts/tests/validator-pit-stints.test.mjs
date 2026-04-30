@@ -112,6 +112,33 @@ test("validatePitStints: fails when pit_stops count does not match stints - 1", 
   }
 });
 
+test("validatePitStints: fails when claimed pit-stop count is not derivable from contract rows", async () => {
+  let importResult = null;
+  try {
+    importResult = await transpileAndImportValidator();
+    const { validatePitStints } = importResult.mod;
+
+    const contract = makeContract([
+      { driver_number: 1, stints: 2, pit_stops: 1 }
+    ]);
+    // Contract supports only 1 pit stop (or stints-1 = 1); claiming 5 must fail.
+    const answer = "Verstappen made 5 pit stops in this race.";
+    const result = validatePitStints(answer, contract);
+
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.reasons.some(
+        (r) => /asserts 5 pit stops/i.test(r) && /derivable/i.test(r)
+      ),
+      `expected reasons to flag 5 not derivable from contract; got ${JSON.stringify(result.reasons)}`
+    );
+  } finally {
+    if (importResult?.dir) {
+      await rm(importResult.dir, { recursive: true, force: true });
+    }
+  }
+});
+
 test("validatePitStints: undercut claim passes when contract rows expose grid/finish columns", async () => {
   let importResult = null;
   try {
