@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-resolution
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T10:40:52-04:00
+updated: 2026-04-30T14:44:57Z
 ---
 
 ## Goal
@@ -143,34 +143,29 @@ After Gate #1, `ls web/.next/types/app/api/{admin/perf-summary,chat,query/previe
 No additional commits were needed beyond the existing implementation commit `157314f` (`refactor(chatRuntime): extract entity-resolution helpers into chatRuntime/resolution.ts`); only the slice file frontmatter and this note are updated to advance the slice back to `awaiting_audit`.
 
 ## Audit verdict
-**Status: REVISE**
+**Status: PASS**
 
 Gate #1 `cd web && npm run build` -> exit `0`
 
-Gate #2 `cd web && npm run typecheck` -> exit `2`
-`error TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-resolution/web/.next/types/app/api/admin/perf-summary/route.ts' not found.`
-`error TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-resolution/web/.next/types/app/api/chat/route.ts' not found.`
-`error TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/09-split-chatRuntime-resolution/web/.next/types/app/api/query/preview/route.ts' not found.`
+Gate #2 `cd web && npm run typecheck` -> exit `0`
 
 Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
 
 Gate #4 `cd web && npx --yes madge --circular --extensions ts,tsx src/lib/chatRuntime.ts src/lib/chatRuntime` -> exit `0`
 
-Scope diff check -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/09-split-chatRuntime-resolution.md`, `web/src/lib/chatRuntime.ts`, and `web/src/lib/chatRuntime/resolution.ts`, which matches `diagnostic/slices/09-split-chatRuntime-resolution.md:30`.
+Scope diff check -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` returned `diagnostic/slices/09-split-chatRuntime-resolution.md`, `web/src/lib/chatRuntime.ts`, and `web/src/lib/chatRuntime/resolution.ts`, all in scope per `diagnostic/slices/09-split-chatRuntime-resolution.md:30-35`.
 
 Criterion 1 -> PASS; `web/src/lib/chatRuntime/resolution.ts:4`, `web/src/lib/chatRuntime/resolution.ts:33`, `web/src/lib/chatRuntime/resolution.ts:45`, `web/src/lib/chatRuntime/resolution.ts:63`, `web/src/lib/chatRuntime/resolution.ts:68`, `web/src/lib/chatRuntime/resolution.ts:79`, `web/src/lib/chatRuntime/resolution.ts:90`, `web/src/lib/chatRuntime/resolution.ts:106`, `web/src/lib/chatRuntime/resolution.ts:122`, and `web/src/lib/chatRuntime/resolution.ts:132` export the moved symbols.
 
-Criterion 2 -> PASS; `web/src/lib/chatRuntime.ts:16` imports the moved helpers from `./chatRuntime/resolution`, and `rg -n "ResolutionStatus|SESSION_REQUIRED_TYPES|isBroadSessionDiscoveryQuestion|isWarehouseWideQuestion|requiresResolvedSession|sessionRecencyValue|compareScoredSessions|buildSessionLabel|mergeSessionRows|mergeDriverRows|deriveResolutionStatus|scoreDriverCandidate" web/src/lib/chatRuntime.ts` found only the import and use sites, not the removed bodies.
+Criterion 2 -> PASS; `web/src/lib/chatRuntime.ts:16-26` contains the import wiring from `./chatRuntime/resolution`, and `rg -n 'function (isBroadSessionDiscoveryQuestion|isWarehouseWideQuestion|requiresResolvedSession|sessionRecencyValue|compareScoredSessions|buildSessionLabel|mergeSessionRows|mergeDriverRows|deriveResolutionStatus|scoreDriverCandidate)|type ResolutionStatus|SESSION_REQUIRED_TYPES' web/src/lib/chatRuntime.ts` returned only `web/src/lib/chatRuntime.ts:25:type ResolutionStatus`, i.e. the import specifier, not moved bodies.
 
-Criterion 3 -> FAIL; `grep -rn 'from "@/lib/chatRuntime/resolution"' web/src` returned exit `1` because there are no direct external importers to update, and the required typecheck verification at `diagnostic/slices/09-split-chatRuntime-resolution.md:49` did not hold because Gate #2 exited `2`.
+Criterion 3 -> PASS; `grep -rn 'from "@/lib/chatRuntime/resolution"' web/src` exited `1` with no matches, so there are no direct external importers of moved symbols to update, while `grep -rn 'from "@/lib/chatRuntime"' web/src` returned `web/src/app/api/chat/route.ts:9`, which still imports only `buildChatRuntime` and `ChatRuntimeResult`; Gate #2 exit `0` verifies those imports still resolve.
 
 Criterion 4 -> PASS; Gate #4 exited `0`, satisfying `diagnostic/slices/09-split-chatRuntime-resolution.md:50`.
 
-Criterion 5 -> FAIL; Gate #2 exited `2`, so `diagnostic/slices/09-split-chatRuntime-resolution.md:51` is not met.
+Criterion 5 -> PASS; all gate commands exited `0`.
 
-Decision -> REVISE
-
-Rationale: the refactor stays in scope and preserves the intended one-way import split, but the declared gate set does not pass as run, and the slice-completion note’s claimed `npm run typecheck` exit `0` is not reproducible in this worktree.
+Decision -> PASS
 
 ## Plan-audit verdict (round 1)
 
