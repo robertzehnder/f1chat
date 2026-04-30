@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T15:00:00Z
 ---
 
 ## Goal
@@ -25,11 +25,15 @@ Validator: every numerical count claim must match the count derived from the lis
 None at author time.
 
 ## Steps
-1. Define the validator interface: `(answerText, attachedContracts) → ValidationResult`.
-2. Implement the validator.
-3. Add unit tests covering pass + fail cases.
-4. Wire into the synthesis post-step in `web/src/app/api/chat/route.ts` (after answer comes back, before returning to user). Validation failures get logged to `chat_query_trace.jsonl` under `validators.countListParity` but don't reject the answer in this phase; the user-facing response is unchanged.
-5. Add a route-wiring test that drives the chat route and asserts `validators.countListParity` is appended to `chat_query_trace.jsonl` on both pass and fail cases without altering the user-facing response.
+1. Define the validator interface as `validateCountListParity(answerText: string, contract: FactContract) → CountListParityValidationResult` (shape: `{ ok: boolean; reasons: string[] }`), matching the single-`FactContract` pattern used by the existing four validators (`pitStintsValidator`, `sectorConsistencyValidator`, `gridFinishValidator`, `strategyEvidenceValidator`) so it slots into the same call site in `web/src/app/api/chat/route.ts` without introducing a multi-contract plumbing layer.
+2. Implement the validator in `web/src/lib/validators/countListParityValidator.ts`.
+3. Add unit tests covering pass + fail cases, plus a no-claim case that returns `ok: true` with empty `reasons`.
+4. Wire into the synthesis post-step in `web/src/app/api/chat/route.ts` alongside the existing four validators (the block that builds `pitStintsValidation`, `sectorConsistencyValidation`, `gridFinishValidation`, `strategyEvidenceValidation`). Add `countListParityValidation` computed via the same `synthesisContract ? validateCountListParity(answer, synthesisContract) : null` ternary, and extend the `validators` object passed to `appendQueryTrace` to include `countListParity` **without removing or renaming** the existing four keys (`pitStints`, `sectorConsistency`, `gridFinish`, `strategyEvidence`). Validation failures are logged to `chat_query_trace.jsonl` under `validators.countListParity` but don't reject the answer in this phase; the user-facing response is unchanged. When `synthesisContract` is `null` (zero-row branch and `deterministic_template` branch), `validators.countListParity` MUST be the literal `null` (matching the existing four validators' behavior on that branch).
+5. Add a route-wiring test (`web/scripts/tests/validator-count-list-route-wiring.test.mjs`) that drives `web/src/app/api/chat/route.ts` for both a pass case and a fail case and asserts:
+   - `trace.validators.countListParity` is appended to `chat_query_trace.jsonl` and reflects the pass/fail outcome.
+   - `trace.validators` simultaneously still contains `pitStints`, `sectorConsistency`, `gridFinish`, and `strategyEvidence` keys (i.e. the new key is added, not substituted) on both the pass and fail traces.
+   - The user-facing response payload is unchanged in both cases (answer text, status, top-level fields).
+   - On a synthesis-contract-absent branch (e.g. zero-row result), `trace.validators.countListParity` is the literal `null`, matching the existing four validators on that branch.
 
 ## Changed files expected
 - `web/src/lib/validators/countListParityValidator.ts`
@@ -48,9 +52,10 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] Validator returns structured pass/fail with reason on test cases.
-- [ ] Synthesis post-step runs validators; failures surface in `chat_query_trace.jsonl`.
-- [ ] Route-wiring test drives `web/src/app/api/chat/route.ts` and asserts `validators.countListParity` is appended to `chat_query_trace.jsonl` on both pass and fail cases, and that the user-facing response is unchanged in both cases.
+- [ ] `validateCountListParity(answerText, contract)` returns `{ ok: boolean; reasons: string[] }` for pass, fail, and no-claim test cases (single `FactContract` argument — matches the existing validator interface; no multi-contract plumbing introduced).
+- [ ] Synthesis post-step in `web/src/app/api/chat/route.ts` computes `countListParityValidation` via `synthesisContract ? validateCountListParity(answer, synthesisContract) : null`, and the `validators` object on the success-path `appendQueryTrace` call now contains exactly the keys `pitStints`, `sectorConsistency`, `gridFinish`, `strategyEvidence`, and `countListParity` (no existing key removed or renamed).
+- [ ] Route-wiring test drives `web/src/app/api/chat/route.ts` and, on both a pass and a fail case, asserts (a) `trace.validators.countListParity` reflects the validator outcome, (b) `trace.validators.pitStints`, `trace.validators.sectorConsistency`, `trace.validators.gridFinish`, and `trace.validators.strategyEvidence` are all still present on the same trace record, and (c) the user-facing response payload is unchanged.
+- [ ] Route-wiring test additionally asserts that on a synthesis-contract-absent branch (zero-row or deterministic_template) `trace.validators.countListParity === null`, matching the existing four validators' null behavior on that branch.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -90,9 +95,9 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Require the route-wiring test and acceptance criteria to assert that `trace.validators` still preserves the existing `pitStints`, `sectorConsistency`, `gridFinish`, and `strategyEvidence` keys when `countListParity` is added; the current “appended” wording permits replacing the whole validators object with only the new key.
-- [ ] Resolve the validator interface mismatch by either scoping Step 1 to the existing single-`FactContract` validator pattern used in `web/src/app/api/chat/route.ts` or explicitly adding any new multi-contract plumbing/files to `Inputs`, `Steps`, and `Changed files expected`; `(answerText, attachedContracts) -> ValidationResult` does not match the single `synthesisContract` currently available in-route.
-- [ ] Define the expected `validators.countListParity` value for the no-synthesis-contract / zero-row branch and cover it in acceptance criteria plus route-wiring tests; existing validators in `web/src/app/api/chat/route.ts` log `null` on that branch, but the current pass/fail-only plan leaves the new trace shape ambiguous.
+- [x] Require the route-wiring test and acceptance criteria to assert that `trace.validators` still preserves the existing `pitStints`, `sectorConsistency`, `gridFinish`, and `strategyEvidence` keys when `countListParity` is added; the current “appended” wording permits replacing the whole validators object with only the new key.
+- [x] Resolve the validator interface mismatch by either scoping Step 1 to the existing single-`FactContract` validator pattern used in `web/src/app/api/chat/route.ts` or explicitly adding any new multi-contract plumbing/files to `Inputs`, `Steps`, and `Changed files expected`; `(answerText, attachedContracts) -> ValidationResult` does not match the single `synthesisContract` currently available in-route.
+- [x] Define the expected `validators.countListParity` value for the no-synthesis-contract / zero-row branch and cover it in acceptance criteria plus route-wiring tests; existing validators in `web/src/app/api/chat/route.ts` log `null` on that branch, but the current pass/fail-only plan leaves the new trace shape ambiguous.
 
 ### Low
 - [ ] None.
