@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T09:51:18-04:00
+updated: 2026-04-30T10:04:20-04:00
 ---
 
 ## Goal
@@ -111,7 +111,19 @@ Rollback: `git revert <commit>`.
 - [x] Route-wiring test additionally covers the synthesis-contract-absent (zero-row) branch and asserts `trace.validators.countListParity === null`, alongside the same `null` assertion on the existing four peer validator keys for that branch.
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/08-validators-count-list-parity.md` plus the four declared code/test paths.
+- Criterion 1 -> PASS; `validateCountListParity(answerText, contract)` returns `{ ok, reasons }`, derives claims/lists from `answerText` only, and never reads contract counts ([web/src/lib/validators/countListParityValidator.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/src/lib/validators/countListParityValidator.ts:3), [web/src/lib/validators/countListParityValidator.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/src/lib/validators/countListParityValidator.ts:116), [web/scripts/tests/validator-count-list.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/scripts/tests/validator-count-list.test.mjs:53)).
+- Criterion 2 -> PASS; mismatch test supplies `contract.rows.length === 3` while the parsed list length is `2` and asserts `ok === false` ([web/scripts/tests/validator-count-list.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/scripts/tests/validator-count-list.test.mjs:70)).
+- Criterion 3 -> PASS; route computes `countListParityValidation` via `synthesisContract ? validateCountListParity(answer, synthesisContract) : null` and appends validators `{ pitStints, sectorConsistency, gridFinish, strategyEvidence, countListParity }` ([web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/src/app/api/chat/route.ts:45), [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/src/app/api/chat/route.ts:1046), [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/src/app/api/chat/route.ts:1075)).
+- Criterion 4 -> PASS; route-wiring tests assert pass/fail trace outcomes, preserve the four existing validator keys, and keep the user-facing payload unchanged ([web/scripts/tests/validator-count-list-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/scripts/tests/validator-count-list-route-wiring.test.mjs:410), [web/scripts/tests/validator-count-list-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/scripts/tests/validator-count-list-route-wiring.test.mjs:464)).
+- Criterion 5 -> PASS; zero-row route-wiring test asserts `trace.validators.countListParity === null` and the existing four validator keys are also `null` on the no-contract branch ([web/scripts/tests/validator-count-list-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-count-list-parity/web/scripts/tests/validator-count-list-route-wiring.test.mjs:525)).
+- Decision -> PASS
+- Rationale -> Acceptance criteria verified, gates passed, no scope creep.
 
 ## Plan-audit verdict (round 1)
 
