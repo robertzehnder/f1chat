@@ -1,7 +1,7 @@
 ---
 slice_id: 09-split-deterministicSql-dataHealth
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -98,7 +98,19 @@ Rollback: `git revert <commit>`.
 - Files changed (matches "Changed files expected"): `web/src/lib/deterministicSql.ts` (delete two inline blocks; add import + 3-line delegation), `web/src/lib/deterministicSql/dataHealth.ts` (new). No other source files modified.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`.
+- Gate #2 `cd web && npm run typecheck` -> exit `0`.
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`.
+- Scope diff -> PASS (`diagnostic/slices/09-split-deterministicSql-dataHealth.md`, `web/src/lib/deterministicSql.ts`, `web/src/lib/deterministicSql/dataHealth.ts` only; subset of declared scope plus implicit slice-file allow-list).
+- Criterion 1 -> PASS: `web/src/lib/deterministicSql/dataHealth.ts:9` exports `buildDataHealthTemplate`; `templateKey` values remain at `web/src/lib/deterministicSql/dataHealth.ts:18` and `web/src/lib/deterministicSql/dataHealth.ts:51`, with the extracted SQL bodies preserved.
+- Criterion 2 -> PASS: `grep -nE 'canonical_id_lookup_abu_dhabi_2025_race|sessions_most_complete_downstream_coverage' web/src/lib/deterministicSql.ts` -> exit `1` (zero matches); delegation now sits at `web/src/lib/deterministicSql.ts:66`.
+- Criterion 3 -> PASS: `grep -nE "from ['\"](\.\./)?deterministicSql(\.js)?['\"]|from ['\"]@/lib/deterministicSql(\.js)?['\"]" web/src/lib/deterministicSql/dataHealth.ts` -> exit `1` (zero matches); only import is `./types` at `web/src/lib/deterministicSql/dataHealth.ts:1`.
+- Criterion 4 -> PASS: `cd web && npm run build` -> exit `0`.
+- Criterion 5 -> PASS: `cd web && npm run typecheck` -> exit `0`.
+- Criterion 6 -> PASS: `bash scripts/loop/test_grading_gate.sh` -> exit `0`.
+- Decision -> PASS: the slice is a scope-clean mechanical split, preserves the two data-health templates, and keeps the helper internal and acyclic.
 
 ## Plan-audit verdict (round 1)
 
