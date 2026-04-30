@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-sector
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:31:00Z
+updated: 2026-04-30T14:51:26-04:00
 ---
 
 ## Goal
@@ -52,7 +52,25 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/09-split-answerSanity-sector`
+- Parent commit: `6e9275a` (plan-approved)
+- Implementation commit: `d813f71` (the slice-completion note in that commit referenced its own hash with a placeholder; this follow-up commit on the same branch records the final hash)
+- Changes:
+  - Created `web/src/lib/answerSanity/sector.ts` exporting `buildSectorAnswer`. The new module also defines local copies of the helpers `buildSectorAnswer` depends on (`asNumber`, `asString`, `driverLabel`), matching the established pattern in `web/src/lib/answerSanity/pitStints.ts` (which is the only other existing sub-module).
+  - Removed the `buildSectorAnswer` body from `web/src/lib/answerSanity.ts` and replaced it with `import { buildSectorAnswer } from "./answerSanity/sector";` so the existing call site in `applyAnswerSanityGuards` (the `if (lowerQuestion.includes("sector"))` branch) keeps the same identifier.
+  - No public re-export was added: repo search confirmed `buildSectorAnswer` is only referenced inside `answerSanity.ts` itself (no other files import it from the barrel), and the only `@/lib/answerSanity` consumer (`web/src/app/api/chat/orchestration.ts`) uses `applyAnswerSanityGuards` and `buildStructuredSummaryFromRows`.
+- Decisions:
+  - Followed the pitStints precedent of duplicating shared helpers (`asNumber`, `asString`, `driverLabel`) into the sub-module instead of extracting a shared util file. Extracting a shared helpers module is out of scope per the slice's "Out of scope: Behavioral changes — this is a pure mechanical split."
+  - Did not add a re-export for `buildSectorAnswer` from `answerSanity.ts` because it has no external consumers (slice Step 2 explicitly calls this out).
+- Self-checks:
+  - `grep -rn "buildSectorAnswer" --include='*.ts' --include='*.tsx' --include='*.mjs' --include='*.js'` after the edit shows only `web/src/lib/answerSanity.ts` (import + call site) and `web/src/lib/answerSanity/sector.ts` (definition) — no stale references.
+  - `grep -n "answerSanity" web/src/lib/answerSanity/{sector,pitStints}.ts` returns nothing, confirming no circular import back to the parent module.
+  - File scope respected: only the two files in `Changed files expected` (`web/src/lib/answerSanity.ts`, `web/src/lib/answerSanity/sector.ts`) plus this slice file are modified.
+- Gate results:
+  - `cd web && npm run build` → exit 0 (Next.js build + lint + type-check passed; `npm install` was run first because `web/node_modules` was empty in this worktree).
+  - `cd web && npm run typecheck` → exit 0 (`tsc --noEmit` clean).
+  - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=38 baseline_fails=38 baseline_failures_fixed=0`).
 
 ## Audit verdict
 (filled by Codex)
