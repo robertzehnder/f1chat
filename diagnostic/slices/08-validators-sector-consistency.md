@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T03:06:18Z
+updated: 2026-04-30T03:07:40Z
 ---
 
 ## Goal
@@ -178,3 +178,19 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
 - `rg -n 'test:grading|--test|scripts/tests' web/package.json web -g 'package.json' -g '*.json' -g '*.mjs'` exited `0`; `web/package.json:10` confirms `npm run test:grading` runs `node --test scripts/tests/*.test.mjs`, so the planned new `web/scripts/tests/*.test.mjs` files are inside the existing grading gate.
+
+## Plan-audit verdict (round 6)
+
+**Status: APPROVED**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] None.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
