@@ -83,7 +83,7 @@ Rollback: `git revert <commit>`.
 - `99cf632` — slice 08-validators-pit-stints: completion note + awaiting_audit
 - `42e17e8` — slice 08-validators-pit-stints: include completion-note commit hash
 - `d0fe51d` — audit: revise
-- `<filled-after-revise-commit>` — fix(validators): verify claimed pit-stop counts match contract values (audit revision)
+- `efd5a4e` — fix(validators): verify claimed pit-stop counts match contract values (audit revision)
 
 **Changed files (matches the slice's "Changed files expected" exactly):**
 - `web/src/lib/validators/pitStintsValidator.ts` (new + revision)
