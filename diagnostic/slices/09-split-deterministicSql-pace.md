@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-pace
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T16:00:15Z
+updated: 2026-04-30T12:01:06-04:00
 ---
 
 ## Goal
@@ -84,7 +84,27 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+- Branch: `slice/09-split-deterministicSql-pace`
+- Implementation commit: `<hash recorded in follow-up commit>`
+- Files touched (matches "Changed files expected"):
+  - `web/src/lib/deterministicSql.ts` — modified: lines 1–4 inline `export type DeterministicSqlTemplate` replaced with `import type { DeterministicSqlTemplate } from "./deterministicSql/types";` plus `export type { DeterministicSqlTemplate } from "./deterministicSql/types";`; added `import { buildPaceTemplate } from "./deterministicSql/pace";`; removed pace-only locals (`mentionsPractice`, `mentionsRacePaceComparison`, `practiceVsRaceDriver`); removed nine pace return-blocks; inserted single early-return `const pace = buildPaceTemplate({ ... }); if (pace) return pace;` at the original first-pace-branch position (immediately after the `if (!targetSession) return null;` guard, where branch 1 used to live).
+  - `web/src/lib/deterministicSql/types.ts` — new file; sole owner of `export type DeterministicSqlTemplate = { templateKey: string; sql: string };`.
+  - `web/src/lib/deterministicSql/pace.ts` — new file; `import type { DeterministicSqlTemplate } from "./types";` (no runtime import from `../deterministicSql`); exports `buildPaceTemplate(input)`. Body evaluates the nine moved branches in source-line ascending order: `practice_laps_vs_race_pace_same_meeting` → `max_leclerc_avg_clean_lap_pace` → `max_leclerc_lap_degradation_by_stint` → `max_leclerc_final_third_pace` → `max_leclerc_common_lap_window_pace` → `max_leclerc_pre_post_pit_pace` → `max_leclerc_stint_pace_vs_tire_age` → `max_leclerc_post_pit_pace` → `max_leclerc_lap_pace_summary`. The pace-only helper locals `mentionsPractice`, `mentionsRacePaceComparison`, `practiceVsRaceDriver` were moved into this module and are computed inside `buildPaceTemplate` (consumed only by branch 1).
+- Decisions:
+  - `buildPaceTemplate` input shape is the minimum needed by the nine moved branches plus the helpers required by `practiceVsRaceDriver`: `lower`, `targetSession` (post-`!targetSession` guard, narrowed to `number`), `driverPairSql`, `hasComparisonLanguage`, `driverNumbers`, `mentionsMax`, `mentionsLeclerc`, `normalizeInt`, `includesAny`, `MAX_VERSTAPPEN`, `CHARLES_LECLERC`. Other shared locals listed in **Scope — exact symbols to move** (`useFixedPair`, `mentionsAbuDhabi`, `mentions2025`, `abuDhabi2025`, `isMaxVsLeclerc`, `resolvedDriverPair`, `includesAll`) are not consumed by any pace branch and so were not threaded through, in keeping with the slice's "pure mechanical split, no behavior change" scope.
+  - `buildPaceTemplate` is intentionally NOT re-exported from `deterministicSql.ts` (per Step 4 / round-3 audit guidance); grep confirms no pre-existing public callers.
+  - The early-return is placed at the line-186 region (immediately after the `if (!targetSession) return null;` guard, where branch 1 used to live), so first-match-wins dispatch is preserved relative to non-pace branches and to the inter-pace-branch source order.
+- Self-check:
+  - `web/src/lib/deterministicSql/types.ts` is the sole declaration site of `export type DeterministicSqlTemplate`; verified by `grep -nE 'DeterministicSqlTemplate' web/src/lib/deterministicSql.ts web/src/lib/deterministicSql/*.ts`, which shows: the declaration in `types.ts` (`export type DeterministicSqlTemplate = {`), the type-only `import type` + `export type { … } from` re-export pair in `deterministicSql.ts` (lines 1–2), and the type-only consumption in `pace.ts` (`import type ... from "./types"` and the return-type annotation on `buildPaceTemplate`). No other declarations.
+  - `web/src/lib/deterministicSql/pace.ts` exports `buildPaceTemplate` and contains exactly nine `templateKey:` literals in the required source-line ascending order; verified via `grep -n 'templateKey:' web/src/lib/deterministicSql/pace.ts`.
+  - `web/src/lib/deterministicSql.ts` no longer contains any of the nine pace `templateKey` literals; verified via `grep -nE 'practice_laps_vs_race_pace_same_meeting|max_leclerc_avg_clean_lap_pace|max_leclerc_lap_degradation_by_stint|max_leclerc_final_third_pace|max_leclerc_common_lap_window_pace|max_leclerc_pre_post_pit_pace|max_leclerc_stint_pace_vs_tire_age|max_leclerc_post_pit_pace|max_leclerc_lap_pace_summary' web/src/lib/deterministicSql.ts` returning zero matches.
+  - `pace.ts` does not runtime-import from `../deterministicSql`; verified via `grep -n '../deterministicSql' web/src/lib/deterministicSql/pace.ts` returning zero matches (only `./types` is imported).
+  - `buildPaceTemplate` is not re-exported from `deterministicSql.ts`; verified via `grep -n 'buildPaceTemplate' web/src/lib/deterministicSql.ts` returning only the runtime `import { buildPaceTemplate } from "./deterministicSql/pace";` and the call site.
+- Gate command exit codes (run from repo root, in order):
+  - `(cd web && npm run build)` → exit 0
+  - `(cd web && npm run typecheck)` → exit 0
+  - `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`)
 
 ## Audit verdict
 (filled by Codex)
