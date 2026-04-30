@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-resolver
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T18:00:00Z
 ---
 
 ## Goal
@@ -24,8 +24,8 @@ None at author time.
 ## Steps
 1. Identify the target functions/types in `web/src/lib/queries.ts`.
 2. Move them to `web/src/lib/queries/resolver.ts`; re-export from `web/src/lib/queries.ts` for back-compat.
-3. Update direct imports of these symbols across the codebase to point at the new file.
-4. Verify no circular imports.
+3. Leave existing call-site imports unchanged — they continue to resolve through the back-compat re-exports in `web/src/lib/queries.ts`. (Slice scope is the two files in `## Changed files expected`; do not touch other import sites.)
+4. Prove no circular import was introduced: assert via `grep -n "from ['\"]\\(\\.\\./queries\\|@/lib/queries\\)['\"]" web/src/lib/queries/resolver.ts` that the new resolver file does NOT import from `web/src/lib/queries.ts` (since queries.ts now re-exports from it). The build/typecheck gate must additionally pass; a non-empty grep result fails the slice.
 
 ## Changed files expected
 - `web/src/lib/queries.ts`
@@ -38,12 +38,15 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
+# Circular-import guard: must print nothing.
+grep -n "from ['\"]\(\.\./queries\|@/lib/queries\)['\"]" web/src/lib/queries/resolver.ts || true
 ```
 
 ## Acceptance criteria
 - [ ] `web/src/lib/queries/resolver.ts` exists and exports the moved symbols.
 - [ ] `web/src/lib/queries.ts` no longer contains the moved bodies (only re-exports if needed).
+- [ ] `web/src/lib/queries/resolver.ts` does not import from `web/src/lib/queries.ts` (Step 4 grep returns empty), proving no `queries.ts ↔ resolver.ts` cycle.
 - [ ] All gate commands pass.
 
 ## Out of scope
@@ -65,11 +68,11 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate is evaluated through the loop baseline wrapper required by `diagnostic/_state.md`.
-- [ ] Expand `## Changed files expected` to include the non-`queries.ts` import sites that Step 3 explicitly updates, or narrow Step 3 so the declared file scope matches the planned edits.
+- [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate is evaluated through the loop baseline wrapper required by `diagnostic/_state.md`.
+- [x] Expand `## Changed files expected` to include the non-`queries.ts` import sites that Step 3 explicitly updates, or narrow Step 3 so the declared file scope matches the planned edits.
 
 ### Low
-- [ ] Make Step 4 and its acceptance coverage concrete by naming how the slice proves the split introduces no circular import beyond the existing build/typecheck gates.
+- [x] Make Step 4 and its acceptance coverage concrete by naming how the slice proves the split introduces no circular import beyond the existing build/typecheck gates.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T17:22:56Z, so no staleness note applies.
