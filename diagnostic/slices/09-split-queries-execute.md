@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-execute
 phase: 9
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:10:29Z
+updated: 2026-04-30T14:11:21-04:00
 ---
 
 ## Goal
@@ -63,7 +63,37 @@ grep -nE "from ['\"]((\.\./)+(lib/)?queries(/index)?|@/lib/queries(/index)?)['\"
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/09-split-queries-execute`
+
+**Implementation summary:**
+- Created `web/src/lib/queries/execute.ts` with `runReadOnlySql` (exported), `safeLimit` (private), and the three `DEFAULT_*` constants (`DEFAULT_QUERY_MAX_ROWS`, `DEFAULT_PREVIEW_MAX_ROWS`, `DEFAULT_QUERY_TIMEOUT_MS`, all module-private). Imports `pool` from `../db`, `assertReadOnlySql` and `clampInt` from `../querySafety`, and the `QueryRunResult` type from `../types`.
+- Edited `web/src/lib/queries.ts` to:
+  - Remove the `runReadOnlySql` body, the `safeLimit` helper, and the three `DEFAULT_*` constants.
+  - Add `export { runReadOnlySql } from "./queries/execute"` for back-compat (consumer-import migration intentionally deferred per Step 3).
+  - Drop the now-unused `pool` import (kept `sql`) and the now-unused `clampInt` and `QueryRunResult`-type imports. The `safeLimit` helper and the constants are not re-exported per Step 2.
+- No other files modified — Changed files match the plan's "Changed files expected" list exactly.
+
+**Decisions:**
+- After removing `runReadOnlySql`, `safeLimit`, and the three `DEFAULT_*` constants, `clampInt`, `assertReadOnlySql`, `pool`, and `QueryRunResult` are no longer referenced in `queries.ts`; their imports were dropped to keep the file lint-clean. This is internal cleanup of the same file in scope, not a scope expansion.
+- Inline transaction comment block preserved verbatim in `execute.ts` because it documents a non-obvious driver-fallback / pooled-url-assertion test sandbox constraint (test sandboxes transpile `db.ts` without the `db/` subdirectory, so using `db/driver.ts` `withTransaction` would break those tests).
+
+**Self-check:**
+- `web/src/lib/queries/execute.ts` exists; exports `runReadOnlySql`; `safeLimit` and the `DEFAULT_*` constants are module-private (no export).
+- `web/src/lib/queries.ts` no longer contains the moved bodies; the `runReadOnlySql` re-export from `./queries/execute` is in place.
+- `execute.ts` contains no relative-or-alias import that re-enters `queries.ts` (verified via the broadened grep gate, exit 1 → grep guard pass).
+- `madge --circular --ts-config tsconfig.json` reports zero cycles through `execute.ts`.
+
+**Gate command exit codes:**
+| Gate | Exit |
+|---|---|
+| `(cd web && npm run build)` | 0 |
+| `(cd web && npm run typecheck)` | 0 |
+| `bash scripts/loop/test_grading_gate.sh` | 0 (no new failures vs baseline; slice_fails=34, baseline_fails=34) |
+| `grep -nE "..." web/src/lib/queries/execute.ts; test $? -eq 1` | 0 (grep printed nothing → exit 1 → `test $? -eq 1` → 0) |
+| `(cd web && npx --yes madge --circular --extensions ts,tsx --ts-config tsconfig.json src/lib/queries/execute.ts)` | 0 (no circular dependency found) |
+
+**Commit:** `78db58e` (`slice/09-split-queries-execute`).
 
 ## Audit verdict
 (filled by Codex)
