@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-pit-stints
 phase: 8
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29
+updated: 2026-04-29T22:16:31-04:00
 ---
 
 ## Goal
@@ -75,7 +75,42 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/08-validators-pit-stints`
+
+**Commits (this slice, ahead of `integration/perf-roadmap`):**
+- `0b2af6b` — feat(validators): wire pit-stints synthesis validator into chat route
+- `99cf632` — slice 08-validators-pit-stints: completion note + awaiting_audit
+
+**Changed files (matches the slice's "Changed files expected" exactly):**
+- `web/src/lib/validators/pitStintsValidator.ts` (new)
+- `web/src/app/api/chat/route.ts` (modified)
+- `web/scripts/tests/validator-pit-stints.test.mjs` (new)
+- `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs` (new)
+
+**Decisions enacted:**
+- Single-contract validator interface as specified: `validatePitStints(answerText: string, contract: FactContract): { ok: boolean; reasons: string[] }`. Type-only import of `FactContract` from `@/lib/contracts/factContract`, so `ts.transpileModule` erases it during the test transpile step (no runtime stubs required for the validator alone).
+- Wiring lives in `web/src/app/api/chat/route.ts` (the synthesis + `appendQueryTrace` call site), not in `web/src/lib/chatRuntime.ts`. The `buildSynthesisContract({ runtime, rows: result.rows })` call was hoisted from the two inner sse/non-sse branches to a single declaration just inside the LLM-synthesis `try`, with a reference captured into an outer-scoped `let synthesisContract: FactContract | null = null` so the validator (running after sanity-check, before `appendQueryTrace`) can reuse the exact same contract object that was sent to the model. The validator only runs when `synthesisContract` is non-null (i.e. the LLM-synthesis branch fired); the deterministic-template path emits `validators.pitStints = null`, since that path performs no LLM claim that needs validating.
+- Failures are non-blocking: the user-facing JSON payload is unchanged; the `ValidationResult` is added to the `appendQueryTrace` payload as `validators: { pitStints: result }` so failures surface in `chat_query_trace.jsonl` only.
+- Test harness matches the existing precedents: `web/scripts/tests/validator-pit-stints.test.mjs` uses `ts.transpileModule` + dynamic import (precedent: `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:39-53`); `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs` reuses the answer-cache route-stub scaffolding (precedent: `web/scripts/tests/answer-cache.test.mjs:170-193`), with one new `from "@/lib/validators/pitStintsValidator"` rewrite that points at the real transpiled validator module (no runtime stubs needed for the validator).
+
+**Acceptance-criteria self-check:**
+- [x] Validator returns structured pass/fail (`{ ok, reasons }`) on the unit-test cases listed in step 3 — `web/scripts/tests/validator-pit-stints.test.mjs` covers (a) consistent stint/pit-stop counts → ok=true, (b) undercut claim with no position-change rows → ok=false, (c) pit_stops count not matching stints-1 → ok=false (plus a fourth case asserting that an undercut claim with grid/finish columns passes).
+- [x] `web/src/app/api/chat/route.ts` invokes the validator after synthesis and includes the `ValidationResult` in the `appendQueryTrace` payload (asserted by `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs`, which checks both a failure case and a happy path; the test also asserts the validator output does NOT leak into the user-facing response payload).
+- [x] No new failures in `bash scripts/loop/test_grading_gate.sh` relative to the baseline at `scripts/loop/state/test_grading_baseline.txt` — wrapper reports `PASS (no new failures vs integration baseline) slice_fails=3 baseline_fails=3 baseline_failures_fixed=0` (exit 0).
+
+**Gate commands (run from repo root, in the order listed in the slice file):**
+| # | Command | Exit code |
+|---|---|---:|
+| 1 | `(cd web && npm run build)` | 0 |
+| 2 | `(cd web && npm run typecheck)` | 0 |
+| 3 | `bash scripts/loop/test_grading_gate.sh` | 0 |
+
+**Slice-local test runs (sanity, not part of the gate set):**
+- `node --test scripts/tests/validator-pit-stints.test.mjs` — 4 pass / 0 fail.
+- `node --test scripts/tests/validator-pit-stints-route-wiring.test.mjs` — 2 pass / 0 fail.
+
+**Out-of-scope items deliberately not touched:** multi-contract validator payloads (the live synthesis path is single-contract per `web/src/lib/anthropic.ts:35-38`); rejecting answers based on validation failures (this phase logs only); validators for any contract other than pit-stop claims.
 
 ## Audit verdict
 
