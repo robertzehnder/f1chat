@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-count-list-parity
 phase: 8
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T13:50:25Z
+updated: 2026-04-30T09:51:18-04:00
 ---
 
 ## Goal
@@ -75,7 +75,40 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/08-validators-count-list-parity`
+
+**Commit:** `edc8cee` — slice 08-validators-count-list-parity: validator + route wiring + tests
+
+### Files added/changed (matches "Changed files expected")
+- `web/src/lib/validators/countListParityValidator.ts` (new)
+- `web/src/app/api/chat/route.ts` (modified — import + synthesis post-step + trace key)
+- `web/scripts/tests/validator-count-list.test.mjs` (new — 4 unit tests)
+- `web/scripts/tests/validator-count-list-route-wiring.test.mjs` (new — 3 route-wiring tests)
+
+### Implementation decisions
+- `validateCountListParity(answerText, _contract)` follows the existing single-`FactContract` validator interface used by the four peer validators. The `contract` parameter is accepted only to match the call-site signature and is intentionally unused; both the claim count and the comparison list length come from `answerText` only. Test (b) confirms the validator does not silently read `contract.rows.length`.
+- Claim parser: `\b(\d+)\s+((?:[a-z][a-zA-Z\-]*\s+)?[a-z][a-zA-Z\-]*s)\b` (1–2 lowercase words ending in `s`), with a non-enumerable-unit blacklist (seconds/minutes/hours/days/weeks/months/years/meters/metres/kilometers/kilometres/miles/kph/mph/degrees/percent) and a `(prev != ".") && (prev != /\d/)` guard so decimals like "3.5 hours" don't fabricate a "5 hours" claim.
+- List parser: looks first for a markdown bullet/numbered list on lines following the claim's enclosing line (within the same paragraph); otherwise falls back to inline enumerations within the claim's enclosing sentence — comma+and number lists, two-number `N and M` lists, or capitalized-word `X, Y, and Z` lists. At least 2 enumerated items required.
+- Per-claim outcomes implemented per Step 1 of the slice spec:
+  - claim parsed + list parsed, lengths match → claim passes
+  - claim parsed + list parsed, lengths disagree → reason `"Count claim '<N> <entity>' disagrees with listed-item count <M>"`
+  - claim parsed + no list parsed → reason `"Count claim '<N> <entity>' has no corresponding listed enumeration in the answer to verify against"`
+  - no parseable claim in answer → `ok: true`, empty `reasons`
+- Route wiring: added `countListParityValidation = synthesisContract ? validateCountListParity(answer, synthesisContract) : null` in the synthesis post-step block alongside the existing four validators, and extended the `validators` object on the success-path `appendQueryTrace` call with the new key only — the existing `pitStints`, `sectorConsistency`, `gridFinish`, `strategyEvidence` keys are preserved unchanged. On the synthesis-contract-absent branch (zero-row, deterministic_template) `validators.countListParity` is the literal `null`, mirroring the existing four validators on that branch.
+- Validator failure is non-blocking: surfaced only in `chat_query_trace.jsonl`. The user-facing response payload is unchanged.
+
+### Gate commands — exit codes
+- `cd web && npm run build` → exit 0
+- `cd web && npm run typecheck` → exit 0
+- `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=30 baseline_fails=30 baseline_failures_fixed=0`)
+
+### Self-check vs acceptance criteria
+- [x] `validateCountListParity(answerText, contract)` returns `{ ok, reasons }` for the four outcomes specified in Step 1; signature matches the single-`FactContract` peer validator pattern; comparison count is parsed from `answerText`, not from `contract.rows.length`. Verified by `validator-count-list.test.mjs` cases (a)–(d).
+- [x] Test (b) `"validateCountListParity: returns ok=false when claim and parsed list disagree, even when contract.rows.length matches the claim"` constructs `answerText = "There were 3 pit stops:\n- Lap 12\n- Lap 24"` (parsed list length = 2) with `contract.rows.length = 3`, asserts `result.ok === false` and the reason names the 3-vs-2 mismatch.
+- [x] Synthesis post-step in `web/src/app/api/chat/route.ts` computes `countListParityValidation` via `synthesisContract ? validateCountListParity(answer, synthesisContract) : null`; the success-path `appendQueryTrace` `validators` object now contains exactly `pitStints`, `sectorConsistency`, `gridFinish`, `strategyEvidence`, `countListParity` (no existing key removed or renamed).
+- [x] Route-wiring test `validator-count-list-route-wiring.test.mjs` drives `web/src/app/api/chat/route.ts` for both pass and fail cases; asserts `trace.validators.countListParity` reflects the validator outcome, asserts `trace.validators.{pitStints,sectorConsistency,gridFinish,strategyEvidence}` are all still present on the same trace record on both pass and fail traces, and asserts the user-facing response payload (`answer`, status 200, no `validators` / `countListParity` top-level field) is unchanged.
+- [x] Route-wiring test additionally covers the synthesis-contract-absent (zero-row) branch and asserts `trace.validators.countListParity === null`, alongside the same `null` assertion on the existing four peer validator keys for that branch.
 
 ## Audit verdict
 (filled by Codex)
