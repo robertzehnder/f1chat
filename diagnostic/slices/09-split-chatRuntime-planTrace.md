@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-planTrace
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:25:57Z
+updated: 2026-04-30T15:28:28Z
 ---
 
 ## Goal
@@ -71,6 +71,20 @@ Rollback: `git revert <commit>`.
 ### Medium
 - [x] Expand `## Changed files expected` to cover the direct-import rewrites from Step 3, or narrow Step 3 if only `chatRuntime.ts` and `chatRuntime/planTrace.ts` should change.
 - [x] Add an explicit gate or acceptance check for Step 4's circular-import verification so the plan tests that requirement instead of leaving it implicit.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T15:22:22Z, so no staleness note applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Add a source-level gate or acceptance check that `web/src/lib/chatRuntime/planTrace.ts` does not import from `web/src/lib/chatRuntime.ts`; successful `npm run build` and `npm run typecheck` are not a direct proof for the no-circular-import requirement stated in Step 4.
 
 ### Low
 
