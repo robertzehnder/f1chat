@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-telemetry
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T12:51:12-04:00
+updated: 2026-04-30T17:07:00-04:00
 ---
 
 ## Goal
@@ -84,7 +84,18 @@ Rollback: `git revert <commit>`.
 - `740101a` — slice: record commit hash in completion note (this slice file update)
 
 ## Audit verdict
-(filled by Codex)
+
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS (`git diff --name-only integration/perf-roadmap...HEAD`: `diagnostic/slices/09-split-deterministicSql-telemetry.md`, `web/src/lib/deterministicSql.ts`, `web/src/lib/deterministicSql/telemetry.ts`)
+- Criterion 1 -> PASS (`web/src/lib/deterministicSql/telemetry.ts:10-68` exports `buildTelemetryTemplate`)
+- Criterion 2 -> PASS (`web/src/lib/deterministicSql.ts:8` imports `buildTelemetryTemplate`; `web/src/lib/deterministicSql.ts:488-494` delegates at the original branch site; no root `export { buildTelemetryTemplate }` in `web/src/lib/deterministicSql.ts:1-496`)
+- Criterion 3 -> PASS (Gate #1 exit `0`; no circular-import failure observed)
+- Criterion 4 -> PASS (Gates #1-#3 exit `0`)
+- Decision -> PASS
 
 ## Plan-audit verdict (round 1)
 
