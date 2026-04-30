@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-deterministicSql-telemetry
 phase: 9
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T17:00:00Z
+updated: 2026-04-30T16:46:25Z
 ---
 
 ## Goal
@@ -73,6 +73,23 @@ Rollback: `git revert <commit>`.
 
 ### Low
 - [x] Add an acceptance criterion that makes Step 4 testable by requiring the moved telemetry symbols to import without introducing a circular-dependency failure.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-04-30T16:41:30Z, so no stale-state warning applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Remove the planned root-level re-export of `buildTelemetryTemplate`, or explicitly add the same root-level export for `buildPaceTemplate`, because `web/src/lib/deterministicSql.ts` currently re-exports `buildStrategyTemplate` and `buildResultTemplate` but not `buildPaceTemplate`, so Step 3's claimed "parity" would otherwise introduce a new public API inconsistent with the existing split pattern.
+- [ ] Rewrite or drop Step 4, because grepping for direct imports of `buildTelemetryTemplate` cannot validate any migration for this slice: the symbol does not exist before the extraction, so the search is guaranteed to find only imports introduced by the slice itself.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-04-30T16:41:30Z, so no stale-state warning applies.
