@@ -1,7 +1,7 @@
 ---
 slice_id: 10-replay-viewer-mvp
 phase: 10
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -148,7 +148,18 @@ Rollback: `git revert <commit>`. The slice adds new files (one query function bl
 - `git status` confirms only the five expected files are modified or added (slice md + the four files listed under "Changed files expected"); no other files were touched.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS. `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/10-replay-viewer-mvp.md`, `web/scripts/tests/replay-viewer-mvp.test.mjs`, `web/src/app/replay/[sessionId]/ReplayViewer.tsx`, `web/src/app/replay/[sessionId]/page.tsx`, and `web/src/lib/queries/sessions.ts`.
+- Criterion: `getSessionRaceProgression` selects all Step 1 columns from `core.race_progression_summary` with `WHERE session_key = $1` and `ORDER BY lap_number ASC, position_end_of_lap ASC NULLS LAST` -> PASS ([web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/lib/queries/sessions.ts:359)).
+- Criterion: `getSessionReplayFrames` selects all Step 2 columns from `core.replay_lap_frames` with `WHERE session_key = $1` and `ORDER BY lap_number ASC` -> PASS ([web/src/lib/queries/sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/lib/queries/sessions.ts:383)).
+- Criterion: `ReplayViewer` renders the required empty state, computes `maxLap` and `numDrivers`, groups by `driver_number`, positions self-closing `replay-lap-marker` elements by `lap_number` and `position_end_of_lap`, binds both fields in the marker `title={...}`, and renders a frame strip referencing `leader_driver_number` and `race_control_flag` -> PASS ([web/src/app/replay/[sessionId]/ReplayViewer.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/app/replay/[sessionId]/ReplayViewer.tsx:8), [web/src/app/replay/[sessionId]/ReplayViewer.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/app/replay/[sessionId]/ReplayViewer.tsx:17), [web/src/app/replay/[sessionId]/ReplayViewer.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/app/replay/[sessionId]/ReplayViewer.tsx:84), [web/src/app/replay/[sessionId]/ReplayViewer.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/app/replay/[sessionId]/ReplayViewer.tsx:106)).
+- Criterion: `page.tsx` imports both query functions from `@/lib/queries/sessions`, destructures `const [progression, frames] = await Promise.all(...)`, and renders `<ReplayViewer progression={progression} frames={frames} />` after the hero header -> PASS ([web/src/app/replay/[sessionId]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/app/replay/[sessionId]/page.tsx:1), [web/src/app/replay/[sessionId]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/app/replay/[sessionId]/page.tsx:21), [web/src/app/replay/[sessionId]/page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/src/app/replay/[sessionId]/page.tsx:28)).
+- Criterion: all five assertion groups G1-G5 pass in `web/scripts/tests/replay-viewer-mvp.test.mjs` -> PASS (`cd web && node --test scripts/tests/replay-viewer-mvp.test.mjs` exit `0`; [web/scripts/tests/replay-viewer-mvp.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/scripts/tests/replay-viewer-mvp.test.mjs:69), [web/scripts/tests/replay-viewer-mvp.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/scripts/tests/replay-viewer-mvp.test.mjs:106), [web/scripts/tests/replay-viewer-mvp.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/scripts/tests/replay-viewer-mvp.test.mjs:143), [web/scripts/tests/replay-viewer-mvp.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/scripts/tests/replay-viewer-mvp.test.mjs:202), [web/scripts/tests/replay-viewer-mvp.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/scripts/tests/replay-viewer-mvp.test.mjs:219), [web/scripts/tests/replay-viewer-mvp.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-replay-viewer-mvp/web/scripts/tests/replay-viewer-mvp.test.mjs:255)).
+- Decision -> PASS. Slice meets scope and acceptance criteria.
 
 ## Plan-audit verdict (round 1)
 
