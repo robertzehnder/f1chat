@@ -96,7 +96,9 @@ Rollback: `git revert <commit>`.
   - [x] `web/src/lib/chatRuntime/completeness.ts` does not import any of `RowVolume`, `Grain`, `SessionCandidate`, `DriverCandidate`, `QueryPlan`, `grainForQuestion`, or `buildQueryPlan` from `@/lib/chatRuntime` (grep returned no matches).
   - [x] `madge --circular` reports no circular dependency involving `chatRuntime.ts ↔ chatRuntime/completeness.ts`.
   - [x] All four gate commands pass (exit 0).
-- Commit hash: filled at commit time below.
+- Commit hashes:
+  - `0e3f3ca2a29a298f95641f1438685e1bc7826351` — split chatRuntime: extract completeness checks (the code move + slice frontmatter status flip).
+  - Follow-up commit on this branch records this commit-hash line in the Slice-completion note (no code changes).
 
 ## Audit verdict
 (filled by Codex)
