@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T02:41:55Z
+updated: 2026-04-30T02:50:31Z
 ---
 
 ## Goal
@@ -22,9 +22,10 @@ Add a synthesis-output validator: every claim about sector times in the answer m
 - `diagnostic/_state.md`
 - `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json`
 - `scripts/loop/test_grading_gate.sh`
-- `scripts/loop/state/test_grading_baseline.txt`
 - `web/scripts/tests/validator-pit-stints.test.mjs` (test-harness precedent)
 - `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs` (route-wiring test precedent)
+
+Note: the test-grading baseline file `scripts/loop/state/test_grading_baseline.txt` is intentionally *not* listed above — it lives only in the integration repo (refreshed by `scripts/loop/dispatch_merger.sh` after every merge) and is absent in slice worktrees. The gate wrapper at `scripts/loop/test_grading_gate.sh` handles its absence by falling back to strict-pass mode (lines 61-70 of that script).
 
 Note: Phase 11 redo will re-baseline; this slice's bar is just "validator runs and asserts the obvious thing".
 
@@ -47,7 +48,7 @@ None at author time.
    - Because the validator only has type-only imports of `FactContract`, no `@/lib/*` rewrites are required (TypeScript erases type-only imports during transpile). If any runtime `@/lib/*` import is added later, the test must add explicit stubs for each (precedent: `web/scripts/tests/answer-cache.test.mjs:170-193`).
    - Cover at least: (a) **pass** — answer claims a best S1 of `25.123s` against a contract row with `best_s1: 25.123` → `ok=true`; (b) **fail** — answer claims `S2 was 30.000s` but the contract's `duration_sector_2`/`best_s2` set does not contain a value within tolerance → `ok=false` with a reason naming the asserted value; (c) **fail** — answer makes a sector claim against a contract that exposes no `duration_sector_*` / `best_s*` / `avg_s*` columns → `ok=false` with the "no sector column to derive from" reason; (d) **pass** — answer makes no sector claim at all (e.g. "Verstappen finished P1") against a contract with no sector columns → `ok=true` (validator must not synthesize false positives).
 4. Wire the validator into `web/src/app/api/chat/route.ts` immediately after the existing pit-stints validator invocation (`route.ts:1018-1020`) and before the `appendQueryTrace(...)` call (`route.ts:1021-1048`), reusing the same `synthesisContract` capture: declare `const sectorConsistencyValidation: SectorConsistencyValidationResult | null = synthesisContract ? validateSectorConsistency(answer, synthesisContract) : null;` and extend the trace payload's `validators` field to `validators: { pitStints: pitStintsValidation, sectorConsistency: sectorConsistencyValidation }`. Do not change the user-facing response payload — failures are logged only. Repeat the pattern for any other `appendQueryTrace` call sites that the existing pit-stints validator already covers (in this slice the wiring is limited to the success path that already runs the pit-stints validator at `route.ts:1018-1047`; other trace writers in the file remain untouched, matching the pit-stints precedent).
-5. Extend the existing route-harness test pattern to assert wiring: add a new test file `web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs` that reuses the `validator-pit-stints-route-wiring.test.mjs` route-stub scaffolding (precedent: `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs:1-end` and `web/scripts/tests/answer-cache.test.mjs:170-193`) — including stubs for every `@/lib/*` import touched by `route.ts` plus a rewrite of `@/lib/validators/sectorConsistencyValidator` that points at the real transpiled validator module. The test must assert, for a fixture answer that makes a deliberately wrong sector claim against a sector-bearing contract, that the resulting `chat_query_trace.jsonl` line contains both `validators.pitStints` (preserved from the prior slice) and `validators.sectorConsistency` with `ok=false` and a non-empty `reasons` array. A second test case must assert a happy-path fixture surfaces `validators.sectorConsistency.ok=true`. The test must also assert that the validator output does NOT leak into the user-facing response payload (matches the pit-stints precedent at `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs`).
+5. Extend the existing route-harness test pattern to assert wiring: add a new test file `web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs` that reuses the `validator-pit-stints-route-wiring.test.mjs` route-stub scaffolding (precedent: `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs:1-end` and `web/scripts/tests/answer-cache.test.mjs:170-193`) — including stubs for every `@/lib/*` import touched by `route.ts` plus a rewrite of `@/lib/validators/sectorConsistencyValidator` that points at the real transpiled validator module. **Logging is asserted against captured `appendJsonLog` payloads, not a real on-disk file** — the `serverLog.stub.mjs` (precedent: `validator-pit-stints-route-wiring.test.mjs:112-123`) records every `appendJsonLog(filename, payload)` call into an in-memory queue exposed via `__getJsonLogCalls()`; the test filters that queue for `filename === "chat_query_trace.jsonl"` and inspects the recorded `payload` objects directly (precedent: `validator-pit-stints-route-wiring.test.mjs:312-321,365-385`). For a fixture answer that makes a deliberately wrong sector claim against a sector-bearing contract, assert that the latest captured `chat_query_trace.jsonl` payload contains both `validators.pitStints` (preserved from the prior slice) and `validators.sectorConsistency` with `ok=false` and a non-empty `reasons` array. A second test case must assert a happy-path fixture surfaces `validators.sectorConsistency.ok=true` in the same captured payload. The test must also assert that the validator output does NOT leak into the user-facing response payload (matches the pit-stints precedent at `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs:387-397`).
 
 ## Changed files expected
 - `web/src/lib/validators/sectorConsistencyValidator.ts` (new validator module)
@@ -68,8 +69,8 @@ bash scripts/loop/test_grading_gate.sh
 
 ## Acceptance criteria
 - [ ] Validator returns structured pass/fail (`{ ok, reasons }`) on the four unit-test cases listed in step 3 (`web/scripts/tests/validator-sector-consistency.test.mjs` exits `0` under `node --test`).
-- [ ] `web/src/app/api/chat/route.ts` invokes `validateSectorConsistency` after synthesis and includes the `ValidationResult` in the `appendQueryTrace` payload as `validators.sectorConsistency`. **Logging is proven testable** by `web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs`, which (i) reads the trace file written by the route-harness invocation, (ii) parses the last `chat_query_trace.jsonl` line, and (iii) asserts the parsed object contains `validators.sectorConsistency.ok === false` with a non-empty `reasons` array on the failure-case fixture and `validators.sectorConsistency.ok === true` on the happy-path fixture (mirrors the pit-stints route-wiring assertion at `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs:318-366`).
-- [ ] No new failures in `bash scripts/loop/test_grading_gate.sh` relative to the baseline at `scripts/loop/state/test_grading_baseline.txt`.
+- [ ] `web/src/app/api/chat/route.ts` invokes `validateSectorConsistency` after synthesis and includes the `ValidationResult` in the `appendQueryTrace` payload as `validators.sectorConsistency`. **Logging is proven testable** by `web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs`, which (i) inspects the in-memory `appendJsonLog` capture queue exposed by the test's `serverLog.stub.mjs` via `__getJsonLogCalls()` (precedent: `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs:112-123,312-321`), (ii) filters that queue for entries with `filename === "chat_query_trace.jsonl"` and selects the latest `payload`, and (iii) asserts the payload contains `validators.sectorConsistency.ok === false` with a non-empty `reasons` array on the failure-case fixture and `validators.sectorConsistency.ok === true` on the happy-path fixture (mirrors the pit-stints route-wiring assertion at `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs:365-385,427-433`).
+- [ ] No new failures in `bash scripts/loop/test_grading_gate.sh` (the wrapper diffs against the integration baseline file `scripts/loop/state/test_grading_baseline.txt` when present, or falls back to strict-pass mode if absent — see `scripts/loop/test_grading_gate.sh:61-70`).
 
 ## Out of scope
 - Multi-contract validator payloads (the live synthesis path is single-contract per `web/src/lib/anthropic.ts:35-38`).
@@ -113,8 +114,8 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Replace or remove `scripts/loop/state/test_grading_baseline.txt` from `## Prior context`; the path does not exist in this worktree, so the slice's required-reading block is currently not satisfiable.
-- [ ] Reconcile Step 5 and the logging acceptance criterion with the cited `validator-pit-stints-route-wiring` precedent: either assert against captured `appendJsonLog` payloads as that harness does, or explicitly plan a file-backed logger stub and direct file reads instead of saying the test reads a real `chat_query_trace.jsonl` line.
+- [x] Replace or remove `scripts/loop/state/test_grading_baseline.txt` from `## Prior context`; the path does not exist in this worktree, so the slice's required-reading block is currently not satisfiable.
+- [x] Reconcile Step 5 and the logging acceptance criterion with the cited `validator-pit-stints-route-wiring` precedent: either assert against captured `appendJsonLog` payloads as that harness does, or explicitly plan a file-backed logger stub and direct file reads instead of saying the test reads a real `chat_query_trace.jsonl` line.
 
 ### Low
 - [ ] None.
