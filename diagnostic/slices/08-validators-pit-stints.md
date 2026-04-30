@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-pit-stints
 phase: 8
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-29T22:26:35-04:00
+updated: 2026-04-29T22:27:40-04:00
 ---
 
 ## Goal
@@ -81,11 +81,14 @@ Rollback: `git revert <commit>`.
 **Commits (this slice, ahead of `integration/perf-roadmap`):**
 - `0b2af6b` — feat(validators): wire pit-stints synthesis validator into chat route
 - `99cf632` — slice 08-validators-pit-stints: completion note + awaiting_audit
+- `42e17e8` — slice 08-validators-pit-stints: include completion-note commit hash
+- `d0fe51d` — audit: revise
+- `efd5a4e` — fix(validators): verify claimed pit-stop counts match contract values (audit revision)
 
 **Changed files (matches the slice's "Changed files expected" exactly):**
-- `web/src/lib/validators/pitStintsValidator.ts` (new)
+- `web/src/lib/validators/pitStintsValidator.ts` (new + revision)
 - `web/src/app/api/chat/route.ts` (modified)
-- `web/scripts/tests/validator-pit-stints.test.mjs` (new)
+- `web/scripts/tests/validator-pit-stints.test.mjs` (new + new test case for audit probe)
 - `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs` (new)
 
 **Decisions enacted:**
@@ -93,9 +96,10 @@ Rollback: `git revert <commit>`.
 - Wiring lives in `web/src/app/api/chat/route.ts` (the synthesis + `appendQueryTrace` call site), not in `web/src/lib/chatRuntime.ts`. The `buildSynthesisContract({ runtime, rows: result.rows })` call was hoisted from the two inner sse/non-sse branches to a single declaration just inside the LLM-synthesis `try`, with a reference captured into an outer-scoped `let synthesisContract: FactContract | null = null` so the validator (running after sanity-check, before `appendQueryTrace`) can reuse the exact same contract object that was sent to the model. The validator only runs when `synthesisContract` is non-null (i.e. the LLM-synthesis branch fired); the deterministic-template path emits `validators.pitStints = null`, since that path performs no LLM claim that needs validating.
 - Failures are non-blocking: the user-facing JSON payload is unchanged; the `ValidationResult` is added to the `appendQueryTrace` payload as `validators: { pitStints: result }` so failures surface in `chat_query_trace.jsonl` only.
 - Test harness matches the existing precedents: `web/scripts/tests/validator-pit-stints.test.mjs` uses `ts.transpileModule` + dynamic import (precedent: `web/scripts/tests/chatRuntime-synthesis-payload.test.mjs:39-53`); `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs` reuses the answer-cache route-stub scaffolding (precedent: `web/scripts/tests/answer-cache.test.mjs:170-193`), with one new `from "@/lib/validators/pitStintsValidator"` rewrite that points at the real transpiled validator module (no runtime stubs needed for the validator).
+- **Audit revision (round 1 → 2):** the prior validator only confirmed that pit-stop/stint *columns* existed; it did not check that the claimed numeric value was actually derivable from contract values. Per the audit's Criterion-1 probe (`validatePitStints("Verstappen made 5 pit stops in this race.", { rows: [{ stints: 2, pit_stops: 1 }] })` returned `ok=true`), the validator now collects the numeric set of derivable pit-stop counts (any `pit_stops`/`pit_count`/`n_pit_stops`/`num_pit_stops` value, plus `stints - 1` for any positive `stints`/`stint_count`/`n_stints`/`num_stints` value) and flags the claim when the asserted number is not in that set. The same shape is applied to claimed stint counts (derivable = any stints value, plus `pit_stops + 1`). Both checks only fire when the contract actually exposes one of those columns; if not, the existing "no column to derive the count" reason is used instead, so the validator never silently approves a numeric claim against a contract that has no supporting column.
 
 **Acceptance-criteria self-check:**
-- [x] Validator returns structured pass/fail (`{ ok, reasons }`) on the unit-test cases listed in step 3 — `web/scripts/tests/validator-pit-stints.test.mjs` covers (a) consistent stint/pit-stop counts → ok=true, (b) undercut claim with no position-change rows → ok=false, (c) pit_stops count not matching stints-1 → ok=false (plus a fourth case asserting that an undercut claim with grid/finish columns passes).
+- [x] Validator returns structured pass/fail (`{ ok, reasons }`) on the unit-test cases listed in step 3 — `web/scripts/tests/validator-pit-stints.test.mjs` now covers five cases: (a) consistent stint/pit-stop counts → ok=true, (b) undercut claim with no position-change rows → ok=false, (c) pit_stops count not matching stints-1 → ok=false, (d) **NEW (audit revision)** claimed pit-stop count not in the contract's derivable set ("5 pit stops" against `{stints: 2, pit_stops: 1}`) → ok=false with a reason that names the asserted count and notes it is not derivable, (e) undercut claim with grid/finish columns → ok=true.
 - [x] `web/src/app/api/chat/route.ts` invokes the validator after synthesis and includes the `ValidationResult` in the `appendQueryTrace` payload (asserted by `web/scripts/tests/validator-pit-stints-route-wiring.test.mjs`, which checks both a failure case and a happy path; the test also asserts the validator output does NOT leak into the user-facing response payload).
 - [x] No new failures in `bash scripts/loop/test_grading_gate.sh` relative to the baseline at `scripts/loop/state/test_grading_baseline.txt` — wrapper reports `PASS (no new failures vs integration baseline) slice_fails=3 baseline_fails=3 baseline_failures_fixed=0` (exit 0).
 
@@ -107,7 +111,7 @@ Rollback: `git revert <commit>`.
 | 3 | `bash scripts/loop/test_grading_gate.sh` | 0 |
 
 **Slice-local test runs (sanity, not part of the gate set):**
-- `node --test scripts/tests/validator-pit-stints.test.mjs` — 4 pass / 0 fail.
+- `node --test scripts/tests/validator-pit-stints.test.mjs` — 5 pass / 0 fail (was 4 before; the new audit-probe test makes it 5).
 - `node --test scripts/tests/validator-pit-stints-route-wiring.test.mjs` — 2 pass / 0 fail.
 
 **Out-of-scope items deliberately not touched:** multi-contract validator payloads (the live synthesis path is single-contract per `web/src/lib/anthropic.ts:35-38`); rejecting answers based on validation failures (this phase logs only); validators for any contract other than pit-stop claims.
