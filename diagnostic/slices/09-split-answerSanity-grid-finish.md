@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-grid-finish
 phase: 9
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T15:02:47-04:00
+updated: 2026-04-30T15:07:21-04:00
 ---
 
 ## Goal
@@ -71,7 +71,19 @@ Rollback: `git revert <commit>`.
   - [x] All gate commands pass.
 
 ## Audit verdict
-(filled by Codex)
+
+**Status: REVISE**
+
+Gate #1 `cd web && npm run build` -> exit `0`
+Gate #2 `cd web && npm run typecheck` -> exit `1`
+First error: `error TS6053: File '/Users/robertzehnder/.openf1-loop-worktrees/09-split-answerSanity-grid-finish/web/.next/types/app/api/admin/perf-summary/route.ts' not found.`
+Gate #3 `cd web && bash ../scripts/loop/test_grading_gate.sh` -> exit `0`
+Scope diff -> PASS: changed paths are limited to `diagnostic/slices/09-split-answerSanity-grid-finish.md`, `web/src/lib/answerSanity.ts`, and `web/src/lib/answerSanity/gridFinish.ts`.
+Criterion 1 -> PASS: `web/src/lib/answerSanity/gridFinish.ts:28` exports `buildPositionsAnswer`.
+Criterion 2 -> PASS: `web/src/lib/answerSanity.ts:13` imports `buildPositionsAnswer` from `./answerSanity/gridFinish`, `web/src/lib/answerSanity.ts:276` calls the imported helper, and the moved body is no longer present in `web/src/lib/answerSanity.ts`.
+Criterion 3 -> FAIL: the declared gate set does not pass because `cd web && npm run typecheck` exits `1`.
+Decision -> REVISE
+Rationale -> Fix the non-green typecheck gate or replace it with a stable green equivalent; a slice with a failing required gate cannot be accepted.
 
 ## Plan-audit verdict (round 1)
 
