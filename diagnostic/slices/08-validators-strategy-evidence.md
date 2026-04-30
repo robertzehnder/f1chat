@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-strategy-evidence
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T05:07:00Z
+updated: 2026-04-30T05:30:00Z
 ---
 
 ## Goal
@@ -27,11 +27,16 @@ Validator: every strategy-decision claim must reference an event in `strategy_ev
 None at author time.
 
 ## Steps
-1. Define the validator interface in `web/src/lib/validators/strategyEvidenceValidator.ts` matching the peer signature used by `validateGridFinish` / `validatePitStints` / `validateSectorConsistency`: `(answerText: string, contract: FactContract) → StrategyEvidenceValidationResult` (a structured `{ status: "pass" | "fail" | "skipped"; reasons: string[]; ... }` object).
-2. Implement the validator. The contract input is the synthesis `FactContract` already built at `web/src/app/api/chat/route.ts` and passed to peer validators; assert that every claim in the answer text referencing a strategy decision (e.g. lap, pit, undercut, overcut events) maps to at least one row in the contract — otherwise return `fail` with a structured reason naming the unsupported claim.
-3. Add unit tests in `web/scripts/tests/validator-strategy-evidence.test.mjs` covering pass + fail + skipped (contract absent / non-strategy question) cases.
-4. Wire the validator into the **route-layer synthesis post-step** at `web/src/app/api/chat/route.ts` near lines 1026–1062, alongside the existing `validatePitStints` / `validateSectorConsistency` / `validateGridFinish` invocations. Add a `strategyEvidence` field to the `validators` payload of the `appendQueryTrace({...})` call so failures surface in `chat_query_trace.jsonl`. Validation failures must NOT reject the answer in this phase. (The validator does not run inside `buildChatRuntime` — that returns planning metadata only and never sees the synthesized answer text.)
-5. Add `web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs` mirroring the structure of `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (and the analogous pit-stints / sector-consistency harnesses): import `route.ts`, replace `@/lib/chatRuntime` with the existing `chatRuntime.stub.mjs` and inject a fake runtime whose `questionType` triggers the strategy-evidence validator, transpile-and-import the real `strategyEvidenceValidator.ts` (do **not** stub it), drive a synthesized answer with an unsupported strategy claim through the route, and assert that the captured `chat_query_trace.jsonl` payload's `validators.strategyEvidence` field has `status: "fail"` and a non-empty `reasons` array. Add a parallel pass-case assertion. The harness must therefore exercise the route-layer wiring added in Step 4 — not just the validator function in isolation.
+1. Define the validator interface in `web/src/lib/validators/strategyEvidenceValidator.ts` matching the peer signature used by `validateGridFinish` / `validatePitStints` / `validateSectorConsistency`: `(answerText: string, contract: FactContract) → StrategyEvidenceValidationResult` where `StrategyEvidenceValidationResult = { ok: boolean; reasons: string[] }` (identical shape to `GridFinishValidationResult` in `web/src/lib/validators/gridFinishValidator.ts`). The validator never receives a "contract absent" case — that is handled at the route layer in Step 4 by passing `null` into the trace, mirroring how peers handle a missing `synthesisContract`.
+2. Implement the validator. The contract input is the synthesis `FactContract` already built at `web/src/app/api/chat/route.ts` and passed to peer validators; assert that every claim in the answer text referencing a strategy decision (e.g. lap, pit, undercut, overcut events) maps to at least one row in the contract — otherwise return `{ ok: false, reasons: [...] }` naming the unsupported claim. When the answer contains no strategy-decision claims, return `{ ok: true, reasons: [] }` (vacuously ok, matching peer behavior on questions outside their pattern).
+3. Add unit tests in `web/scripts/tests/validator-strategy-evidence.test.mjs` covering: (a) `{ ok: true, reasons: [] }` for an answer with no strategy-decision claims, (b) `{ ok: true, reasons: [] }` for an answer whose strategy claims are all backed by contract rows, and (c) `{ ok: false, reasons: [...non-empty] }` for an answer with at least one unsupported strategy claim. The "contract absent" case is exercised by the route-wiring test in Step 5 (which verifies the route's null-guard), not by this unit suite, because the validator's signature requires `contract: FactContract`.
+4. Wire the validator into the **route-layer synthesis post-step** at `web/src/app/api/chat/route.ts` near lines 1026–1062, alongside the existing `validatePitStints` / `validateSectorConsistency` / `validateGridFinish` invocations using the same null-guard pattern (`synthesisContract ? validateStrategyEvidence(answer, synthesisContract) : null`). Add a `strategyEvidence` field to the `validators` payload of the `appendQueryTrace({...})` call so failures surface in `chat_query_trace.jsonl`. Validation failures must remain **non-blocking**: the route still returns `status: 200` with the unchanged synthesized `answer` / `answerReasoning`, and the validator payload appears only in the trace — the user-facing response body must not gain a `validators` / `strategyEvidence` field. (The validator does not run inside `buildChatRuntime` — that returns planning metadata only and never sees the synthesized answer text.)
+5. Add `web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs` mirroring the structure of `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (and the analogous pit-stints / sector-consistency harnesses): import `route.ts`, replace `@/lib/chatRuntime` with the existing `chatRuntime.stub.mjs` and inject a fake runtime whose `questionType` triggers the strategy-evidence validator, transpile-and-import the real `strategyEvidenceValidator.ts` (do **not** stub it), drive a synthesized answer with an unsupported strategy claim through the route, and assert all of the following on that fail-case request:
+   - the captured `chat_query_trace.jsonl` payload's `validators.strategyEvidence` field has `ok: false` and a non-empty `reasons` array;
+   - the HTTP response status is `200` (validator failure is non-blocking);
+   - the user-facing response body's `answer` matches the synthesized text verbatim (validator failure does not rewrite the answer);
+   - the user-facing response body has no `validators` and no `strategyEvidence` keys at any level (the validator payload stays in the trace only).
+   Then add a parallel pass-case assertion that the trace payload's `validators.strategyEvidence` field is `{ ok: true, reasons: [] }`. The harness must therefore exercise the route-layer wiring added in Step 4 — not just the validator function in isolation.
 
 ## Changed files expected
 - `web/src/lib/validators/strategyEvidenceValidator.ts` (new)
@@ -51,9 +56,10 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] Validator returns structured pass/fail/skipped with reason on test cases (unit test in `web/scripts/tests/validator-strategy-evidence.test.mjs`).
-- [ ] The route-layer synthesis post-step in `web/src/app/api/chat/route.ts` invokes `validateStrategyEvidence` alongside the peer validators and emits a `validators.strategyEvidence` entry in the `chat_query_trace.jsonl` payload.
-- [ ] `web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs` drives a request through the real `route.ts` (with `chatRuntime` stubbed via the existing `chatRuntime.stub.mjs` pattern and the real `strategyEvidenceValidator.ts` transpiled), and asserts that an unsupported strategy claim surfaces as `validators.strategyEvidence.status === "fail"` with a non-empty `reasons` array in the captured trace entry.
+- [ ] Validator returns `{ ok: boolean; reasons: string[] }` (matching the peer `GridFinishValidationResult` / `PitStintsValidationResult` / `SectorConsistencyValidationResult` shape) on the unit-test cases in `web/scripts/tests/validator-strategy-evidence.test.mjs` (vacuously-ok / supported-claims / unsupported-claim).
+- [ ] The route-layer synthesis post-step in `web/src/app/api/chat/route.ts` invokes `validateStrategyEvidence` alongside the peer validators using the same `synthesisContract ? ... : null` guard, and emits a `validators.strategyEvidence` entry in the `chat_query_trace.jsonl` payload.
+- [ ] `web/scripts/tests/validator-strategy-evidence-route-wiring.test.mjs` drives a request through the real `route.ts` (with `chatRuntime` stubbed via the existing `chatRuntime.stub.mjs` pattern and the real `strategyEvidenceValidator.ts` transpiled), and asserts that an unsupported strategy claim surfaces as `validators.strategyEvidence.ok === false` with a non-empty `reasons` array in the captured trace entry.
+- [ ] The same route-wiring test asserts that on validator failure the route stays non-blocking: HTTP status `200`, the response body's `answer` is unchanged from the synthesized text, and the response body contains no `validators` or `strategyEvidence` keys at any level (validator output is trace-only).
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -109,8 +115,8 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Resolve the `skipped` contract-absent contradiction by either widening the validator/route contract to emit a structured skipped result when `strategy_evidence_summary` is absent, or by removing the “contract absent” skipped case from Steps 2-4 and Step 3’s test scope; the current Step 1 signature requires `contract: FactContract` while Step 4 still only invokes validators when `synthesisContract` exists.
-- [ ] Add an explicit failure-case assertion to Step 5 and the acceptance criteria that `validateStrategyEvidence` failures remain non-blocking at the route layer (for example, HTTP 200, unchanged answer text, and no validator payload leak into the user-facing response), because Step 4 makes that a required behavior but the current test description only checks the trace payload.
+- [x] Resolve the `skipped` contract-absent contradiction by either widening the validator/route contract to emit a structured skipped result when `strategy_evidence_summary` is absent, or by removing the “contract absent” skipped case from Steps 2-4 and Step 3’s test scope; the current Step 1 signature requires `contract: FactContract` while Step 4 still only invokes validators when `synthesisContract` exists.
+- [x] Add an explicit failure-case assertion to Step 5 and the acceptance criteria that `validateStrategyEvidence` failures remain non-blocking at the route layer (for example, HTTP 200, unchanged answer text, and no validator payload leak into the user-facing response), because Step 4 makes that a required behavior but the current test description only checks the trace payload.
 
 ### Low
 
