@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-chatRuntime-planTrace
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T11:32:48-04:00
+updated: 2026-04-30T16:05:00-04:00
 ---
 
 ## Goal
@@ -114,7 +114,21 @@ does not import back from `chatRuntime.ts`.
 - [x] All gate commands pass (commit hash will be filled by the runner after commit).
 
 ## Audit verdict
-(filled by Codex)
+
+**Status: PASS**
+
+- Gate #1 no-circular-import grep -> exit `0`
+- Gate #2 `cd web && npm run build` -> exit `0`
+- Gate #3 `cd web && npm run typecheck` -> exit `0`
+- Gate #4 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/09-split-chatRuntime-planTrace.md`, `web/src/lib/chatRuntime.ts`, and `web/src/lib/chatRuntime/planTrace.ts`; all are in scope.
+- Criterion 1: PASS — `web/src/lib/chatRuntime/planTrace.ts:1` exports `ChatRuntimeStageLog`.
+- Criterion 2: PASS — `web/src/lib/chatRuntime.ts:22` and `web/src/lib/chatRuntime.ts:37` retain only the type import and back-compat re-export; the moved type body is no longer present in `chatRuntime.ts`.
+- Criterion 3: PASS — Slice-completion note records `rg -n "ChatRuntimeStageLog" web/src` and the observed result matches current state: only `web/src/lib/chatRuntime.ts:22`, `web/src/lib/chatRuntime.ts:37`, `web/src/lib/chatRuntime.ts:126`, `web/src/lib/chatRuntime.ts:760`, and `web/src/lib/chatRuntime/planTrace.ts:1` reference the symbol.
+- Criterion 4: PASS — the source-level grep gate exited `0` with no matches, so `web/src/lib/chatRuntime/planTrace.ts` does not import from `web/src/lib/chatRuntime.ts`.
+- Criterion 5: PASS — `cd web && npm run build` and `cd web && npm run typecheck` both exited `0`.
+- Criterion 6: PASS — all declared gate commands exited `0`.
+- Decision: PASS — pure mechanical type split verified; safe to merge.
 
 ## Plan-audit verdict (round 1)
 
