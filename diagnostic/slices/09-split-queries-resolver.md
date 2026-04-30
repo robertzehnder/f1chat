@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-resolver
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:10:00Z
+updated: 2026-04-30T22:30:00Z
 ---
 
 ## Goal
@@ -25,7 +25,7 @@ None at author time.
 1. Identify the target functions/types in `web/src/lib/queries.ts`.
 2. Move them to `web/src/lib/queries/resolver.ts`; re-export from `web/src/lib/queries.ts` for back-compat.
 3. Leave existing call-site imports unchanged — they continue to resolve through the back-compat re-exports in `web/src/lib/queries.ts`. (Slice scope is the two files in `## Changed files expected`; do not touch other import sites.)
-4. Prove no circular import was introduced: assert via `grep -n "from ['\"]\\(\\.\\./queries\\|@/lib/queries\\)['\"]" web/src/lib/queries/resolver.ts` that the new resolver file does NOT import from `web/src/lib/queries.ts` (since queries.ts now re-exports from it). The build/typecheck gate must additionally pass; a non-empty grep result fails the slice.
+4. Prove no circular import was introduced: assert via `! grep -n "from ['\"]\\(\\.\\./queries\\|@/lib/queries\\)['\"]" web/src/lib/queries/resolver.ts` that the new resolver file does NOT import from `web/src/lib/queries.ts` (since queries.ts now re-exports from it). The negated grep exits non-zero on any match, failing the gate. The build/typecheck gate must additionally pass.
 
 ## Changed files expected
 - `web/src/lib/queries.ts`
@@ -39,8 +39,10 @@ None.
 cd web && npm run build
 cd web && npm run typecheck
 bash scripts/loop/test_grading_gate.sh
-# Circular-import guard: must print nothing.
-grep -n "from ['\"]\(\.\./queries\|@/lib/queries\)['\"]" web/src/lib/queries/resolver.ts || true
+# Circular-import guard: fails (non-zero) if resolver.ts imports queries.ts.
+# `! grep -n …` inverts grep's exit code so an empty result (no match) exits 0
+# and any match exits non-zero, blocking the gate.
+! grep -n "from ['\"]\(\.\./queries\|@/lib/queries\)['\"]" web/src/lib/queries/resolver.ts
 ```
 
 ## Acceptance criteria
@@ -84,7 +86,7 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Remove the trailing `|| true` from the circular-import `grep` gate, or replace it with an explicit empty-output assertion that exits non-zero on any match, so `All gate commands pass` cannot succeed when `resolver.ts` imports `queries.ts`.
+- [x] Remove the trailing `|| true` from the circular-import `grep` gate, or replace it with an explicit empty-output assertion that exits non-zero on any match, so `All gate commands pass` cannot succeed when `resolver.ts` imports `queries.ts`.
 
 ### Low
 
