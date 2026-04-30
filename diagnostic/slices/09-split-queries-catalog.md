@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-catalog
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T13:17:24-04:00
+updated: 2026-04-30T13:21:47-0400
 ---
 
 ## Goal
@@ -82,7 +82,18 @@ Commit: see `[slice:09-split-queries-catalog][awaiting-audit]` HEAD on this bran
 - `bash scripts/loop/test_grading_gate.sh` → 0 (`PASS (no new failures vs integration baseline) slice_fails=34 baseline_fails=34 baseline_failures_fixed=0`)
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+Gate #1 `cd web && npm run build` -> exit `0`
+Gate #2 `cd web && npm run typecheck` -> exit `0`
+Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+Scope diff -> PASS (`diagnostic/slices/09-split-queries-catalog.md`, `web/src/app/api/schema/route.ts`, `web/src/app/catalog/page.tsx`, `web/src/lib/queries.ts`, `web/src/lib/queries/catalog.ts`)
+Criterion 1 -> PASS [`web/src/lib/queries/catalog.ts:3`]
+Criterion 2 -> PASS [`web/src/lib/queries.ts:759`]; `grep -n "export async function getSchemaCatalog" web/src/lib/queries.ts` exit `1`
+Criterion 3 -> PASS [`web/src/lib/queries/catalog.ts:1`]; circular-import grep exit `1`
+Criterion 4 -> PASS [`web/src/app/api/schema/route.ts:2`, `web/src/app/catalog/page.tsx:2`, `web/src/lib/queries.ts:759`, `web/src/lib/queries/catalog.ts:3`]
+Criterion 5 -> PASS
+Decision -> PASS
 
 ## Plan-audit verdict (round 1)
 
