@@ -79,7 +79,8 @@ Rollback: `git revert <commit>`.
 - Acceptance criterion 3: `cd web && npm run build` succeeded; the new module imports cleanly with no circular-dependency failure between `deterministicSql.ts` and `deterministicSql/telemetry.ts` — ✓.
 - Acceptance criterion 4: all gate commands exit 0 — ✓.
 
-**Commit hashes:** filled in after `git commit` below.
+**Commit hashes:**
+- `0c8f4df` — split: extract telemetry SQL into deterministicSql/telemetry.ts (code split + slice-note + frontmatter flip)
 
 ## Audit verdict
 (filled by Codex)
