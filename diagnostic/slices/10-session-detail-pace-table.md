@@ -1,7 +1,7 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: ready_to_merge
+status: done
 owner: codex
 user_approval_required: no
 created: 2026-04-26
