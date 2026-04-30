@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-29T23:35:35-04:00
 ---
 
 ## Goal
@@ -66,7 +66,34 @@ bash scripts/loop/test_grading_gate.sh
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/08-validators-grid-finish`
+**Commit:** `8bec432c059e380a1352a5fb08a58bd763f744a2` (single slice commit on this branch).
+
+### What changed
+- New file `web/src/lib/validators/gridFinishValidator.ts` exports `validateGridFinish(answerText, contract): GridFinishValidationResult` covering all three claim shapes called for in Step 2:
+  - (a) explicit grid/finish position statements (e.g. "started P5", "finished P3", "from grid 7 to P2"),
+  - (b) position-change claims derivable from `grid_vs_finish` (e.g. "gained 4 places", "lost 2 positions", "moved up/down N spots", "climbed/dropped N places"),
+  - (c) comparative claims between two named drivers (e.g. "Verstappen gained more positions than Leclerc", "Leclerc lost fewer places than Hamilton", "X moved up more spots than Y").
+  Driver attribution is sentence-scoped: a phrase like `gained 4 places` is attached to the nearest preceding capitalized name in the same sentence, so a single subject can chain claims (e.g. "Verstappen started P5 and finished P3").
+- `web/src/app/api/chat/route.ts` imports `validateGridFinish` (alongside the existing `validatePitStints` and `validateSectorConsistency`), invokes it on the synthesis post-step against `synthesisContract`, and adds a `gridFinish` field to the `validators` object passed to `appendQueryTrace` (line ~1056). Failures only log to `chat_query_trace.jsonl`; the user-facing response payload is unchanged in shape.
+- New unit-test file `web/scripts/tests/validator-grid-finish.test.mjs` (13 tests, all pass) covers pass+fail cases for all three claim shapes plus a "no claims" pass case, a "no grid/finish columns" failure case, and a `moved up N spots` happy-path case.
+- New route-wiring test file `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (2 tests, all pass) asserts (a) the trace event written to `chat_query_trace.jsonl` includes `validators.gridFinish` (alongside the preserved `pitStints` and `sectorConsistency` fields), AND (b) when `validateGridFinish` returns `ok: false` for the synthesized answer, the user-facing route response (HTTP status, `body.answer` text, absence of a `validators` key) is identical in shape to the pass case.
+
+### Decisions / scope
+- The validator interface (`GridFinishValidationResult`) is co-located in `gridFinishValidator.ts` (per the slice's `## Decisions`), matching the precedent set by `sectorConsistencyValidator.ts` and `pitStintsValidator.ts`. No new shared contract/type file added.
+- Wiring lives in `web/src/app/api/chat/route.ts`, NOT `web/src/lib/chatRuntime.ts` — the route is where `validatePitStints` / `validateSectorConsistency` are actually invoked and where their results are surfaced via `appendQueryTrace`. The slice's `## Decisions` block already documents this correction to the original Inputs reference.
+- All regex name-capture patterns are case-sensitive (no `i` flag) and require an actual uppercase first letter; this avoids parsing English connective words ("and", "from", "to") as driver tokens. Case-insensitive parts of keywords (`P` vs `p`, `Grid` vs `grid`) are spelled with explicit character classes (`[Pp]`, `[Gg]rid`).
+
+### Gate command results
+- `cd web && npm run build` → exit 0
+- `cd web && npm run typecheck` → exit 0
+- `bash scripts/loop/test_grading_gate.sh` → exit 0 (`PASS (no new failures vs integration baseline) slice_fails=26 baseline_fails=26 baseline_failures_fixed=0`)
+
+### Self-checks against acceptance criteria
+- [x] Validator returns structured pass/fail with reason on test cases for all three shapes (a/b/c) — see `validator-grid-finish.test.mjs` cases (a1)/(a2), (b1)–(b4), (c1)–(c4) all green.
+- [x] Synthesis post-step runs validators; failures surface in `chat_query_trace.jsonl` under `validators.gridFinish` — verified by `validator-grid-finish-route-wiring.test.mjs` test #1 (assert `lastTrace.validators.gridFinish.ok === false` plus non-empty reasons).
+- [x] When `validateGridFinish` returns `ok: false`, user-facing response payload (HTTP status + answer text) is unchanged versus the pass case — verified by `validator-grid-finish-route-wiring.test.mjs` test #2 (asserts pass/fail HTTP status equality, exact answer-text equality to the synthesized text in both cases, and identical `validators`-key presence on `body`).
 
 ## Audit verdict
 (filled by Codex)
