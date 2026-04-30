@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-answerSanity-pit-stints
 phase: 9
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30
+updated: 2026-04-30T19:00:00Z
 ---
 
 ## Goal
@@ -23,9 +23,8 @@ None at author time.
 
 ## Steps
 1. Identify the target functions/types in `web/src/lib/answerSanity.ts`.
-2. Move them to `web/src/lib/answerSanity/pitStints.ts`; re-export from `web/src/lib/answerSanity.ts` for back-compat.
-3. Update direct imports of these symbols across the codebase to point at the new file.
-4. Verify no circular imports.
+2. Move them to `web/src/lib/answerSanity/pitStints.ts`; re-export from `web/src/lib/answerSanity.ts` for back-compat. Because of the re-export, no call-site rewrites are required by this slice; existing `answerSanity` imports continue to resolve unchanged.
+3. Verify no circular imports.
 
 ## Changed files expected
 - `web/src/lib/answerSanity.ts`
@@ -38,7 +37,7 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
@@ -63,10 +62,10 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate is evaluated against the maintained baseline instead of auto-failing on known unrelated repo-wide test failures.
+- [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` so the grading gate is evaluated against the maintained baseline instead of auto-failing on known unrelated repo-wide test failures.
 
 ### Medium
-- [ ] Expand `Changed files expected` to include the direct-import call sites touched by Step 3, or narrow Step 3 so the slice no longer claims repo-wide import rewrites outside the listed file scope.
+- [x] Expand `Changed files expected` to include the direct-import call sites touched by Step 3, or narrow Step 3 so the slice no longer claims repo-wide import rewrites outside the listed file scope.
 
 ### Low
 
