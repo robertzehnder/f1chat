@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-30T03:18:23Z
+# Project state — last updated: 2026-04-30T03:50:46Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -16,7 +16,7 @@ accumulated context the loop carries between slices._
 | 5 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 7 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 8 | 7 | 4 | 0 | 3 | 0 | 0 | 0 | 0 | 0 |
+| 8 | 7 | 5 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
 | 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `3ba4c93` merge: 08-validators-grid-finish [pass] — 2026-04-29
 - `b28d3d8` merge: 08-validators-sector-consistency [pass] — 2026-04-29
 - `0be2784` merge: 08-validators-pit-stints [pass] — 2026-04-29
 - `b655a6f` merge: 08-synthesis-payload-cutover [pass] — 2026-04-29
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `785749b` merge: 07-streaming-synthesis-server [pass] — 2026-04-29
 - `b4a9aad` merge: 07-skip-repair-on-deterministic [pass] — 2026-04-29
 - `e8d0a17` merge: 07-zero-llm-path-tighten [pass] — 2026-04-29
-- `cfe2972` merge: 06-cu-rightsize [pass] — 2026-04-29
 
 ## Open architectural decisions
 
