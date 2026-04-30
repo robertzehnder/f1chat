@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-resolver
 phase: 9
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T13:31:18-04:00
+updated: 2026-04-30T13:37:16-04:00
 ---
 
 ## Goal
@@ -82,7 +82,17 @@ Commit: see `[slice:09-split-queries-resolver][awaiting-audit]` HEAD on this bra
 - `! grep -n "from ['\"]\(\.\./queries\|@/lib/queries\)['\"]" web/src/lib/queries/resolver.ts` → 0 (no match)
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Gate #4 `! grep -n "from ['\"]\(\.\./queries\|@/lib/queries\)['\"]" web/src/lib/queries/resolver.ts` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` returned only `diagnostic/slices/09-split-queries-resolver.md`, `web/src/lib/queries.ts`, and `web/src/lib/queries/resolver.ts`, all in scope.
+- Criterion 1 -> PASS; `web/src/lib/queries/resolver.ts` exists and exports the moved symbols at `web/src/lib/queries/resolver.ts:4`, `web/src/lib/queries/resolver.ts:17`, `web/src/lib/queries/resolver.ts:52`, `web/src/lib/queries/resolver.ts:96`, `web/src/lib/queries/resolver.ts:212`, and `web/src/lib/queries/resolver.ts:289`.
+- Criterion 2 -> PASS; `web/src/lib/queries.ts:13`-`web/src/lib/queries.ts:19` now contains only the back-compat re-exports, and the moved type/function bodies are absent from `web/src/lib/queries.ts`.
+- Criterion 3 -> PASS; `web/src/lib/queries/resolver.ts:1`-`web/src/lib/queries/resolver.ts:2` import only `../db` and `../querySafety`, and the Step 4 grep returned no matches.
+- Criterion 4 -> PASS; all gate commands passed.
 
 ## Plan-audit verdict (round 1)
 
