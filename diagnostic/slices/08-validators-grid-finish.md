@@ -1,7 +1,7 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
@@ -96,7 +96,16 @@ Rollback: `git revert <commit>`.
 - [x] When `validateGridFinish` returns `ok: false`, user-facing response payload (HTTP status + answer text) is unchanged versus the pass case — verified by `validator-grid-finish-route-wiring.test.mjs` test #2 (asserts pass/fail HTTP status equality, exact answer-text equality to the synthesized text in both cases, and identical `validators`-key presence on `body`).
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` is limited to declared paths plus this slice file.
+- Criterion 1 -> PASS. [web/src/lib/validators/gridFinishValidator.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/src/lib/validators/gridFinishValidator.ts:3) defines structured `{ ok, reasons }`; claim parsing and validation cover explicit positions, signed position deltas, and comparative ordering at [web/src/lib/validators/gridFinishValidator.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/src/lib/validators/gridFinishValidator.ts:144) and [web/src/lib/validators/gridFinishValidator.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/src/lib/validators/gridFinishValidator.ts:281). `node --test web/scripts/tests/validator-grid-finish.test.mjs` -> exit `0` (13/13 passing).
+- Criterion 2 -> PASS. [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/src/app/api/chat/route.ts:37) imports `validateGridFinish`; [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/src/app/api/chat/route.ts:1032) invokes it; [web/src/app/api/chat/route.ts](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/src/app/api/chat/route.ts:1061) records `validators.gridFinish`. `node --test web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` -> exit `0`.
+- Criterion 3 -> PASS. [web/scripts/tests/validator-grid-finish-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/scripts/tests/validator-grid-finish-route-wiring.test.mjs:434) and [web/scripts/tests/validator-grid-finish-route-wiring.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/web/scripts/tests/validator-grid-finish-route-wiring.test.mjs:445) assert failed `gridFinish` validation leaves HTTP status and `body.answer` unchanged and does not leak validator output into the user response; test exits `0`.
+- Decision -> PASS. Slice meets acceptance criteria and is safe to merge.
 
 ## Plan-audit verdict (round 1)
 
