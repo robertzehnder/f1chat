@@ -1,11 +1,11 @@
 ---
 slice_id: 08-validators-sector-consistency
 phase: 8
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T02:40:16Z
+updated: 2026-04-30T02:41:55Z
 ---
 
 ## Goal
@@ -101,6 +101,23 @@ Rollback: `git revert <commit>`.
 
 ### Low
 - [x] Consider broadening `Changed files expected` to mention any contract/type module under `web/src/lib/contracts/` if the validator interface or attached contract shape must be shared rather than kept local. — Decision: keep `ValidationResult` local to the validator file (matches the pit-stints precedent's `PitStintsValidationResult` declared in `web/src/lib/validators/pitStintsValidator.ts`); no new module under `web/src/lib/contracts/` is required because the validator imports `FactContract` type-only and re-uses the already-merged contract type. Out-of-scope item added to make this explicit.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Replace or remove `scripts/loop/state/test_grading_baseline.txt` from `## Prior context`; the path does not exist in this worktree, so the slice's required-reading block is currently not satisfiable.
+- [ ] Reconcile Step 5 and the logging acceptance criterion with the cited `validator-pit-stints-route-wiring` precedent: either assert against captured `appendJsonLog` payloads as that harness does, or explicitly plan a file-backed logger stub and direct file reads instead of saying the test reads a real `chat_query_trace.jsonl` line.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was last updated on 2026-04-30T02:34:51Z, so the state context is current.
