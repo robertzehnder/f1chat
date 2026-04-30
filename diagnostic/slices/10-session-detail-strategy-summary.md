@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-strategy-summary
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:20:00Z
+updated: 2026-04-30T22:45:00Z
 ---
 
 ## Goal
@@ -30,6 +30,7 @@ None at author time. Tests are pure source-inspection (Node `node:test`) and do 
 2. Create `web/src/app/sessions/[sessionKey]/StrategySummary.tsx` as a default-exported function component taking `{ rows: Record<string, unknown>[] }`. Render one row per driver showing: `#<driver_number> <driver_name> · <team_name>`, `pit_stop_count`, the `compounds_used` array joined as a readable list, and `strategy_type`. Mark each driver row with `data-testid="strategy-row"` and the strategy-type cell with `data-testid="strategy-type"`.
 3. Wire `StrategySummary` into `web/src/app/sessions/[sessionKey]/page.tsx`:
    - Default-import `StrategySummary` from `./StrategySummary`.
+   - Import `getSessionStrategySummary` from `@/lib/queries/sessions` (the same module path used by the existing `getSessionDriverPace` / `getSessionStintTimeline` imports). Do NOT import from the `@/lib/queries` barrel — `web/src/lib/queries.ts` is not modified by this slice, so the new function is only reachable via the per-module specifier.
    - Insert `getSessionStrategySummary(key)` into the existing `await Promise.all([...])` **before** the existing `getSessionStintTimeline(key)` call, and add the matching binding (e.g. `strategySummary`) into the destructured array **before** `stints`. This preserves `stints` as the LAST destructured identifier, which the existing `web/scripts/tests/session-detail-stint-timeline.test.mjs` G3/G5 regex (`/const\s+\[[^\]]*?,\s*(\w+)\s*\]\s*=\s*await\s+Promise\.all\(/`) relies on; reordering after `getSessionStintTimeline` would make the new identifier the trailing slot and break those non-baseline tests.
    - Render `<StrategySummary rows={strategySummary} />` directly inside the page-level `<div className="stack">` flow (no extra `<section>` / card / wrapper element — adjacent slices like `<PaceTable>` and `<StintTimeline>` render bare into the stack), positioned immediately after `<StintTimeline rows={stints} />` and before the existing weather/race-control `<div className="two-col">` block whose first child is `<DataTable title="Weather Preview" ...>`.
 4. Add the source-inspection grading test `web/scripts/tests/session-detail-strategy-summary.test.mjs` mirroring the structure of `web/scripts/tests/session-detail-stint-timeline.test.mjs`. Required assertions (G1–G5) are spelled out under Acceptance criteria. The test must NOT rely on the "last destructured identifier" shortcut (since this slice intentionally keeps `stints` as the trailing slot); instead, G3/G5 must extract the strategy-summary row-binding directly from the JSX (`<StrategySummary rows={(\w+)}`).
@@ -54,7 +55,7 @@ bash scripts/loop/test_grading_gate.sh
 - [ ] `web/scripts/tests/session-detail-strategy-summary.test.mjs` exists and passes under `bash scripts/loop/test_grading_gate.sh` with these assertions:
   - **G1**: `getSessionStrategySummary` is declared in `web/src/lib/queries/sessions.ts`; its body contains `FROM core.strategy_summary` and `WHERE session_key = $1`; it does NOT reference `raw.stints` or `raw.pit`; and it references each of `driver_number`, `driver_name`, `team_name`, `total_stints`, `pit_stop_count`, `compounds_used`, `strategy_type`, `total_pit_duration_seconds`, `pit_laps`.
   - **G2**: `web/src/app/sessions/[sessionKey]/StrategySummary.tsx` exists, exports a default function, and contains the literal substrings `data-testid="strategy-row"`, `data-testid="strategy-type"`, `compounds_used`, `pit_stop_count`, and `strategy_type`.
-  - **G3**: `page.tsx` (a) imports `getSessionStrategySummary` from `@/lib/queries` or `@/lib/queries/sessions`; (b) calls `getSessionStrategySummary(` inside the `await Promise.all([...])` argument list; (c) contains a `<StrategySummary rows={<binding>}` JSX element from which `<binding>` is extracted via the regex `/<StrategySummary\s+rows=\{(\w+)\}/` (NOT via the trailing-destructure shortcut); and (d) `<binding>` appears as one of the destructured identifiers in the `const [ ... ] = await Promise.all([...])` array. The test MUST NOT assume the new binding is the last destructured slot — `stints` is intentionally preserved as the trailing slot to keep the existing stint-timeline grading test passing.
+  - **G3**: `page.tsx` (a) imports `getSessionStrategySummary` from `@/lib/queries/sessions` specifically (the per-module path; the `@/lib/queries` barrel form is NOT accepted because this slice does not modify `web/src/lib/queries.ts` to re-export the new function); (b) calls `getSessionStrategySummary(` inside the `await Promise.all([...])` argument list; (c) contains a `<StrategySummary rows={<binding>}` JSX element from which `<binding>` is extracted via the regex `/<StrategySummary\s+rows=\{(\w+)\}/` (NOT via the trailing-destructure shortcut); and (d) `<binding>` appears as one of the destructured identifiers in the `const [ ... ] = await Promise.all([...])` array. The test MUST NOT assume the new binding is the last destructured slot — `stints` is intentionally preserved as the trailing slot to keep the existing stint-timeline grading test passing.
   - **G4**: `page.tsx` default-imports `StrategySummary` from `./StrategySummary`.
   - **G5**: In `page.tsx`, the `<StrategySummary rows={<binding>}>` element (with `<binding>` extracted per G3 from `/<StrategySummary\s+rows=\{(\w+)\}/`) appears AFTER the literal substring `<StintTimeline rows={` (matched as a generic substring with no captured-binding interpolation, so the assertion is independent of which identifier ends up in `<StintTimeline rows={...}>`) and BEFORE the literal substring `Weather Preview` (which marks the start of the existing two-col weather/race-control block).
 - [ ] `cd web && npm run build` exits 0.
@@ -143,7 +144,7 @@ Rollback: `git revert <commit>`. The card is additive; no existing route, query,
 ### High
 
 ### Medium
-- [ ] Resolve the query import surface inconsistency: either constrain Step 3 and Acceptance G3 to import `getSessionStrategySummary` from `@/lib/queries/sessions`, or add an explicit step plus `web/src/lib/queries.ts` to `Changed files expected` so the barrel exports the new function before allowing `@/lib/queries`.
+- [x] Resolve the query import surface inconsistency: either constrain Step 3 and Acceptance G3 to import `getSessionStrategySummary` from `@/lib/queries/sessions`, or add an explicit step plus `web/src/lib/queries.ts` to `Changed files expected` so the barrel exports the new function before allowing `@/lib/queries`.
 
 ### Low
 
