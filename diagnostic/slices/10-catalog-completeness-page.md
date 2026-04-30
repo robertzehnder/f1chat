@@ -1,11 +1,11 @@
 ---
 slice_id: 10-catalog-completeness-page
 phase: 10
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:34:50-04:00
+updated: 2026-04-30T18:42:09-04:00
 ---
 
 ## Goal
@@ -113,7 +113,18 @@ Rollback: `git revert <commit>`. The route is purely additive at `/catalog/compl
 - No live-DB runtime verification was performed; that is explicitly out of scope per `Required services / env` and `Out of scope`.
 
 ## Audit verdict
-(filled by Codex)
+**Status: PASS**
+
+Gate #1 `(cd web && npm run build)` -> exit `0`
+Gate #2 `(cd web && npm run typecheck)` -> exit `0`
+Gate #3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+Scope diff -> PASS; `git diff --name-only integration/perf-roadmap...HEAD` stays within declared scope (`diagnostic/slices/10-catalog-completeness-page.md`, `web/scripts/tests/catalog-completeness.test.mjs`, `web/src/app/catalog/completeness/CompletenessTable.tsx`, `web/src/app/catalog/completeness/page.tsx`, `web/src/lib/queries/sessions.ts`).
+Criterion G1 -> PASS; `getCatalogCompleteness` is exported and queries `core.session_completeness` with the required projection, filters, ordering, and bounded pagination at [sessions.ts](/Users/robertzehnder/.openf1-loop-worktrees/10-catalog-completeness-page/web/src/lib/queries/sessions.ts:387) and enforced by [catalog-completeness.test.mjs](/Users/robertzehnder/.openf1-loop-worktrees/10-catalog-completeness-page/web/scripts/tests/catalog-completeness.test.mjs:70).
+Criterion G2 -> PASS; `CompletenessTable.tsx` default-exports the table, renders the required cells/testids, and derives coverage from all 14 `has_*` flags at [CompletenessTable.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-catalog-completeness-page/web/src/app/catalog/completeness/CompletenessTable.tsx:1) and [CompletenessTable.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-catalog-completeness-page/web/src/app/catalog/completeness/CompletenessTable.tsx:59).
+Criterion G3 -> PASS; the page imports `getCatalogCompleteness`, binds `const rows = await getCatalogCompleteness({})`, and passes that binding into `<CompletenessTable rows={rows} />` at [page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-catalog-completeness-page/web/src/app/catalog/completeness/page.tsx:1).
+Criterion G4 -> PASS; `page.tsx` default-imports `CompletenessTable` from `./CompletenessTable` at [page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-catalog-completeness-page/web/src/app/catalog/completeness/page.tsx:2).
+Criterion G5 -> PASS; `page.tsx` declares `export const dynamic = "force-dynamic"` at [page.tsx](/Users/robertzehnder/.openf1-loop-worktrees/10-catalog-completeness-page/web/src/app/catalog/completeness/page.tsx:4).
+Decision -> PASS; all declared gates passed and the implementation satisfies the additive `/catalog/completeness` contract without scope creep.
 
 ## Plan-audit verdict (round 1)
 
