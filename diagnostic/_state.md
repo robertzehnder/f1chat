@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-30T16:28:16Z
+# Project state — last updated: 2026-04-30T16:41:30Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -17,7 +17,7 @@ accumulated context the loop carries between slices._
 | 6 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 7 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 9 | 21 | 7 | 0 | 14 | 0 | 0 | 0 | 0 | 0 |
+| 9 | 21 | 8 | 0 | 13 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 0 | 0 |
 | 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
@@ -38,6 +38,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `76e1bbf` merge: 09-split-deterministicSql-result [pass] — 2026-04-30
 - `0f30d09` merge: 09-split-deterministicSql-strategy [pass] — 2026-04-30
 - `1d1a352` merge: 09-split-deterministicSql-pace [pass] — 2026-04-30
 - `ed56691` merge: 09-split-chatRuntime-planTrace [pass] — 2026-04-30
@@ -47,7 +48,6 @@ accumulated context the loop carries between slices._
 - `a9e3f2a` merge: 09-split-chatRuntime-classification [pass] — 2026-04-30
 - `fd4a996` merge: 08-validators-count-list-parity [pass] — 2026-04-30
 - `3fec8a2` merge: 08-validators-strategy-evidence [pass] — 2026-04-30
-- `3ba4c93` merge: 08-validators-grid-finish [pass] — 2026-04-29
 
 ## Open architectural decisions
 
