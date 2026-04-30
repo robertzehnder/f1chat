@@ -1,11 +1,11 @@
 ---
 slice_id: 10-catalog-completeness-page
 phase: 10
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:30:00-04:00
+updated: 2026-04-30T18:19:47-04:00
 ---
 
 ## Goal
@@ -100,3 +100,18 @@ Rollback: `git revert <commit>`. The route is purely additive at `/catalog/compl
 
 ### Notes (informational only — no action)
 - `web/src/app/catalog/page.tsx` already exists in the repo, so this slice is a repurpose/extension of the existing route rather than creation of a brand-new page.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Make the `## Gate commands` block shell-safe when run as a pasted multi-line block by wrapping the `cd web && ...` entries in subshells or switching to an equivalent root-safe form; as written, the first `cd web && npm run build` leaves the shell in `web/`, so the next `cd web && npm run typecheck` resolves against `web/web` and fails before the intended gate runs.
+- [ ] Extend the grading-test contract so G2 (or a new assertion) proves `CompletenessTable.tsx` actually renders the contract-coverage cell from the `has_*` booleans; the current acceptance criteria only require `completeness_status`, `completeness_score`, and `meeting_name` substrings, so the slice can pass while omitting the goal-critical “which contracts populated this session” output entirely.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated at `2026-04-30T22:11:15Z`, which is within 24 hours of this audit.
