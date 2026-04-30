@@ -1,8 +1,8 @@
 ---
 slice_id: 08-validators-grid-finish
 phase: 8
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-29
@@ -12,26 +12,37 @@ updated: 2026-04-29
 Validator: every grid/finish claim must be consistent with `grid_vs_finish`.
 
 ## Inputs
-- `web/src/lib/chatRuntime.ts`
-- `web/src/lib/contracts/`
+- `web/src/app/api/chat/route.ts` (synthesis post-step where validators are invoked alongside `validatePitStints` / `validateSectorConsistency`)
+- `web/src/lib/contracts/factContract.ts`
+- `web/src/lib/validators/sectorConsistencyValidator.ts` (reference implementation pattern)
+- `web/src/lib/validators/pitStintsValidator.ts` (reference implementation pattern)
 
 ## Prior context
 - `diagnostic/_state.md`
-- Latest healthcheck artifact under `diagnostic/artifacts/healthcheck/`
-- Phase 11 redo will re-baseline; this slice's bar is just "validator runs and asserts the obvious thing"
+- `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json`
+- `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.md`
+- `web/scripts/tests/validator-sector-consistency.test.mjs` (existing per-validator unit-test pattern)
+- `web/scripts/tests/validator-sector-consistency-route-wiring.test.mjs` (existing route-wiring test pattern)
 
 ## Required services / env
 None at author time.
 
+## Decisions
+- Step 4 wires the validator into the synthesis post-step in `web/src/app/api/chat/route.ts` (where `validatePitStints` and `validateSectorConsistency` are invoked at lines ~1022–1027 and surfaced in `appendQueryTrace`'s `validators` field at ~line 1054), not in `web/src/lib/chatRuntime.ts`. The original Inputs reference to `chatRuntime.ts` was incorrect; corrected here. Plan-audit round 1 Medium item asked for `chatRuntime.ts` in Changed files; we list the actually-modified file (`route.ts`) instead.
+- The validator interface (e.g. `GridFinishValidationResult`) is co-located in the new validator module file rather than in a separate shared contract/type file, matching the precedent set by `sectorConsistencyValidator.ts` and `pitStintsValidator.ts` (each defines and exports its own `*ValidationResult` type). No new shared contract file is added.
+
 ## Steps
-1. Define the validator interface: `(answerText, attachedContracts) → ValidationResult`.
-2. Implement the validator.
-3. Add unit tests covering pass + fail cases.
-4. Wire into synthesis post-step (after answer comes back, before returning to user). Validation failures get logged but don't reject the answer in this phase.
+1. Define the validator interface in `web/src/lib/validators/gridFinishValidator.ts`: `(answerText: string, contract: FactContract) → GridFinishValidationResult` with shape `{ ok: boolean; reasons: string[] }`, matching the precedent in `sectorConsistencyValidator.ts`.
+2. Implement the validator: parse grid/finish claims from `answerText` and assert consistency against the `grid_vs_finish` rows in the attached `FactContract`.
+3. Add unit tests at `web/scripts/tests/validator-grid-finish.test.mjs` covering pass + fail cases (mirror the structure of `validator-sector-consistency.test.mjs`).
+4. Wire into the synthesis post-step in `web/src/app/api/chat/route.ts` alongside the existing pit-stints and sector-consistency validators (after answer comes back, before returning to user): call `validateGridFinish(answer, synthesisContract)` and add a `gridFinish` field to the `validators` object passed to `appendQueryTrace` (line ~1054). Validation failures get logged in `chat_query_trace.jsonl` but don't reject the answer in this phase.
+5. Add a route-wiring test at `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (mirror `validator-sector-consistency-route-wiring.test.mjs`) asserting the trace event includes `validators.gridFinish`.
 
 ## Changed files expected
-- `web/src/lib/validators/gridFinishValidator.ts`
-- `web/scripts/tests/validator-grid-finish.test.mjs`
+- `web/src/lib/validators/gridFinishValidator.ts` (new)
+- `web/scripts/tests/validator-grid-finish.test.mjs` (new)
+- `web/scripts/tests/validator-grid-finish-route-wiring.test.mjs` (new)
+- `web/src/app/api/chat/route.ts` (import + invoke `validateGridFinish`; add `gridFinish` to `validators` field in `appendQueryTrace` payload)
 
 ## Artifact paths
 None.
@@ -40,12 +51,12 @@ None.
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
 - [ ] Validator returns structured pass/fail with reason on test cases.
-- [ ] Synthesis post-step runs validators; failures surface in `chat_query_trace.jsonl`.
+- [ ] Synthesis post-step runs validators; failures surface in `chat_query_trace.jsonl` under the `validators.gridFinish` field.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -67,12 +78,12 @@ Rollback: `git revert <commit>`.
 - [ ] None.
 
 ### Medium
-- [ ] Replace the ambiguous/non-path `## Prior context` entries at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:20) and [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:21) with concrete existing artifact path(s), because plan-audit requires every listed prior-context path to be directly readable.
-- [ ] Replace the raw `cd web && npm run test:grading` gate at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:43) with `bash scripts/loop/test_grading_gate.sh` per the standing auditor note in `diagnostic/_state.md`.
-- [ ] Add `web/src/lib/chatRuntime.ts` to `## Changed files expected` at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:32), because Step 4 explicitly wires the validator into the synthesis post-step there.
+- [x] Replace the ambiguous/non-path `## Prior context` entries at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:20) and [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:21) with concrete existing artifact path(s), because plan-audit requires every listed prior-context path to be directly readable.
+- [x] Replace the raw `cd web && npm run test:grading` gate at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:43) with `bash scripts/loop/test_grading_gate.sh` per the standing auditor note in `diagnostic/_state.md`.
+- [x] Add `web/src/lib/chatRuntime.ts` to `## Changed files expected` at [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:32), because Step 4 explicitly wires the validator into the synthesis post-step there. (Addressed via `web/src/app/api/chat/route.ts` — see Decisions; that is the actual file where pit-stints/sector validators are wired, not `chatRuntime.ts`.)
 
 ### Low
-- [ ] Clarify whether the validator interface from [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:27) lives in a new shared contract/type file, and if so add that path under `## Changed files expected`.
+- [x] Clarify whether the validator interface from [diagnostic/slices/08-validators-grid-finish.md](/Users/robertzehnder/.openf1-loop-worktrees/08-validators-grid-finish/diagnostic/slices/08-validators-grid-finish.md:27) lives in a new shared contract/type file, and if so add that path under `## Changed files expected`. (Addressed in Decisions: validator type is co-located in the validator module, no new shared file.)
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was readable and its timestamp did not block this audit.
