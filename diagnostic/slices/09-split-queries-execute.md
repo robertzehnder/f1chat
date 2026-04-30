@@ -1,11 +1,11 @@
 ---
 slice_id: 09-split-queries-execute
 phase: 9
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T18:30:00Z
+updated: 2026-04-30T19:30:00Z
 ---
 
 ## Goal
@@ -76,3 +76,21 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current on 2026-04-30, so no stale-state note applies.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied)**
+
+### High
+
+### Medium
+- [ ] Step 4's claim that `(cd web && npm run build)` and `(cd web && npm run typecheck)` "also fail on a runtime/type-detectable cycle" overstates the guarantees: `tsc --noEmit` does not error on import cycles, and `next build` does not statically reject them either (cycles silently produce undefined-at-init bindings). The grep is therefore the only real cycle guard. Either delete the misleading sentence or add a concrete transitive-cycle gate (e.g., `npx --yes madge --circular web/src/lib/queries/execute.ts` invoked from `web/`) to back the claim.
+
+### Low
+- [ ] The circular-import grep alternation `(\.\./queries|@/lib/queries)` does not catch deeper relative paths such as `'../../lib/queries'` or trailing `/index` forms; broaden the pattern (e.g., `(\.\./)+(lib/)?queries(/index)?` plus `@/lib/queries`) to harden the direct-import guard against unconventional resolution paths.
+- [ ] Step 1's "execute-only helpers/constants it depends on" is a discovery instruction; with prior splits already moving sessions/resolver/catalog out, the residual move-set in `queries.ts` is now small and enumerable — naming the expected symbols inline would remove ambiguity for the implementer and the impl auditor.
+
+### Notes (informational only — no action)
+- Round-1 High and both Mediums are addressed; Medium #1 was resolved by deferring consumer-import migration in Step 3 (Changed files now matches Steps), which is internally consistent.
+- The `grep ...; test $? -eq 1` idiom is fine under the loop's per-line gate runner (matches the convention used by other recently-merged Phase 9 split slices); not flagging.
