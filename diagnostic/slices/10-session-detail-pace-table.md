@@ -1,11 +1,11 @@
 ---
 slice_id: 10-session-detail-pace-table
 phase: 10
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:05:00Z
+updated: 2026-04-30T21:30:00Z
 ---
 
 ## Goal
@@ -35,7 +35,7 @@ contract.
    - `web/src/lib/queries/sessions.ts` source contains both `export async function getSessionDriverPace` and `FROM core.driver_session_summary` within the same function body, plus `WHERE session_key = $1`.
    - `web/src/app/sessions/[sessionKey]/PaceTable.tsx` exists, exports a default function, and imports from `@/components/DataTable`.
    - `web/src/app/sessions/[sessionKey]/page.tsx` imports `getSessionDriverPace` from `@/lib/queries` (or the sessions submodule) and references `<PaceTable`.
-   - The `getSessionDriverPace` function body contains the strings `best_valid_lap`, `median_lap`, `best_s1`, and does **not** reference `raw.laps` (the slice must use the materialized `core.*` contract per Phase 10 item 1).
+   - The `getSessionDriverPace` function body contains **every** column name enumerated in Step 1 — i.e., the literal substrings `driver_number`, `driver_name`, `team_name`, `lap_count`, `valid_lap_count`, `best_lap`, `median_lap`, `avg_lap`, `best_valid_lap`, `median_valid_lap`, `best_s1`, `best_s2`, `best_s3`, `avg_s1`, `avg_s2`, `avg_s3` — and does **not** reference `raw.laps` (the slice must use the materialized `core.*` contract per Phase 10 item 1). The test iterates the column list and asserts each as a substring so the SELECT-shape stays in lock-step with Step 1.
 
 ## Changed files expected
 - `web/src/lib/queries/sessions.ts` (new exported function `getSessionDriverPace`)
@@ -57,8 +57,8 @@ bash scripts/loop/test_grading_gate.sh
 - [ ] `cd web && npm run typecheck` exits 0.
 - [ ] `cd web && npm run build` exits 0.
 - [ ] `bash scripts/loop/test_grading_gate.sh` exits 0 (no new failures vs `scripts/loop/state/test_grading_baseline.txt`); the new `session-detail-pace-table.test.mjs` is part of the run and passes.
-- [ ] All four assertions inside `web/scripts/tests/session-detail-pace-table.test.mjs` (listed in Step 4) pass — this is the observable check that the page is wired to `core.driver_session_summary` rather than to `raw.laps`, and that `PaceTable` is rendered from `page.tsx`.
-- [ ] The `getSessionDriverPace` SQL string in `web/src/lib/queries/sessions.ts` references the columns enumerated in Step 1 only; the test in Step 4 enforces the contract-shape subset (`best_valid_lap`, `median_lap`, `best_s1`).
+- [ ] All four assertion groups inside `web/scripts/tests/session-detail-pace-table.test.mjs` (listed in Step 4) pass — this is the observable check that the page is wired to `core.driver_session_summary` rather than to `raw.laps`, and that `PaceTable` is rendered from `page.tsx`.
+- [ ] The `getSessionDriverPace` SQL string in `web/src/lib/queries/sessions.ts` contains every column listed in Step 1; this is enforced by the per-column substring loop in Step 4's fourth assertion group, so the test and this criterion are the same observable check.
 
 ## Out of scope
 - Charting / visualization (timeline, gantt) — covered by sibling slice `10-session-detail-stint-timeline.md`.
@@ -109,7 +109,7 @@ Rollback: `git revert <commit>`. The change is additive (new query function, new
 - [ ] None.
 
 ### Medium
-- [ ] Make the final acceptance criterion and Step 4 use the same observable check: either assert the full `SELECT` column list/order from Step 1 in `session-detail-pace-table.test.mjs`, or narrow the criterion so it no longer claims the test proves the query references only the enumerated columns.
+- [x] Make the final acceptance criterion and Step 4 use the same observable check: either assert the full `SELECT` column list/order from Step 1 in `session-detail-pace-table.test.mjs`, or narrow the criterion so it no longer claims the test proves the query references only the enumerated columns.
 
 ### Low
 - [ ] None.
