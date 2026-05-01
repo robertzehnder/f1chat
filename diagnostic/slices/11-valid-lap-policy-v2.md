@@ -1,15 +1,17 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T13:44:04Z
+updated: 2026-05-01T14:05:00Z
 ---
 
 ## Goal
-Refine the lap-validity policy that governs clean-lap analytics: improve handling of out-laps, in-laps, SC laps, and deleted laps. The policy lives in `core.valid_lap_policy` (default-row driven) and is materialized as the `is_valid` column on `core.laps_enriched`, both defined in `sql/006_semantic_lap_layer.sql`. Downstream summary contracts that depend on `is_valid` filtering are also in scope where the diagnosis shows their output is contaminated by an inadequate validity rule.
+Refine the lap-validity policy that governs clean-lap analytics: improve handling of out-laps, in-laps, and SC laps (track-status flags). The policy lives in `core.valid_lap_policy` (default-row driven) and is materialized as the `is_valid` column on `core.laps_enriched`, both defined in `sql/006_semantic_lap_layer.sql`. Downstream summary contracts that depend on `is_valid` filtering are also in scope where the diagnosis shows their output is contaminated by an inadequate validity rule.
+
+**Deleted-lap scope (per round-3 audit):** `raw.laps` exposes no `deleted` / `lap_deleted` column (`sql/002_create_tables.sql:57-77`) and `core.lap_context_summary` carries only per-lap-number aggregates (`sql/007_semantic_summary_contracts.sql:763-790`), so there is no source signal in this repo for "deleted laps." Deleted-lap handling is therefore **out of scope** for this slice. SC laps remain in scope: the `track_flag` column already projected onto `core.laps_enriched` from `raw.race_control` (`sql/006_semantic_lap_layer.sql:117-131,244` etc.) is the SC/SC-ending signal this slice may consult.
 
 **Q30 scope clarification (per round-2 audit):** the 2026-04-30 rerun records Q30 as routed to deterministic template `max_leclerc_lap_pace_summary` (lap-pace), not to a sector-times template. That is a routing/template defect, not a lap-validity contamination, so this slice does **not** commit to lifting Q30. Q30 is held to a regression-only bar (must not drop below its current B grade) and the routing/template fix is handed off to a future slice.
 
@@ -41,10 +43,13 @@ Refine the lap-validity policy that governs clean-lap analytics: improve handlin
 - `OPENF1_CHAT_BASE_URL` pointed at a running web instance (default `http://127.0.0.1:3000`); start `npm run dev` (or equivalent) in `web/` before running the re-grade gate.
 
 ## Steps
-1. Inspect the current `is_valid` rule (`core.valid_lap_policy` defaults + `is_valid` derivation in `sql/006_semantic_lap_layer.sql`) and enumerate the four target signals: out-laps (`is_pit_out_lap`), in-laps (`is_pit_lap` / pit-stop on this lap), SC laps (track-status / safety-car flag), deleted laps (any `deleted` / `lap_deleted` / sanity-band flag carried in `raw.laps` or available via the lap-context summary).
+1. Inspect the current `is_valid` rule (`core.valid_lap_policy` defaults + `is_valid` derivation in `sql/006_semantic_lap_layer.sql`) and enumerate the three in-scope target signals available in this repo: out-laps (`is_pit_out_lap`), in-laps (`is_pit_lap` / pit-stop on this lap), and SC laps (the `track_flag` column already projected from `raw.race_control` onto `core.laps_enriched` via the `race_control_at_lap` CTE in `sql/006_semantic_lap_layer.sql`). Deleted-lap handling is out of scope (no source column exists in `raw.laps`).
 2. **Routing/template check first (Q30):** before treating Q30 as lap-validity contamination, confirm what the 2026-04-30 rerun already shows — Q30's `generationNotes` records `template=max_leclerc_lap_pace_summary` (a lap-pace template), not a sector-times template. Read the Q30 row in `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` and the routing logic in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts` to verify the routing mismatch. If Q30 is failing because of routing/template selection (the documented case), do **not** modify the validity policy on Q30's behalf; record the finding in the slice-completion note and hand Q30 off to a future routing/template slice. Q30's grade is a regression-only check in gate 5 (must not drop below B).
-3. **Lap-validity contamination check (independent of Q30):** for the lap-policy-sensitive contracts that drive Q19–Q29 and Q31–Q37, audit whether SC laps, deleted laps, in-laps, or out-laps slip past the current `is_valid` rule and contaminate aggregates. If contamination is found that risks regression (or that demonstrably degrades any of these answers in the rerun), update `sql/006_semantic_lap_layer.sql` (`core.valid_lap_policy` defaults and/or the `is_valid` boolean expression) accordingly. Mirror in `sql/008_core_build_schema.sql` only if the `core.laps_clean_*` view family carries the same defect. If no contamination is found that warrants a change, the slice may complete with **no SQL change** and only the slice-file/diagnosis updates committed (still subject to gate 5).
-4. Apply any schema change(s) to the dev DB (`psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` and, if touched, `sql/008_core_build_schema.sql`), then refresh the dependent materializations. Skip if step 3 produced no SQL edits.
+3. **Lap-validity contamination check (independent of Q30):** for the lap-policy-sensitive contracts that drive Q19–Q29 and Q31–Q37, audit whether SC laps (via `track_flag`), in-laps, or out-laps slip past the current `is_valid` rule and contaminate aggregates. If contamination is found that risks regression (or that demonstrably degrades any of these answers in the rerun), update `sql/006_semantic_lap_layer.sql` (`core.valid_lap_policy` defaults and/or the `is_valid` boolean expression) accordingly. Mirror in `sql/008_core_build_schema.sql` only if the `core_build.laps_enriched` view's `is_valid` derivation (`sql/008_core_build_schema.sql:7-67`) carries the same defect. If no contamination is found that warrants a change, the slice may complete with **no SQL change** and only the slice-file/diagnosis updates committed (still subject to gate 5).
+4. Apply any schema change(s) to the dev DB (`psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` and, if touched, `sql/008_core_build_schema.sql`), then re-materialize the dependent storage tables in dependency order. The actual refresh path (per `sql/010_laps_enriched_mat.sql:71-83`) is **TRUNCATE + INSERT** by re-applying the mat migration files, NOT `REFRESH MATERIALIZED VIEW` — `core.laps_enriched` is a CREATE-OR-REPLACE-VIEW facade over the heap table `core.laps_enriched_mat`, not a Postgres materialized view. The order is:
+   1. `sql/010_laps_enriched_mat.sql` — repopulates `core.laps_enriched_mat` from the (now-updated) `core_build.laps_enriched` view.
+   2. Downstream summary mats that filter by `is_valid` and feed Q19–Q37's deterministic templates: `sql/009_driver_session_summary_mat.sql`, `sql/011_stint_summary_mat.sql`, `sql/013_race_progression_summary_mat.sql`, `sql/017_lap_phase_summary_mat.sql`, `sql/018_lap_context_summary_mat.sql`.
+   Skip step 4 entirely if step 3 produced no SQL edits.
 5. Re-grade the lap-policy-sensitive question set (Q19–Q37) per gate 5 to verify regression-protection holds: Q19–Q29 and Q31–Q37 remain at A, and Q30 does not regress below B.
 6. Record the diagnosis in the slice-completion note: which contamination class (if any) was fixed, and the explicit Q30 hand-off to a routing/template slice with its evidence (`generationNotes=template=max_leclerc_lap_pace_summary`).
 
@@ -56,7 +61,7 @@ Refine the lap-validity policy that governs clean-lap analytics: improve handlin
 - `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json` — re-grade artifact written by gate 5 (Q19–Q37 regression-protection re-grade output); always produced.
 
 ## Artifact paths
-- `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json` — re-grade output from gate 5 (15-row subset: Q19–Q37; Q30 is the primary target, the rest are regression protection).
+- `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json` — re-grade output from gate 5 (19-row subset: Q19–Q37, regression-protection only). No primary lift target; Q30 is held to a "must not regress below B" check, and Q19–Q29 + Q31–Q37 are held at A.
 
 ## Gate commands
 ```bash
@@ -70,11 +75,23 @@ cd web && npm run typecheck
 bash scripts/loop/test_grading_gate.sh
 
 # Gate 4 — apply the schema change(s) the slice touched, in dependency order, and
-# refresh dependent materializations. Skip files this slice did not modify.
+# re-materialize dependent storage tables. Skip migration files this slice did not
+# modify; ALWAYS re-apply the mat files below when 006 or 008 changed, because the
+# storage tables are repopulated by TRUNCATE + INSERT inside those migrations
+# (see sql/010_laps_enriched_mat.sql:71-83). core.laps_enriched is a
+# CREATE-OR-REPLACE-VIEW facade over core.laps_enriched_mat, not a Postgres
+# materialized view, so REFRESH MATERIALIZED VIEW does NOT apply here.
 psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql
 # Only if step 3 also touched the core build schema:
 # psql "$DATABASE_URL" -f sql/008_core_build_schema.sql
-psql "$DATABASE_URL" -c "REFRESH MATERIALIZED VIEW CONCURRENTLY core.laps_enriched;"
+
+# Re-materialize storage tables in dependency order (idempotent TRUNCATE+INSERT).
+psql "$DATABASE_URL" -f sql/010_laps_enriched_mat.sql
+psql "$DATABASE_URL" -f sql/009_driver_session_summary_mat.sql
+psql "$DATABASE_URL" -f sql/011_stint_summary_mat.sql
+psql "$DATABASE_URL" -f sql/013_race_progression_summary_mat.sql
+psql "$DATABASE_URL" -f sql/017_lap_phase_summary_mat.sql
+psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql
 
 # Gate 5 — re-grade the lap-policy-sensitive question set (Q19–Q37) using a filtered
 # questions file built from the canonical mapping. Acceptance: Q19–Q29 and Q31–Q37
@@ -189,11 +206,11 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Replace gate 4's `REFRESH MATERIALIZED VIEW CONCURRENTLY core.laps_enriched;` with the repo's actual refresh path for this contract graph: `core.laps_enriched` is a view facade over `core.laps_enriched_mat` (`sql/010_laps_enriched_mat.sql:12-13,71-83`), so the plan must name the executable re-materialization step(s) that repopulate `core.laps_enriched_mat` and any downstream summary mats the slice relies on before gate 5 re-grades.
-- [ ] Resolve the deleted-lap scope against real repository sources: `raw.laps` has no `deleted`/`lap_deleted` field (`sql/002_create_tables.sql:57-77`) and `core.lap_context_summary` exposes only per-lap-number aggregates (`sql/007_semantic_summary_contracts.sql:763-790`), so the slice must either remove deleted-lap handling from scope or name the actual source relation/column that can drive it.
+- [x] Replace gate 4's `REFRESH MATERIALIZED VIEW CONCURRENTLY core.laps_enriched;` with the repo's actual refresh path for this contract graph: `core.laps_enriched` is a view facade over `core.laps_enriched_mat` (`sql/010_laps_enriched_mat.sql:12-13,71-83`), so the plan must name the executable re-materialization step(s) that repopulate `core.laps_enriched_mat` and any downstream summary mats the slice relies on before gate 5 re-grades.
+- [x] Resolve the deleted-lap scope against real repository sources: `raw.laps` has no `deleted`/`lap_deleted` field (`sql/002_create_tables.sql:57-77`) and `core.lap_context_summary` exposes only per-lap-number aggregates (`sql/007_semantic_summary_contracts.sql:763-790`), so the slice must either remove deleted-lap handling from scope or name the actual source relation/column that can drive it.
 
 ### Medium
-- [ ] Fix the gate-5 artifact contract so its row-count and targeting language match the declared question set: the slice re-grades Q19-Q37 inclusive (19 IDs) with no primary lift target, but `## Artifact paths` still says `15-row subset` and calls Q30 the primary target.
+- [x] Fix the gate-5 artifact contract so its row-count and targeting language match the declared question set: the slice re-grades Q19-Q37 inclusive (19 IDs) with no primary lift target, but `## Artifact paths` still says `15-row subset` and calls Q30 the primary target.
 
 ### Low
 
