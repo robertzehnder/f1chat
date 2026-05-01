@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T18:42:00Z
+updated: 2026-05-01T19:05:00Z
 ---
 
 ## Goal
@@ -181,6 +181,20 @@ Rollback: `git revert <commit>`. The disambiguation tightening is a localized sc
 
 ### Low
 - [x] Remove `web/package.json` from `## Changed files expected` or move the auto-discovery note elsewhere, because the file is explicitly unchanged and should not appear in the expected diff scope.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T15:42:52Z`).
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Add a gate/acceptance assertion that `ambiguousSurnames` is actually wired into the runtime clarification path in `web/src/lib/chatRuntime.ts`, because the current plan only proves `disambiguateDrivers(..., selectedSession?.year ?? null)` is called and that explicit-driver-number handling remains, so a green entrypoint test could still mask a silent pre-2024 bare-`Verstappen` misresolution if `forceDriverClarification` never consumes the ambiguity metadata.
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T15:42:52Z`).
