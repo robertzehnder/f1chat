@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:05:03Z
+updated: 2026-05-01T19:30:00Z
 ---
 
 ## Goal
@@ -28,6 +28,7 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
    **Snapshot category-mate baselines BEFORE step 3 moves the legacy artifact.** Capture every row's legacy `answer_grade` / `semantic_conformance_grade` from `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` into a temp file (e.g. `cp diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json /tmp/11-rerun_legacy_baseline.json`, or use `git show HEAD:diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` later, or read it from its post-move path `diagnostic/artifacts/healthcheck/legacy/11-rerun_2026-04-30.json`) so the category-mate non-regression criterion remains computable AFTER step 3 moves the file out of the live `diagnostic/artifacts/healthcheck/` glob. **The slice does NOT rewrite `11-rerun_2026-04-30.json` in place** — it is preserved verbatim in legacy schema and only relocated. The slice-completion note must record the per-ID, per-mapped-axis legacy→new diff drawn from this snapshot.
 2. Rebuild the offline grader pipeline so artifact rows carry the three axes:
    - In `web/scripts/chat-health-check-baseline.mjs`, `web/scripts/chat-health-check-grade.mjs`, AND `web/scripts/chat-health-check.mjs` (the live healthcheck runner — which also emits `answer_grade_counts` / `semantic_conformance_grade_counts` at lines 87-88 and renders `Answer grade` / `Answer grade reason` / `Semantic conformance grade` markdown rows at lines 253 and 271-273), replace `answer_grade` / `answer_grade_reason` / `semantic_conformance_grade` / `semantic_conformance_reason` with `factual_correctness`, `completeness`, `clarity` (each `{ grade, reason }`). Keep `root_cause_labels` for orthogonal regression detection.
+   - **Update both grader entrypoints to emit the single merged-object shape** declared in `## Decisions` (`Canonical artifact top-level shape`). Today `chat-health-check-grade.mjs:171-176` writes a rows-array to `chat_health_check_baseline_<stamp>.json` and a separate `{generatedAt, sourceFile, rubricPath, gradingModel, summary, actionable}` object to `chat_health_check_baseline_<stamp>.summary.json`; rewrite that block (and the parallel block at `chat-health-check.mjs:383-405`) to instead emit a single top-level object `{generatedAt, sourceFile, rubricPath, gradingModel: "answer_semantic_split_v1+multi_axis", results, summary, actionable}` to one `.json` file. The `summary` and `actionable` sub-objects use the new per-axis count keys (see next sub-bullet). The `.summary.json` sidecar is no longer written for the canonical in-tree artifact; if the grader's existing `web/logs/` ad-hoc-run sidecar pattern needs to be preserved for developer diagnostics, do so behind a clearly-named flag so the in-tree artifact under `diagnostic/artifacts/healthcheck/` remains a single file.
    - Update `summarizeBaselineGrades` (and any markdown report builder, including the per-row `Answer Grade` / `Semantic Grade` columns and the per-row detail block) to emit `factualCorrectnessCounts`, `completenessCounts`, `clarityCounts` in the artifact `summary` object and to render per-axis columns (`Factual Correctness`, `Completeness`, `Clarity`) in the markdown report. The `summary.actionable.*` shape must mirror the same three keys (`factual_correctness_grade_counts`, `completeness_grade_counts`, `clarity_grade_counts`).
    - Update `web/scripts/chat-health-check.rubric.json` and `web/scripts/chat-health-check.rubric.intense.json` so each rubric entry carries per-axis expectations (or document a deterministic mapping from existing rubric keys to the new axes).
    - Update `web/scripts/build-rerun-comparison-md.mjs` (lines 139-153, 172-173, 222) so the rerun-comparison generator reads `factual_correctness` / `completeness` / `clarity` from each row and `factualCorrectnessCounts` / `completenessCounts` / `clarityCounts` from the prior summary. The `Source:` footer string at line 222 must be updated to reference the new summary keys.
@@ -37,7 +38,7 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
    - Re-shape every artifact row to the new fields and bump `summary` to expose the three axis count maps. **Keep `summary.gradeCounts`** (the overall A/B/C aggregate of `baselineGrade`) **unchanged** — it is orthogonal to the per-axis split and `scripts/loop/update_state.sh:106-108` still reads it for the `Overall A/B/C:` headline. Do not drop or rename this key.
    - Update `scripts/loop/update_state.sh` (`render_benchmark_headline`, lines 109-113 — the legacy-key reads inside the function) so the benchmark headline reads from the new `factualCorrectnessCounts`, `completenessCounts`, and `clarityCounts` keys; keep a one-version legacy fallback only if both key sets coexist in-tree on author day, otherwise replace cleanly.
    - Update the regression-test fixtures under `web/scripts/tests/fixtures/` — every fixture, namely `clarification.fixture.json` + `clarification.rubric.json`, `semantic.fixture.json` + `semantic.rubric.json` (the actual on-disk filenames; there is no `semantic-conformance.fixture.json`), `report.fixture.json` + `report.rubric.json`, and `synthesis.fixture.json` + `synthesis.rubric.json` — and the assertions in `web/scripts/tests/grading-regression.test.mjs` to use the three axis fields instead of `answer_grade` / `semantic_conformance_grade`. The test currently asserts (a) per-row `answer_grade` / `semantic_conformance_grade` / `semantic_conformance_reason` (lines 47-48, 52, 66-67, 159-164), (b) summary-level `summary.summary.answerGradeCounts` / `summary.summary.semanticConformanceGradeCounts` / `summary.actionable.answer_grade_counts` / `summary.actionable.semantic_conformance_grade_counts` (lines 142-150), and (c) markdown-report regexes `/Answer Grade/i` and `/Semantic Grade/i` (lines 167-168). Each of these MUST be rewritten to assert the new axis fields (`factual_correctness`, `completeness`, `clarity` per row; `factualCorrectnessCounts` / `completenessCounts` / `clarityCounts` in `summary.summary`; `factual_correctness_grade_counts` / `completeness_grade_counts` / `clarity_grade_counts` in `summary.actionable`) and the markdown regexes MUST become `/Factual Correctness/i`, `/Completeness/i`, `/Clarity/i`. Root-cause assertions on `synthesis.fixture.json` (lines 78-109) MUST continue to pass — they are orthogonal to the axis split.
-   - **Canonical regrade artifact path**: write a new sibling artifact at `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` (use the gate-day date) by running `node web/scripts/chat-health-check-grade.mjs` against the existing input rows so the artifact-on-disk matches the new schema. **The slice does NOT regenerate `11-rerun_2026-04-30.json` in place** — that file is preserved as the legacy baseline used by step 4's category-mate diff (and snapshotted in step 1 for safety). Reference the new path under `## Artifact paths` below; the mtime-pin gate, the `## Changed files expected` entry, and every acceptance criterion all refer to this single canonical path.
+   - **Canonical regrade artifact path and shape**: write a new sibling artifact at `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` (use the gate-day date) by running `node web/scripts/chat-health-check-grade.mjs` against the existing input rows so the artifact-on-disk matches the new schema. The artifact MUST be a **single JSON object** with the top-level keys `{generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable}` declared in `## Decisions` (`Canonical artifact top-level shape`); a top-level array (today's rows-only `chat_health_check_baseline_<stamp>.json` shape) or a split rows + `.summary.json` sidecar pair is **not** acceptable for the in-tree canonical artifact, because `update_state.sh:render_benchmark_headline` requires a single dict it can call `.get('summary', d)` on. **The slice does NOT regenerate `11-rerun_2026-04-30.json` in place** — that file is preserved as the legacy baseline used by step 4's category-mate diff (and snapshotted in step 1 for safety). Reference the new path under `## Artifact paths` below; the mtime-pin gate, the `## Changed files expected` entry, and every acceptance criterion all refer to this single canonical path.
    - **Pin newest-by-mtime**: at gate time, `scripts/loop/update_state.sh:45-53` (`latest_file`) selects the healthcheck artifact via `ls -t`. The current latest-by-mtime file is `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` (legacy schema). The new `11-multi-axis-regrade_<YYYY-MM-DD>.json` artifact must be the newest `*.json` under `diagnostic/artifacts/healthcheck/` at gate time. Either (a) ensure its mtime is fresher than every other file in `diagnostic/artifacts/healthcheck/*.json` AND additionally re-shape `11-valid-lap-policy-v2_2026-05-01.json` to the new schema (it remains in-tree and would otherwise break if `update_state.sh` ever falls back to it; `11-rerun_2026-04-30.json` is intentionally preserved in legacy schema as the category-mate baseline and is therefore moved to `diagnostic/artifacts/healthcheck/legacy/` under this option to keep it out of `latest_file`'s glob), OR (b) move every other in-tree healthcheck artifact (`11-valid-lap-policy-v2_2026-05-01.json` AND `11-rerun_2026-04-30.json`) to `diagnostic/artifacts/healthcheck/legacy/` so the live directory contains only the new multi-axis artifact. Both options leave `11-rerun_2026-04-30.json` reachable for the step-4 diff via either the step-1 snapshot or `git show HEAD:diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json`. Option (a) is the default; the schema-consumer gate below explicitly asserts the newest match equals the new canonical regrade artifact.
 4. Re-grade just the target question IDs (from step 1) using the legacy→new axis mapping declared in `## Decisions` (`answer_grade` → `factual_correctness`; `semantic_conformance_grade` → `completeness`; `clarity` is newly introduced) and verify each previously-failing axis improves in the regenerated artifact while previously-passing questions in the same category retain their grades. Use the legacy-baseline snapshot from step 1 to compute per-ID, per-mapped-axis diffs and record them in the slice-completion note.
 5. Run the gate commands listed below and ensure each exits 0.
@@ -62,6 +63,19 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
 - **Pre-move legacy snapshot (Medium-1 resolution)**: step 1 mandates capturing the legacy `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (whether by `cp` to a temp file, by relying on `git show HEAD:...` later, or by reading it from its post-move path `diagnostic/artifacts/healthcheck/legacy/11-rerun_2026-04-30.json`) BEFORE step 3 moves that artifact into `diagnostic/artifacts/healthcheck/legacy/`. **The slice does NOT rewrite `11-rerun_2026-04-30.json` in place** — it is preserved verbatim in legacy schema and only relocated, which keeps the per-row legacy `answer_grade` / `semantic_conformance_grade` fields available to compute the category-mate diff. The slice-completion note records the per-ID, per-mapped-axis legacy→new diff drawn from this snapshot, so the category-mate non-regression criterion remains computable post-move.
 - **`summary.gradeCounts` retention (Low-1 resolution)**: the `summary.gradeCounts` overall A/B/C aggregate of `baselineGrade` is **kept unchanged** under the new schema. It is orthogonal to the per-axis split (the per-axis `factualCorrectnessCounts` / `completenessCounts` / `clarityCounts` are net-additive), and `scripts/loop/update_state.sh:106-108` continues to read it for the `Overall A/B/C:` headline render. Implementer must NOT drop, rename, or repurpose this key.
 - **`update_state.sh` line-range reconciliation (Medium-2 resolution)**: the canonical line range for the legacy-key reads inside `render_benchmark_headline` is **lines 109-113**. The function as a whole spans roughly lines 92-124, but the implementer only needs to edit the legacy-key read block at 109-113. All references to this section use the 109-113 range.
+- **Canonical artifact top-level shape (round-6 High-1 resolution)**: the new healthcheck artifact `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` is a **single JSON object** (not a top-level array, and not split across a `.json` rows file + `.summary.json` sidecar) with the following top-level keys:
+  ```json
+  {
+    "generatedAt": "<ISO timestamp>",
+    "sourceFile": "<input rows path>",
+    "rubricPath": "<rubric path>",
+    "gradingModel": "answer_semantic_split_v1+multi_axis",
+    "results": [ /* graded row objects, each with factual_correctness, completeness, clarity, plus baselineGrade, root_cause_labels, etc. */ ],
+    "summary": { "gradeCounts": {...}, "factualCorrectnessCounts": {...}, "completenessCounts": {...}, "clarityCounts": {...}, "rootCauseCounts": {...}, "total": <int>, ... },
+    "actionable": { "factual_correctness_grade_counts": {...}, "completeness_grade_counts": {...}, "clarity_grade_counts": {...}, ... }
+  }
+  ```
+  This is the **single canonical artifact** for the multi-axis regrade. Today's offline grader (`chat-health-check-grade.mjs:171-176` and `chat-health-check.mjs:383-405`) writes the rows-array to `*.json` and the summary metadata to `*.summary.json`; the slice **MUST update both grader entrypoints** so they emit one merged object to the canonical path under `diagnostic/artifacts/healthcheck/`. The `update_state.sh:render_benchmark_headline` Python block reads `d.get('summary', d)` — under the new shape it picks up the `summary` key and renders the per-axis count headlines without falling through to the `'list' object has no attribute 'get'` error currently shown in `_state.md`. The `*.summary.json` sidecar pattern is **not preserved** for the canonical multi-axis artifact (sidecars may still be written under `web/logs/` for ad-hoc grader runs, but the in-tree canonical artifact is one file). Acceptance criteria, the schema-consumer gate, and the mtime-pin gate all reference this same single-file path.
 
 ## Changed files expected
 - `web/scripts/chat-health-check-baseline.mjs` (offline grader: per-axis grading + summary counts)
@@ -86,7 +100,7 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
 - `scripts/loop/state/test_grading_baseline.txt` (regenerated only if `bash scripts/loop/test_grading_gate.sh` reports a non-empty `slice_fails` set after the rewrite that is not a strict subset of the existing baseline; see Decisions note below).
 
 ## Artifact paths
-- Regenerated/new healthcheck artifact written in step 3 (path declared in the slice-completion note).
+- Single canonical regenerated healthcheck artifact written in step 3 at `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` (use the gate-day date). Top-level shape: a single JSON object `{generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable}` per `## Decisions` (`Canonical artifact top-level shape`). No sidecar `.summary.json` under `diagnostic/artifacts/healthcheck/`. The slice-completion note records the resolved date and the per-ID, per-mapped-axis legacy→new diff drawn from the step-1 snapshot of `11-rerun_2026-04-30.json`.
 
 ## Gate commands
 ```bash
@@ -109,6 +123,40 @@ REGRADE_ARTIFACT="$(ls -t diagnostic/artifacts/healthcheck/11-multi-axis-regrade
 [[ -n "$REGRADE_ARTIFACT" ]] || { echo "FAIL: no 11-multi-axis-regrade_*.json artifact present"; exit 1; }
 NEWEST="$(ls -t diagnostic/artifacts/healthcheck/*.json 2>/dev/null | head -1)"
 [[ "$NEWEST" = "$REGRADE_ARTIFACT" ]] || { echo "FAIL: newest healthcheck artifact ($NEWEST) is not the regenerated multi-axis artifact ($REGRADE_ARTIFACT). Either touch the regrade artifact's mtime or move legacy artifacts to diagnostic/artifacts/healthcheck/legacy/."; exit 1; }
+
+# Canonical-shape gate: prove the regenerated artifact is a single JSON
+# object (not a top-level array, and not a rows-only file with the summary
+# split into a `.summary.json` sidecar) carrying the keys update_state.sh
+# expects. This blocks the round-6 failure mode where the grader emits
+# a rows-array + sidecar and the schema-consumer gate then trips on
+# `'list' object has no attribute 'get'`.
+python3 - "$REGRADE_ARTIFACT" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+if not isinstance(d, dict):
+    print(f"FAIL: regrade artifact root is {type(d).__name__}, expected dict")
+    sys.exit(1)
+required_top = {"generatedAt", "sourceFile", "rubricPath", "gradingModel", "results", "summary", "actionable"}
+missing = required_top - set(d.keys())
+if missing:
+    print(f"FAIL: regrade artifact missing top-level keys: {sorted(missing)}")
+    sys.exit(1)
+if not isinstance(d["results"], list):
+    print(f"FAIL: regrade artifact 'results' is {type(d['results']).__name__}, expected list")
+    sys.exit(1)
+s = d["summary"]
+required_summary = {"factualCorrectnessCounts", "completenessCounts", "clarityCounts"}
+missing_s = required_summary - set(s.keys())
+if missing_s:
+    print(f"FAIL: regrade artifact summary missing per-axis count keys: {sorted(missing_s)}")
+    sys.exit(1)
+a = d["actionable"]
+required_act = {"factual_correctness_grade_counts", "completeness_grade_counts", "clarity_grade_counts"}
+missing_a = required_act - set(a.keys())
+if missing_a:
+    print(f"FAIL: regrade artifact actionable missing per-axis count keys: {sorted(missing_a)}")
+    sys.exit(1)
+PY
 
 # Schema-consumer gate: prove update_state.sh still parses the new artifact
 # without falling through to the "could not parse" branch and that the
@@ -143,8 +191,9 @@ fi
 ```
 
 ## Acceptance criteria
-- [ ] Every row in the regenerated healthcheck artifact (path declared in the slice-completion note) contains `factual_correctness`, `completeness`, and `clarity` objects, each with a `grade` (one of `A`/`B`/`C`) and a non-empty `reason` string; the legacy `answer_grade` / `semantic_conformance_grade` fields are absent (no transitional alias — the slice's risk-section grep enforces this).
-- [ ] The regenerated artifact's `summary` object contains `factualCorrectnessCounts`, `completenessCounts`, and `clarityCounts` count maps; the regenerated artifact's `summary.actionable` object contains `factual_correctness_grade_counts`, `completeness_grade_counts`, and `clarity_grade_counts`; `update_state.sh` consumes them without hitting its `could not parse` branch (verified by the schema-consumer gate above).
+- [ ] The regenerated healthcheck artifact at `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` is a single JSON object whose top-level keys are exactly the set declared in `## Decisions` (`Canonical artifact top-level shape`): `generatedAt`, `sourceFile`, `rubricPath`, `gradingModel`, `results`, `summary`, `actionable` (verified by the canonical-shape gate above). It is NOT a top-level array, and there is no separate `*.summary.json` sidecar under `diagnostic/artifacts/healthcheck/`.
+- [ ] Every row in the regenerated artifact's `results` array contains `factual_correctness`, `completeness`, and `clarity` objects, each with a `grade` (one of `A`/`B`/`C`) and a non-empty `reason` string; the legacy `answer_grade` / `semantic_conformance_grade` fields are absent (no transitional alias — the slice's risk-section grep enforces this).
+- [ ] The regenerated artifact's `summary` object contains `factualCorrectnessCounts`, `completenessCounts`, and `clarityCounts` count maps; the regenerated artifact's `actionable` object contains `factual_correctness_grade_counts`, `completeness_grade_counts`, and `clarity_grade_counts`; `update_state.sh` consumes them without hitting its `could not parse` branch (verified by the canonical-shape gate and schema-consumer gate above).
 - [ ] The Decisions block lists at least one target ID line in the canonical form `- id=<N> legacy_axis=<answer_grade|semantic_conformance_grade> from=<A|B|C>` (verified by the Decisions-block gate above).
 - [ ] For each target question ID listed in the `Decisions` block, the **mapped** new axis (per the Decisions mapping: `answer_grade` → `factual_correctness`, `semantic_conformance_grade` → `completeness`) improves by at least one grade step in the regenerated artifact versus the recorded `from=` baseline (e.g. `C → B` or `B → A`); the regenerated artifact path and the per-ID before/after axis grades are recorded in the slice-completion note. The `clarity` axis is exempt from this criterion (see Decisions).
 - [ ] **`clarity` absolute target**: every row in the regenerated artifact has `clarity.grade` ∈ `{A, B}`. Any `C` on `clarity` fails this criterion.
@@ -268,7 +317,7 @@ fi
 **Status: REVISE**
 
 ### High
-- [ ] Define the canonical top-level schema of the regenerated healthcheck artifact and make every step/gate/acceptance criterion use that same shape: today the plan requires one `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` file whose rows carry the new axes and whose `summary` is parseable by `scripts/loop/update_state.sh`, but the current offline grader contract writes rows to `chat_health_check_baseline_<stamp>.json` and the summary to a separate `chat_health_check_baseline_<stamp>.summary.json`; without an explicit decision such as `{ results: [...], summary: ..., actionable: ... }` in the canonical artifact (or an explicit sidecar-reading consumer rewrite), the implementer can satisfy one half of the plan and still fail the schema-consumer gate.
+- [x] Define the canonical top-level schema of the regenerated healthcheck artifact and make every step/gate/acceptance criterion use that same shape: today the plan requires one `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` file whose rows carry the new axes and whose `summary` is parseable by `scripts/loop/update_state.sh`, but the current offline grader contract writes rows to `chat_health_check_baseline_<stamp>.json` and the summary to a separate `chat_health_check_baseline_<stamp>.summary.json`; without an explicit decision such as `{ results: [...], summary: ..., actionable: ... }` in the canonical artifact (or an explicit sidecar-reading consumer rewrite), the implementer can satisfy one half of the plan and still fail the schema-consumer gate.
 
 ### Medium
 
