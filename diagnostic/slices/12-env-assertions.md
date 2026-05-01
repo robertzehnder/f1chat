@@ -1,11 +1,11 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T23:59:00Z
+updated: 2026-05-01T18:49:24-04:00
 ---
 
 ## Goal
@@ -108,7 +108,39 @@ Rollback procedure (repo-local — no infra rollback needed since nothing deploy
 No production state, schema, or external service is touched, so the rollback is a single git revert.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/12-env-assertions` (parent on `integration/perf-roadmap`: `8361eec` plan-approved).
+
+**Commits added by this implementation:** one commit `[slice:12-env-assertions][awaiting-audit]` containing all four expected file changes — see `git log integration/perf-roadmap..HEAD` after push.
+
+**Files changed (matches `## Changed files expected`):**
+- `web/src/lib/db.ts` — added `assertLocalDockerDb(env)` (with `ALLOWED_LOCAL_DB_HOSTS = ["127.0.0.1", "localhost", "::1", "db", "postgres"]`), exported it, and invoked it at module load directly after `assertPooledDatabaseUrl(process.env)` so it runs once at startup before `createPool()`. The function early-returns when `NODE_ENV === "production"` or when any of `NEON_DATABASE_URL`, `DATABASE_URL`, or `NEON_DB_HOST` is non-empty after `?.trim()` (matching `firstUrl(...).trim()` at line 19 and `NEON_DB_HOST?.trim()` at line 101 — whitespace-only values do NOT bypass). When the local-Docker `DB_*` branch is active, it reads `env.DB_HOST` (defaulting to `"127.0.0.1"`, matching `createPool()` line 119) and throws an `Error` whose message names both the offending host and the full allowed set if `DB_HOST` is not in `ALLOWED_LOCAL_DB_HOSTS`.
+- `web/scripts/tests/local-docker-db-assertion.test.mjs` — NEW. Mirrors the transpile-stub pattern from `pooled-url-assertion.test.mjs` verbatim (env-clearing prologue → `ts.transpileModule` with `pg` rewritten to `./pg.stub.mjs` → cached module load + `test.after` cleanup). Ten `node --test` cases cover the seven required branches plus the three whitespace-only cases for `NEON_DATABASE_URL`, `DATABASE_URL`, and `NEON_DB_HOST`. Every "throws" case uses an explicit try/catch and a helper `assertMessageNamesHostAndAllowedSet` that asserts the thrown `Error.message` contains both the literal offending `DB_HOST` value (`db.example.com`) AND every entry in the allowed set (`127.0.0.1`, `localhost`, `::1`, `db`, `postgres`).
+- `.env.example` — documents the full database-env contract consumed by `web/src/lib/db.ts`. Added commented blocks for `NEON_DATABASE_URL`, `NEON_DATABASE_URL_REPLICA`, `DATABASE_URL`, the per-component `NEON_DB_HOST`/`NEON_DB_PORT`/`NEON_DB_NAME`/`NEON_DB_USER`/`NEON_DB_PASSWORD` override block, and the SSL-toggle pair (`DB_SSL`, `NEON_SSL`). Added a header line naming precedence (`NEON_DATABASE_URL > DATABASE_URL > NEON_DB_* > local DB_*`). Preserved the existing local `DB_HOST=127.0.0.1` / `DB_PORT=5432` / `DB_NAME=openf1` / `DB_USER=openf1` / `DB_PASSWORD=openf1_local_dev` block verbatim as the ONLY uncommented database block. `OPENF1_*` ingestion lines untouched.
+- `diagnostic/slices/12-env-assertions.md` — frontmatter `status` flipped from `pending` → `in_progress` → `awaiting_audit`, `owner` → `codex`, `updated` → `2026-05-01T18:49:24-04:00`; this completion note filled in.
+
+**Decisions:**
+- Implemented `ALLOWED_LOCAL_DB_HOSTS` as a `const`-asserted tuple at module scope so `Array.includes` is type-safe under strict TS and the allowed set is referenced by both the runtime check and the error message — guarantees the message always lists the same set the assertion enforces.
+- Used `(env.DB_HOST ?? "127.0.0.1").trim()` so the assertion mirrors `createPool()`'s default-handling at `web/src/lib/db.ts:119` and a stray trailing newline in `DB_HOST` does not slip a remote host past the allow-list.
+- Wrote each whitespace/throws case with an explicit `try/catch` + the message-content helper rather than `assert.throws({ message: /…/ })` so failure output names exactly which substring is missing if the message contract regresses.
+- Kept `.env.example` URL examples on a port that mirrors the production contract for the pooled URL (`:6543`) so the file documents the Phase 12 production assertion without being load-bearing for the dev flow (those lines stay commented).
+
+**Self-check (gate exit codes, run from `/Users/robertzehnder/.openf1-loop-worktrees/12-env-assertions`):**
+- `cd web && npm run typecheck` → exit `0`.
+- `cd web && npm run build` → exit `0` (Next.js production build succeeds; `assertPooledDatabaseUrl` skips because `NEXT_PHASE === "phase-production-build"`, and `assertLocalDockerDb` skips because `NODE_ENV` is `"production"` during `next build`).
+- `cd web && node --test scripts/tests/pooled-url-assertion.test.mjs` → exit `0`, 7/7 pass (regression guard for the pre-existing pooler assertion after the second module-load call was wired in).
+- `cd web && node --test scripts/tests/local-docker-db-assertion.test.mjs` → exit `0`, 10/10 pass (all seven branch-coverage cases plus the three whitespace-bypass cases).
+- `bash scripts/loop/test_grading_gate.sh` → exit `0`, output: `PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0` — no regressions vs `scripts/loop/state/test_grading_baseline.txt`.
+
+**Acceptance-criteria self-audit:**
+- [x] `npm run build` and `npm run typecheck` exit 0 — confirmed above.
+- [x] Ten named cases pass with message-content checks (literal `db.example.com` AND every entry of the allowed-host set) on every "throws" case via `assertMessageNamesHostAndAllowedSet`.
+- [x] Pooled-URL regression guard exits 0 (7/7 pass after the second module-load assertion was added).
+- [x] `test_grading_gate.sh` exits 0 with `slice_fails=39 baseline_fails=39`.
+- [x] `git diff --name-only integration/perf-roadmap...HEAD` (post-commit) lists exactly the four expected paths: `web/src/lib/db.ts`, `web/scripts/tests/local-docker-db-assertion.test.mjs`, `.env.example`, `diagnostic/slices/12-env-assertions.md`.
+- [x] `web/src/lib/db.ts` exports `assertLocalDockerDb` and invokes it at module load directly after `assertPooledDatabaseUrl(process.env)` (lines `assertPooledDatabaseUrl(process.env);` then `assertLocalDockerDb(process.env);`).
+- [x] `.env.example` contains the commented placeholders for `NEON_DATABASE_URL`, `NEON_DATABASE_URL_REPLICA`, `DATABASE_URL`, the `NEON_DB_*` per-component override block, and the SSL-toggle pair, plus the header comment naming precedence on the local-Docker block.
+- [x] `.env.example` preserves the local `DB_*` defaults verbatim (`DB_HOST=127.0.0.1`, `DB_PORT=5432`, `DB_NAME=openf1`, `DB_USER=openf1`, `DB_PASSWORD=openf1_local_dev`) as the only uncommented database block; every `NEON_*`, `DATABASE_URL`, and `DB_SSL`/`NEON_SSL` line is `#`-commented.
 
 ## Audit verdict
 (filled by Codex)
