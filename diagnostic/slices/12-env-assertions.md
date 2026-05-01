@@ -1,8 +1,8 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01
@@ -115,6 +115,24 @@ No production state, schema, or external service is touched, so the rollback is 
 - [x] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh` in Gate commands so the slice uses the required baseline-aware grading gate.
 - [x] Fix `Changed files expected` to match the modules this plan actually has to touch: `web/src/lib/env.ts` does not exist here, while the current database-env assertions live in `web/src/lib/db.ts`; include any required docs file such as `.env.example` if the slice keeps the Phase 12 env-documentation work in scope.
 - [x] Make the acceptance criteria testable from declared artifacts and gate commands; `Implementation works in staging` and `Rollback plan documented in slice-completion note` are not verifiable by the listed gates.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T20:49:40Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Make the goal, test plan, and acceptance criteria consistently cover all non-`DB_*` branches in `web/src/lib/db.ts`: add explicit slice-local proof that `assertLocalDockerDb` early-returns when `DATABASE_URL` or `NEON_DB_HOST` is set, not only when `NEON_DATABASE_URL` is set.
+- [ ] Fix the diff-scope bookkeeping: implementation must update `diagnostic/slices/12-env-assertions.md` when it flips the slice to `awaiting_audit`, so include the slice file in `## Changed files expected` and stop asserting that the diff contains exactly the current three files.
+- [ ] Align the diff acceptance check with repo convention by replacing `git diff --stat main...HEAD` with a scope check against `integration/perf-roadmap...HEAD` (using `--name-only`, per loop guidance).
 
 ### Low
 - [ ] None.
