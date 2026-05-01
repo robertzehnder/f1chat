@@ -1,14 +1,16 @@
 # Chat Health Check Grading Model
 
-The benchmark grader now separates two concerns per result row:
+The benchmark grader emits three independent axis grades per result row, each carrying a `{ grade, reason }` object:
 
-- `answer_grade`: answerability handling, correctness/completeness, synthesis consistency, and caveat discipline.
-- `semantic_conformance_grade`: whether preferred semantic/core contracts were used (and whether raw-table regressions occurred where semantic contracts exist).
+- `factual_correctness`: answerability handling, correctness, synthesis consistency, and caveat discipline.
+- `completeness`: whether preferred semantic/core contracts were used (and whether raw-table regressions occurred where semantic contracts exist).
+- `clarity`: whether the answer text is non-empty, structured, and includes narrative synthesis (held to an absolute A/B target — never C).
 
 The legacy `baselineGrade` is still produced for compatibility and is derived as the lower of:
 
-- `answer_grade`
-- `semantic_conformance_grade`
+- `factual_correctness.grade`
+- `completeness.grade`
+- `clarity.grade`
 
 The grader also emits `root_cause_labels` to support actionable diagnostics, including:
 
@@ -42,9 +44,8 @@ Check strength notes:
 
 ## Artifacts
 
-- `chat-health-check.mjs` writes row-level grading fields into each health-check JSON row.
-- `chat-health-check.mjs` also writes a summary sidecar (`chat_health_check_*.summary.json`).
+- `chat-health-check.mjs` writes a single merged JSON object per run (`chat_health_check_*.json`) with top-level keys `{ generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable }`.
 - `chat-health-check-grade.mjs` writes:
-  - graded rows (`chat_health_check_baseline_*.json`)
-  - summary metadata (`chat_health_check_baseline_*.summary.json`)
+  - merged graded artifact (`chat_health_check_baseline_*.json`) — same single-object shape as above
   - markdown matrix/report (`chat_health_check_baseline_*.md`)
+  - optional `--legacy-sidecar` flag emits a separate `chat_health_check_baseline_*.summary.json` for ad-hoc developer diagnostics; the in-tree canonical artifact under `diagnostic/artifacts/healthcheck/` is always a single file (no sidecar).

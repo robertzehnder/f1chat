@@ -85,7 +85,7 @@ function buildCategoryCounts(rows, getCategory, getBaseline, getAnswer, getSeman
 
 function categoryTable(cats, categoryOrder) {
   const lines = [];
-  lines.push("| Category | Baseline A/B/C | Answer A/B/C | Semantic A/B/C | Total |");
+  lines.push("| Category | Baseline A/B/C | Factual Correctness A/B/C | Completeness A/B/C | Total |");
   lines.push("|---|---|---|---|---:|");
   for (const c of categoryOrder) {
     const v = cats[c];
@@ -119,9 +119,10 @@ function main() {
   const questionsPath = path.resolve(args.questions);
   const outputPath = path.resolve(args.output);
 
-  const rows = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+  const artifactJson = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+  const rows = Array.isArray(artifactJson) ? artifactJson : artifactJson.results;
   if (!Array.isArray(rows)) {
-    console.error("artifact is not an array of rows");
+    console.error("artifact is not an array of rows nor an object with a 'results' array");
     process.exit(1);
   }
   const priorJson = JSON.parse(fs.readFileSync(priorJsonPath, "utf8"));
@@ -136,8 +137,9 @@ function main() {
   }
 
   const newOverallBaseline = tally(rows, (r) => r.baselineGrade);
-  const newOverallAnswer = tally(rows, (r) => r.answer_grade);
-  const newOverallSemantic = tally(rows, (r) => r.semantic_conformance_grade);
+  const newOverallFactual = tally(rows, (r) => r.factual_correctness?.grade);
+  const newOverallCompleteness = tally(rows, (r) => r.completeness?.grade);
+  const newOverallClarity = tally(rows, (r) => r.clarity?.grade);
   const newRootCauses = {};
   for (const r of rows) {
     for (const rc of r.root_cause_labels || []) {
@@ -149,8 +151,8 @@ function main() {
     rows,
     (r) => r.category,
     (r) => r.baselineGrade,
-    (r) => r.answer_grade,
-    (r) => r.semantic_conformance_grade
+    (r) => r.factual_correctness?.grade,
+    (r) => r.completeness?.grade
   );
 
   const priorRows = Object.entries(priorMatrix).map(([id, g]) => ({
@@ -169,8 +171,9 @@ function main() {
   );
 
   const priorOverallBaseline = priorJson.summary?.gradeCounts || emptyCounts();
-  const priorOverallAnswer = priorJson.summary?.answerGradeCounts || emptyCounts();
-  const priorOverallSemantic = priorJson.summary?.semanticConformanceGradeCounts || emptyCounts();
+  const priorOverallFactual = priorJson.summary?.factualCorrectnessCounts || emptyCounts();
+  const priorOverallCompleteness = priorJson.summary?.completenessCounts || emptyCounts();
+  const priorOverallClarity = priorJson.summary?.clarityCounts || emptyCounts();
   const priorRootCauses = priorJson.summary?.rootCauseCounts || {};
 
   const improved = [];
@@ -207,8 +210,9 @@ function main() {
   lines.push("## New-run A/B/C counts (overall)");
   lines.push("");
   lines.push(`- Baseline grade A/B/C: ${fmtCounts(newOverallBaseline)}`);
-  lines.push(`- Answer grade A/B/C: ${fmtCounts(newOverallAnswer)}`);
-  lines.push(`- Semantic conformance grade A/B/C: ${fmtCounts(newOverallSemantic)}`);
+  lines.push(`- Factual correctness A/B/C: ${fmtCounts(newOverallFactual)}`);
+  lines.push(`- Completeness A/B/C: ${fmtCounts(newOverallCompleteness)}`);
+  lines.push(`- Clarity A/B/C: ${fmtCounts(newOverallClarity)}`);
   lines.push(`- Total questions: ${rows.length}`);
   lines.push(`- Root causes (rerun): ${rootCauseString(newRootCauses)}`);
   lines.push("");
@@ -219,12 +223,13 @@ function main() {
   lines.push("## Prior-baseline A/B/C counts (overall)");
   lines.push("");
   lines.push(
-    `Source: \`${args["prior-json"]}\` (\`summary.gradeCounts\`, \`summary.answerGradeCounts\`, \`summary.semanticConformanceGradeCounts\`).`
+    `Source: \`${args["prior-json"]}\` (\`summary.gradeCounts\`, \`summary.factualCorrectnessCounts\`, \`summary.completenessCounts\`, \`summary.clarityCounts\`).`
   );
   lines.push("");
   lines.push(`- Baseline grade A/B/C: ${fmtCounts(priorOverallBaseline)}`);
-  lines.push(`- Answer grade A/B/C: ${fmtCounts(priorOverallAnswer)}`);
-  lines.push(`- Semantic conformance A/B/C: ${fmtCounts(priorOverallSemantic)}`);
+  lines.push(`- Factual correctness A/B/C: ${fmtCounts(priorOverallFactual)}`);
+  lines.push(`- Completeness A/B/C: ${fmtCounts(priorOverallCompleteness)}`);
+  lines.push(`- Clarity A/B/C: ${fmtCounts(priorOverallClarity)}`);
   lines.push(`- Total questions: ${priorJson.summary?.total ?? 50}`);
   lines.push(`- Root causes (prior): ${rootCauseString(priorRootCauses)}`);
   lines.push("");
@@ -301,7 +306,13 @@ function main() {
     `- Overall direction: ${direction} at the aggregate level. Baseline-grade A: ${priorOverallBaseline.A} → ${newOverallBaseline.A} (Δ${deltaA >= 0 ? "+" : ""}${deltaA}); B: ${priorOverallBaseline.B} → ${newOverallBaseline.B} (Δ${deltaB >= 0 ? "+" : ""}${deltaB}); C: ${priorOverallBaseline.C} → ${newOverallBaseline.C} (Δ${deltaC >= 0 ? "+" : ""}${deltaC}).`
   );
   lines.push(
-    `- Semantic conformance: ${fmtCountsSlash(priorOverallSemantic)} → ${fmtCountsSlash(newOverallSemantic)}.`
+    `- Factual correctness: ${fmtCountsSlash(priorOverallFactual)} → ${fmtCountsSlash(newOverallFactual)}.`
+  );
+  lines.push(
+    `- Completeness: ${fmtCountsSlash(priorOverallCompleteness)} → ${fmtCountsSlash(newOverallCompleteness)}.`
+  );
+  lines.push(
+    `- Clarity: ${fmtCountsSlash(priorOverallClarity)} → ${fmtCountsSlash(newOverallClarity)}.`
   );
   lines.push(
     `- Per-question delta: ${improved.length} improved, ${unchanged.length} unchanged, ${regressed.length} regressed (baseline-grade dimension).`

@@ -22,7 +22,9 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const parsed = {
     input: null,
-    rubricPath: path.join(projectRoot, "scripts", "chat-health-check.rubric.json")
+    rubricPath: path.join(projectRoot, "scripts", "chat-health-check.rubric.json"),
+    output: null,
+    legacySidecar: false
   };
   for (let i = 0; i < args.length; i += 1) {
     if ((args[i] === "--input" || args[i] === "-i") && args[i + 1]) {
@@ -33,6 +35,15 @@ function parseArgs() {
     if ((args[i] === "--rubric" || args[i] === "-r") && args[i + 1]) {
       parsed.rubricPath = path.resolve(args[i + 1]);
       i += 1;
+      continue;
+    }
+    if ((args[i] === "--output" || args[i] === "-o") && args[i + 1]) {
+      parsed.output = path.resolve(args[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (args[i] === "--legacy-sidecar") {
+      parsed.legacySidecar = true;
     }
   }
   return parsed;
@@ -74,8 +85,9 @@ function buildActionableSummary(results, baselineSummary) {
   }));
 
   return {
-    answer_grade_counts: baselineSummary.answerGradeCounts ?? {},
-    semantic_conformance_grade_counts: baselineSummary.semanticConformanceGradeCounts ?? {},
+    factual_correctness_grade_counts: baselineSummary.factualCorrectnessCounts ?? {},
+    completeness_grade_counts: baselineSummary.completenessCounts ?? {},
+    clarity_grade_counts: baselineSummary.clarityCounts ?? {},
     answerability_outcome_counts: baselineSummary.answerability ?? {},
     root_cause_label_counts: baselineSummary.rootCauseCounts ?? {},
     root_cause_priority: rootCausePriority
@@ -106,12 +118,17 @@ function buildMarkdownReport(inputPath, results, baselineSummary, rubricPath) {
   lines.push(`Total questions: ${results.length}`);
   lines.push(`Baseline grades: ${Object.entries(baselineSummary.gradeCounts).map(([g, c]) => `${g}=${c}`).join(", ")}`);
   lines.push(
-    `Answer grades: ${sortCountEntries(baselineSummary.answerGradeCounts ?? {})
+    `Factual correctness: ${sortCountEntries(baselineSummary.factualCorrectnessCounts ?? {})
       .map(([g, c]) => `${g}=${c}`)
       .join(", ")}`
   );
   lines.push(
-    `Semantic conformance grades: ${sortCountEntries(baselineSummary.semanticConformanceGradeCounts ?? {})
+    `Completeness: ${sortCountEntries(baselineSummary.completenessCounts ?? {})
+      .map(([g, c]) => `${g}=${c}`)
+      .join(", ")}`
+  );
+  lines.push(
+    `Clarity: ${sortCountEntries(baselineSummary.clarityCounts ?? {})
       .map(([g, c]) => `${g}=${c}`)
       .join(", ")}`
   );
@@ -138,12 +155,12 @@ function buildMarkdownReport(inputPath, results, baselineSummary, rubricPath) {
   lines.push("## Matrix");
   lines.push("");
   lines.push(
-    "| ID | Baseline | Answer Grade | Semantic Grade | Answerability | Root Causes | Quality | Original Adequacy | Rows | Session | Question | Baseline Reason | Semantic Reason |"
+    "| ID | Baseline | Factual Correctness | Completeness | Clarity | Answerability | Root Causes | Quality | Original Adequacy | Rows | Session | Question | Baseline Reason | Completeness Reason |"
   );
-  lines.push("|---:|---|---|---|---|---|---|---|---:|---:|---|---|---|");
+  lines.push("|---:|---|---|---|---|---|---|---|---|---:|---:|---|---|---|");
   for (const item of results) {
     lines.push(
-      `| ${item.id} | ${escapeMarkdown(item.baselineGrade)} | ${escapeMarkdown(item.answer_grade ?? "")} | ${escapeMarkdown(item.semantic_conformance_grade ?? "")} | ${escapeMarkdown(item.baselineAnswerability)} | ${escapeMarkdown((item.root_cause_labels ?? []).join(", "))} | ${escapeMarkdown(item.baselineQuality)} | ${escapeMarkdown(item.adequacyGrade ?? "")} | ${item.rowCount ?? ""} | ${item.sessionKey ?? ""} | ${escapeMarkdown(item.question)} | ${escapeMarkdown(item.baselineReason)} | ${escapeMarkdown(item.semantic_conformance_reason ?? "")} |`
+      `| ${item.id} | ${escapeMarkdown(item.baselineGrade)} | ${escapeMarkdown(item.factual_correctness?.grade ?? "")} | ${escapeMarkdown(item.completeness?.grade ?? "")} | ${escapeMarkdown(item.clarity?.grade ?? "")} | ${escapeMarkdown(item.baselineAnswerability)} | ${escapeMarkdown((item.root_cause_labels ?? []).join(", "))} | ${escapeMarkdown(item.baselineQuality)} | ${escapeMarkdown(item.adequacyGrade ?? "")} | ${item.rowCount ?? ""} | ${item.sessionKey ?? ""} | ${escapeMarkdown(item.question)} | ${escapeMarkdown(item.baselineReason)} | ${escapeMarkdown(item.completeness?.reason ?? "")} |`
     );
   }
   lines.push("");
@@ -166,34 +183,54 @@ async function main() {
   const baselineSummary = summarizeBaselineGrades(graded);
   const actionable = buildActionableSummary(graded, baselineSummary);
 
+  const merged = {
+    generatedAt: new Date().toISOString(),
+    sourceFile: inputPath,
+    rubricPath: rubric.rubricPath,
+    gradingModel: "answer_semantic_split_v1+multi_axis",
+    results: graded,
+    summary: baselineSummary,
+    actionable
+  };
+
+  if (args.output) {
+    await mkdir(path.dirname(args.output), { recursive: true });
+    await writeFile(args.output, JSON.stringify(merged, null, 2), "utf8");
+    process.stdout.write(`Wrote ${args.output}\n`);
+    return;
+  }
+
   await mkdir(logsDir, { recursive: true });
   const stamp = nowStamp();
   const outJson = path.join(logsDir, `chat_health_check_baseline_${stamp}.json`);
-  const outSummaryJson = path.join(logsDir, `chat_health_check_baseline_${stamp}.summary.json`);
   const outMd = path.join(logsDir, `chat_health_check_baseline_${stamp}.md`);
 
-  await writeFile(outJson, JSON.stringify(graded, null, 2), "utf8");
-  await writeFile(
-    outSummaryJson,
-    JSON.stringify(
-      {
-        generatedAt: new Date().toISOString(),
-        sourceFile: inputPath,
-        rubricPath: rubric.rubricPath,
-        gradingModel: "answer_semantic_split_v1",
-        summary: baselineSummary,
-        actionable
-      },
-      null,
-      2
-    ),
-    "utf8"
-  );
+  await writeFile(outJson, JSON.stringify(merged, null, 2), "utf8");
   await writeFile(outMd, buildMarkdownReport(inputPath, graded, baselineSummary, rubric.rubricPath), "utf8");
 
   process.stdout.write(`Wrote ${outJson}\n`);
-  process.stdout.write(`Wrote ${outSummaryJson}\n`);
   process.stdout.write(`Wrote ${outMd}\n`);
+
+  if (args.legacySidecar) {
+    const outSummaryJson = path.join(logsDir, `chat_health_check_baseline_${stamp}.summary.json`);
+    await writeFile(
+      outSummaryJson,
+      JSON.stringify(
+        {
+          generatedAt: merged.generatedAt,
+          sourceFile: inputPath,
+          rubricPath: rubric.rubricPath,
+          gradingModel: merged.gradingModel,
+          summary: baselineSummary,
+          actionable
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+    process.stdout.write(`Wrote ${outSummaryJson}\n`);
+  }
 }
 
 main().catch((error) => {

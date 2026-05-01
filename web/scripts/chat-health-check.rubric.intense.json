@@ -1,11 +1,12 @@
 {
-  "version": "2026-03-17-intense-v3",
+  "version": "2026-05-01-intense-v4",
   "notes": [
     "Intensity overlay rubric for the existing 50-question benchmark.",
     "Focuses on proving the semantic layer and summary contracts are used where relevant.",
     "Adds synthesis-oriented SQL evidence checks for sector, strategy, and pit-cycle narratives.",
     "Adds synthesis-oriented answer checks via required_answer_checks for known narration failure modes.",
-    "Unlisted question_ids inherit baseline rubric behavior via extends_rubric."
+    "Unlisted question_ids inherit baseline rubric behavior via extends_rubric.",
+    "Multi-axis mapping: required_answer_checks/critical_checks (answer-side) feed factual_correctness; ideal_tables / required_sql_patterns / require_all_ideal_tables / semantic-side critical_checks feed completeness; clarity is graded from answer-text heuristics."
   ],
   "extends_rubric": "./chat-health-check.rubric.json",
   "questions": [

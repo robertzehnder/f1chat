@@ -106,12 +106,15 @@ try:
     if isinstance(s.get('gradeCounts'), dict):
         gc = s['gradeCounts']
         print(f"- Overall A/B/C: {gc.get('A','?')} / {gc.get('B','?')} / {gc.get('C','?')}")
-    if isinstance(s.get('answerGradeCounts'), dict):
-        gc = s['answerGradeCounts']
-        print(f"- Answer A/B/C: {gc.get('A','?')} / {gc.get('B','?')} / {gc.get('C','?')}")
-    if isinstance(s.get('semanticConformanceGradeCounts'), dict):
-        gc = s['semanticConformanceGradeCounts']
-        print(f"- Semantic conformance A/B/C: {gc.get('A','?')} / {gc.get('B','?')} / {gc.get('C','?')}")
+    if isinstance(s.get('factualCorrectnessCounts'), dict):
+        gc = s['factualCorrectnessCounts']
+        print(f"- Factual correctness A/B/C: {gc.get('A','?')} / {gc.get('B','?')} / {gc.get('C','?')}")
+    if isinstance(s.get('completenessCounts'), dict):
+        gc = s['completenessCounts']
+        print(f"- Completeness A/B/C: {gc.get('A','?')} / {gc.get('B','?')} / {gc.get('C','?')}")
+    if isinstance(s.get('clarityCounts'), dict):
+        gc = s['clarityCounts']
+        print(f"- Clarity A/B/C: {gc.get('A','?')} / {gc.get('B','?')} / {gc.get('C','?')}")
     if isinstance(s.get('rootCauseCounts'), dict):
         rc = s['rootCauseCounts']
         items = ', '.join(f"{k}: {v}" for k, v in sorted(rc.items(), key=lambda x: -x[1]))
@@ -214,6 +217,11 @@ fi
 } > "$STATE_FILE.tmp"
 
 mv "$STATE_FILE.tmp" "$STATE_FILE"
+
+# Echo the regenerated benchmark-headline block to stdout so callers (and the
+# multi-axis schema-consumer gate) can grep the new axis labels without
+# round-tripping through the committed state file.
+awk '/^## Latest benchmark headline$/ {flag=1; next} flag && /^## / {flag=0} flag' "$STATE_FILE"
 
 # Commit only if file actually changed.
 if git diff --quiet -- "$STATE_FILE"; then

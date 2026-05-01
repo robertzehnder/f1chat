@@ -637,8 +637,58 @@ function gradeFromChecks({ checks, criticalChecks, minScoreRatio }) {
   };
 }
 
-function combineGrades(answerGrade, semanticGrade) {
-  return GRADE_ORDER[answerGrade] <= GRADE_ORDER[semanticGrade] ? answerGrade : semanticGrade;
+function combineGrades(...grades) {
+  let worst = "A";
+  for (const g of grades) {
+    if (GRADE_ORDER[g] !== undefined && GRADE_ORDER[g] < GRADE_ORDER[worst]) {
+      worst = g;
+    }
+  }
+  return worst;
+}
+
+function gradeClarity(item, { expectedClarification, clarified }) {
+  const answer = String(item.answer ?? "").trim();
+  const lower = answer.toLowerCase();
+
+  if (expectedClarification && clarified) {
+    if (answer.length === 0) {
+      return {
+        grade: "B",
+        reason: "Empty clarification message; user-facing prompt is missing."
+      };
+    }
+    return {
+      grade: "A",
+      reason: "Clear clarification request was returned to the user."
+    };
+  }
+
+  const checks = [];
+  checks.push({ name: "non_empty_answer", passed: answer.length > 0 });
+  checks.push({ name: "answer_has_sentence_structure", passed: /[.!?]/.test(answer) });
+  checks.push({ name: "answer_long_enough", passed: answer.length >= 20 });
+
+  const isRowDumpStart = /^i found\s+\d+\s+matching\s+row\(s\)\.?/i.test(answer);
+  const hasStructuredPairs = /(driver_number=|full_name=|lap_number=|session_key=|stint_number=|pit_lap=)/i.test(lower);
+  const hasNarrativeSummary = /(faster|slower|edge|overall|therefore|suggests|indicates|more consistent|less consistent|stronger|weaker|gained|lost|won|behind|ahead|consistent)/i.test(
+    lower
+  );
+  const rowDumpWithoutNarrative = isRowDumpStart && hasStructuredPairs && !hasNarrativeSummary;
+  checks.push({ name: "no_row_dump_without_narrative", passed: !rowDumpWithoutNarrative });
+
+  const failedChecks = checks.filter((check) => !check.passed).map((check) => check.name);
+  if (failedChecks.length === 0) {
+    return {
+      grade: "A",
+      reason: "Answer text is non-empty, structured, and includes narrative synthesis."
+    };
+  }
+  // Clarity is held to an absolute A/B target — never C.
+  return {
+    grade: "B",
+    reason: `Clarity gaps: ${failedChecks.join(", ")}.`
+  };
 }
 
 function uniqueLabels(labels) {
@@ -789,113 +839,199 @@ export function gradeResultWithRubric(item, rubricRowInput) {
     baselineAnswerability = "answerable_but_unanswered";
   }
 
-  // Dual-grade model:
-  // - answerChecks score correctness/completeness/caution quality.
-  // - semanticChecks score conformance to preferred semantic contracts.
-  const answerChecks = [];
-  const semanticChecks = [];
+  // Multi-axis grade model (slice 11-multi-axis-grader-redesign):
+  // - factualChecks score correctness of the answer's facts (entities resolved, no
+  //   internal contradictions).
+  // - completenessChecks score whether the answer/SQL completely covered what the
+  //   question asked: includes answer-quality completeness checks (non-generic
+  //   answer, caveat handling, synthesis-evidence checks) AND semantic contract
+  //   conformance (ideal tables, summary contracts, required/forbidden SQL
+  //   patterns, raw-table regression).
+  // - clarity is graded by gradeClarity() and held to an absolute A/B target.
+  const factualChecks = [];
+  const completenessChecks = [];
 
-  let answerGrade = "C";
-  let answerReason = "";
+  let factualGrade = "C";
+  let factualReason = "";
+  let completenessGrade = "A";
+  let completenessReason = "Completeness checks passed.";
+
+  const sqlExecuted = !toLower(item.sql).includes("query not executed");
+  const canEvaluateSemantic = sqlExecuted && Boolean(item.sql);
+  const enforceSemantic = shouldEvaluateSemanticConformance(rubricRow);
+
+  function pushSemanticChecks() {
+    completenessChecks.push({
+      name: requireAllIdealTables ? "all_ideal_tables_used" : "ideal_tables_used",
+      passed: requireAllIdealTables
+        ? idealTablesSatisfiedAll(sqlTables, rubricRow.ideal_tables)
+        : idealTablesSatisfied(sqlTables, rubricRow.ideal_tables)
+    });
+    if (summaryTables.length > 0) {
+      completenessChecks.push({
+        name: "summary_contract_used",
+        passed: requireAllIdealTables
+          ? idealTablesSatisfiedAll(sqlTables, summaryTables)
+          : idealTablesSatisfied(sqlTables, summaryTables)
+      });
+    }
+    if (rubricRow.require_fact_tables) {
+      completenessChecks.push({
+        name: "fact_table_used",
+        passed: usesFactTable(sqlTables)
+      });
+    }
+    if (Array.isArray(rubricRow.required_sql_patterns) && rubricRow.required_sql_patterns.length > 0) {
+      completenessChecks.push({
+        name: "required_sql_patterns",
+        passed: sqlPatternsSatisfied(item.sql, rubricRow.required_sql_patterns)
+      });
+    }
+    if (Array.isArray(rubricRow.forbidden_sql_patterns) && rubricRow.forbidden_sql_patterns.length > 0) {
+      completenessChecks.push({
+        name: "no_forbidden_sql_patterns",
+        passed: noForbiddenSqlPatterns(item.sql, rubricRow.forbidden_sql_patterns)
+      });
+    }
+    const idealCoreSatisfied = requireAllIdealTables
+      ? idealTablesSatisfiedAll(sqlTables, idealCoreTables)
+      : idealTablesSatisfied(sqlTables, idealCoreTables);
+    completenessChecks.push({
+      name: "raw_table_regression",
+      passed: !(idealCoreTables.length > 0 && usesRawTable(sqlTables) && !idealCoreSatisfied)
+    });
+  }
+
+  let completenessHandled = false;
 
   if (expectedClarification) {
     if (clarified) {
-      answerGrade = "A";
-      answerReason = "Correctly asked for clarification on a question that requires disambiguation.";
+      factualGrade = "A";
+      factualReason = "Correctly asked for clarification on a question that requires disambiguation.";
+      completenessGrade = "A";
+      completenessReason = "Clarification request was returned; completeness is satisfied.";
+      completenessHandled = true;
     } else {
-      answerGrade = hasRows ? "C" : "B";
-      answerReason = hasRows
+      factualGrade = hasRows ? "C" : "B";
+      factualReason = hasRows
         ? "Answered without required clarification; likely relied on an arbitrary default context."
         : "Did not clearly request required clarification.";
       rootCauseLabels.push("resolver_failure");
+      completenessGrade = "B";
+      completenessReason = "Required clarification was missed; answer completeness not evaluated.";
+      completenessHandled = true;
     }
   } else if (clarified) {
-    answerGrade = "C";
-    answerReason =
+    factualGrade = "C";
+    factualReason =
       "Asked for clarification even though this benchmark question should be answerable as written.";
     rootCauseLabels.push("unnecessary_clarification");
+    completenessGrade = "C";
+    completenessReason = "Unnecessary clarification was returned; answer completeness not evaluated.";
+    completenessHandled = true;
   } else if (!hasRows) {
-    answerGrade = "C";
-    answerReason = "No result rows returned for a question that should be answerable.";
+    factualGrade = "C";
+    factualReason = "No result rows returned for a question that should be answerable.";
+    completenessGrade = "C";
+    completenessReason = "No result rows returned; completeness not evaluable.";
+    completenessHandled = true;
   } else {
-    answerChecks.push({
+    // Normal path — has rows, no clarification. Run all multi-axis checks.
+    factualChecks.push({
       name: "session_match",
       passed: sessionSatisfied(item, expectedSessionKey)
     });
-    answerChecks.push({
+    factualChecks.push({
       name: "driver_scope_match",
       passed: driversSatisfied(item, rubricRow.required_driver_numbers)
     });
-    answerChecks.push({
-      name: "non_generic_answer",
-      passed: !detectGenericOrIncompleteAnswer(item)
-    });
-    answerChecks.push({
-      name: "caveat_handling",
-      passed: detectCaveatHandling(item)
-    });
-    answerChecks.push({
+    factualChecks.push({
       name: "synthesis_consistency",
       passed: !detectSynthesisContradiction(item)
     });
+
+    completenessChecks.push({
+      name: "non_generic_answer",
+      passed: !detectGenericOrIncompleteAnswer(item)
+    });
+    completenessChecks.push({
+      name: "caveat_handling",
+      passed: detectCaveatHandling(item)
+    });
     if (shouldRunSynthesisAnswerCheck("stop_count_consistent_with_stints", item, rubricRow)) {
-      answerChecks.push({
+      completenessChecks.push({
         name: "stop_count_consistent_with_stints",
         passed: stopCountConsistentWithStints(item)
       });
     }
     if (shouldRunSynthesisAnswerCheck("sector_summary_matches_metrics", item, rubricRow)) {
-      answerChecks.push({
+      completenessChecks.push({
         name: "sector_summary_matches_metrics",
         passed: sectorSummaryMatchesMetrics(item)
       });
     }
     if (shouldRunSynthesisAnswerCheck("structured_rows_summarized", item, rubricRow)) {
-      answerChecks.push({
+      completenessChecks.push({
         name: "structured_rows_summarized",
         passed: structuredRowsSummarized(item)
       });
     }
     if (shouldRunSynthesisAnswerCheck("evidence_required_for_strategy_claim", item, rubricRow)) {
-      answerChecks.push({
+      completenessChecks.push({
         name: "evidence_required_for_strategy_claim",
         passed: evidenceRequiredForStrategyClaim(item)
       });
     }
     if (shouldRunSynthesisAnswerCheck("grid_finish_evidence_present", item, rubricRow)) {
-      answerChecks.push({
+      completenessChecks.push({
         name: "grid_finish_evidence_present",
         passed: gridFinishEvidencePresent(item)
       });
     }
 
-    const answerCheckNames = new Set(answerChecks.map((check) => check.name));
-    const answerCriticalChecks = criticalChecks.filter((checkName) => answerCheckNames.has(checkName));
+    if (enforceSemantic && canEvaluateSemantic) {
+      pushSemanticChecks();
+    }
 
-    const answerEval = gradeFromChecks({
-      checks: answerChecks,
-      criticalChecks: answerCriticalChecks,
+    const factualCheckNames = new Set(factualChecks.map((check) => check.name));
+    const factualCriticalChecks = criticalChecks.filter((checkName) => factualCheckNames.has(checkName));
+    const factualEval = gradeFromChecks({
+      checks: factualChecks,
+      criticalChecks: factualCriticalChecks,
       minScoreRatio
     });
-    answerGrade = answerEval.grade;
-    answerReason =
-      answerEval.failedChecks.length === 0
-        ? "Answer quality matched expected requirements."
-        : `Answer quality gaps: ${answerEval.failedChecks.join(", ")}.`;
+    factualGrade = factualEval.grade;
+    factualReason =
+      factualEval.failedChecks.length === 0
+        ? "Factual correctness checks matched expected requirements."
+        : `Factual correctness gaps: ${factualEval.failedChecks.join(", ")}.`;
 
-    if (!answerChecks.find((check) => check.name === "session_match")?.passed) {
+    if (!factualChecks.find((check) => check.name === "session_match")?.passed) {
       rootCauseLabels.push("resolver_failure");
     }
-    if (!answerChecks.find((check) => check.name === "driver_scope_match")?.passed) {
+    if (!factualChecks.find((check) => check.name === "driver_scope_match")?.passed) {
       rootCauseLabels.push("resolver_failure");
     }
-    if (!answerChecks.find((check) => check.name === "synthesis_consistency")?.passed) {
+    if (!factualChecks.find((check) => check.name === "synthesis_consistency")?.passed) {
       rootCauseLabels.push("synthesis_contradiction");
     }
-    if (!answerChecks.find((check) => check.name === "caveat_handling")?.passed) {
+
+    const completenessCriticalChecks = criticalChecks; // semantic + answer-side critical checks intermix here
+    const completenessEval = gradeFromChecks({
+      checks: completenessChecks,
+      criticalChecks: completenessCriticalChecks,
+      minScoreRatio
+    });
+    completenessGrade = completenessEval.grade;
+    completenessReason =
+      completenessEval.failedChecks.length === 0
+        ? "Completeness matched rubric expectations."
+        : `Completeness gaps: ${completenessEval.failedChecks.join(", ")}.`;
+
+    if (!completenessChecks.find((check) => check.name === "caveat_handling")?.passed) {
       rootCauseLabels.push("insufficient_evidence_handling");
     }
-    for (const failedCheck of answerEval.failedChecks) {
+    for (const failedCheck of completenessEval.failedChecks) {
       if (EXTENDED_ANSWER_CHECK_NAMES.has(failedCheck)) {
         rootCauseLabels.push(failedCheck);
       }
@@ -908,87 +1044,34 @@ export function gradeResultWithRubric(item, rubricRowInput) {
       if (failedCheck === "stop_count_consistent_with_stints" || failedCheck === "sector_summary_matches_metrics") {
         rootCauseLabels.push("synthesis_contradiction");
       }
+      if (failedCheck === "all_ideal_tables_used" || failedCheck === "ideal_tables_used") {
+        rootCauseLabels.push("semantic_contract_missed");
+      }
+      if (failedCheck === "summary_contract_used") {
+        rootCauseLabels.push("summary_contract_missing");
+      }
+      if (failedCheck === "required_sql_patterns") {
+        rootCauseLabels.push("semantic_contract_missed");
+      }
+      if (failedCheck === "raw_table_regression") {
+        rootCauseLabels.push("raw_table_regression");
+      }
     }
+    completenessHandled = true;
   }
 
-  let semanticConformanceGrade = "A";
-  let semanticConformanceReason = "Semantic conformance checks passed.";
-
-  const enforceSemanticConformance = shouldEvaluateSemanticConformance(rubricRow);
-  const sqlExecuted = !toLower(item.sql).includes("query not executed");
-  const canEvaluateSemantic = sqlExecuted && Boolean(item.sql);
-  if (!enforceSemanticConformance) {
-    semanticConformanceGrade = "A";
-    semanticConformanceReason = "Semantic conformance is not enforced for this baseline rubric row.";
-  } else if (canEvaluateSemantic) {
-    semanticChecks.push({
-      name: requireAllIdealTables ? "all_ideal_tables_used" : "ideal_tables_used",
-      passed: requireAllIdealTables
-        ? idealTablesSatisfiedAll(sqlTables, rubricRow.ideal_tables)
-        : idealTablesSatisfied(sqlTables, rubricRow.ideal_tables)
-    });
-    if (summaryTables.length > 0) {
-      semanticChecks.push({
-        name: "summary_contract_used",
-        passed: requireAllIdealTables
-          ? idealTablesSatisfiedAll(sqlTables, summaryTables)
-          : idealTablesSatisfied(sqlTables, summaryTables)
-      });
+  // Semantic-only fallback: if semantic enforcement was on but we never ran
+  // semantic checks (e.g. clarification path took completeness branch above),
+  // honor the existing fallback semantics so clarification-row completeness
+  // tracks the prior conformance behavior.
+  if (!completenessHandled) {
+    if (!enforceSemantic) {
+      completenessGrade = "A";
+      completenessReason = "Completeness is not enforced for this baseline rubric row.";
+    } else if (!canEvaluateSemantic) {
+      completenessGrade = expectedClarification ? "A" : "B";
+      completenessReason = "Completeness is enforced for this row, but no SQL was executed.";
     }
-    if (rubricRow.require_fact_tables) {
-      semanticChecks.push({
-        name: "fact_table_used",
-        passed: usesFactTable(sqlTables)
-      });
-    }
-    if (Array.isArray(rubricRow.required_sql_patterns) && rubricRow.required_sql_patterns.length > 0) {
-      semanticChecks.push({
-        name: "required_sql_patterns",
-        passed: sqlPatternsSatisfied(item.sql, rubricRow.required_sql_patterns)
-      });
-    }
-    if (Array.isArray(rubricRow.forbidden_sql_patterns) && rubricRow.forbidden_sql_patterns.length > 0) {
-      semanticChecks.push({
-        name: "no_forbidden_sql_patterns",
-        passed: noForbiddenSqlPatterns(item.sql, rubricRow.forbidden_sql_patterns)
-      });
-    }
-
-    const idealCoreSatisfied = requireAllIdealTables
-      ? idealTablesSatisfiedAll(sqlTables, idealCoreTables)
-      : idealTablesSatisfied(sqlTables, idealCoreTables);
-    semanticChecks.push({
-      name: "raw_table_regression",
-      passed: !(idealCoreTables.length > 0 && usesRawTable(sqlTables) && !idealCoreSatisfied)
-    });
-
-    const semanticEval = gradeFromChecks({
-      checks: semanticChecks,
-      criticalChecks,
-      minScoreRatio
-    });
-    semanticConformanceGrade = semanticEval.grade;
-    semanticConformanceReason =
-      semanticEval.failedChecks.length === 0
-        ? "Semantic conformance matched rubric expectations."
-        : `Semantic conformance gaps: ${semanticEval.failedChecks.join(", ")}.`;
-
-    if (semanticEval.failedChecks.includes("all_ideal_tables_used") || semanticEval.failedChecks.includes("ideal_tables_used")) {
-      rootCauseLabels.push("semantic_contract_missed");
-    }
-    if (semanticEval.failedChecks.includes("summary_contract_used")) {
-      rootCauseLabels.push("summary_contract_missing");
-    }
-    if (semanticEval.failedChecks.includes("required_sql_patterns")) {
-      rootCauseLabels.push("semantic_contract_missed");
-    }
-    if (semanticEval.failedChecks.includes("raw_table_regression")) {
-      rootCauseLabels.push("raw_table_regression");
-    }
-  } else {
-    semanticConformanceGrade = expectedClarification ? "A" : "B";
-    semanticConformanceReason =
-      "Semantic conformance is enforced for this row, but no SQL was executed.";
   }
 
   if (detectInsufficientEvidenceHandlingIssue(item)) {
@@ -1002,35 +1085,74 @@ export function gradeResultWithRubric(item, rubricRowInput) {
     rootCauseLabels.push("unnecessary_clarification");
   }
 
-  const baselineGrade = combineGrades(answerGrade, semanticConformanceGrade);
-  const baselineReason = `Answer: ${answerReason} Semantic: ${semanticConformanceReason}`;
+  const clarity = gradeClarity(item, { expectedClarification, clarified });
+
+  const baselineGrade = combineGrades(factualGrade, completenessGrade, clarity.grade);
+  const baselineReason = `Factual correctness: ${factualReason} Completeness: ${completenessReason} Clarity: ${clarity.reason}`;
 
   return {
     baselineGrade,
     baselineReason,
     baselineAnswerability,
     baselineQuality: baselineGrade === "A" ? "strong" : baselineGrade === "B" ? "partial" : "weak",
-    answer_grade: answerGrade,
-    answer_grade_reason: answerReason,
-    semantic_conformance_grade: semanticConformanceGrade,
-    semantic_conformance_reason: semanticConformanceReason,
+    factual_correctness: { grade: factualGrade, reason: factualReason },
+    completeness: { grade: completenessGrade, reason: completenessReason },
+    clarity: { grade: clarity.grade, reason: clarity.reason },
     root_cause_labels: uniqueLabels(rootCauseLabels),
     baselineChecks: {
       expectedClarification,
       clarified,
       hasRows,
-      answerChecks,
-      semanticChecks
+      factualChecks,
+      completenessChecks
     }
   };
 }
+
+// Allow-list of source row fields that flow into a graded result. Any legacy
+// per-axis grade fields present on the input are dropped by construction (they
+// are not in this list), so re-grading a previously-graded artifact yields a
+// clean multi-axis row that carries only the new schema's grading output.
+const PRESERVED_INPUT_FIELDS = [
+  "id",
+  "category",
+  "question",
+  "ok",
+  "httpStatus",
+  "elapsedMs",
+  "retryAttempted",
+  "retrySessionKey",
+  "adequacyGrade",
+  "adequacyReason",
+  "answer",
+  "answerReasoning",
+  "generationNotes",
+  "generationSource",
+  "model",
+  "requestId",
+  "rowCount",
+  "rowSummary",
+  "previewRows",
+  "warnings",
+  "questionType",
+  "resolutionStatus",
+  "sessionKey",
+  "sql",
+  "errorBodyPreview"
+];
 
 export function gradeHealthCheckResults(results, rubricById) {
   return results.map((item) => {
     const rubricRow = rubricById.get(Number(item.id)) ?? defaultRubricRow(Number(item.id));
     const baseline = gradeResultWithRubric(item, rubricRow);
+    const cleanedItem = {};
+    for (const field of PRESERVED_INPUT_FIELDS) {
+      if (field in item) {
+        cleanedItem[field] = item[field];
+      }
+    }
     return {
-      ...item,
+      ...cleanedItem,
       ...baseline
     };
   });
@@ -1040,8 +1162,9 @@ export function summarizeBaselineGrades(results) {
   const summary = {
     total: results.length,
     gradeCounts: { A: 0, B: 0, C: 0 },
-    answerGradeCounts: { A: 0, B: 0, C: 0 },
-    semanticConformanceGradeCounts: { A: 0, B: 0, C: 0 },
+    factualCorrectnessCounts: { A: 0, B: 0, C: 0 },
+    completenessCounts: { A: 0, B: 0, C: 0 },
+    clarityCounts: { A: 0, B: 0, C: 0 },
     answerability: {
       expected_clarification_met: 0,
       expected_clarification_missed: 0,
@@ -1056,11 +1179,17 @@ export function summarizeBaselineGrades(results) {
     if (summary.gradeCounts[item.baselineGrade] !== undefined) {
       summary.gradeCounts[item.baselineGrade] += 1;
     }
-    if (summary.answerGradeCounts[item.answer_grade] !== undefined) {
-      summary.answerGradeCounts[item.answer_grade] += 1;
+    const factualGrade = item.factual_correctness?.grade;
+    if (summary.factualCorrectnessCounts[factualGrade] !== undefined) {
+      summary.factualCorrectnessCounts[factualGrade] += 1;
     }
-    if (summary.semanticConformanceGradeCounts[item.semantic_conformance_grade] !== undefined) {
-      summary.semanticConformanceGradeCounts[item.semantic_conformance_grade] += 1;
+    const completenessGrade = item.completeness?.grade;
+    if (summary.completenessCounts[completenessGrade] !== undefined) {
+      summary.completenessCounts[completenessGrade] += 1;
+    }
+    const clarityGrade = item.clarity?.grade;
+    if (summary.clarityCounts[clarityGrade] !== undefined) {
+      summary.clarityCounts[clarityGrade] += 1;
     }
     if (summary.answerability[item.baselineAnswerability] !== undefined) {
       summary.answerability[item.baselineAnswerability] += 1;

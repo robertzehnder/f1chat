@@ -84,8 +84,9 @@ function buildActionableSummary(results, baselineSummary) {
   }));
 
   return {
-    answer_grade_counts: baselineSummary.answerGradeCounts ?? {},
-    semantic_conformance_grade_counts: baselineSummary.semanticConformanceGradeCounts ?? {},
+    factual_correctness_grade_counts: baselineSummary.factualCorrectnessCounts ?? {},
+    completeness_grade_counts: baselineSummary.completenessCounts ?? {},
+    clarity_grade_counts: baselineSummary.clarityCounts ?? {},
     answerability_outcome_counts: baselineSummary.answerability ?? {},
     root_cause_label_counts: baselineSummary.rootCauseCounts ?? {},
     root_cause_priority: rootCausePriority
@@ -214,12 +215,17 @@ function buildMarkdownReport(results, baselineSummary, rubricPathUsed, questions
   lines.push("");
   lines.push(`Baseline grades: ${Object.entries(baselineSummary.gradeCounts).map(([grade, count]) => `${grade}=${count}`).join(", ")}`);
   lines.push(
-    `Answer grades: ${sortCountEntries(baselineSummary.answerGradeCounts ?? {})
+    `Factual correctness: ${sortCountEntries(baselineSummary.factualCorrectnessCounts ?? {})
       .map(([grade, count]) => `${grade}=${count}`)
       .join(", ")}`
   );
   lines.push(
-    `Semantic conformance grades: ${sortCountEntries(baselineSummary.semanticConformanceGradeCounts ?? {})
+    `Completeness: ${sortCountEntries(baselineSummary.completenessCounts ?? {})
+      .map(([grade, count]) => `${grade}=${count}`)
+      .join(", ")}`
+  );
+  lines.push(
+    `Clarity: ${sortCountEntries(baselineSummary.clarityCounts ?? {})
       .map(([grade, count]) => `${grade}=${count}`)
       .join(", ")}`
   );
@@ -245,12 +251,12 @@ function buildMarkdownReport(results, baselineSummary, rubricPathUsed, questions
 
   lines.push("## Matrix");
   lines.push("");
-  lines.push("| ID | Category | Adequacy | Baseline | Answer Grade | Semantic Grade | Answerability | Root Causes | Status | Rows | Question Type | Session | Question | Baseline Reason | Semantic Reason | Caveats |");
-  lines.push("|---:|---|---|---|---|---|---|---|---:|---:|---|---:|---|---|---|---|");
+  lines.push("| ID | Category | Adequacy | Baseline | Factual Correctness | Completeness | Clarity | Answerability | Root Causes | Status | Rows | Question Type | Session | Question | Baseline Reason | Completeness Reason | Caveats |");
+  lines.push("|---:|---|---|---|---|---|---|---|---|---:|---:|---|---:|---|---|---|---|");
 
   for (const item of results) {
     lines.push(
-      `| ${item.id} | ${escapeMarkdown(item.category)} | ${escapeMarkdown(item.adequacyGrade)} | ${escapeMarkdown(item.baselineGrade ?? "")} | ${escapeMarkdown(item.answer_grade ?? "")} | ${escapeMarkdown(item.semantic_conformance_grade ?? "")} | ${escapeMarkdown(item.baselineAnswerability ?? "")} | ${escapeMarkdown((item.root_cause_labels ?? []).join(", "))} | ${item.httpStatus} | ${item.rowCount ?? ""} | ${escapeMarkdown(item.questionType ?? "")} | ${item.sessionKey ?? ""} | ${escapeMarkdown(item.question)} | ${escapeMarkdown(item.baselineReason ?? "")} | ${escapeMarkdown(item.semantic_conformance_reason ?? "")} | ${escapeMarkdown(item.warnings.join(" ; "))} |`
+      `| ${item.id} | ${escapeMarkdown(item.category)} | ${escapeMarkdown(item.adequacyGrade)} | ${escapeMarkdown(item.baselineGrade ?? "")} | ${escapeMarkdown(item.factual_correctness?.grade ?? "")} | ${escapeMarkdown(item.completeness?.grade ?? "")} | ${escapeMarkdown(item.clarity?.grade ?? "")} | ${escapeMarkdown(item.baselineAnswerability ?? "")} | ${escapeMarkdown((item.root_cause_labels ?? []).join(", "))} | ${item.httpStatus} | ${item.rowCount ?? ""} | ${escapeMarkdown(item.questionType ?? "")} | ${item.sessionKey ?? ""} | ${escapeMarkdown(item.question)} | ${escapeMarkdown(item.baselineReason ?? "")} | ${escapeMarkdown(item.completeness?.reason ?? "")} | ${escapeMarkdown(item.warnings.join(" ; "))} |`
     );
   }
 
@@ -268,10 +274,12 @@ function buildMarkdownReport(results, baselineSummary, rubricPathUsed, questions
     lines.push(`- Baseline reason: ${item.baselineReason ?? "n/a"}`);
     lines.push(`- Baseline answerability: ${item.baselineAnswerability ?? "n/a"}`);
     lines.push(`- Baseline quality: ${item.baselineQuality ?? "n/a"}`);
-    lines.push(`- Answer grade: ${item.answer_grade ?? "n/a"}`);
-    lines.push(`- Answer grade reason: ${item.answer_grade_reason ?? "n/a"}`);
-    lines.push(`- Semantic conformance grade: ${item.semantic_conformance_grade ?? "n/a"}`);
-    lines.push(`- Semantic conformance reason: ${item.semantic_conformance_reason ?? "n/a"}`);
+    lines.push(`- Factual correctness grade: ${item.factual_correctness?.grade ?? "n/a"}`);
+    lines.push(`- Factual correctness reason: ${item.factual_correctness?.reason ?? "n/a"}`);
+    lines.push(`- Completeness grade: ${item.completeness?.grade ?? "n/a"}`);
+    lines.push(`- Completeness reason: ${item.completeness?.reason ?? "n/a"}`);
+    lines.push(`- Clarity grade: ${item.clarity?.grade ?? "n/a"}`);
+    lines.push(`- Clarity reason: ${item.clarity?.reason ?? "n/a"}`);
     lines.push(`- Root-cause labels: ${(item.root_cause_labels ?? []).join(", ") || "n/a"}`);
     lines.push(`- HTTP status: ${item.httpStatus}`);
     lines.push(`- Elapsed ms: ${item.elapsedMs}`);
@@ -380,29 +388,22 @@ async function main() {
   await mkdir(logsDir, { recursive: true });
   const stamp = nowStamp();
   const jsonPath = path.join(logsDir, `chat_health_check_${stamp}.json`);
-  const summaryJsonPath = path.join(logsDir, `chat_health_check_${stamp}.summary.json`);
   const mdPath = path.join(logsDir, `chat_health_check_${stamp}.md`);
   const gradedResults = gradeHealthCheckResults(results, rubricById);
   const baselineSummary = summarizeBaselineGrades(gradedResults);
   const actionable = buildActionableSummary(gradedResults, baselineSummary);
 
-  await writeFile(jsonPath, JSON.stringify(gradedResults, null, 2), "utf8");
-  await writeFile(
-    summaryJsonPath,
-    JSON.stringify(
-      {
-        generatedAt: new Date().toISOString(),
-        questionsPath: args.questionsPath,
-        rubricPath: rubricPathUsed,
-        gradingModel: "answer_semantic_split_v1",
-        summary: baselineSummary,
-        actionable
-      },
-      null,
-      2
-    ),
-    "utf8"
-  );
+  const merged = {
+    generatedAt: new Date().toISOString(),
+    sourceFile: args.questionsPath,
+    rubricPath: rubricPathUsed,
+    gradingModel: "answer_semantic_split_v1+multi_axis",
+    results: gradedResults,
+    summary: baselineSummary,
+    actionable
+  };
+
+  await writeFile(jsonPath, JSON.stringify(merged, null, 2), "utf8");
   await writeFile(
     mdPath,
     buildMarkdownReport(gradedResults, baselineSummary, rubricPathUsed, args.questionsPath),
@@ -410,7 +411,6 @@ async function main() {
   );
 
   process.stdout.write(`Wrote ${jsonPath}\n`);
-  process.stdout.write(`Wrote ${summaryJsonPath}\n`);
   process.stdout.write(`Wrote ${mdPath}\n`);
   if (debugTraceEnabled) {
     process.stdout.write(
