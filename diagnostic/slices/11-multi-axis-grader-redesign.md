@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:10:43Z
+updated: 2026-05-01T19:13:12Z
 ---
 
 ## Goal
@@ -13,7 +13,7 @@ Redesign the **offline** chat-quality grader so each healthcheck row carries thr
 
 ## Inputs
 - `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (latest in-tree healthcheck artifact at author time; the 2026-04-26 file referenced earlier does not exist on disk)
-- Specific failing-question IDs identified from that artifact's rows where `answer_grade` is `C` or `semantic_conformance_grade` is `C`
+- Specific failing-question IDs identified from that artifact's rows where `answer_grade` ≠ `A` or `semantic_conformance_grade` ≠ `A` (i.e. any `B` or `C` on either legacy axis). This matches step 1's enumeration rule and the canonical `- id=<N> legacy_axis=... from=<A|B|C>` line shape — a row whose `from=A` is excluded by construction (step 1 only enumerates non-`A` rows), so the population is "all non-`A` rows on either legacy axis", not "C-only".
 
 ## Prior context
 - `diagnostic/_state.md`
@@ -40,7 +40,7 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
    - Update the regression-test fixtures under `web/scripts/tests/fixtures/` — every fixture, namely `clarification.fixture.json` + `clarification.rubric.json`, `semantic.fixture.json` + `semantic.rubric.json` (the actual on-disk filenames; there is no `semantic-conformance.fixture.json`), `report.fixture.json` + `report.rubric.json`, and `synthesis.fixture.json` + `synthesis.rubric.json` — and the assertions in `web/scripts/tests/grading-regression.test.mjs` to use the three axis fields instead of `answer_grade` / `semantic_conformance_grade`. The test currently asserts (a) per-row `answer_grade` / `semantic_conformance_grade` / `semantic_conformance_reason` (lines 47-48, 52, 66-67, 159-164), (b) summary-level `summary.summary.answerGradeCounts` / `summary.summary.semanticConformanceGradeCounts` / `summary.actionable.answer_grade_counts` / `summary.actionable.semantic_conformance_grade_counts` (lines 142-150), and (c) markdown-report regexes `/Answer Grade/i` and `/Semantic Grade/i` (lines 167-168). Each of these MUST be rewritten to assert the new axis fields (`factual_correctness`, `completeness`, `clarity` per row; `factualCorrectnessCounts` / `completenessCounts` / `clarityCounts` in `summary.summary`; `factual_correctness_grade_counts` / `completeness_grade_counts` / `clarity_grade_counts` in `summary.actionable`) and the markdown regexes MUST become `/Factual Correctness/i`, `/Completeness/i`, `/Clarity/i`. Root-cause assertions on `synthesis.fixture.json` (lines 78-109) MUST continue to pass — they are orthogonal to the axis split.
    - **Canonical regrade artifact path and shape**: write a new sibling artifact at `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` (use the gate-day date) by running `node web/scripts/chat-health-check-grade.mjs` against the existing input rows so the artifact-on-disk matches the new schema. The artifact MUST be a **single JSON object** with the top-level keys `{generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable}` declared in `## Decisions` (`Canonical artifact top-level shape`); a top-level array (today's rows-only `chat_health_check_baseline_<stamp>.json` shape) or a split rows + `.summary.json` sidecar pair is **not** acceptable for the in-tree canonical artifact, because `update_state.sh:render_benchmark_headline` requires a single dict it can call `.get('summary', d)` on. **The slice does NOT regenerate `11-rerun_2026-04-30.json` in place** — that file is preserved as the legacy baseline used by step 4's category-mate diff (and snapshotted in step 1 for safety). Reference the new path under `## Artifact paths` below; the mtime-pin gate, the `## Changed files expected` entry, and every acceptance criterion all refer to this single canonical path.
    - **Pin newest-by-mtime**: at gate time, `scripts/loop/update_state.sh:45-53` (`latest_file`) selects the healthcheck artifact via `ls -t`. The current latest-by-mtime file is `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` (legacy schema). The new `11-multi-axis-regrade_<YYYY-MM-DD>.json` artifact must be the newest `*.json` under `diagnostic/artifacts/healthcheck/` at gate time. Either (a) ensure its mtime is fresher than every other file in `diagnostic/artifacts/healthcheck/*.json` AND additionally re-shape `11-valid-lap-policy-v2_2026-05-01.json` to the new schema (it remains in-tree and would otherwise break if `update_state.sh` ever falls back to it; `11-rerun_2026-04-30.json` is intentionally preserved in legacy schema as the category-mate baseline and is therefore moved to `diagnostic/artifacts/healthcheck/legacy/` under this option to keep it out of `latest_file`'s glob), OR (b) move every other in-tree healthcheck artifact (`11-valid-lap-policy-v2_2026-05-01.json` AND `11-rerun_2026-04-30.json`) to `diagnostic/artifacts/healthcheck/legacy/` so the live directory contains only the new multi-axis artifact. Both options leave `11-rerun_2026-04-30.json` reachable for the step-4 diff via either the step-1 snapshot or `git show HEAD:diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json`. Option (a) is the default; the schema-consumer gate below explicitly asserts the newest match equals the new canonical regrade artifact.
-4. Re-grade just the target question IDs (from step 1) using the legacy→new axis mapping declared in `## Decisions` (`answer_grade` → `factual_correctness`; `semantic_conformance_grade` → `completeness`; `clarity` is newly introduced) and verify each previously-failing axis improves in the regenerated artifact while previously-passing questions in the same category retain their grades. Use the legacy-baseline snapshot from step 1 to compute per-ID, per-mapped-axis diffs and record them in the slice-completion note.
+4. **Verify** target-ID improvement and category-mate non-regression **inside the full regenerated artifact produced in step 3**. The slice does NOT do a partial regrade: step 3 regenerates the whole multi-axis artifact (every row's `factual_correctness`, `completeness`, `clarity`) in one pass via `node web/scripts/chat-health-check-grade.mjs`. Step 4 is a read-only verification pass over that artifact: for each target question ID listed in the `Decisions` block, confirm the **mapped** new axis (per the Decisions mapping: `answer_grade` → `factual_correctness`; `semantic_conformance_grade` → `completeness`; `clarity` is newly introduced and exempt) improves by at least one grade step versus the recorded `from=` legacy baseline; for every other question ID in the same `category` as a target ID, confirm the mapped new-axis grade does not decrease versus the legacy baseline drawn from the step-1 snapshot of `11-rerun_2026-04-30.json`. Record the per-ID, per-mapped-axis legacy→new diff (targets and category mates) in the slice-completion note.
 5. Run the gate commands listed below and ensure each exits 0.
 
 ## Decisions
@@ -97,6 +97,8 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
 - `web/scripts/tests/fixtures/synthesis.rubric.json`
 - `scripts/loop/update_state.sh` (`render_benchmark_headline` reads new count keys; lines 109-113)
 - New canonical artifact `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` (the slice does NOT regenerate `11-rerun_2026-04-30.json` in place — it is preserved as the legacy baseline for the category-mate diff and is moved to `diagnostic/artifacts/healthcheck/legacy/` so it is no longer matched by `update_state.sh`'s `*.json` glob). Per `## Decisions` option (a), `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` is ALSO re-shaped to the new schema (or moved to `diagnostic/artifacts/healthcheck/legacy/` under option (b)) so the `update_state.sh` `latest_file` selection cannot fall back to a legacy artifact.
+- `diagnostic/artifacts/healthcheck/legacy/11-rerun_2026-04-30.json` (mandatory destination of the relocated legacy baseline; required under both option (a) and option (b))
+- `diagnostic/artifacts/healthcheck/legacy/11-valid-lap-policy-v2_2026-05-01.json` (only under option (b) — when re-shaping the file in place per option (a) is not chosen, this is its destination after the move)
 - `scripts/loop/state/test_grading_baseline.txt` (regenerated only if `bash scripts/loop/test_grading_gate.sh` reports a non-empty `slice_fails` set after the rewrite that is not a strict subset of the existing baseline; see Decisions note below).
 
 ## Artifact paths
@@ -333,11 +335,11 @@ fi
 ### High
 
 ### Medium
-- [ ] Rewrite step 4 so it verifies the target IDs inside the full regenerated artifact instead of saying "Re-grade just the target question IDs": step 3 and the acceptance criteria require one canonical artifact whose `results`, `summary`, and `actionable` cover every row, so the current wording implies a partial regrade flow that conflicts with the slice’s whole-artifact contract.
-- [ ] Add the mandatory moved legacy-artifact path to `## Changed files expected`: the plan now requires `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` to be relocated to `diagnostic/artifacts/healthcheck/legacy/`, but that destination path is not listed even though the audit scope rules require moved/created paths to be named explicitly.
+- [x] Rewrite step 4 so it verifies the target IDs inside the full regenerated artifact instead of saying "Re-grade just the target question IDs": step 3 and the acceptance criteria require one canonical artifact whose `results`, `summary`, and `actionable` cover every row, so the current wording implies a partial regrade flow that conflicts with the slice’s whole-artifact contract.
+- [x] Add the mandatory moved legacy-artifact path to `## Changed files expected`: the plan now requires `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` to be relocated to `diagnostic/artifacts/healthcheck/legacy/`, but that destination path is not listed even though the audit scope rules require moved/created paths to be named explicitly.
 
 ### Low
-- [ ] Reconcile the target-ID scope wording between `## Inputs` ("rows where `answer_grade` is `C` or `semantic_conformance_grade` is `C`") and step 1 ("rows where ... `≠ A`"): pick one target population so the implementer is not left choosing between C-only fixes and all non-A rows.
+- [x] Reconcile the target-ID scope wording between `## Inputs` ("rows where `answer_grade` is `C` or `semantic_conformance_grade` is `C`") and step 1 ("rows where ... `≠ A`"): pick one target population so the implementer is not left choosing between C-only fixes and all non-A rows.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
