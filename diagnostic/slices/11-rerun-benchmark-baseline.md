@@ -149,7 +149,8 @@ Branch: `slice/11-rerun-benchmark-baseline` (off `integration/perf-roadmap`, bas
 Commit hashes:
 - `f4b1cd1` — initial submission of artifacts and note (superseded).
 - `1338130` — first revision (superseded by this round).
-- *(this commit)* — revision round 2: subshell-wrap gate 5, fresh benchmark rerun, regenerated artifacts.
+- `ac87b59` — revision round 2: subshell-wrap gate 5, fresh benchmark rerun, regenerated artifacts.
+- *(amend below)* — record the `ac87b59` hash in the note.
 
 ## Audit verdict
 
