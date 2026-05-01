@@ -1,11 +1,11 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T21:38:10-04:00
+updated: 2026-04-30T21:39:29-04:00
 ---
 
 ## Goal
@@ -61,7 +61,8 @@ bash scripts/loop/test_grading_gate.sh
 
 # Benchmark gate: produce the artifact and verify all 50 questions answered.
 # Assumes web dev server is running and OPENF1_CHAT_BASE_URL / ANTHROPIC_API_KEY / DATABASE_URL are set.
-cd web && npm run healthcheck:chat
+# Subshell so cwd stays at worktree root for the subsequent `web/logs/...` lookup.
+( cd web && npm run healthcheck:chat )
 # Exclude *.summary.json (aggregate sidecar) so we always pick the raw 50-row
 # graded array, not the summary object that the script writes alongside it.
 LATEST_JSON=$(ls -t web/logs/chat_health_check_*.json 2>/dev/null | grep -v '\.summary\.json$' | head -1)
@@ -117,10 +118,10 @@ Rollback: `git revert <commit>`.
 Branch: `slice/11-rerun-benchmark-baseline` (off `integration/perf-roadmap`, base `8b3ff71`).
 
 ### Decisions
-- No source code changes. The deliverable is purely the two artifacts under `diagnostic/artifacts/healthcheck/`. Filename stays date-stamped to the slice `updated:` date (2026-04-30); the actual benchmark run also occurred on 2026-04-30 EDT (UTC stamp `2026-05-01T01:06:41.168Z` ≡ 2026-04-30 21:06 EDT), so no rename was needed.
-- Revision pass: the prior submission's `.md` was stale relative to a fresh rerun (auditor flagged drift on Q12/Q14/Q30 and aggregate counts). The benchmark was re-run from scratch on 2026-04-30 EDT, the JSON artifact was overwritten with the new graded results, and the `.md` was regenerated end-to-end from that JSON.
-- Per slice Decisions, the regression documented on Q7 (A → B) is recorded as a finding in the `.md` artifact and is NOT treated as an auto-fail; this slice's purpose is to capture the new baseline and document the delta, not to act on regressions.
-- Aggregate direction is a clear improvement: overall A/B/C went from 24/11/15 → 47/3/0; semantic conformance went from 29/6/15 → 50/0/0. 25 questions improved, 24 unchanged, 1 regressed.
+- No source code changes. The deliverable is purely the two artifacts under `diagnostic/artifacts/healthcheck/`. Filename stays date-stamped to the slice `updated:` date (2026-04-30); the actual benchmark run also occurred on 2026-04-30 EDT (UTC stamp `2026-05-01T01:44:56.566Z` ≡ 2026-04-30 21:44 EDT), so no rename was needed.
+- Revision pass (round 2): addressed both audit findings. (a) Fixed the gate-5 path bug — the previous block ran `cd web && npm run healthcheck:chat` and then immediately referenced `web/logs/...`, which from the post-cd cwd resolved to `web/web/logs/...` and made gate 5 exit `1`. The benchmark step is now wrapped in a subshell `( cd web && npm run healthcheck:chat )` so the worktree-root cwd is preserved for the subsequent copy/validation. (b) Re-ran the benchmark from scratch and regenerated both artifacts end-to-end so the `.md` matches the new JSON exactly.
+- The benchmark is non-deterministic (LLM-graded), so per-question grades can vary between runs. The aggregate direction (clear improvement) is stable across the three runs I and the auditor have observed (47/3/0 overall, 50/0/0 semantic in all three); only individual-question grades for Q7/Q12/Q18 have flipped between runs. This run shows 24 improved, 26 unchanged, 0 regressed.
+- Per slice Decisions, regressions in A/B counts vs the prior baseline are findings to record, not auto-fails. This run records zero per-question regressions, so there is nothing to flag for follow-up beyond the three remaining `B` rows already present in the prior baseline (Q5, Q12, Q30 — all unchanged or improved).
 
 ### Gate command exit codes (run from worktree root unless noted)
 
@@ -129,25 +130,27 @@ Branch: `slice/11-rerun-benchmark-baseline` (off `integration/perf-roadmap`, bas
 | 1 | `cd web && npm run build` | 0 |
 | 2 | `cd web && npm run typecheck` | 0 |
 | 3 | `bash scripts/loop/test_grading_gate.sh` | 0 (`slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`) |
-| 4 | `cd web && npm run healthcheck:chat` (after `npm run dev` started in `web/` and verified `HTTP 200` on `http://127.0.0.1:3000/`) | 0 (50/50 questions answered) |
+| 4 | `( cd web && npm run healthcheck:chat )` (after `npm run dev` started in `web/` and verified `HTTP 200` on `http://127.0.0.1:3000/`) | 0 (50/50 questions answered, raw output `web/logs/chat_health_check_2026-05-01T01-44-56-566Z.json`) |
 | 5 | benchmark gate copy + 50-row validation (`node -e ...`) | 0 (`OK: 50/50 answered`) |
 | 6 | comparison-summary gate (grep checks on `11-rerun_2026-04-30.md`) | 0 (`OK: ... has new-run counts, prior-baseline counts, and per-question delta`) |
 
 ### Self-check vs acceptance criteria
 - [x] `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` exists, contains 50 rows, every row has a non-empty `answer` (asserted by gate 5).
-- [x] `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` exists; contains: per-aspect/per-category A/B/C counts for the new run (47/3/0 baseline, 47/3/0 answer, 50/0/0 semantic), prior-baseline A/B/C counts copied from `00-fresh-benchmark_2026-04-26.json`, and explicit Improved (25) / Unchanged (24) / Regressed (1) sections with per-question IDs (asserted by gate 6).
+- [x] `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` exists; contains: per-aspect/per-category A/B/C counts for the new run (47/3/0 baseline, 47/3/0 answer, 50/0/0 semantic), prior-baseline A/B/C counts copied from `00-fresh-benchmark_2026-04-26.json`, and explicit Improved (24) / Unchanged (26) / Regressed (0) sections with per-question IDs (asserted by gate 6).
 - [x] Test-grading gate (gate 3) exits 0; no new failures vs the loop integration baseline.
 - [x] Build and typecheck gates (gates 1 and 2) exit 0.
-- [x] Comparison vs prior baseline is documented in the `.md` artifact (improvement direction at aggregate, plus the single per-question regression on Q7).
+- [x] Comparison vs prior baseline is documented in the `.md` artifact (clear improvement direction at aggregate; per-question deltas enumerated; zero regressions in this run).
 
 ### Files changed
-- `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (regenerated 50-row graded result set from the 2026-04-30 EDT rerun)
+- `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (regenerated 50-row graded result set from the 2026-04-30 EDT rerun, source `web/logs/chat_health_check_2026-05-01T01-44-56-566Z.json`)
 - `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` (regenerated comparison summary aligned to the new JSON)
-- `diagnostic/slices/11-rerun-benchmark-baseline.md` (frontmatter status + this note)
+- `diagnostic/slices/11-rerun-benchmark-baseline.md` (frontmatter status, gate-5 subshell fix, and this note)
 
 Commit hashes:
-- `f4b1cd1` — initial submission of artifacts and note (superseded by this revision).
-- `1338130` — revision: regenerated artifacts from a fresh 2026-04-30 EDT rerun and updated note (this commit).
+- `f4b1cd1` — initial submission of artifacts and note (superseded).
+- `1338130` — first revision (superseded by this round).
+- `ac87b59` — revision round 2: subshell-wrap gate 5, fresh benchmark rerun, regenerated artifacts.
+- `8a8c1a4` — note-only follow-up to record the `ac87b59` hash inline.
 
 ## Audit verdict
 
