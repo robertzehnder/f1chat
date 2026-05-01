@@ -1,8 +1,8 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-30T21:39:29-04:00
@@ -157,20 +157,20 @@ Commit hashes:
 **Status: REVISE**
 
 - Gate 1 `cd web && npm run build` -> exit `0`
-- Gate 2 `cd web && npm run typecheck` -> exit `0`
+- Gate 2 `cd web && npm run typecheck` -> exit `2`
 - Gate 3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
-- Gate 4 `cd web && npm run healthcheck:chat` -> exit `0`
-- Gate 5 benchmark copy + 50-row validation -> exit `1`
+- Gate 4 `( cd web && npm run healthcheck:chat )` -> exit `0`
+- Gate 5 benchmark copy + 50-row validation -> exit `0`
 - Gate 6 comparison-summary grep gate -> exit `0`
 - Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to the two declared artifacts plus `diagnostic/slices/11-rerun-benchmark-baseline.md`.
 - Criterion `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` exists with 50 non-empty answers: PASS.
 - Criterion `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` exists and contains the required sections: PASS.
-- Criterion per-question improved / unchanged / regressed delta is reproducible from a fresh local rerun: FAIL. The audit rerun written to `web/logs/chat_health_check_2026-05-01T01-36-45-721Z.json` changed Q18 from `A` to `B`, so `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:11`, `:12`, `:44`, `:45`, `:62`, `:84`, and `:100` no longer match the locally rerun benchmark (`46/4/0` overall and Q18 unchanged, not improved).
+- Criterion per-question improved / unchanged / regressed delta is reproducible from a fresh local rerun: FAIL. The fresh rerun written to `web/logs/chat_health_check_2026-05-01T01-54-19-661Z.json` produced baseline grade counts `B=4, C=46`, answer grade counts `B=4, C=46`, and semantic counts `A=50`, so [diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md](/Users/robertzehnder/.openf1-loop-worktrees/11-rerun-benchmark-baseline/diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:11) through [line 13](/Users/robertzehnder/.openf1-loop-worktrees/11-rerun-benchmark-baseline/diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:13), [line 44](/Users/robertzehnder/.openf1-loop-worktrees/11-rerun-benchmark-baseline/diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:44) through [line 46](/Users/robertzehnder/.openf1-loop-worktrees/11-rerun-benchmark-baseline/diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:46), and [line 54](/Users/robertzehnder/.openf1-loop-worktrees/11-rerun-benchmark-baseline/diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:54) through [line 95](/Users/robertzehnder/.openf1-loop-worktrees/11-rerun-benchmark-baseline/diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:95) do not describe the rerun artifact the slice requires.
 - Criterion `bash scripts/loop/test_grading_gate.sh` exits `0`: PASS.
-- Criterion build and typecheck gates exit `0`: PASS.
-- Criterion comparison vs prior baseline is documented regardless of direction: PASS.
+- Criterion build and typecheck gates exit `0`: FAIL. `npm run typecheck` exits `2` with missing `.next/types/**/*.ts` entries from `web/tsconfig.json` including `.next/types/app/api/admin/perf-summary/route.ts`, `.next/types/app/api/chat/route.ts`, and `.next/types/app/chat/page.ts`.
+- Criterion comparison vs prior baseline is documented regardless of direction: FAIL. The checked-in summary documents `47/3/0` and `24` improved / `0` regressed instead of the fresh rerun’s observed counts, so the comparison artifact is stale.
 - Decision: REVISE.
-- Rationale: the benchmark block does not pass as written because the copy step looks for `web/logs/...` after `cd web`, and a fresh audit rerun did not reproduce the checked-in baseline exactly.
+- Rationale: one declared gate is red (`npm run typecheck`), and the summary artifact is not derived from the fresh rerun benchmark required by the slice.
 
 ## Plan-audit verdict (round 1)
 
