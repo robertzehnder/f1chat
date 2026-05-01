@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:15:00Z
+updated: 2026-05-01T19:01:03Z
 ---
 
 ## Goal
@@ -243,6 +243,20 @@ fi
 
 ### Medium
 - [x] Make the artifact output contract consistent: either require the canonical regenerated artifact path to be `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` everywhere, or rewrite the mtime-pin gate so it validates whichever single path step 3 / `## Artifact paths` actually allow. The current plan still says step 3 may regenerate `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` in place, but the gate hard-fails unless `ls -t diagnostic/artifacts/healthcheck/11-multi-axis-regrade_*.json` finds a sibling regrade file.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
+
+## Plan-audit verdict (round 5)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Reconcile the legacy-artifact instructions into one implementation path: step 3 and `## Changed files expected` now say `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` is preserved as the legacy baseline and the canonical output is the sibling `11-multi-axis-regrade_<YYYY-MM-DD>.json`, but the `## Decisions` bullet `Pre-rewrite legacy snapshot (Medium-1 resolution)` still says step 3 rewrites `11-rerun_2026-04-30.json` in place; remove the in-place rewrite language or switch the rest of the plan back to that model so the implementer has one artifact contract.
 
 ### Low
 
