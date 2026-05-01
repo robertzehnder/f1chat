@@ -1,8 +1,8 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: ready_to_merge
-owner: user
+status: done
+owner: -
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-05-01T16:10:00-04:00
