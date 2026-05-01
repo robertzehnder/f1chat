@@ -177,7 +177,7 @@ Commit hashes:
 - `e118b20` — revision round 3: fresh benchmark rerun, regenerated `.json` + `.md` artifacts.
 - `65800c5` — revision round 4: fresh benchmark rerun executed in this worktree against `PORT=3001` dev server, regenerated `.json` + `.md`.
 - `0cca94f` — revision round 5: fresh benchmark rerun, regenerated `.json` + `.md` together (still failed audit because the audit's own gate-5 rerun re-overwrote the JSON to a different value, leaving the committed `.md` stale).
-- (new this round) — revision round 6: introduces `web/scripts/build-rerun-comparison-md.mjs` and inserts a generation step into the gate block so the `.md` is deterministically derived from the JSON each gate run; fresh benchmark executed (`web/logs/chat_health_check_2026-05-01T02-51-32-243Z.json`), `.json` + `.md` regenerated together. The audit's gate-5 rerun will now also regenerate the `.md` automatically, so any drift between `.md` and `.json` numerics is structurally impossible going forward.
+- `ff9262a` — revision round 6: introduces `web/scripts/build-rerun-comparison-md.mjs` and inserts a generation step into the gate block so the `.md` is deterministically derived from the JSON each gate run; fresh benchmark executed (`web/logs/chat_health_check_2026-05-01T02-51-32-243Z.json`), `.json` + `.md` regenerated together. The audit's gate-5 rerun will now also regenerate the `.md` automatically, so any drift between `.md` and `.json` numerics is structurally impossible going forward.
 
 ## Audit verdict
 
