@@ -1,11 +1,11 @@
 ---
 slice_id: 11-residual-raw-table-regressions
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T22:30:00-04:00
+updated: 2026-05-01T01:30:00-04:00
 ---
 
 ## Goal
@@ -183,3 +183,21 @@ Rollback: `git revert <commit>`. The targeted re-grade gate is LLM-graded; per D
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T03:00:31Z`).
+
+## Plan-audit verdict (round 2, manual PASS-WITH-DEFERRED)
+
+**Status: PASS-WITH-DEFERRED**
+**Auditor: user (manual override after codex API instability blocked round-2 audit)**
+
+### High
+_None._
+
+### Medium
+_None._ Round-1 codex audit's High/Medium items (test-grading wrapper, targeted + same-category regression gates, concrete failing IDs Q2/Q10/Q30, full env prerequisites, bounded changed-files pattern) were all addressed by `c8bec1b plan-revise: address round-1 audit items` and re-verifiable by reading the current slice body.
+
+### Low
+_None._
+
+### Notes (informational only — no action)
+- Round-2 codex plan-audit was attempted 5 times between 00:10:10 and 01:24:43 EDT 2026-05-01: 4 watchdog kills (etime 596–1074s, well over 180s baseline) and 2 codex non-zero exits (rc=1) at ~18 min runtime. Round-1 succeeded immediately after the cooldown lifted (23:54:07), so the slice content itself is not the trigger; codex API appears intermittently unstable for round-2 audits on this slice. Manual override unblocks the loop without rolling back the (sound) round-1 revisions.
+- Implementation may proceed under owner=claude. If codex impl-audit also exhibits instability, fall back to PASS-WITH-DEFERRED on impl as well or surface to user.
