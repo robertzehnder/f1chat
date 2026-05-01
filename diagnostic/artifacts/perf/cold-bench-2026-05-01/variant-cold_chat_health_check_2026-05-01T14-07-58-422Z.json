@@ -1,0 +1,3079 @@
+[
+  {
+    "id": 101,
+    "category": "Session discovery and metadata",
+    "question": "What race sessions do we have for the 2025 season?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 7233,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "The 2025 season has 24 race sessions. They are: Australia (Melbourne, Mar 16), China (Shanghai, Mar 23), Japan (Suzuka, Apr 6), Bahrain (Sakhir, Apr 13), Saudi Arabia (Jeddah, Apr 20), United States (Miami, May 4), Italy (Imola, May 18), Monaco (May 25), Spain (Barcelona, Jun 1), Canada (Montréal, Jun 15), Austria (Spielberg, Jun 29), United Kingdom (Silverstone, Jul 6), Belgium (Spa, Jul 27), Hungary (Budapest, Aug 3), Netherlands (Zandvoort, Aug 31), Italy (Monza, Sep 7), Azerbaijan (Baku, Sep 21), Singapore (Marina Bay, Oct 5), United States (Austin, Oct 19), Mexico (Mexico City, Oct 26), Brazil (São Paulo, Nov 9), United States (Las Vegas, Nov 23), Qatar (Lusail, Nov 30), and United Arab Emirates (Yas Island, Dec 7).",
+    "answerReasoning": "The query returned 24 rows, each representing a race session in the 2025 season. I listed all 24 by country/location and date, ordered chronologically as provided.",
+    "generationNotes": "Filtering core.sessions for year = 2025 and session_name matching 'race' (case-insensitive) to return all race sessions in the 2025 season, ordered by date. A limit of 50 is used since there are typically ~24 race weekends per season.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "9301dbfb-127f-4a7c-ba54-aea20d468cac",
+    "rowCount": 24,
+    "rowSummary": "1. session_key=9693, meeting_name=null, session_name=Race, country_name=Australia, location=Melbourne, date_start=2025-03-16T04:00:00.000Z\n2. session_key=9998, meeting_name=null, session_name=Race, country_name=China, location=Shanghai, date_start=2025-03-23T07:00:00.000Z\n3. session_key=10006, meeting_name=null, session_name=Race, country_name=Japan, location=Suzuka, date_start=2025-04-06T05:00:00.000Z",
+    "previewRows": [
+      {
+        "session_key": "9693",
+        "meeting_name": null,
+        "session_name": "Race",
+        "country_name": "Australia",
+        "location": "Melbourne",
+        "date_start": "2025-03-16T04:00:00.000Z"
+      },
+      {
+        "session_key": "9998",
+        "meeting_name": null,
+        "session_name": "Race",
+        "country_name": "China",
+        "location": "Shanghai",
+        "date_start": "2025-03-23T07:00:00.000Z"
+      },
+      {
+        "session_key": "10006",
+        "meeting_name": null,
+        "session_name": "Race",
+        "country_name": "Japan",
+        "location": "Suzuka",
+        "date_start": "2025-04-06T05:00:00.000Z"
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT session_key, meeting_name, session_name, country_name, location, date_start FROM core.sessions WHERE year = 2025 AND session_name ILIKE '%race%' ORDER BY date_start LIMIT 50",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 102,
+    "category": "Session discovery and metadata",
+    "question": "Which sessions in the warehouse are Race vs Qualifying vs Practice?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 7447,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "The warehouse contains 7 distinct session types spanning 2023–2026. Race sessions are the most common with 95 entries, followed by Qualifying and Practice 1 (72 each), Practice 2 and Practice 3 (54 each), Sprint Qualifying (22), and Sprint (18). In total there are 3 practice session types, 2 qualifying types (Qualifying and Sprint Qualifying), and 2 race types (Race and Sprint).",
+    "answerReasoning": "The query groups all sessions by session_name and counts them. The 7 rows directly show each session type, its count, and year range, allowing a clear breakdown into Practice, Qualifying, and Race categories.",
+    "generationNotes": "The question asks for a breakdown of session types (Race, Qualifying, Practice) in the warehouse. By grouping core.sessions on session_name, we get a count of each distinct session type along with the year range covered, giving a clear summary of what session categories exist and how many of each are stored.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "b2647f8e-e756-45db-b46f-6af17743c5ff",
+    "rowCount": 7,
+    "rowSummary": "1. session_name=Race, session_count=95, earliest_year=2023, latest_year=2026\n2. session_name=Qualifying, session_count=72, earliest_year=2024, latest_year=2026\n3. session_name=Practice 1, session_count=72, earliest_year=2024, latest_year=2026",
+    "previewRows": [
+      {
+        "session_name": "Race",
+        "session_count": "95",
+        "earliest_year": 2023,
+        "latest_year": 2026
+      },
+      {
+        "session_name": "Qualifying",
+        "session_count": "72",
+        "earliest_year": 2024,
+        "latest_year": 2026
+      },
+      {
+        "session_name": "Practice 1",
+        "session_count": "72",
+        "earliest_year": 2024,
+        "latest_year": 2026
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT session_name, COUNT(*) AS session_count, MIN(year) AS earliest_year, MAX(year) AS latest_year FROM core.sessions GROUP BY session_name ORDER BY session_count DESC LIMIT 50",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 103,
+    "category": "Session discovery and metadata",
+    "question": "What session corresponds to Monza 2025 Race in canonical IDs?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 6249,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "The Monza 2025 Race corresponds to session_key 9912. It is scheduled for September 7, 2025, at 13:00 UTC in Monza, Italy.",
+    "answerReasoning": "Among the two rows returned, session_key 9912 matches location 'Monza' with session_name 'Race' in 2025. The other row (9987) is from Imola, not Monza.",
+    "generationNotes": "Looking up the canonical session_key for the Monza 2025 Race by filtering core.sessions on year=2025, matching location/country/meeting_name to Monza or Italy, and filtering session_name to race-type sessions.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "5c5defdd-07b1-4387-b772-e38854663bb5",
+    "rowCount": 2,
+    "rowSummary": "1. session_key=9912, meeting_name=null, session_name=Race, year=2025, country_name=Italy, location=Monza\n2. session_key=9987, meeting_name=null, session_name=Race, year=2025, country_name=Italy, location=Imola",
+    "previewRows": [
+      {
+        "session_key": "9912",
+        "meeting_name": null,
+        "session_name": "Race",
+        "year": 2025,
+        "country_name": "Italy",
+        "location": "Monza",
+        "date_start": "2025-09-07T13:00:00.000Z"
+      },
+      {
+        "session_key": "9987",
+        "meeting_name": null,
+        "session_name": "Race",
+        "year": 2025,
+        "country_name": "Italy",
+        "location": "Imola",
+        "date_start": "2025-05-18T13:00:00.000Z"
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT session_key, meeting_name, session_name, year, country_name, location, date_start FROM core.sessions WHERE year = 2025 AND (LOWER(location) LIKE '%monza%' OR LOWER(country_name) LIKE '%italy%' OR LOWER(meeting_name) LIKE '%monza%' OR LOWER(meeting_name) LIKE '%italy%') AND LOWER(session_name) LIKE '%race%' LIMIT 10",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 104,
+    "category": "Session discovery and metadata",
+    "question": "Which sessions do we have for Silverstone / Northamptonshire / United Kingdom?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 9414,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "There are 16 sessions for Silverstone, United Kingdom across four years. In 2026 (July 3–5): Practice 1, Sprint Qualifying, Sprint, Qualifying, and Race. In 2025 (July 4–6): Practice 1, Practice 2, Practice 3, Qualifying, and Race. In 2024 (July 5–7): Practice 1, Practice 2, Practice 3, Qualifying, and Race. In 2023: at least a Race session (July 9) is present in the data.",
+    "answerReasoning": "The query returned 16 rows all located at Silverstone, United Kingdom. The rows cover 2023–2026 with session types including Practice 1–3, Sprint Qualifying, Sprint, Qualifying, and Race. The 2026 weekend is a Sprint format (no Practice 2/3), while 2024 and 2025 follow the standard three-practice format. Only one 2023 session (Race) appears in the returned sample, suggesting the dataset may be limited for that year.",
+    "generationNotes": "Looking up all sessions associated with Silverstone / Northamptonshire / United Kingdom by filtering core.sessions on country_name and location fields using case-insensitive pattern matching. The driver_number context is noted but sessions are not filtered by driver here since core.sessions does not have a driver_number column — the question is about which sessions exist at this venue.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "108100ed-a181-4739-a3b8-24610f407bba",
+    "rowCount": 16,
+    "rowSummary": "1. session_key=11326, meeting_name=null, session_name=Race, year=2026, country_name=United Kingdom, location=Silverstone\n2. session_key=11322, meeting_name=null, session_name=Qualifying, year=2026, country_name=United Kingdom, location=Silverstone\n3. session_key=11321, meeting_name=null, session_name=Sprint, year=2026, country_name=United Kingdom, location=Silverstone",
+    "previewRows": [
+      {
+        "session_key": "11326",
+        "meeting_name": null,
+        "session_name": "Race",
+        "year": 2026,
+        "country_name": "United Kingdom",
+        "location": "Silverstone",
+        "date_start": "2026-07-05T14:00:00.000Z"
+      },
+      {
+        "session_key": "11322",
+        "meeting_name": null,
+        "session_name": "Qualifying",
+        "year": 2026,
+        "country_name": "United Kingdom",
+        "location": "Silverstone",
+        "date_start": "2026-07-04T15:00:00.000Z"
+      },
+      {
+        "session_key": "11321",
+        "meeting_name": null,
+        "session_name": "Sprint",
+        "year": 2026,
+        "country_name": "United Kingdom",
+        "location": "Silverstone",
+        "date_start": "2026-07-04T11:00:00.000Z"
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT session_key, meeting_name, session_name, year, country_name, location, date_start FROM core.sessions WHERE country_name ILIKE '%united kingdom%' OR location ILIKE '%silverstone%' OR location ILIKE '%northampton%' ORDER BY date_start DESC LIMIT 50",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 105,
+    "category": "Session discovery and metadata",
+    "question": "Which sessions are missing key metadata like meeting_name or date_start?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 9419,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "At least 50 sessions are missing the meeting_name field, all from the 2026 season. The affected sessions span multiple Grand Prix weekends including Yas Marina (UAE), Lusail (Qatar), Las Vegas (USA), São Paulo (Brazil), and Mexico City (Mexico), covering all session types (Practice 1–3, Qualifying, and Race). Notably, date_start is present for all returned rows, so the missing metadata is exclusively meeting_name. The query returned the maximum 50 rows, meaning the total number of affected sessions is likely higher.",
+    "answerReasoning": "All 50 returned rows have meeting_name as null but have valid date_start values, confirming the data quality issue is isolated to meeting_name. The rows cover 2026 sessions across at least 5 different race locations and all session types. The 50-row limit was hit, indicating there may be more affected sessions beyond what was returned.",
+    "generationNotes": "We query core.sessions to find rows where either meeting_name is NULL/empty or date_start is NULL, as these represent sessions with missing key metadata. Results are ordered by session_key descending to surface the most recent affected sessions first, with a limit of 50 to keep output bounded.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "dbc462e9-22f2-4122-97f2-38aab0ad451a",
+    "rowCount": 50,
+    "rowSummary": "1. session_key=11436, meeting_name=null, session_name=Race, year=2026, country_name=United Arab Emirates, location=Yas Marina\n2. session_key=11432, meeting_name=null, session_name=Qualifying, year=2026, country_name=United Arab Emirates, location=Yas Marina\n3. session_key=11431, meeting_name=null, session_name=Practice 3, year=2026, country_name=United Arab Emirates, location=Yas Marina",
+    "previewRows": [
+      {
+        "session_key": "11436",
+        "meeting_name": null,
+        "session_name": "Race",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina",
+        "date_start": "2026-12-06T13:00:00.000Z"
+      },
+      {
+        "session_key": "11432",
+        "meeting_name": null,
+        "session_name": "Qualifying",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina",
+        "date_start": "2026-12-05T14:00:00.000Z"
+      },
+      {
+        "session_key": "11431",
+        "meeting_name": null,
+        "session_name": "Practice 3",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina",
+        "date_start": "2026-12-05T10:30:00.000Z"
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT session_key, meeting_name, session_name, year, country_name, location, date_start FROM core.sessions WHERE meeting_name IS NULL OR meeting_name = '' OR date_start IS NULL ORDER BY session_key DESC LIMIT 50",
+    "errorBodyPreview": null,
+    "baselineGrade": "B",
+    "baselineReason": "Answer: Answer quality gaps: non_generic_answer. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "partial",
+    "answer_grade": "B",
+    "answer_grade_reason": "Answer quality gaps: non_generic_answer.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": false
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 106,
+    "category": "Session discovery and metadata",
+    "question": "Which sessions have the most complete downstream data coverage?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 13,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "Driver is the top visible row (session key=9839, meeting key=1276, year=2025), with 25 total matching rows.",
+    "answerReasoning": null,
+    "generationNotes": "template=sessions_most_complete_downstream_coverage",
+    "generationSource": "deterministic_template",
+    "model": null,
+    "requestId": "8e896ccd-def9-4f06-8eff-c3b0ffcfe53d",
+    "rowCount": 25,
+    "rowSummary": "1. session_key=9839, meeting_key=1276, year=2025, session_name=Race, country_name=United Arab Emirates, location=Yas Island\n2. session_key=9850, meeting_key=1275, year=2025, session_name=Race, country_name=Qatar, location=Lusail\n3. session_key=9846, meeting_key=1275, year=2025, session_name=Qualifying, country_name=Qatar, location=Lusail",
+    "previewRows": [
+      {
+        "session_key": "9839",
+        "meeting_key": "1276",
+        "year": 2025,
+        "session_name": "Race",
+        "country_name": "United Arab Emirates",
+        "location": "Yas Island",
+        "date_start": "2025-12-07T13:00:00.000Z",
+        "downstream_coverage_score": 8,
+        "has_laps": 1,
+        "has_car_data": 1,
+        "has_location": 1,
+        "has_pit": 1,
+        "has_stints": 1,
+        "has_weather": 1,
+        "has_team_radio": 1,
+        "has_position_history": 1
+      },
+      {
+        "session_key": "9850",
+        "meeting_key": "1275",
+        "year": 2025,
+        "session_name": "Race",
+        "country_name": "Qatar",
+        "location": "Lusail",
+        "date_start": "2025-11-30T16:00:00.000Z",
+        "downstream_coverage_score": 8,
+        "has_laps": 1,
+        "has_car_data": 1,
+        "has_location": 1,
+        "has_pit": 1,
+        "has_stints": 1,
+        "has_weather": 1,
+        "has_team_radio": 1,
+        "has_position_history": 1
+      },
+      {
+        "session_key": "9846",
+        "meeting_key": "1275",
+        "year": 2025,
+        "session_name": "Qualifying",
+        "country_name": "Qatar",
+        "location": "Lusail",
+        "date_start": "2025-11-29T18:00:00.000Z",
+        "downstream_coverage_score": 8,
+        "has_laps": 1,
+        "has_car_data": 1,
+        "has_location": 1,
+        "has_pit": 1,
+        "has_stints": 1,
+        "has_weather": 1,
+        "has_team_radio": 1,
+        "has_position_history": 1
+      }
+    ],
+    "warnings": [],
+    "questionType": "data_health_question",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "WITH coverage AS (\n          SELECT\n            s.session_key,\n            s.meeting_key,\n            s.year,\n            s.session_name,\n            s.country_name,\n            s.location,\n            s.date_start,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.laps l WHERE l.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_laps,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.car_data cd WHERE cd.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_car_data,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.location loc WHERE loc.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_location,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.pit p WHERE p.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_pit,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.stints st WHERE st.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_stints,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.weather w WHERE w.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_weather,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.team_radio tr WHERE tr.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_team_radio,\n            CASE WHEN EXISTS (SELECT 1 FROM raw.position_history ph WHERE ph.session_key = s.session_key LIMIT 1) THEN 1 ELSE 0 END AS has_position_history\n          FROM core.sessions s\n        )\n        SELECT\n          session_key,\n          meeting_key,\n          year,\n          session_name,\n          country_name,\n          location,\n          date_start,\n          (has_laps + has_car_data + has_location + has_pit + has_stints + has_weather + has_team_radio + has_position_history) AS downstream_coverage_score,\n          has_laps,\n          has_car_data,\n          has_location,\n          has_pit,\n          has_stints,\n          has_weather,\n          has_team_radio,\n          has_position_history\n        FROM coverage\n        ORDER BY downstream_coverage_score DESC, date_start DESC NULLS LAST\n        LIMIT 25",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 107,
+    "category": "Session discovery and metadata",
+    "question": "Which sessions have weather, radio, pit, laps, and telemetry all populated?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 10112,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "At least 50 sessions have all five data types (weather, radio, pit, laps, and telemetry) fully populated. The most recent is the 2025 Abu Dhabi Race (session 9839, December 7, 2025), followed by sessions from Qatar, the United States (Las Vegas), Brazil, Mexico, and Austin across late 2025. The results are capped at 50 rows, so the full list likely extends further back in time.",
+    "answerReasoning": "The query checks for the existence of records in all five raw tables (weather, team_radio, pit, laps, car_data) for each session and returns 50 matching sessions ordered by most recent first. All 50 rows returned confirm full data coverage across those five sources.",
+    "generationNotes": "We check each session in core.sessions for the presence of at least one row in each of the five required raw tables: raw.weather (weather), raw.team_radio (radio), raw.pit (pit), raw.laps (laps), and raw.car_data (telemetry). Using EXISTS with LIMIT 1 sub-queries is efficient and avoids full table scans. Results are ordered by most recent sessions first.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "87ad2225-d80f-4dd4-8b03-37bb6c260a90",
+    "rowCount": 50,
+    "rowSummary": "1. session_key=9839, meeting_name=null, session_name=Race, year=2025, country_name=United Arab Emirates, date_start=2025-12-07T13:00:00.000Z\n2. session_key=9850, meeting_name=null, session_name=Race, year=2025, country_name=Qatar, date_start=2025-11-30T16:00:00.000Z\n3. session_key=9846, meeting_name=null, session_name=Qualifying, year=2025, country_name=Qatar, date_start=2025-11-29T18:00:00.000Z",
+    "previewRows": [
+      {
+        "session_key": "9839",
+        "meeting_name": null,
+        "session_name": "Race",
+        "year": 2025,
+        "country_name": "United Arab Emirates",
+        "date_start": "2025-12-07T13:00:00.000Z"
+      },
+      {
+        "session_key": "9850",
+        "meeting_name": null,
+        "session_name": "Race",
+        "year": 2025,
+        "country_name": "Qatar",
+        "date_start": "2025-11-30T16:00:00.000Z"
+      },
+      {
+        "session_key": "9846",
+        "meeting_name": null,
+        "session_name": "Qualifying",
+        "year": 2025,
+        "country_name": "Qatar",
+        "date_start": "2025-11-29T18:00:00.000Z"
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT s.session_key, s.meeting_name, s.session_name, s.year, s.country_name, s.date_start FROM core.sessions s WHERE EXISTS ( SELECT 1 FROM raw.weather w WHERE w.session_key = s.session_key LIMIT 1 ) AND EXISTS ( SELECT 1 FROM raw.team_radio tr WHERE tr.session_key = s.session_key LIMIT 1 ) AND EXISTS ( SELECT 1 FROM raw.pit p WHERE p.session_key = s.session_key LIMIT 1 ) AND EXISTS ( SELECT 1 FROM raw.laps l WHERE l.session_key = s.session_key LIMIT 1 ) AND EXISTS ( SELECT 1 FROM raw.car_data cd WHERE cd.session_key = s.session_key LIMIT 1 ) ORDER BY s.year DESC, s.date_start DESC LIMIT 50",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 108,
+    "category": "Session discovery and metadata",
+    "question": "Which drivers participated in a given session?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 15,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Clarification was appropriate because the question needed a specific session.",
+    "answer": "Please specify the session (for example: Abu Dhabi 2025 Race or session_key 9839) so I can list participating drivers.",
+    "answerReasoning": null,
+    "generationNotes": "clarification_required",
+    "generationSource": "runtime_clarification",
+    "model": null,
+    "requestId": "b50df8bb-fe95-4c42-b8c8-eb38ee5df994",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": "metadata_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "-- query not executed (clarification required)",
+    "errorBodyPreview": null,
+    "baselineGrade": "C",
+    "baselineReason": "Answer: Asked for clarification even though this benchmark question should be answerable as written. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "unnecessary_clarification",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "Asked for clarification even though this benchmark question should be answerable as written.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "unnecessary_clarification"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": true,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 109,
+    "category": "Session discovery and metadata",
+    "question": "Which teams were present in a given session?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 10,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Clarification was appropriate because the question needed a specific session.",
+    "answer": "Please specify the session (for example: Abu Dhabi 2025 Race or session_key 9839) so I can list the teams present.",
+    "answerReasoning": null,
+    "generationNotes": "clarification_required",
+    "generationSource": "runtime_clarification",
+    "model": null,
+    "requestId": "266873ea-a7ac-413f-b5ce-2dada5b0181c",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": "metadata_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "-- query not executed (clarification required)",
+    "errorBodyPreview": null,
+    "baselineGrade": "C",
+    "baselineReason": "Answer: Asked for clarification even though this benchmark question should be answerable as written. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "unnecessary_clarification",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "Asked for clarification even though this benchmark question should be answerable as written.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "unnecessary_clarification"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": true,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 110,
+    "category": "Session discovery and metadata",
+    "question": "Which sessions appear to be partially loaded or placeholder sessions?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 12983,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "All 50 sessions flagged as partially loaded are 2026 future/placeholder sessions, each missing only the meeting_name field. They span multiple venues including Yas Marina (UAE), Lusail (Qatar), Las Vegas, São Paulo, and Mexico City, with session keys ranging up to 11436. All other fields — session_name, country_name, location, and date_start — are populated, suggesting these are pre-loaded schedule entries awaiting official meeting name confirmation.",
+    "answerReasoning": "Every row in the result set has missing_field_count=1 with 'Missing meeting_name' as the only missing field. All sessions are year=2026 with future dates, indicating they are placeholder/pre-scheduled entries rather than corrupted records. The session and location data is otherwise complete.",
+    "generationNotes": "To identify partially loaded or placeholder sessions, I look for sessions in core.sessions that are missing key descriptive fields such as meeting_name, session_name, country_name, location, or date_start. These null or empty values are strong indicators of incomplete or placeholder records. I compute a missing_field_count to rank the most incomplete sessions first, and concatenate a human-readable description of which fields are missing. Results are limited to 50 rows.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "38c5fab7-4e8a-4606-98df-a46470d376c5",
+    "rowCount": 50,
+    "rowSummary": "1. session_key=11436, meeting_name=null, session_name=Race, year=2026, country_name=United Arab Emirates, location=Yas Marina\n2. session_key=11432, meeting_name=null, session_name=Qualifying, year=2026, country_name=United Arab Emirates, location=Yas Marina\n3. session_key=11431, meeting_name=null, session_name=Practice 3, year=2026, country_name=United Arab Emirates, location=Yas Marina",
+    "previewRows": [
+      {
+        "session_key": "11436",
+        "meeting_name": null,
+        "session_name": "Race",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina",
+        "date_start": "2026-12-06T13:00:00.000Z",
+        "missing_fields": "Missing meeting_name",
+        "missing_field_count": 1
+      },
+      {
+        "session_key": "11432",
+        "meeting_name": null,
+        "session_name": "Qualifying",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina",
+        "date_start": "2026-12-05T14:00:00.000Z",
+        "missing_fields": "Missing meeting_name",
+        "missing_field_count": 1
+      },
+      {
+        "session_key": "11431",
+        "meeting_name": null,
+        "session_name": "Practice 3",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina",
+        "date_start": "2026-12-05T10:30:00.000Z",
+        "missing_fields": "Missing meeting_name",
+        "missing_field_count": 1
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT s.session_key, s.meeting_name, s.session_name, s.year, s.country_name, s.location, s.date_start, CASE WHEN s.meeting_name IS NULL OR s.meeting_name = '' THEN 'Missing meeting_name' ELSE '' END || CASE WHEN s.session_name IS NULL OR s.session_name = '' THEN ' Missing session_name' ELSE '' END || CASE WHEN s.country_name IS NULL OR s.country_name = '' THEN ' Missing country_name' ELSE '' END || CASE WHEN s.location IS NULL OR s.location = '' THEN ' Missing location' ELSE '' END || CASE WHEN s.date_start IS NULL THEN ' Missing date_start' ELSE '' END AS missing_fields, ( (CASE WHEN s.meeting_name IS NULL OR s.meeting_name = '' THEN 1 ELSE 0 END) + (CASE WHEN s.session_name IS NULL OR s.session_name = '' THEN 1 ELSE 0 END) + (CASE WHEN s.country_name IS NULL OR s.country_name = '' THEN 1 ELSE 0 END) + (CASE WHEN s.location IS NULL OR s.location = '' THEN 1 ELSE 0 END) + (CASE WHEN s.date_start IS NULL THEN 1 ELSE 0 END) ) AS missing_field_count FROM core.sessions s WHERE ( s.meeting_name IS NULL OR s.meeting_name = '' OR s.session_name IS NULL OR s.session_name = '' OR s.country_name IS NULL OR s.country_name = '' OR s.location IS NULL OR s.location = '' OR s.date_start IS NULL ) ORDER BY missing_field_count DESC, s.session_key DESC LIMIT 50",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 111,
+    "category": "Driver roster and participation",
+    "question": "Who drove in the Silverstone 2025 race?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15021,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "431c681d-326e-4e13-bb86-6c05074d763b",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"431c681d-326e-4e13-bb86-6c05074d763b\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 112,
+    "category": "Driver roster and participation",
+    "question": "Which sessions did George Russell participate in during 2025?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 9572,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "George Russell (driver #63) participated in at least 50 sessions in 2025, spanning multiple race weekends. The confirmed events include Australia (Melbourne) — Practice 1-3, Qualifying, Race; China (Shanghai) — Practice 1, Sprint Qualifying, Sprint, Qualifying, Race; Japan (Suzuka) — Practice 1-3, Qualifying, Race; Bahrain (Sakhir) — Practice 2-3, Qualifying, Race (Practice 1 not shown); Saudi Arabia (Jeddah) — Practice 1-3, Qualifying, Race; and at least the start of the Miami Gardens weekend. The query was capped at 50 rows, so additional sessions beyond Miami likely exist.",
+    "answerReasoning": "The rows show 50 sessions with driver_number 63 (George Russell) in 2025, ordered by date. They cover Australia, China, Japan, Bahrain, Saudi Arabia, and the beginning of the Miami weekend. The 50-row limit means the full list is truncated and further sessions are not shown.",
+    "generationNotes": "Join core.sessions with core.session_drivers to find all sessions where George Russell (driver_number = 63) participated in 2025. Ordered by date to show chronological progression of his season.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "5f472242-a792-4db7-b656-721d5adb4744",
+    "rowCount": 50,
+    "rowSummary": "1. session_key=9686, meeting_name=null, session_name=Practice 1, year=2025, country_name=Australia, location=Melbourne\n2. session_key=9687, meeting_name=null, session_name=Practice 2, year=2025, country_name=Australia, location=Melbourne\n3. session_key=9688, meeting_name=null, session_name=Practice 3, year=2025, country_name=Australia, location=Melbourne",
+    "previewRows": [
+      {
+        "session_key": "9686",
+        "meeting_name": null,
+        "session_name": "Practice 1",
+        "year": 2025,
+        "country_name": "Australia",
+        "location": "Melbourne",
+        "date_start": "2025-03-14T01:30:00.000Z"
+      },
+      {
+        "session_key": "9687",
+        "meeting_name": null,
+        "session_name": "Practice 2",
+        "year": 2025,
+        "country_name": "Australia",
+        "location": "Melbourne",
+        "date_start": "2025-03-14T05:00:00.000Z"
+      },
+      {
+        "session_key": "9688",
+        "meeting_name": null,
+        "session_name": "Practice 3",
+        "year": 2025,
+        "country_name": "Australia",
+        "location": "Melbourne",
+        "date_start": "2025-03-15T01:30:00.000Z"
+      }
+    ],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT s.session_key, s.meeting_name, s.session_name, s.year, s.country_name, s.location, s.date_start FROM core.sessions s JOIN core.session_drivers sd ON s.session_key = sd.session_key WHERE s.year = 2025 AND sd.driver_number = 63 ORDER BY s.date_start LIMIT 50",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 113,
+    "category": "Driver roster and participation",
+    "question": "Which drivers appeared under more than one team across the dataset?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 10136,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "15 drivers appeared under more than one team in the dataset. Driver #22 had the most team associations with 4 teams (AlphaTauri, Racing Bulls, RB, Red Bull Racing), followed by drivers #3, #27, #30, #40, and #77 each appearing under 3 teams. The remaining 9 drivers appeared under 2 teams each, including notable examples like #1 (McLaren and Red Bull Racing), #44 (Ferrari and Mercedes), and #55 (Ferrari and Williams). Many of the multi-team appearances reflect rebranding within the same organization, such as AlphaTauri → RB → Racing Bulls.",
+    "answerReasoning": "The query groups by driver_number and filters for those with more than one distinct team_name. The 15 returned rows show driver numbers, their team counts, and the specific teams. Driver #22 tops the list with 4 teams, several drivers have 3, and the rest have 2. Some apparent multi-team entries (e.g., AlphaTauri/RB/Racing Bulls) likely represent the same constructor under different names across seasons.",
+    "generationNotes": "To find drivers who appeared under more than one team across the dataset, I aggregate raw.drivers by driver_number and count distinct team_name values. Drivers with more than one distinct team are returned along with the list of teams they drove for. While the runtime context mentions driver_number=1, the question asks broadly about all drivers with multiple teams, so I return all such drivers (not filtered to just driver 1). raw.drivers is used because it contains the driver_number-to-team_name mapping across sessions.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "270e0d35-b52e-4e6f-a20f-391ec24717bb",
+    "rowCount": 15,
+    "rowSummary": "1. driver_number=22, team_count=4, teams=AlphaTauri,Racing Bulls,RB,Red Bull Racing\n2. driver_number=3, team_count=3, teams=AlphaTauri,RB,Red Bull Racing\n3. driver_number=27, team_count=3, teams=Audi,Haas F1 Team,Kick Sauber",
+    "previewRows": [
+      {
+        "driver_number": 22,
+        "team_count": "4",
+        "teams": [
+          "AlphaTauri",
+          "Racing Bulls",
+          "RB",
+          "Red Bull Racing"
+        ]
+      },
+      {
+        "driver_number": 3,
+        "team_count": "3",
+        "teams": [
+          "AlphaTauri",
+          "RB",
+          "Red Bull Racing"
+        ]
+      },
+      {
+        "driver_number": 27,
+        "team_count": "3",
+        "teams": [
+          "Audi",
+          "Haas F1 Team",
+          "Kick Sauber"
+        ]
+      }
+    ],
+    "warnings": [],
+    "questionType": "metadata_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT driver_number, COUNT(DISTINCT team_name) AS team_count, ARRAY_AGG(DISTINCT team_name ORDER BY team_name) AS teams FROM raw.drivers GROUP BY driver_number HAVING COUNT(DISTINCT team_name) > 1 ORDER BY team_count DESC, driver_number LIMIT 60",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 114,
+    "category": "Driver roster and participation",
+    "question": "Which driver numbers appear in the warehouse, and who do they map to?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 7760,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "The query was filtered to driver number 1 only, so it doesn't show all driver numbers in the warehouse. For driver number 1 specifically, it maps to Max Verstappen (Red Bull Racing, Netherlands) and also appears once linked to Lando Norris (McLaren), likely a data anomaly since Norris uses number 4.",
+    "answerReasoning": "The SQL query has a WHERE clause restricting results to driver_number = 1, so it cannot answer the broader question of which driver numbers appear across the whole warehouse. The three returned rows all have driver_number 1: two are Max Verstappen (Red Bull Racing, with and without country code) and one is Lando Norris (McLaren), which appears to be a data quality issue.",
+    "generationNotes": "The question asks which driver numbers appear in the warehouse and who they map to. The runtime context has resolved driver_number = 1, so we filter to that driver. core.session_drivers is the primary table identified in the query plan and contains driver_number, full_name, team_name, and country_code. Using DISTINCT to collapse duplicate rows across sessions, with a LIMIT of 60 as recommended.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "e8a499f6-e39e-4cdc-95dd-46b47c106b2a",
+    "rowCount": 3,
+    "rowSummary": "1. driver_number=1, full_name=Lando NORRIS, team_name=McLaren, country_code=null\n2. driver_number=1, full_name=Max VERSTAPPEN, team_name=Red Bull Racing, country_code=NED\n3. driver_number=1, full_name=Max VERSTAPPEN, team_name=Red Bull Racing, country_code=null",
+    "previewRows": [
+      {
+        "driver_number": 1,
+        "full_name": "Lando NORRIS",
+        "team_name": "McLaren",
+        "country_code": null
+      },
+      {
+        "driver_number": 1,
+        "full_name": "Max VERSTAPPEN",
+        "team_name": "Red Bull Racing",
+        "country_code": "NED"
+      },
+      {
+        "driver_number": 1,
+        "full_name": "Max VERSTAPPEN",
+        "team_name": "Red Bull Racing",
+        "country_code": null
+      }
+    ],
+    "warnings": [],
+    "questionType": "metadata_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT DISTINCT driver_number, full_name, team_name, country_code FROM core.session_drivers WHERE driver_number = 1 ORDER BY full_name LIMIT 60",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 115,
+    "category": "Driver roster and participation",
+    "question": "Which sessions is a specific driver missing from, despite the session existing?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 14,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "D",
+    "adequacyReason": "Clarification was requested, but the guidance does not appear specific enough.",
+    "answer": "Please specify the driver (full name or driver number, for example: Max Verstappen or driver 1) whose missing sessions you want me to check.",
+    "answerReasoning": null,
+    "generationNotes": "clarification_required",
+    "generationSource": "runtime_clarification",
+    "model": null,
+    "requestId": "c95a09b2-8c10-4d10-96da-9802b2f40249",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": "entity_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "-- query not executed (clarification required)",
+    "errorBodyPreview": null,
+    "baselineGrade": "C",
+    "baselineReason": "Answer: Asked for clarification even though this benchmark question should be answerable as written. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "unnecessary_clarification",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "Asked for clarification even though this benchmark question should be answerable as written.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "unnecessary_clarification"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": true,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 116,
+    "category": "Driver roster and participation",
+    "question": "How many unique drivers are represented in the warehouse?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 4403,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "There are 46 unique drivers represented in the warehouse.",
+    "answerReasoning": "The query counted distinct driver numbers from the core.session_drivers table, returning a single result of 46.",
+    "generationNotes": "The question asks for the total number of unique drivers in the warehouse, which is a global count and should not be filtered by a specific driver number. Using core.session_drivers as the primary table and counting distinct driver_number values gives the correct answer across all sessions and drivers in the warehouse.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "a1d0bf6f-1351-4141-8fc1-2cf101367d36",
+    "rowCount": 1,
+    "rowSummary": "1. unique_driver_count=46",
+    "previewRows": [
+      {
+        "unique_driver_count": "46"
+      }
+    ],
+    "warnings": [],
+    "questionType": "metadata_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "SELECT COUNT(DISTINCT driver_number) AS unique_driver_count FROM core.session_drivers",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 117,
+    "category": "Driver roster and participation",
+    "question": "What is the roster for a given race session, with driver and team names?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 10,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Clarification was appropriate because the question needed a specific session.",
+    "answer": "Please specify the race session (for example: Abu Dhabi 2025 Race or session_key 9839) so I can return the full driver-and-team roster.",
+    "answerReasoning": null,
+    "generationNotes": "clarification_required",
+    "generationSource": "runtime_clarification",
+    "model": null,
+    "requestId": "293931c4-3a08-4a95-802b-278d4fae41cf",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": "metadata_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "-- query not executed (clarification required)",
+    "errorBodyPreview": null,
+    "baselineGrade": "C",
+    "baselineReason": "Answer: Asked for clarification even though this benchmark question should be answerable as written. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "unnecessary_clarification",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "Asked for clarification even though this benchmark question should be answerable as written.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "unnecessary_clarification"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": true,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 118,
+    "category": "Driver roster and participation",
+    "question": "Which drivers appeared in all race sessions we currently have for 2025?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 14020,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "All 20 drivers on the 2025 grid appeared in every one of the 24 race sessions currently in the database. They are: Max Verstappen (Red Bull Racing), Lando Norris (McLaren), Gabriel Bortoleto (Kick Sauber), Isack Hadjar (Racing Bulls), Pierre Gasly (Alpine), Kimi Antonelli (Mercedes), Fernando Alonso (Aston Martin), Charles Leclerc (Ferrari), Yuki Tsunoda (Racing Bulls/Red Bull Racing), Alexander Albon (Williams), Nico Hülkenberg (Kick Sauber), Liam Lawson (Racing Bulls/Red Bull Racing), Esteban Ocon (Haas), Lewis Hamilton (Ferrari), Carlos Sainz (Williams), George Russell (Mercedes), Oscar Piastri (McLaren), and Oliver Bearman (Haas). Notably, Tsunoda and Lawson each appear under two teams, reflecting mid-season team changes.",
+    "answerReasoning": "The query identified 24 total race sessions in 2025 and returned 20 distinct driver numbers (20 rows after grouping), each with races_attended = 24, confirming full attendance across all sessions. Tsunoda (#22) and Lawson (#30) appear twice due to team changes during the season.",
+    "generationNotes": "The question asks which drivers appeared in ALL race sessions for 2025. The approach is: (1) find all sessions in 2025 where session_name contains 'Race', (2) count how many such sessions exist, (3) count how many race sessions each driver attended via core.session_drivers, (4) filter to only those drivers whose count matches the total, and (5) join to raw.drivers to get name/team info. The runtime context mentions driver_number=1 but the question is about all drivers in all races, so we return all qualifying drivers rather than filtering to just driver 1.",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "4f2bd1a7-ed27-4ef4-8c96-c65a54f994e0",
+    "rowCount": 20,
+    "rowSummary": "1. driver_number=1, full_name=Max VERSTAPPEN, team_name=Red Bull Racing, races_attended=24\n2. driver_number=4, full_name=Lando NORRIS, team_name=McLaren, races_attended=24\n3. driver_number=5, full_name=Gabriel BORTOLETO, team_name=Kick Sauber, races_attended=24",
+    "previewRows": [
+      {
+        "driver_number": 1,
+        "full_name": "Max VERSTAPPEN",
+        "team_name": "Red Bull Racing",
+        "races_attended": "24"
+      },
+      {
+        "driver_number": 4,
+        "full_name": "Lando NORRIS",
+        "team_name": "McLaren",
+        "races_attended": "24"
+      },
+      {
+        "driver_number": 5,
+        "full_name": "Gabriel BORTOLETO",
+        "team_name": "Kick Sauber",
+        "races_attended": "24"
+      }
+    ],
+    "warnings": [],
+    "questionType": "metadata_lookup",
+    "resolutionStatus": "low_confidence",
+    "sessionKey": null,
+    "sql": "WITH race_sessions_2025 AS (\n    SELECT session_key\n    FROM core.sessions\n    WHERE year = 2025\n      AND session_name ILIKE '%Race%'\n),\ntotal_race_count AS (\n    SELECT COUNT(*) AS total FROM race_sessions_2025\n),\ndriver_race_counts AS (\n    SELECT\n        sd.driver_number,\n        COUNT(DISTINCT sd.session_key) AS races_attended\n    FROM core.session_drivers sd\n    INNER JOIN race_sessions_2025 rs ON sd.session_key = rs.session_key\n    GROUP BY sd.driver_number\n),\ndrivers_in_all_races AS (\n    SELECT\n        drc.driver_number,\n        drc.races_attended\n    FROM driver_race_counts drc\n    CROSS JOIN total_race_count trc\n    WHERE drc.races_attended = trc.total\n)\nSELECT\n    d.driver_number,\n    d.full_name,\n    d.team_name,\n    dar.races_attended\nFROM drivers_in_all_races dar\nINNER JOIN raw.drivers d\n    ON dar.driver_number = d.driver_number\nINNER JOIN race_sessions_2025 rs\n    ON d.session_key = rs.session_key\nGROUP BY d.driver_number, d.full_name, d.team_name, dar.races_attended\nORDER BY d.driver_number\nLIMIT 60",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 119,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "In the Singapore 2025 race session, who set the fastest lap?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15018,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "0c63748e-1ec5-49e6-904e-2daaec0ae057",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"0c63748e-1ec5-49e6-904e-2daaec0ae057\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 120,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "In the Las Vegas 2025 race session, what were the top 10 fastest laps overall?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15018,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "a5aaa4b3-c88d-4bef-b018-c7695f3691bf",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"a5aaa4b3-c88d-4bef-b018-c7695f3691bf\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 121,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "Between Lewis Hamilton and Lando Norris in the Silverstone 2025 race session, who had the better average clean-lap pace?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15024,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "917a215b-fd4b-4708-a387-dd0f6537598d",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"917a215b-fd4b-4708-a387-dd0f6537598d\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 122,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "How did George Russell and Oscar Piastri compare on lap pace over the full Monaco 2025 race session?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15021,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "a86985b1-f30a-4351-97cd-62062fe6ba77",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"a86985b1-f30a-4351-97cd-62062fe6ba77\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 123,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "Between Carlos Sainz and Fernando Alonso in the Monza 2025 race session, who was stronger in sector 1, sector 2, and sector 3?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 51930,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "The available data does not include a Monza 2025 race session. The most recent sessions in the dataset are from the 2026 season, and no session for Monza (Italy) in 2025 appears in the results. Therefore, a sector-by-sector comparison between Carlos Sainz and Fernando Alonso at Monza 2025 cannot be made from the provided data.",
+    "answerReasoning": "The SQL query returned the 25 most recent sessions, all of which are from the 2026 season. No Monza 2025 race session is present in the rows, making it impossible to answer the question about sector performance for Sainz and Alonso at that event.",
+    "generationNotes": "To compare Carlos Sainz and Fernando Alonso across all three sectors in the Monza 2025 race (session_key=9912), I join core.session_drivers with raw.drivers to resolve their driver numbers by name, then aggregate core.laps_enriched for clean laps only. I compute both best (minimum) and average sector times for S1, S2, and S3 per driver. This allows a direct head-to-head comparison of sector pace for both drivers. | The error indicates that 'sector_1_time' does not exist in core.laps_enriched. The correct column naming convention in this table uses 'duration_sector_1', 'duration_sector_2', and 'duration_sector_3' for sector times. I replaced all three sector time column references accordingly while keeping the rest of the query logic intact — filtering for Sainz and Alonso in session 9912, using clean laps only, and computing both best and average sector times. | auto_repair_applied | repair_failed_heuristic_used | session_pin_unverifiable_no_literal_session_key_predicate(session_key=9912)",
+    "generationSource": "heuristic_after_sql_failure",
+    "model": "claude-sonnet-4-6",
+    "requestId": "b9df67e2-26c6-4529-bab0-e59fa0b3e3b5",
+    "rowCount": 25,
+    "rowSummary": "1. session_key=11436, session_name=Race, date_start=2026-12-06T13:00:00.000Z, year=2026, country_name=United Arab Emirates, location=Yas Marina\n2. session_key=11432, session_name=Qualifying, date_start=2026-12-05T14:00:00.000Z, year=2026, country_name=United Arab Emirates, location=Yas Marina\n3. session_key=11431, session_name=Practice 3, date_start=2026-12-05T10:30:00.000Z, year=2026, country_name=United Arab Emirates, location=Yas Marina",
+    "previewRows": [
+      {
+        "session_key": "11436",
+        "session_name": "Race",
+        "date_start": "2026-12-06T13:00:00.000Z",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina"
+      },
+      {
+        "session_key": "11432",
+        "session_name": "Qualifying",
+        "date_start": "2026-12-05T14:00:00.000Z",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina"
+      },
+      {
+        "session_key": "11431",
+        "session_name": "Practice 3",
+        "date_start": "2026-12-05T10:30:00.000Z",
+        "year": 2026,
+        "country_name": "United Arab Emirates",
+        "location": "Yas Marina"
+      }
+    ],
+    "warnings": [],
+    "questionType": "aggregate_analysis",
+    "resolutionStatus": "high_confidence",
+    "sessionKey": "9912",
+    "sql": "SELECT session_key, session_name, date_start, year, country_name, location\n    FROM core.sessions\n    ORDER BY date_start DESC NULLS LAST\n    LIMIT 25",
+    "errorBodyPreview": null,
+    "baselineGrade": "B",
+    "baselineReason": "Answer: Answer quality gaps: non_generic_answer. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "partial",
+    "answer_grade": "B",
+    "answer_grade_reason": "Answer quality gaps: non_generic_answer.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": false
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "sector_summary_matches_metrics",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 124,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "In the Suzuka 2025 race session, which laps were the fastest laps for Sergio Perez and Pierre Gasly, respectively?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15021,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "464c35ac-a6ca-42e8-81be-73babbfdbfdb",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"464c35ac-a6ca-42e8-81be-73babbfdbfdb\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 125,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "Between Yuki Tsunoda and Alex Albon, who improved more over the course of the Austin 2025 qualifying session?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 29779,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Clarification was appropriate because the question needed a specific session.",
+    "answer": "I found multiple close session matches. Can you confirm the session key (9884, 9879, 9835)?",
+    "answerReasoning": null,
+    "generationNotes": "clarification_required",
+    "generationSource": "runtime_clarification",
+    "model": null,
+    "requestId": "07ed5981-f8ca-4450-b629-2898bfb5a4c5",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": "aggregate_analysis",
+    "resolutionStatus": "high_confidence",
+    "sessionKey": "9884",
+    "sql": "-- query not executed (clarification required)",
+    "errorBodyPreview": null,
+    "baselineGrade": "C",
+    "baselineReason": "Answer: Asked for clarification even though this benchmark question should be answerable as written. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "unnecessary_clarification",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "Asked for clarification even though this benchmark question should be answerable as written.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "unnecessary_clarification"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": true,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 126,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "Within the Sao Paulo 2025 weekend, which session had the smallest spread between the fastest and slowest competitive laps, and how did Lewis Hamilton and Lando Norris compare in that session?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 15449,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "Lando NORRIS leads on average lap (89) versus Lewis HAMILTON (90), a gap of 1.",
+    "answerReasoning": null,
+    "generationNotes": "template=max_leclerc_lap_pace_summary | session_pin_verified(session_key=9839)",
+    "generationSource": "deterministic_template",
+    "model": null,
+    "requestId": "4fe916de-96c6-4d3f-b3d8-cc3c02ca3362",
+    "rowCount": 2,
+    "rowSummary": "1. driver_number=4, full_name=Lando NORRIS, total_laps=54, best_lap=86.818, avg_lap=88.596, median_lap=88.291\n2. driver_number=44, full_name=Lewis HAMILTON, total_laps=54, best_lap=88.094, avg_lap=89.624, median_lap=89.380",
+    "previewRows": [
+      {
+        "driver_number": 4,
+        "full_name": "Lando NORRIS",
+        "total_laps": "54",
+        "best_lap": "86.818",
+        "avg_lap": "88.596",
+        "median_lap": "88.291",
+        "lap_stddev": "1.308"
+      },
+      {
+        "driver_number": 44,
+        "full_name": "Lewis HAMILTON",
+        "total_laps": "54",
+        "best_lap": "88.094",
+        "avg_lap": "89.624",
+        "median_lap": "89.380",
+        "lap_stddev": "1.578"
+      }
+    ],
+    "warnings": [],
+    "questionType": "comparison_analysis",
+    "resolutionStatus": "medium_confidence",
+    "sessionKey": "9839",
+    "sql": "WITH lap_data AS (\n          SELECT\n            l.driver_number,\n            COALESCE(l.driver_name, d.full_name) AS full_name,\n            l.lap_number,\n            l.lap_duration,\n            l.duration_sector_1,\n            l.duration_sector_2,\n            l.duration_sector_3,\n            l.is_pit_out_lap\n          FROM core.laps_enriched l\n          LEFT JOIN core.session_drivers d\n            ON d.session_key = l.session_key\n           AND d.driver_number = l.driver_number\n          WHERE l.session_key = 9839\n            AND l.driver_number IN (4, 44)\n            AND l.lap_duration IS NOT NULL\n            AND l.lap_duration > 0\n            AND COALESCE(l.is_valid, TRUE) = TRUE\n        )\n        SELECT\n          driver_number,\n          full_name,\n          COUNT(*) AS total_laps,\n          ROUND(MIN(lap_duration)::numeric, 3) AS best_lap,\n          ROUND(AVG(lap_duration)::numeric, 3) AS avg_lap,\n          ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY lap_duration)::numeric, 3) AS median_lap,\n          ROUND(STDDEV_POP(lap_duration)::numeric, 3) AS lap_stddev\n        FROM lap_data\n        GROUP BY driver_number, full_name\n        ORDER BY avg_lap ASC",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 127,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "What was the lap-time degradation trend for George Russell and Oscar Piastri in the Bahrain 2025 race session?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15018,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "b27ab65f-cf60-4795-8770-2c037c4e4c13",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"b27ab65f-cf60-4795-8770-2c037c4e4c13\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 128,
+    "category": "Lap pace and fastest-lap analysis",
+    "question": "Between Carlos Sainz and Fernando Alonso, who was faster in the final third of the Spa 2025 race session?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15025,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "fcd9d110-72fa-4cae-b62a-80315d05e6b5",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"fcd9d110-72fa-4cae-b62a-80315d05e6b5\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 129,
+    "category": "Head-to-head driver comparison",
+    "question": "Compare Sergio Perez and Pierre Gasly on lap pace in the Singapore 2025 race session.",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15028,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "fed7dad0-835a-4aad-a15e-83659835ad74",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"fed7dad0-835a-4aad-a15e-83659835ad74\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 130,
+    "category": "Head-to-head driver comparison",
+    "question": "Compare Yuki Tsunoda and Alex Albon on sector times in the Las Vegas 2025 race session.",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15023,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "7f8138d1-0db2-412c-8d97-1111b77009c3",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"7f8138d1-0db2-412c-8d97-1111b77009c3\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 131,
+    "category": "Head-to-head driver comparison",
+    "question": "Between Lewis Hamilton and Lando Norris, who had better race pace after pit stops in the Silverstone 2025 race session?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15023,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "56f91c08-de9c-41d2-b60f-322d164f36ba",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"56f91c08-de9c-41d2-b60f-322d164f36ba\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 132,
+    "category": "Head-to-head driver comparison",
+    "question": "Between George Russell and Oscar Piastri, who was quicker on fresh tires versus used tires in the Monaco 2025 race session?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 15144,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "George RUSSELL used HARD and MEDIUM; Oscar PIASTRI used MEDIUM.",
+    "answerReasoning": null,
+    "generationNotes": "template=max_leclerc_fresh_vs_used_tires | session_pin_verified(session_key=9979)",
+    "generationSource": "deterministic_template",
+    "model": null,
+    "requestId": "10b41e9b-8129-458b-acd5-325be69c08e5",
+    "rowCount": 4,
+    "rowSummary": "1. driver_number=63, full_name=George RUSSELL, tyre_state=fresh, compound_name=HARD, lap_count=6, avg_lap=93.274\n2. driver_number=63, full_name=George RUSSELL, tyre_state=used, compound_name=MEDIUM, lap_count=64, avg_lap=78.104\n3. driver_number=81, full_name=Oscar PIASTRI, tyre_state=fresh, compound_name=MEDIUM, lap_count=8, avg_lap=87.797",
+    "previewRows": [
+      {
+        "driver_number": 63,
+        "full_name": "George RUSSELL",
+        "tyre_state": "fresh",
+        "compound_name": "HARD",
+        "lap_count": "6",
+        "avg_lap": "93.274",
+        "best_lap": "74.053"
+      },
+      {
+        "driver_number": 63,
+        "full_name": "George RUSSELL",
+        "tyre_state": "used",
+        "compound_name": "MEDIUM",
+        "lap_count": "64",
+        "avg_lap": "78.104",
+        "best_lap": "73.405"
+      },
+      {
+        "driver_number": 81,
+        "full_name": "Oscar PIASTRI",
+        "tyre_state": "fresh",
+        "compound_name": "MEDIUM",
+        "lap_count": "8",
+        "avg_lap": "87.797",
+        "best_lap": "73.818"
+      }
+    ],
+    "warnings": [],
+    "questionType": "comparison_analysis",
+    "resolutionStatus": "high_confidence",
+    "sessionKey": "9979",
+    "sql": "WITH lap_buckets AS (\n          SELECT\n            l.driver_number,\n            COALESCE(l.driver_name, sd.full_name) AS full_name,\n            CASE\n              WHEN COALESCE(l.tyre_age_on_lap, 99) <= 3 THEN 'fresh'\n              ELSE 'used'\n            END AS tyre_state,\n            COALESCE(l.compound_name, 'UNKNOWN') AS compound_name,\n            l.lap_duration\n          FROM core.laps_enriched l\n          LEFT JOIN core.session_drivers sd\n            ON sd.session_key = l.session_key\n           AND sd.driver_number = l.driver_number\n          WHERE l.session_key = 9979\n            AND l.driver_number IN (63, 81)\n            AND l.lap_duration IS NOT NULL\n            AND l.lap_duration > 0\n            AND COALESCE(l.is_valid, TRUE) = TRUE\n            AND COALESCE(l.is_pit_out_lap, FALSE) = FALSE\n        )\n        SELECT\n          driver_number,\n          full_name,\n          tyre_state,\n          MAX(compound_name) AS compound_name,\n          COUNT(*) AS lap_count,\n          ROUND(AVG(lap_duration)::numeric, 3) AS avg_lap,\n          ROUND(MIN(lap_duration)::numeric, 3) AS best_lap\n        FROM lap_buckets\n        GROUP BY driver_number, full_name, tyre_state\n        ORDER BY driver_number, tyre_state",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 133,
+    "category": "Head-to-head driver comparison",
+    "question": "Between Carlos Sainz and Fernando Alonso, who lost more time in a specific sector over the Monza 2025 race session?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 33041,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "Fernando Alonso lost significantly more time in a specific sector compared to Carlos Sainz at Monza 2025. Alonso's worst sector was Sector 3, where he averaged 29.24 seconds — 1.471 seconds slower than Sainz's average of 27.77 seconds in that sector. Sainz was the faster driver across all three sectors on average, with Alonso also losing 0.267s in Sector 1 and 0.215s in Sector 2.",
+    "answerReasoning": "The query compares average sector times for both drivers and calculates time lost relative to the faster of the two in each sector. Sainz (driver 55) had the best average in all three sectors, so his time_lost values are 0. Alonso (driver 14) lost 0.267s in S1, 0.215s in S2, and 1.471s in S3, making Sector 3 his worst sector and the largest single-sector gap between the two drivers.",
+    "generationNotes": "To compare Carlos Sainz (driver_number=55) and Fernando Alonso (driver_number=14) at Monza 2025 (session_key=9912), I compute average sector times for each driver across valid laps. I then calculate time lost per sector relative to the faster of the two drivers in each sector (using MIN across both drivers as the reference). The driver with the highest time loss in any single sector is identified as the one who lost more time in that specific sector. The query returns per-driver sector averages, time lost vs. the faster driver in each sector, and highlights the worst sector for each driver. | session_pin_verified(session_key=9912)",
+    "generationSource": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "requestId": "95eb2454-a641-4fbb-8ba1-2d4996e6c226",
+    "rowCount": 2,
+    "rowSummary": "1. driver_number=14, full_name=Fernando ALONSO, avg_s1=27.661727272727276, avg_s2=28.922636363636368, avg_s3=29.242818181818176, time_lost_s1=0.267\n2. driver_number=55, full_name=Carlos SAINZ, avg_s1=27.394627450980398, avg_s2=28.707666666666654, avg_s3=27.77141176470588, time_lost_s1=0.000",
+    "previewRows": [
+      {
+        "driver_number": 14,
+        "full_name": "Fernando ALONSO",
+        "avg_s1": 27.661727272727276,
+        "avg_s2": 28.922636363636368,
+        "avg_s3": 29.242818181818176,
+        "time_lost_s1": "0.267",
+        "time_lost_s2": "0.215",
+        "time_lost_s3": "1.471",
+        "max_time_lost_in_any_sector": "1.471",
+        "worst_sector": "Sector 3",
+        "valid_laps": "22"
+      },
+      {
+        "driver_number": 55,
+        "full_name": "Carlos SAINZ",
+        "avg_s1": 27.394627450980398,
+        "avg_s2": 28.707666666666654,
+        "avg_s3": 27.77141176470588,
+        "time_lost_s1": "0.000",
+        "time_lost_s2": "0.000",
+        "time_lost_s3": "0.000",
+        "max_time_lost_in_any_sector": "0.000",
+        "worst_sector": "Sector 1",
+        "valid_laps": "51"
+      }
+    ],
+    "warnings": [],
+    "questionType": "aggregate_analysis",
+    "resolutionStatus": "high_confidence",
+    "sessionKey": "9912",
+    "sql": "WITH sector_stats AS (\n  SELECT\n    le.driver_number,\n    sd.full_name,\n    AVG(le.duration_sector_1) AS avg_s1,\n    AVG(le.duration_sector_2) AS avg_s2,\n    AVG(le.duration_sector_3) AS avg_s3,\n    MIN(le.duration_sector_1) AS best_s1,\n    MIN(le.duration_sector_2) AS best_s2,\n    MIN(le.duration_sector_3) AS best_s3,\n    COUNT(*) FILTER (WHERE le.is_valid = true) AS valid_laps\n  FROM core.laps_enriched le\n  JOIN raw.drivers sd\n    ON le.session_key = sd.session_key\n    AND le.driver_number = sd.driver_number\n  WHERE le.session_key = 9912\n    AND le.driver_number IN (55, 14)\n    AND le.is_valid = true\n    AND le.duration_sector_1 IS NOT NULL\n    AND le.duration_sector_2 IS NOT NULL\n    AND le.duration_sector_3 IS NOT NULL\n  GROUP BY le.driver_number, sd.full_name\n),\nbest_across AS (\n  SELECT\n    MIN(avg_s1) AS ref_s1,\n    MIN(avg_s2) AS ref_s2,\n    MIN(avg_s3) AS ref_s3\n  FROM sector_stats\n)\nSELECT\n  ss.driver_number,\n  ss.full_name,\n  ss.avg_s1,\n  ss.avg_s2,\n  ss.avg_s3,\n  ROUND((ss.avg_s1 - ba.ref_s1)::numeric, 3) AS time_lost_s1,\n  ROUND((ss.avg_s2 - ba.ref_s2)::numeric, 3) AS time_lost_s2,\n  ROUND((ss.avg_s3 - ba.ref_s3)::numeric, 3) AS time_lost_s3,\n  GREATEST(\n    ROUND((ss.avg_s1 - ba.ref_s1)::numeric, 3),\n    ROUND((ss.avg_s2 - ba.ref_s2)::numeric, 3),\n    ROUND((ss.avg_s3 - ba.ref_s3)::numeric, 3)\n  ) AS max_time_lost_in_any_sector,\n  CASE\n    WHEN GREATEST(\n      ROUND((ss.avg_s1 - ba.ref_s1)::numeric, 3),\n      ROUND((ss.avg_s2 - ba.ref_s2)::numeric, 3),\n      ROUND((ss.avg_s3 - ba.ref_s3)::numeric, 3)\n    ) = ROUND((ss.avg_s1 - ba.ref_s1)::numeric, 3) THEN 'Sector 1'\n    WHEN GREATEST(\n      ROUND((ss.avg_s1 - ba.ref_s1)::numeric, 3),\n      ROUND((ss.avg_s2 - ba.ref_s2)::numeric, 3),\n      ROUND((ss.avg_s3 - ba.ref_s3)::numeric, 3)\n    ) = ROUND((ss.avg_s2 - ba.ref_s2)::numeric, 3) THEN 'Sector 2'\n    ELSE 'Sector 3'\n  END AS worst_sector,\n  ss.valid_laps\nFROM sector_stats ss\nCROSS JOIN best_across ba\nORDER BY max_time_lost_in_any_sector DESC\nLIMIT 10",
+    "errorBodyPreview": null,
+    "baselineGrade": "A",
+    "baselineReason": "Answer: Answer quality matched expected requirements. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "strong",
+    "answer_grade": "A",
+    "answer_grade_reason": "Answer quality matched expected requirements.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": true
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "sector_summary_matches_metrics",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 134,
+    "category": "Head-to-head driver comparison",
+    "question": "Between Sergio Perez and Pierre Gasly, who was more consistent lap-to-lap in the Suzuka 2025 race session?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15025,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "048ef8dd-b665-4da5-85d2-bd016a0de20d",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"048ef8dd-b665-4da5-85d2-bd016a0de20d\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 135,
+    "category": "Head-to-head driver comparison",
+    "question": "Between Yuki Tsunoda and Alex Albon, who had the higher top speed in the Austin 2025 race session?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15027,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "6c310d1a-3cfb-4481-b100-01a570630872",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"6c310d1a-3cfb-4481-b100-01a570630872\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 136,
+    "category": "Head-to-head driver comparison",
+    "question": "Between Lewis Hamilton and Lando Norris, who braked later or carried more speed into key portions of a lap in the Sao Paulo 2025 race session?",
+    "ok": true,
+    "httpStatus": 200,
+    "elapsedMs": 38838,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "B",
+    "adequacyReason": "Answer appears to address the question.",
+    "answer": "The provided SQL query only returns lap timing data for driver number 4 (Lando Norris) in the Sao Paulo 2025 race session (session key 9839). There is no equivalent data returned for Lewis Hamilton (driver number 44), and the dataset contains only sector durations — not raw telemetry like braking points, brake pressure, or cornering speed. Without Hamilton's sector times or any telemetry data for either driver, it is not possible to determine who braked later or carried more speed into key corners.",
+    "answerReasoning": "The query fetches only driver_number = 4 (Norris), so Hamilton's data is entirely absent. Additionally, sector durations alone cannot reveal braking points or cornering speeds — that would require telemetry channels such as speed, brake, or throttle. The available rows are insufficient to answer the question.",
+    "generationNotes": "The question asks for a braking and speed comparison between Lewis Hamilton (driver 44) and Lando Norris (driver 4) in the Sao Paulo 2025 race session (session_key=9839). The runtime context resolves driver_number=4 (Norris). Hamilton's driver number is 44. I use core.telemetry_lap_bridge joined to core.laps_enriched to find each driver's fastest valid lap, then aggregate telemetry by track distance zones (every 500m) to compare average/max/min speed and braking frequency per zone. This reveals who brakes later (lower brake_pct at zone entry, higher min_speed) or carries more speed into corners. The query covers both drivers (4 and 81 — note: Norris is 4, Hamilton is 44; I use 4 and 44 but the context only resolved 4, so I include both 4 and 44 in the filter). Actually correcting: Norris=4, Hamilton=44. I'll adjust the IN clause to (4, 44). | The original query failed because `is_valid_lap` does not exist in `core.laps_enriched`. I replaced that filter with `is_pit_lap = FALSE` which is a valid column in `core.laps_enriched` to filter out pit laps and approximate clean laps. This still filters out non-representative laps while using an existing column. All other logic remains the same — comparing Hamilton (4) and Norris (81) across track zones using telemetry from their best laps in session 9839. | auto_repair_applied | repair_failed_heuristic_used | session_pin_verified(session_key=9839)",
+    "generationSource": "heuristic_after_sql_failure",
+    "model": "claude-sonnet-4-6",
+    "requestId": "d9f6cb54-f8b0-43aa-a01d-3101b458929a",
+    "rowCount": 58,
+    "rowSummary": "1. lap_number=1, lap_duration=94.457, duration_sector_1=21.75, duration_sector_2=38.68, duration_sector_3=34.027\n2. lap_number=2, lap_duration=89.893, duration_sector_1=18.3, duration_sector_2=38.239, duration_sector_3=33.354\n3. lap_number=3, lap_duration=89.86, duration_sector_1=18.056, duration_sector_2=38.536, duration_sector_3=33.268",
+    "previewRows": [
+      {
+        "lap_number": 1,
+        "lap_duration": 94.457,
+        "duration_sector_1": 21.75,
+        "duration_sector_2": 38.68,
+        "duration_sector_3": 34.027
+      },
+      {
+        "lap_number": 2,
+        "lap_duration": 89.893,
+        "duration_sector_1": 18.3,
+        "duration_sector_2": 38.239,
+        "duration_sector_3": 33.354
+      },
+      {
+        "lap_number": 3,
+        "lap_duration": 89.86,
+        "duration_sector_1": 18.056,
+        "duration_sector_2": 38.536,
+        "duration_sector_3": 33.268
+      }
+    ],
+    "warnings": [],
+    "questionType": "telemetry_analysis",
+    "resolutionStatus": "high_confidence",
+    "sessionKey": "9839",
+    "sql": "SELECT lap_number, lap_duration, duration_sector_1, duration_sector_2, duration_sector_3\n        FROM core.laps_enriched\n        WHERE session_key = 9839 AND driver_number = 4\n        ORDER BY lap_number ASC",
+    "errorBodyPreview": null,
+    "baselineGrade": "B",
+    "baselineReason": "Answer: Answer quality gaps: non_generic_answer. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_and_answered",
+    "baselineQuality": "partial",
+    "answer_grade": "B",
+    "answer_grade_reason": "Answer quality gaps: non_generic_answer.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": true,
+      "answerChecks": [
+        {
+          "name": "session_match",
+          "passed": true
+        },
+        {
+          "name": "driver_scope_match",
+          "passed": true
+        },
+        {
+          "name": "non_generic_answer",
+          "passed": false
+        },
+        {
+          "name": "caveat_handling",
+          "passed": true
+        },
+        {
+          "name": "synthesis_consistency",
+          "passed": true
+        },
+        {
+          "name": "structured_rows_summarized",
+          "passed": true
+        }
+      ],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 137,
+    "category": "Head-to-head driver comparison",
+    "question": "Over the same lap window in the Bahrain 2025 race session, who had better average pace between George Russell and Oscar Piastri, and why?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15021,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "9867a42b-590b-4068-9bcd-3d3cb801c98c",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"9867a42b-590b-4068-9bcd-3d3cb801c98c\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 138,
+    "category": "Pit strategy and stints",
+    "question": "In the Spa 2025 race session, how many pit stops did Carlos Sainz and Fernando Alonso each make?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15026,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "58952eed-d8d2-44c0-9661-f637549d8ad3",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"58952eed-d8d2-44c0-9661-f637549d8ad3\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 139,
+    "category": "Pit strategy and stints",
+    "question": "In the Singapore 2025 race session, on which laps did Sergio Perez and Pierre Gasly pit?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15027,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "04260376-ff2e-429f-a508-d8f5372525e6",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"04260376-ff2e-429f-a508-d8f5372525e6\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 140,
+    "category": "Pit strategy and stints",
+    "question": "Between Yuki Tsunoda and Alex Albon in the Las Vegas 2025 race session, who had the shorter stationary pit stop?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15026,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "fcd32104-ea01-4f67-9818-de4bb322a1f4",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"fcd32104-ea01-4f67-9818-de4bb322a1f4\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 141,
+    "category": "Pit strategy and stints",
+    "question": "Between Lewis Hamilton and Lando Norris in the Silverstone 2025 race session, who spent less total time in the pit lane?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15027,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "c29978fb-d503-47c3-834d-1dabd47014fb",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"c29978fb-d503-47c3-834d-1dabd47014fb\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 142,
+    "category": "Pit strategy and stints",
+    "question": "In the Monaco 2025 race session, what were the stint lengths for George Russell and Oscar Piastri?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15019,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "6839b407-c41e-40f5-a462-e66f9846e440",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"6839b407-c41e-40f5-a462-e66f9846e440\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 143,
+    "category": "Pit strategy and stints",
+    "question": "In the Monza 2025 race session, which tire compounds did Carlos Sainz and Fernando Alonso use?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15023,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "4f5e547e-41af-432c-b4ab-820c31004c5c",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"4f5e547e-41af-432c-b4ab-820c31004c5c\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 144,
+    "category": "Pit strategy and stints",
+    "question": "In the Suzuka 2025 race session, did Sergio Perez and Pierre Gasly each attempt a one-stop or two-stop strategy?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15026,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "82d431a6-1762-4c40-aa86-0c6e8aed0fcb",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"82d431a6-1762-4c40-aa86-0c6e8aed0fcb\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 145,
+    "category": "Pit strategy and stints",
+    "question": "Between Yuki Tsunoda and Alex Albon in the Austin 2025 race session, who gained track position around the pit cycle?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15022,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "ca15b7c6-e662-410a-9765-c18421aa04e4",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"ca15b7c6-e662-410a-9765-c18421aa04e4\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "insufficient_evidence_handling"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 146,
+    "category": "Pit strategy and stints",
+    "question": "In the Sao Paulo 2025 race session, was there evidence that Lewis Hamilton or Lando Norris benefited from an undercut or overcut?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15023,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "d148d1c8-5111-45f0-9ede-de49c4473bc8",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"d148d1c8-5111-45f0-9ede-de49c4473bc8\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "insufficient_evidence_handling"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 147,
+    "category": "Pit strategy and stints",
+    "question": "Between George Russell and Oscar Piastri in the Bahrain 2025 race session, which stint showed the strongest pace relative to tire age?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15024,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "eb0451ca-1a15-4753-a09d-743f0a50983d",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"eb0451ca-1a15-4753-a09d-743f0a50983d\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 148,
+    "category": "Pit strategy and stints",
+    "question": "Between Carlos Sainz and Fernando Alonso in the Spa 2025 race session, who ran the longer opening stint and who ran the longer closing stint?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15030,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "f521368f-2fff-463d-b9e3-af2d03e493fe",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"f521368f-2fff-463d-b9e3-af2d03e493fe\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 149,
+    "category": "Position, intervals, and race progression",
+    "question": "During the Singapore 2025 race session, how did the running order change over the course of the race, especially for Sergio Perez and Pierre Gasly?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15026,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "35e32aa9-8897-4dbc-86e3-8a787029afd5",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"35e32aa9-8897-4dbc-86e3-8a787029afd5\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  },
+  {
+    "id": 150,
+    "category": "Position, intervals, and race progression",
+    "question": "During the Las Vegas 2025 race session, which of Yuki Tsunoda or Alex Albon gained or lost more positions?",
+    "ok": false,
+    "httpStatus": 400,
+    "elapsedMs": 15023,
+    "retryAttempted": false,
+    "retrySessionKey": null,
+    "adequacyGrade": "F",
+    "adequacyReason": "Request failed before a usable answer was produced.",
+    "answer": "canceling statement due to statement timeout",
+    "answerReasoning": null,
+    "generationNotes": null,
+    "generationSource": null,
+    "model": null,
+    "requestId": "cb9049d5-4a95-48c0-b9ee-2cb1caf05e00",
+    "rowCount": null,
+    "rowSummary": "",
+    "previewRows": [],
+    "warnings": [],
+    "questionType": null,
+    "resolutionStatus": null,
+    "sessionKey": null,
+    "sql": null,
+    "errorBodyPreview": "{\"error\":\"canceling statement due to statement timeout\",\"requestId\":\"cb9049d5-4a95-48c0-b9ee-2cb1caf05e00\",\"adequacyGrade\":\"F\",\"adequacyReason\":\"Request failed before a usable answer was produced.\",\"responseGrade\":\"F\",\"gradeReason\":\"Request failed before a usable answer was produced.\"}",
+    "baselineGrade": "C",
+    "baselineReason": "Answer: No result rows returned for a question that should be answerable. Semantic: Semantic conformance is not enforced for this baseline rubric row.",
+    "baselineAnswerability": "answerable_but_unanswered",
+    "baselineQuality": "weak",
+    "answer_grade": "C",
+    "answer_grade_reason": "No result rows returned for a question that should be answerable.",
+    "semantic_conformance_grade": "A",
+    "semantic_conformance_reason": "Semantic conformance is not enforced for this baseline rubric row.",
+    "root_cause_labels": [
+      "insufficient_evidence_handling"
+    ],
+    "baselineChecks": {
+      "expectedClarification": false,
+      "clarified": false,
+      "hasRows": false,
+      "answerChecks": [],
+      "semanticChecks": []
+    }
+  }
+]
