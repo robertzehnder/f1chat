@@ -120,9 +120,10 @@ This document consolidates outcomes from the seven prompt waves requested for th
 
 ### Implemented
 
-- Grading model split:
-  - `answer_grade`
-  - `semantic_conformance_grade`
+- Grading model split (multi-axis):
+  - `factual_correctness`
+  - `completeness`
+  - `clarity`
   - `root_cause_labels`
 - Baseline clarification policy made explicit and consistent:
   - benchmark mode is stateless

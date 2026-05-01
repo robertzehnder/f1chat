@@ -44,12 +44,13 @@ test("clarification policy fixture catches expected vs unnecessary clarification
 
   const expectedClarification = rowById(graded, 101);
   assert.equal(expectedClarification.baselineAnswerability, "expected_clarification_met");
-  assert.equal(expectedClarification.answer_grade, "A");
-  assert.equal(expectedClarification.semantic_conformance_grade, "A");
+  assert.equal(expectedClarification.factual_correctness.grade, "A");
+  assert.equal(expectedClarification.completeness.grade, "A");
+  assert.ok(["A", "B"].includes(expectedClarification.clarity.grade), "clarity must be A or B");
 
   const unnecessaryClarification = rowById(graded, 102);
   assert.equal(unnecessaryClarification.baselineAnswerability, "unnecessary_clarification");
-  assert.equal(unnecessaryClarification.answer_grade, "C");
+  assert.equal(unnecessaryClarification.factual_correctness.grade, "C");
   assert.ok(
     unnecessaryClarification.root_cause_labels.includes("unnecessary_clarification"),
     "Expected unnecessary_clarification root-cause label"
@@ -63,8 +64,9 @@ test("semantic conformance fixture catches strict semantic/raw regression drift"
   });
 
   const row = rowById(graded, 201);
-  assert.equal(row.answer_grade, "A");
-  assert.equal(row.semantic_conformance_grade, "C");
+  assert.equal(row.factual_correctness.grade, "A");
+  assert.equal(row.completeness.grade, "C");
+  assert.ok(["A", "B"].includes(row.clarity.grade), "clarity must be A or B");
   assert.ok(
     row.root_cause_labels.includes("semantic_contract_missed"),
     "Expected semantic_contract_missed root-cause label"
@@ -121,11 +123,7 @@ test("report generation fixture preserves summary/output shape", async () => {
 
   const logsDir = path.join(cwd, "logs");
   const files = await readdir(logsDir);
-  const summaryFile = files
-    .filter((name) => /^chat_health_check_baseline_.*\.summary\.json$/i.test(name))
-    .sort()
-    .pop();
-  const gradedFile = files
+  const mergedFile = files
     .filter((name) => /^chat_health_check_baseline_.*\.json$/i.test(name) && !name.includes(".summary."))
     .sort()
     .pop();
@@ -134,38 +132,43 @@ test("report generation fixture preserves summary/output shape", async () => {
     .sort()
     .pop();
 
-  assert.ok(summaryFile, "Expected summary json output file");
-  assert.ok(gradedFile, "Expected graded json output file");
+  assert.ok(mergedFile, "Expected merged graded json output file");
   assert.ok(markdownFile, "Expected markdown output file");
 
-  const summary = JSON.parse(await readFile(path.join(logsDir, summaryFile), "utf8"));
-  assert.ok(summary.summary?.answerGradeCounts, "Missing summary.answerGradeCounts");
-  assert.ok(summary.summary?.semanticConformanceGradeCounts, "Missing summary.semanticConformanceGradeCounts");
-  assert.ok(summary.summary?.answerability, "Missing summary.answerability");
-  assert.ok(summary.summary?.rootCauseCounts, "Missing summary.rootCauseCounts");
-  assert.ok(summary.actionable?.answer_grade_counts, "Missing actionable.answer_grade_counts");
-  assert.ok(
-    summary.actionable?.semantic_conformance_grade_counts,
-    "Missing actionable.semantic_conformance_grade_counts"
-  );
-  assert.ok(summary.actionable?.answerability_outcome_counts, "Missing actionable.answerability_outcome_counts");
-  assert.ok(summary.actionable?.root_cause_label_counts, "Missing actionable.root_cause_label_counts");
-  assert.ok(Array.isArray(summary.actionable?.root_cause_priority), "Missing actionable.root_cause_priority");
+  const merged = JSON.parse(await readFile(path.join(logsDir, mergedFile), "utf8"));
+  assert.ok(typeof merged === "object" && !Array.isArray(merged), "Expected merged JSON object root");
+  assert.ok(merged.summary?.factualCorrectnessCounts, "Missing summary.factualCorrectnessCounts");
+  assert.ok(merged.summary?.completenessCounts, "Missing summary.completenessCounts");
+  assert.ok(merged.summary?.clarityCounts, "Missing summary.clarityCounts");
+  assert.ok(merged.summary?.answerability, "Missing summary.answerability");
+  assert.ok(merged.summary?.rootCauseCounts, "Missing summary.rootCauseCounts");
+  assert.ok(merged.actionable?.factual_correctness_grade_counts, "Missing actionable.factual_correctness_grade_counts");
+  assert.ok(merged.actionable?.completeness_grade_counts, "Missing actionable.completeness_grade_counts");
+  assert.ok(merged.actionable?.clarity_grade_counts, "Missing actionable.clarity_grade_counts");
+  assert.ok(merged.actionable?.answerability_outcome_counts, "Missing actionable.answerability_outcome_counts");
+  assert.ok(merged.actionable?.root_cause_label_counts, "Missing actionable.root_cause_label_counts");
+  assert.ok(Array.isArray(merged.actionable?.root_cause_priority), "Missing actionable.root_cause_priority");
 
-  const gradedRows = JSON.parse(await readFile(path.join(logsDir, gradedFile), "utf8"));
-  assert.ok(Array.isArray(gradedRows), "Expected graded rows array");
-  assert.ok(gradedRows.length > 0, "Expected graded rows to be non-empty");
-  const sampleRow = gradedRows[0];
-  assert.ok("answer_grade" in sampleRow, "Missing answer_grade field");
-  assert.ok("semantic_conformance_grade" in sampleRow, "Missing semantic_conformance_grade field");
+  assert.ok(Array.isArray(merged.results), "Expected merged.results array");
+  assert.ok(merged.results.length > 0, "Expected merged.results to be non-empty");
+  const sampleRow = merged.results[0];
+  assert.ok("factual_correctness" in sampleRow, "Missing factual_correctness field");
+  assert.ok("completeness" in sampleRow, "Missing completeness field");
+  assert.ok("clarity" in sampleRow, "Missing clarity field");
+  assert.ok(["A", "B", "C"].includes(sampleRow.factual_correctness.grade), "factual_correctness.grade must be A/B/C");
+  assert.ok(["A", "B", "C"].includes(sampleRow.completeness.grade), "completeness.grade must be A/B/C");
+  assert.ok(["A", "B"].includes(sampleRow.clarity.grade), "clarity.grade must be A or B");
+  assert.ok(typeof sampleRow.factual_correctness.reason === "string" && sampleRow.factual_correctness.reason.length > 0, "factual_correctness.reason must be non-empty string");
+  assert.ok(typeof sampleRow.completeness.reason === "string" && sampleRow.completeness.reason.length > 0, "completeness.reason must be non-empty string");
+  assert.ok(typeof sampleRow.clarity.reason === "string" && sampleRow.clarity.reason.length > 0, "clarity.reason must be non-empty string");
   assert.ok("baselineAnswerability" in sampleRow, "Missing baselineAnswerability field");
   assert.ok("root_cause_labels" in sampleRow, "Missing root_cause_labels field");
   assert.ok("baselineReason" in sampleRow, "Missing baselineReason field");
-  assert.ok("semantic_conformance_reason" in sampleRow, "Missing semantic_conformance_reason field");
 
   const markdown = await readFile(path.join(logsDir, markdownFile), "utf8");
-  assert.match(markdown, /Answer Grade/i);
-  assert.match(markdown, /Semantic Grade/i);
+  assert.match(markdown, /Factual Correctness/i);
+  assert.match(markdown, /Completeness/i);
+  assert.match(markdown, /Clarity/i);
   assert.match(markdown, /Answerability/i);
   assert.match(markdown, /Root Causes/i);
 });

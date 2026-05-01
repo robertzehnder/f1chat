@@ -1,8 +1,9 @@
 {
-  "version": "2026-03-16",
+  "version": "2026-05-01",
   "notes": [
     "Separate baseline rubric for benchmark grading.",
-    "Grades evaluate two dimensions: answerability handling and answer quality.",
+    "Grades evaluate three independent axes: factual_correctness, completeness, and clarity.",
+    "Deterministic axis mapping: required_answer_checks/critical_checks (answer-side) feed factual_correctness; ideal_tables / require_fact_tables / required_sql_patterns / forbidden_sql_patterns / require_all_ideal_tables / semantic-side critical_checks feed completeness; clarity is graded from answer-text heuristics and is held to an absolute A/B target.",
     "Do not require exact wording matches; evaluate against intent and required entities."
   ],
   "benchmark_answerability_policy": {
