@@ -1,8 +1,8 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01
@@ -123,20 +123,75 @@ under "Required services / env → Non-prod / staging". They MUST NOT be
 pointed at production.
 
 ```bash
-# Sanity: sqitch project is well-formed and plan parses.
-sqitch --chdir sql/migrations status db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1} || true
+# Sanity: sqitch plan parses and project metadata loads. Targeting an
+# explicit non-existent DB URI ('db:pg:') exercises plan/config parsing
+# without needing a live DB; sqitch returns 0 if the plan is well-formed
+# and non-zero on parse errors. No '|| true' — this gate must fail loudly
+# when the plan/config is malformed.
+sqitch --chdir sql/migrations plan
+sqitch --chdir sql/migrations config --list
 
 # Full forward apply against a freshly recreated non-prod DB.
 psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
   -c "DROP DATABASE IF EXISTS ${DB_NAME:-openf1}; CREATE DATABASE ${DB_NAME:-openf1};"
 bash scripts/init_db.sh
 
+# Prove every change in sqitch.plan reached "deployed". 'sqitch status'
+# exits non-zero when there are undeployed changes ("Undeployed change:
+# ..."), and the awk check asserts the deployed-change count equals the
+# plan-change count (excludes header/comment/pragma/blank lines from the
+# plan, mirroring sqitch's own parser).
+sqitch --chdir sql/migrations status db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
+PLAN_CHANGES=$(awk '/^[^%#[:space:]]/ {print $1}' sql/migrations/sqitch.plan | wc -l | tr -d ' ')
+DEPLOYED_CHANGES=$(sqitch --chdir sql/migrations log --format=oneline db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1} | grep -c '^deploy ')
+test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"
+
 # Verify every change reports OK.
 sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
 
-# Rollback round-trip: revert the head change, re-deploy, re-verify.
+# Rollback round-trip: revert the head change, assert the head change's
+# specific objects are gone, then re-deploy and re-verify. The head
+# change is 021_saved_analysis (the last entry in sqitch.plan); it
+# creates core.saved_analysis (table), saved_analysis_name_nonempty
+# (check constraint), and saved_analysis_created_at_idx (index). After
+# revert these three must all be absent; after re-deploy they must all
+# be present. The implementer MUST update this block if a future change
+# is appended after 021 (so head_objects always names the actual head
+# change's outputs).
 sqitch --chdir sql/migrations revert --to @HEAD^ -y db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
+psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
+  DO \$\$
+  DECLARE
+    leftover INT;
+  BEGIN
+    SELECT
+      (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+         WHERE n.nspname='core' AND c.relname='saved_analysis')
+      + (SELECT count(*) FROM pg_constraint WHERE conname='saved_analysis_name_nonempty')
+      + (SELECT count(*) FROM pg_class WHERE relname='saved_analysis_created_at_idx')
+    INTO leftover;
+    IF leftover <> 0 THEN
+      RAISE EXCEPTION 'rollback left % head-change objects behind (expected 0)', leftover;
+    END IF;
+  END \$\$;
+"
 sqitch --chdir sql/migrations deploy db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
+psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
+  DO \$\$
+  DECLARE
+    restored INT;
+  BEGIN
+    SELECT
+      (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+         WHERE n.nspname='core' AND c.relname='saved_analysis')
+      + (SELECT count(*) FROM pg_constraint WHERE conname='saved_analysis_name_nonempty')
+      + (SELECT count(*) FROM pg_class WHERE relname='saved_analysis_created_at_idx')
+    INTO restored;
+    IF restored <> 3 THEN
+      RAISE EXCEPTION 're-deploy restored only %/3 head-change objects', restored;
+    END IF;
+  END \$\$;
+"
 sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
 
 # Existence / refresh-correctness for the migrated matviews — independent
@@ -169,15 +224,25 @@ bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] `sqitch --chdir sql/migrations status <non-prod-target>` reports
-      every change in `sqitch.plan` as "deployed" after `bash
-      scripts/init_db.sh` against a freshly recreated `openf1` DB.
+- [ ] `sqitch --chdir sql/migrations status <non-prod-target>` exits 0
+      after `bash scripts/init_db.sh` against a freshly recreated
+      `openf1` DB (sqitch returns non-zero when undeployed changes
+      remain), AND the gate's `test "$PLAN_CHANGES" -eq
+      "$DEPLOYED_CHANGES"` line passes — i.e., the count of changes in
+      `sqitch.plan` equals the count of `deploy` events in
+      `sqitch log`.
 - [ ] `sqitch --chdir sql/migrations verify <non-prod-target>` exits 0
       against the same DB.
 - [ ] The rollback round-trip in Gate commands (revert head → re-deploy
-      → re-verify) exits 0 with no leftover objects from the reverted
-      state (asserted by the post-revert `pg_matviews` count matching
-      `count(plan_changes) - 1`).
+      → re-verify) exits 0; specifically, after the revert the three
+      objects created by the head change `021_saved_analysis`
+      (`core.saved_analysis` table, `saved_analysis_name_nonempty` check
+      constraint, `saved_analysis_created_at_idx` index) are all absent
+      from `pg_class`/`pg_constraint` (post-revert assertion `DO`
+      block), and after re-deploy all three are present (post-redeploy
+      assertion `DO` block). Both `DO` blocks `RAISE EXCEPTION` on
+      mismatch, so a non-zero `psql` exit means the rollback gate
+      failed.
 - [ ] `pg_matviews` for the `public` schema lists exactly the 11 matview
       names enumerated in the matview gate block above.
 - [ ] `cd web && npm run build` and `cd web && npm run typecheck` exit
@@ -242,11 +307,11 @@ and confirm every Acceptance criterion checkbox.)
 **Status: REVISE**
 
 ### High
-- [ ] Replace the rollback acceptance check `post-revert pg_matviews count matching count(plan_changes) - 1` with an object-level assertion tied to the specific reverted head change; the current formula is wrong because plan changes and materialized views are not 1:1, so it can fail on correct rollback or pass with leftover objects.
+- [x] Replace the rollback acceptance check `post-revert pg_matviews count matching count(plan_changes) - 1` with an object-level assertion tied to the specific reverted head change; the current formula is wrong because plan changes and materialized views are not 1:1, so it can fail on correct rollback or pass with leftover objects.
 
 ### Medium
-- [ ] Add an explicit post-deploy gate command that proves the acceptance criterion “every change in `sqitch.plan` is deployed” instead of relying on `sqitch verify`; the listed gates never run a status/log check after `bash scripts/init_db.sh`, so that criterion is not currently testable from the gate block.
-- [ ] Remove `|| true` from the “sqitch project is well-formed and plan parses” sanity gate or rewrite the command/comment so the gate has a real pass/fail condition; as written it masks malformed-project failures while claiming to validate them.
+- [x] Add an explicit post-deploy gate command that proves the acceptance criterion “every change in `sqitch.plan` is deployed” instead of relying on `sqitch verify`; the listed gates never run a status/log check after `bash scripts/init_db.sh`, so that criterion is not currently testable from the gate block.
+- [x] Remove `|| true` from the “sqitch project is well-formed and plan parses” sanity gate or rewrite the command/comment so the gate has a real pass/fail condition; as written it masks malformed-project failures while claiming to validate them.
 
 ### Low
 - [ ] None.
