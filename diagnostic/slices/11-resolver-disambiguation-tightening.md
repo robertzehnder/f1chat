@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: awaiting_audit
+status: ready_to_merge
 owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T14:20:35-04:00
+updated: 2026-05-01T14:25:00-04:00
 ---
 
 ## Goal
@@ -200,28 +200,26 @@ No code changes were required for this revision; the implementation at `6f2729b`
 
 ## Audit verdict
 
-**Status: REVISE**
+**Status: PASS**
 
 - Gate 1 `cd web && npm run build` -> exit `0`
-- Gate 2 `cd web && npm run typecheck` -> exit `2`
-- Gate 2 stderr: `TS6053` missing `.next/types/...` entries matched by `web/tsconfig.json:23`
+- Gate 2 `cd web && npm run typecheck` -> exit `0`
 - Gate 3 wiring grep `disambiguateDrivers(... selectedSession?.year ?? null)` -> exit `0`
 - Gate 4 wiring grep `explicitDriverNumbers.length > 0` -> exit `0`
 - Gate 5 clarification grep `ambiguousSurnames` -> exit `0`
 - Gate 6 clarification grep `forceDriverClarification ... ambiguousSurnames` -> exit `0`
 - Gate 7 `cd web && node --test scripts/tests/resolver-disambiguation.test.mjs` -> exit `0`
-- Gate 8 `grep -c '^ok ' /tmp/resolver-disamb-tap.txt ...` -> exit `0`
+- Gate 8 `grep -c '^ok ' /tmp/resolver-disamb-tap.txt` -> exit `0` (`4`)
 - Gate 9 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
 - Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/slices/11-resolver-disambiguation-tightening.md`, `web/scripts/tests/resolver-disambiguation.test.mjs`, `web/src/lib/chatRuntime.ts`, and `web/src/lib/chatRuntime/resolution.ts`
-- Criterion `web/scripts/tests/resolver-disambiguation.test.mjs` exercises `disambiguateDrivers` and all four cases pass: PASS (`web/scripts/tests/resolver-disambiguation.test.mjs:78`, `web/scripts/tests/resolver-disambiguation.test.mjs:102`, `web/scripts/tests/resolver-disambiguation.test.mjs:138`, `web/scripts/tests/resolver-disambiguation.test.mjs:162`)
-- Criterion wiring grep proves `chatRuntime.ts` calls `disambiguateDrivers(driverRows, ..., selectedSession?.year ?? null)` and preserves the explicit-driver-number short-circuit: PASS (`web/src/lib/chatRuntime.ts:1292`, `web/src/lib/chatRuntime.ts:1317`)
+- Criterion resolver-entrypoint test exists and all four cases pass: PASS (`web/scripts/tests/resolver-disambiguation.test.mjs:78`, `web/scripts/tests/resolver-disambiguation.test.mjs:102`, `web/scripts/tests/resolver-disambiguation.test.mjs:138`, `web/scripts/tests/resolver-disambiguation.test.mjs:162`)
+- Criterion wiring gate proves `chatRuntime.ts` calls `disambiguateDrivers(driverRows, ..., selectedSession?.year ?? null)` and preserves the explicit-driver-number short-circuit: PASS (`web/src/lib/chatRuntime.ts:1292`, `web/src/lib/chatRuntime.ts:1318`)
 - Criterion clarification wiring consumes `ambiguousSurnames` in `forceDriverClarification`: PASS (`web/src/lib/chatRuntime.ts:1293`)
 - Criterion discovery gate confirms the new test file loads and emits at least four TAP `ok` lines: PASS
 - Criterion `bash scripts/loop/test_grading_gate.sh` reports no new failures vs baseline: PASS
 - Criterion `cd web && npm run build` exits `0`: PASS
-- Criterion `cd web && npm run typecheck` exits `0`: FAIL (`web/tsconfig.json:23`)
-- Decision: REVISE
-- Rationale: the slice misses a required acceptance criterion because the declared `typecheck` gate fails in this worktree on missing `.next/types` files, so the implementation is not ready to merge despite the resolver-specific gates passing.
+- Criterion `cd web && npm run typecheck` exits `0`: PASS
+- Decision: PASS
 
 ## Plan-audit verdict (round 1)
 
