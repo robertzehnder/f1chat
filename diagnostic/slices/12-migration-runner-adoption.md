@@ -1,58 +1,219 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01
 ---
 
 ## Goal
-Adopt a SQL migration runner (sqitch / Atlas / custom python) for all schema changes going forward. Migrate existing matview SQL into the runner's format.
+Adopt **sqitch** as the SQL migration runner for all schema changes going
+forward, port every existing `sql/NNN_*.sql` file (including the matview
+contracts) into sqitch deploy/revert/verify scripts, and replace the
+ad-hoc `scripts/init_db.sh` psql-loop with a sqitch-driven apply path.
+Land behind explicit user approval; production deploy is a separate
+follow-up step gated on a green non-prod run.
 
 ## Inputs
-- Production deployment context
+- `diagnostic/_state.md`
 - `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 12
+- Existing schema source of truth: `sql/001_create_schemas.sql` …
+  `sql/021_saved_analysis.sql`
+- Existing applier: `scripts/init_db.sh` (psql `-v ON_ERROR_STOP=1` loop)
 
 ## Prior context
 - `diagnostic/_state.md`
 
+## Decisions
+- **Runner = sqitch.** Picked over Atlas/custom-python because (1) pure
+  SQL — no new language runtime added to the repo; (2) deploy/revert/
+  verify split is first-class, which is what makes the rollback gate
+  testable; (3) does not couple migrations to the `web/` Node toolchain
+  (matview SQL is independent of the Next.js app).
+- **Non-prod first.** All gate commands in this slice run against the
+  local dockerised Postgres (`scripts/init_db.sh`'s defaults — host
+  `127.0.0.1`, db `openf1`). Production rollout is documented but NOT
+  executed inside this slice; it is a separate user-approved step.
+- **Rollback artifact lives in-repo** as `sql/migrations/README.md`
+  plus per-change `revert/*.sql` scripts (sqitch convention), not in the
+  slice-completion note.
+
 ## Required services / env
-Production `DATABASE_URL`, deployment platform credentials.
+
+### Non-prod / staging (used by this slice's Steps and Gate commands)
+- Local dockerised Postgres reachable at `DB_HOST=127.0.0.1`,
+  `DB_PORT=5432`, `DB_NAME=openf1`, `DB_USER=openf1`,
+  `DB_PASSWORD=openf1_local_dev` (defaults from `scripts/init_db.sh`).
+  Override via `.env` if running elsewhere; do NOT point this at
+  production.
+- `sqitch` CLI ≥ 1.4 with the `pg` engine available on `$PATH`
+  (`brew install sqitch --with-postgres-support` or distro equivalent).
+- `psql` client (already required by `scripts/init_db.sh`).
+
+### Production (informational — NOT exercised by this slice)
+- Production `DATABASE_URL` (Neon connection string) — used only for the
+  follow-up production deploy step, after this slice is merged and the
+  user signs off on the staging run captured in the slice-completion
+  note.
+- Deployment platform credentials (Neon project / branch admin token).
 
 ## Steps
-1. Design + implement the change.
-2. Stage in a non-prod environment first.
-3. Document the rollback procedure.
-4. Land behind explicit user approval.
+1. **Scaffold sqitch in the repo.** Run `sqitch init openf1
+   --engine pg --top-dir sql/migrations` and commit the resulting
+   `sqitch.conf` + `sqitch.plan` skeleton.
+2. **Port existing SQL** — for each `sql/NNN_*.sql`, run
+   `sqitch add <name> -n "<one-line>"` to generate
+   `sql/migrations/deploy/<name>.sql`,
+   `sql/migrations/revert/<name>.sql`,
+   `sql/migrations/verify/<name>.sql`. Move the existing file content
+   into `deploy/`. Author a paired `revert/` script (drop / restore
+   prior state) and a `verify/` script (e.g. `SELECT 1 FROM
+   pg_matviews WHERE matviewname = '...'` for matview changes,
+   `pg_class`/`pg_index` lookups for tables/indexes). Order in
+   `sqitch.plan` must preserve the existing `001 → 021` sequence via
+   the `[requires]` chain.
+3. **Replace `scripts/init_db.sh`'s psql loop** with `sqitch deploy
+   db:pg://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME`. Keep the
+   `f1_codex_helpers` post-step. Update the script's header comment to
+   point at `sql/migrations/README.md`.
+4. **Write `sql/migrations/README.md`** documenting: how to deploy
+   (`sqitch deploy <target>`), how to revert one change
+   (`sqitch revert --to @HEAD^ <target>`), how to verify
+   (`sqitch verify <target>`), and the production rollout / rollback
+   procedure (deploy on a Neon branch first, run verify, promote;
+   rollback = `sqitch revert --to <tag> <prod-target>`).
+5. **Stage end-to-end against the local dockerised Postgres**:
+   drop and recreate the `openf1` database, run the new
+   `scripts/init_db.sh`, confirm every change in `sqitch.plan` reaches
+   "deployed" status, then exercise the rollback gate (revert the head
+   change, re-deploy, re-verify).
+6. **Land behind explicit user approval.** Production deploy is NOT
+   executed in this slice — it is a follow-up requiring the
+   user-approved sentinel.
 
 ## Changed files expected
-- `sql/migrations/`
-- `scripts/migrate.sh`
+- `sqitch.conf` (new) — sqitch project config, `pg` engine.
+- `sql/migrations/sqitch.plan` (new) — ordered change list mirroring
+  `001 → 021`.
+- `sql/migrations/deploy/*.sql` (new, ~21 files) — ported from the
+  existing bare-numbered SQL.
+- `sql/migrations/revert/*.sql` (new, ~21 files) — paired rollback
+  scripts.
+- `sql/migrations/verify/*.sql` (new, ~21 files) — existence /
+  invariant checks per change.
+- `sql/migrations/README.md` (new) — rollout + rollback runbook.
+- `scripts/init_db.sh` (modified) — replace the explicit psql loop with
+  `sqitch deploy`; keep the helper-load tail.
+- `sql/001_create_schemas.sql` … `sql/021_saved_analysis.sql` —
+  removed (content lives in `sql/migrations/deploy/`) OR retained as
+  thin pointer comments; the implementation must pick one and apply
+  uniformly.
 
 ## Artifact paths
-None.
+- `diagnostic/artifacts/migrations/12-sqitch-staging-run-<date>.log` —
+  full output of Step 5 (drop/recreate, sqitch deploy, sqitch verify,
+  rollback round-trip) for the audit record.
 
 ## Gate commands
+
+All gate commands run against the local dockerised Postgres declared
+under "Required services / env → Non-prod / staging". They MUST NOT be
+pointed at production.
+
 ```bash
+# Sanity: sqitch project is well-formed and plan parses.
+sqitch --chdir sql/migrations status db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1} || true
+
+# Full forward apply against a freshly recreated non-prod DB.
+psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
+  -c "DROP DATABASE IF EXISTS ${DB_NAME:-openf1}; CREATE DATABASE ${DB_NAME:-openf1};"
+bash scripts/init_db.sh
+
+# Verify every change reports OK.
+sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
+
+# Rollback round-trip: revert the head change, re-deploy, re-verify.
+sqitch --chdir sql/migrations revert --to @HEAD^ -y db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
+sqitch --chdir sql/migrations deploy db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
+sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
+
+# Existence / refresh-correctness for the migrated matviews — independent
+# of sqitch's own verify, so a buggy verify script cannot mask a missing
+# object.
+psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
+  SELECT matviewname FROM pg_matviews WHERE schemaname='public' ORDER BY matviewname;
+  REFRESH MATERIALIZED VIEW driver_session_summary_mat;
+  REFRESH MATERIALIZED VIEW laps_enriched_mat;
+  REFRESH MATERIALIZED VIEW stint_summary_mat;
+  REFRESH MATERIALIZED VIEW strategy_summary_mat;
+  REFRESH MATERIALIZED VIEW race_progression_summary_mat;
+  REFRESH MATERIALIZED VIEW grid_vs_finish_mat;
+  REFRESH MATERIALIZED VIEW pit_cycle_summary_mat;
+  REFRESH MATERIALIZED VIEW strategy_evidence_summary_mat;
+  REFRESH MATERIALIZED VIEW lap_phase_summary_mat;
+  REFRESH MATERIALIZED VIEW lap_context_summary_mat;
+  REFRESH MATERIALIZED VIEW telemetry_lap_bridge_mat;
+"
+
+# Web build + typecheck (still required — schema names are referenced
+# from web/src/lib/db.ts callers).
 cd web && npm run build
 cd web && npm run typecheck
-cd web && npm run test:grading
+
+# Grading gate via the loop wrapper (per repo policy — diffs against
+# scripts/loop/state/test_grading_baseline.txt so pre-existing failures
+# do not auto-REJECT).
+bash scripts/loop/test_grading_gate.sh
 ```
 
 ## Acceptance criteria
-- [ ] Implementation works in staging.
-- [ ] Rollback plan documented in slice-completion note.
+- [ ] `sqitch --chdir sql/migrations status <non-prod-target>` reports
+      every change in `sqitch.plan` as "deployed" after `bash
+      scripts/init_db.sh` against a freshly recreated `openf1` DB.
+- [ ] `sqitch --chdir sql/migrations verify <non-prod-target>` exits 0
+      against the same DB.
+- [ ] The rollback round-trip in Gate commands (revert head → re-deploy
+      → re-verify) exits 0 with no leftover objects from the reverted
+      state (asserted by the post-revert `pg_matviews` count matching
+      `count(plan_changes) - 1`).
+- [ ] `pg_matviews` for the `public` schema lists exactly the 11 matview
+      names enumerated in the matview gate block above.
+- [ ] `cd web && npm run build` and `cd web && npm run typecheck` exit
+      0; `bash scripts/loop/test_grading_gate.sh` exits 0 (or only
+      reports pre-baseline failures).
+- [ ] `sql/migrations/README.md` exists and contains both a "deploy"
+      and a "rollback" section naming the exact `sqitch` invocations.
+- [ ] `diagnostic/artifacts/migrations/12-sqitch-staging-run-<date>.log`
+      is committed and contains the full Step-5 transcript.
 
 ## Out of scope
-- Anything outside the slice's declared scope.
+- Running the migration runner against production. That happens in a
+  separate, user-approved follow-up after this slice merges.
+- Refactoring matview SQL contents — this slice ports them verbatim
+  into deploy/ scripts.
+- Replacing `f1_codex_helpers` loading; `scripts/init_db.sh` still
+  invokes `load_codex_helpers.sh` after `sqitch deploy`.
 
 ## Risk / rollback
-Production-touching, requires user-approved sentinel before merge. Full rollback documented in slice.
+Production-touching adoption of a new tool. Mitigations:
+- All Step-5 validation runs against the non-prod local DB; no
+  production credentials are referenced in this slice.
+- Rollback procedure is exercised by a gate command (revert→deploy→
+  verify round-trip), not just documented.
+- Per-change `revert/*.sql` scripts mean any single bad migration can
+  be unwound with `sqitch revert --to <tag>` — the runbook in
+  `sql/migrations/README.md` is the durable repo artifact for this.
+- If sqitch adoption fails the gates, the rollback for the slice
+  itself is `git revert` of the merge commit — `scripts/init_db.sh`
+  reverts to the prior psql loop and the bare-numbered `sql/NNN_*.sql`
+  files are restored.
 
 ## Slice-completion note
-(filled by Claude)
+(filled by Claude — must reference the
+`diagnostic/artifacts/migrations/12-sqitch-staging-run-*.log` artifact
+and confirm every Acceptance criterion checkbox.)
 
 ## Audit verdict
 (filled by Codex)
@@ -62,16 +223,16 @@ Production-touching, requires user-approved sentinel before merge. Full rollback
 **Status: REVISE**
 
 ### High
-- [ ] Replace the web-only gate block with migration-runner gates that exercise the declared scope end-to-end in a non-prod database, including applying the migrations, verifying the migrated matview objects exist/refresh correctly, and proving the rollback procedure works.
-- [ ] Replace `Production DATABASE_URL` in Required services / env with the exact non-prod/staging database and deployment prerequisites needed for Step 2, and state the production approval/deploy inputs separately so the implementer does not run first-pass validation against production.
+- [x] Replace the web-only gate block with migration-runner gates that exercise the declared scope end-to-end in a non-prod database, including applying the migrations, verifying the migrated matview objects exist/refresh correctly, and proving the rollback procedure works.
+- [x] Replace `Production DATABASE_URL` in Required services / env with the exact non-prod/staging database and deployment prerequisites needed for Step 2, and state the production approval/deploy inputs separately so the implementer does not run first-pass validation against production.
 
 ### Medium
-- [ ] Commit to one migration-runner path in the plan and expand Changed files expected to cover the runner-specific config, invocation, and documentation files the implementation will necessarily touch; `sqitch / Atlas / custom python` is too open-ended to audit.
-- [ ] Rewrite the acceptance criteria as command- or artifact-based checks owned by this slice instead of `Implementation works in staging` and a slice-completion note; they must be testable without subjective judgment.
-- [ ] If a grading gate remains, invoke it via `bash scripts/loop/test_grading_gate.sh` rather than raw `cd web && npm run test:grading`, per loop policy.
+- [x] Commit to one migration-runner path in the plan and expand Changed files expected to cover the runner-specific config, invocation, and documentation files the implementation will necessarily touch; `sqitch / Atlas / custom python` is too open-ended to audit.
+- [x] Rewrite the acceptance criteria as command- or artifact-based checks owned by this slice instead of `Implementation works in staging` and a slice-completion note; they must be testable without subjective judgment.
+- [x] If a grading gate remains, invoke it via `bash scripts/loop/test_grading_gate.sh` rather than raw `cd web && npm run test:grading`, per loop policy.
 
 ### Low
-- [ ] Clarify where the rollback procedure must live during implementation; `slice-completion note` conflicts with the production-facing nature of the change and does not identify a durable repo artifact.
+- [x] Clarify where the rollback procedure must live during implementation; `slice-completion note` conflicts with the production-facing nature of the change and does not identify a durable repo artifact.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-05-01T22:56:29Z, so no stale-state note is required.
