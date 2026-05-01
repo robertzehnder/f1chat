@@ -162,7 +162,7 @@ Commit hashes:
 - `8a8c1a4` — note-only follow-up to record the `ac87b59` hash inline.
 - `e118b20` — revision round 3: fresh benchmark rerun (`web/logs/chat_health_check_2026-05-01T02-01-45-454Z.json`), regenerated `.json` + `.md` artifacts so the comparison artifact matches the rerun, restated build→typecheck ordering.
 - `65800c5` — revision round 4: fresh benchmark rerun (`web/logs/chat_health_check_2026-05-01T02-14-19-591Z.json`) executed in this worktree against `PORT=3001` dev server, regenerated `.json` + `.md` so the comparison artifact derives from this rerun.
-- _this commit_ — revision round 5: fresh benchmark rerun (`web/logs/chat_health_check_2026-05-01T02-30-00-837Z.json`) executed in this worktree against `PORT=3001` dev server, regenerated `.json` + `.md` together so the comparison artifact (46/4/0; 23 improved / 27 unchanged / 0 regressed) is derived directly from this rerun.
+- `0cca94f` — revision round 5: fresh benchmark rerun (`web/logs/chat_health_check_2026-05-01T02-30-00-837Z.json`) executed in this worktree against `PORT=3001` dev server, regenerated `.json` + `.md` together so the comparison artifact (46/4/0; 23 improved / 27 unchanged / 0 regressed) is derived directly from this rerun.
 
 ## Audit verdict
 
