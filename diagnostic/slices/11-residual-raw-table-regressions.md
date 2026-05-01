@@ -1,11 +1,11 @@
 ---
 slice_id: 11-residual-raw-table-regressions
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-04-30T23:59:00-04:00
 ---
 
 ## Goal
@@ -56,3 +56,21 @@ Rollback: `git revert <commit>`.
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace `cd web && npm run test:grading` with `bash scripts/loop/test_grading_gate.sh`, or declare an isolated grading gate that exits 0 for only the targeted questions plus the same-category regression set, because raw `npm run test:grading` violates the loop audit protocol and does not prove the slice-local acceptance criteria.
+- [ ] Add an explicit gate command that re-grades the targeted failing question IDs and a second explicit gate that checks previously-passing questions in the same category still pass, because the current gate block contains only repo-wide build/typecheck/grading commands and never tests either acceptance criterion directly.
+
+### Medium
+- [ ] Replace `Specific failing question IDs from that artifact` with the concrete question IDs or a deterministic command/path that derives them, so the slice scope is auditable and step 1 is reproducible.
+- [ ] Update `## Required services / env` to list every prerequisite needed to diagnose and re-grade chat questions, including the DB/web/API env and any required running service, because `None at author time.` conflicts with the planned grading workflow.
+- [ ] Replace `Changed files expected: (determined by diagnosis)` with the minimum expected file set or an explicit bounded pattern, because the current scope declaration is too open-ended for a plan that intends to route queries off raw `f1.*` tables.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T03:00:31Z`).
