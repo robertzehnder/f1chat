@@ -177,3 +177,53 @@ export function scoreDriverCandidate(row: DriverResolutionRow, normalizedMessage
 
   return { score, matchedOn: unique(matchedOn) };
 }
+
+export type DisambiguationResult = {
+  scoredCandidates: { row: DriverResolutionRow; matchedOn: string[]; score: number }[];
+  ambiguousSurnames: { surname: string; rows: DriverResolutionRow[] }[];
+};
+
+export function disambiguateDrivers(
+  rows: DriverResolutionRow[],
+  normalizedMessage: string,
+  sessionYear: number | null
+): DisambiguationResult {
+  const scored = rows.map((row) => {
+    const base = scoreDriverCandidate(row, normalizedMessage);
+    return { row, score: base.score, matchedOn: [...base.matchedOn] };
+  });
+
+  const mentionsVerstappen = containsWholePhrase(normalizedMessage, "verstappen");
+  const mentionsMax = containsWholePhrase(normalizedMessage, "max");
+  const bareVerstappen = mentionsVerstappen && !mentionsMax;
+
+  const ambiguousSurnames: DisambiguationResult["ambiguousSurnames"] = [];
+
+  if (bareVerstappen) {
+    if (sessionYear !== null && sessionYear >= 2024) {
+      const maxItem = scored.find((item) => item.row.driver_number === 1);
+      if (maxItem) {
+        maxItem.score += 5;
+        maxItem.matchedOn.push("bare_verstappen_2024_default");
+      }
+    } else {
+      const verstappenRows = rows.filter(
+        (row) => (row.last_name ?? "").toLowerCase() === "verstappen"
+      );
+      if (verstappenRows.length >= 2) {
+        ambiguousSurnames.push({ surname: "verstappen", rows: verstappenRows });
+      }
+    }
+  }
+
+  const scoredCandidates = scored
+    .filter((item) => item.score > 0)
+    .map((item) => ({
+      row: item.row,
+      score: item.score,
+      matchedOn: unique(item.matchedOn)
+    }))
+    .sort((a, b) => b.score - a.score || a.row.driver_number - b.row.driver_number);
+
+  return { scoredCandidates, ambiguousSurnames };
+}

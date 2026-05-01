@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T18:08:21Z
+updated: 2026-05-01T14:09:19-04:00
 ---
 
 ## Goal
@@ -140,7 +140,45 @@ python3 -c "import json,glob,os; f=max(glob.glob('web/logs/chat-health-check-*.j
 Rollback: `git revert <commit>`. The disambiguation tightening is a localized score adjustment in one function plus one new test file; reverting restores prior behavior cleanly with no schema or artifact dependencies.
 
 ## Slice-completion note
-(filled by Claude)
+
+- **Branch:** `slice/11-resolver-disambiguation-tightening`
+- **Implementation commit:** filled in commit message body (single commit on top of plan-approved `7b3d396`).
+
+### Changes
+
+- `web/src/lib/chatRuntime/resolution.ts` — added exported `disambiguateDrivers(rows, normalizedMessage, sessionYear)` plus `DisambiguationResult` type. Implements the year-aware boost rule (`+5` on `driver_number === 1` with `bare_verstappen_2024_default` in `matchedOn` when bare "verstappen" appears with `sessionYear !== null && sessionYear >= 2024`) and the ambiguity-flagging rule (populate `ambiguousSurnames` when bare-verstappen + `sessionYear === null || sessionYear < 2024` and ≥2 rows match surname). Pure function — no DB / fetch / module-level state. `scoreDriverCandidate` retained and reused internally.
+- `web/src/lib/chatRuntime.ts` — refactored the `driverRows`→`driverCandidates` block (~lines 1289-1320) to call `disambiguateDrivers(driverRows, normalizedMessage, selectedSession?.year ?? null)`. Caller still applies the existing `+30` `explicitDriverNumbers` boost, the `score > 0` filter, the `score`/`driver_number` sort, and the `.slice(0, 6)` cap, so `selectComparisonDriverNumbers` (`chatRuntime.ts:343`) still receives a multi-driver list. `forceDriverClarification` was relocated to immediately after the `disambiguateDrivers` call and rewritten as `(asksSpecificDriverClarification || ambiguousSurnames.length > 0) && explicitDriverNumbers.length === 0`, wiring ambiguity metadata into the existing clarification path. The `explicitDriverNumbers.length > 0` short-circuit at the original line is preserved verbatim. `SessionCandidate` gained `year: number | null` (sourced from `SessionResolutionRow.year`) so the resolver can pass it to `disambiguateDrivers`; `getSessionByKey` and the scored-session candidate constructor were both updated to populate it. The unused `scoreDriverCandidate` named import was removed; `disambiguateDrivers` was added in its place.
+- `web/scripts/tests/resolver-disambiguation.test.mjs` — new deterministic Node test file using the existing `ts.transpileModule`/temp-dir pattern from `resolver-lru.test.mjs`. No DB / fetch / LLM. Asserts at the resolver entrypoint (`disambiguateDrivers`) for all four cases (A: bare-Verstappen + 2024 → Max top with `bare_verstappen_2024_default`; B: bare-Verstappen + 2003 → ambiguousSurnames populated, both Verstappens still in `scoredCandidates`, no boost stamped; C: explicit `max verstappen` + 2003 → Max via `canonical_full_name_match`, no ambiguity; D: Q26 verbatim text + 2025 + 4-row fixture → Max #1 and Charles #16 both in `scoredCandidates` top 4 with positive scores, no ambiguity).
+
+### Decisions made during implementation
+
+- **`SessionCandidate.year` propagation.** `selectedSession` is a `SessionCandidate`, not a raw `SessionResolutionRow`, so I added a `year: number | null` field to `SessionCandidate` and populated it from `row.year ?? null` in both construction sites (the explicit-session-key path and the scored-session loop). This is the minimal way to fulfil the planned `selectedSession?.year ?? null` argument and stays within the slice's "Changed files expected" list (`web/src/lib/chatRuntime.ts`).
+- **Single-line call sites for grep gates.** The wiring grep (`disambiguateDrivers\(\s*driverRows\s*,[^)]*selectedSession\?\.year\s*\?\?\s*null`) and the clarification grep (`forceDriverClarification[^=;]*=[^;]*ambiguousSurnames`) are line-based, so I kept both expressions on a single line each rather than wrapping for readability.
+- **`scoredCandidates` filter.** Per the slice spec ("includes every row with `score > 0`"), `disambiguateDrivers` filters to score > 0 internally. The caller still re-applies its own `score > 0` filter after the explicit-driver-number boost — preserving the existing `driverCandidates` shape exactly.
+
+### Gate exit codes
+
+| Gate | Command | Exit |
+|---|---|---|
+| build | `cd web && npm run build` | 0 |
+| typecheck | `cd web && npm run typecheck` | 0 |
+| wiring grep 1 | `grep -E 'disambiguateDrivers\(\s*driverRows\s*,[^)]*selectedSession\?\.year\s*\?\?\s*null' web/src/lib/chatRuntime.ts` | 0 |
+| wiring grep 2 | `grep -E 'explicitDriverNumbers\.length\s*>\s*0' web/src/lib/chatRuntime.ts` | 0 |
+| clarification grep 1 | `grep -E 'ambiguousSurnames' web/src/lib/chatRuntime.ts` | 0 |
+| clarification grep 2 | `grep -E 'forceDriverClarification[^=;]*=[^;]*ambiguousSurnames|ambiguousSurnames[^;]*forceDriverClarification' web/src/lib/chatRuntime.ts` | 0 |
+| isolated test run | `cd web && node --test scripts/tests/resolver-disambiguation.test.mjs` | 0 (4 pass / 0 fail) |
+| ok-line count gate | `grep -c '^ok ' /tmp/resolver-disamb-tap.txt` ≥ 4 | 4 |
+| baseline-aware grading suite | `bash scripts/loop/test_grading_gate.sh` | 0 (`slice_fails=39 baseline_fails=39 baseline_failures_fixed=0` — no new regressions vs `scripts/loop/state/test_grading_baseline.txt`) |
+
+### Self-checks
+
+- **Acceptance criterion 1 (entrypoint test, all four cases pass):** TAP shows `ok 1` Case A, `ok 2` Case B, `ok 3` Case C, `ok 4` Case D in `/tmp/resolver-disamb-tap.txt`; `1..4`, `# pass 4`, `# fail 0`.
+- **Acceptance criterion 2 (wiring gate):** both wiring greps emit a match on stdout and exit 0.
+- **Acceptance criterion 3 (clarification-wiring gate):** both clarification greps emit a match on stdout and exit 0; the `forceDriverClarification` declaration literally reads `(asksSpecificDriverClarification || ambiguousSurnames.length > 0) && explicitDriverNumbers.length === 0`.
+- **Acceptance criterion 4 (discovery gate):** isolated `node --test scripts/tests/resolver-disambiguation.test.mjs` exits 0 with 4 ok-lines, proving the new file is loadable and not silently skipped.
+- **Acceptance criterion 5 (grading suite no new failures):** `test_grading_gate.sh` reports `slice_fails=39 baseline_fails=39 baseline_failures_fixed=0` — pre-existing baseline failures preserved, no new regressions.
+- **Acceptance criterion 6 (typecheck + build):** both exit 0.
+- **Out-of-scope check:** diff touches only the three files listed under "Changed files expected" plus the slice file's frontmatter and completion note. `web/package.json` is unchanged; the new test is auto-discovered by the existing `scripts/tests/*.test.mjs` glob (verified by `npm run test:grading` running through `test_grading_gate.sh`).
 
 ## Audit verdict
 (filled by Codex)
