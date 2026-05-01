@@ -1,8 +1,8 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01
@@ -60,9 +60,15 @@ follow-up step gated on a green non-prod run.
 - Deployment platform credentials (Neon project / branch admin token).
 
 ## Steps
-1. **Scaffold sqitch in the repo.** Run `sqitch init openf1
-   --engine pg --top-dir sql/migrations` and commit the resulting
-   `sqitch.conf` + `sqitch.plan` skeleton.
+1. **Scaffold sqitch in the repo.** Create `sql/migrations/` and run
+   `sqitch init` from inside it (no `--top-dir` flag) so the project
+   root, `sqitch.conf`, `sqitch.plan`, and the `deploy/ revert/ verify/`
+   subdirectories all live under `sql/migrations/` — matching the
+   `sqitch --chdir sql/migrations ...` gate invocations below. Concrete
+   command: `mkdir -p sql/migrations && (cd sql/migrations && sqitch
+   init openf1 --engine pg)`. Commit the resulting
+   `sql/migrations/sqitch.conf` + `sql/migrations/sqitch.plan`
+   skeleton. Do NOT place `sqitch.conf` at the repo root.
 2. **Port existing SQL** — for each `sql/NNN_*.sql`, run
    `sqitch add <name> -n "<one-line>"` to generate
    `sql/migrations/deploy/<name>.sql`,
@@ -94,7 +100,10 @@ follow-up step gated on a green non-prod run.
    user-approved sentinel.
 
 ## Changed files expected
-- `sqitch.conf` (new) — sqitch project config, `pg` engine.
+- `sql/migrations/sqitch.conf` (new) — sqitch project config, `pg`
+  engine. Lives **inside** `sql/migrations/` (NOT at repo root) so the
+  project root matches the `sqitch --chdir sql/migrations ...` gate
+  invocations.
 - `sql/migrations/sqitch.plan` (new) — ordered change list mirroring
   `001 → 021`.
 - `sql/migrations/deploy/*.sql` (new, ~21 files) — ported from the
@@ -132,8 +141,15 @@ sqitch --chdir sql/migrations plan
 sqitch --chdir sql/migrations config --list
 
 # Full forward apply against a freshly recreated non-prod DB.
+# DROP DATABASE / CREATE DATABASE cannot run inside a transaction, and
+# psql wraps multiple statements passed via a single -c into one
+# implicit transaction. Therefore each statement gets its own -c
+# invocation. Both run against the maintenance DB ('postgres') because
+# the target DB is being recreated.
 psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
-  -c "DROP DATABASE IF EXISTS ${DB_NAME:-openf1}; CREATE DATABASE ${DB_NAME:-openf1};"
+  -c "DROP DATABASE IF EXISTS ${DB_NAME:-openf1};"
+psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
+  -c "CREATE DATABASE ${DB_NAME:-openf1};"
 bash scripts/init_db.sh
 
 # Prove every change in sqitch.plan reached "deployed". 'sqitch status'
@@ -196,9 +212,53 @@ sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-o
 
 # Existence / refresh-correctness for the migrated matviews — independent
 # of sqitch's own verify, so a buggy verify script cannot mask a missing
-# object.
+# object. The DO block asserts pg_matviews in the public schema is
+# EXACTLY the expected 11-name set (no missing, no extras, no renames);
+# RAISE EXCEPTION on any difference fails the gate via psql's non-zero
+# exit. Refreshes follow as a separate -c so a refresh failure is also
+# loud.
 psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
-  SELECT matviewname FROM pg_matviews WHERE schemaname='public' ORDER BY matviewname;
+  DO \$\$
+  DECLARE
+    expected text[] := ARRAY[
+      'driver_session_summary_mat',
+      'grid_vs_finish_mat',
+      'lap_context_summary_mat',
+      'lap_phase_summary_mat',
+      'laps_enriched_mat',
+      'pit_cycle_summary_mat',
+      'race_progression_summary_mat',
+      'stint_summary_mat',
+      'strategy_evidence_summary_mat',
+      'strategy_summary_mat',
+      'telemetry_lap_bridge_mat'
+    ];
+    actual text[];
+    missing text[];
+    extra text[];
+  BEGIN
+    SELECT array_agg(matviewname ORDER BY matviewname)
+      INTO actual
+      FROM pg_matviews
+      WHERE schemaname = 'public';
+    IF actual IS NULL THEN
+      RAISE EXCEPTION 'public schema has no matviews; expected %', expected;
+    END IF;
+    SELECT array_agg(x) INTO missing
+      FROM unnest(expected) AS x
+      WHERE x <> ALL (actual);
+    SELECT array_agg(x) INTO extra
+      FROM unnest(actual) AS x
+      WHERE x <> ALL (expected);
+    IF missing IS NOT NULL OR extra IS NOT NULL THEN
+      RAISE EXCEPTION 'matview set mismatch: missing=% extra=% (actual=%)',
+        coalesce(missing, ARRAY[]::text[]),
+        coalesce(extra,   ARRAY[]::text[]),
+        actual;
+    END IF;
+  END \$\$;
+"
+psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
   REFRESH MATERIALIZED VIEW driver_session_summary_mat;
   REFRESH MATERIALIZED VIEW laps_enriched_mat;
   REFRESH MATERIALIZED VIEW stint_summary_mat;
@@ -243,8 +303,16 @@ bash scripts/loop/test_grading_gate.sh
       assertion `DO` block). Both `DO` blocks `RAISE EXCEPTION` on
       mismatch, so a non-zero `psql` exit means the rollback gate
       failed.
-- [ ] `pg_matviews` for the `public` schema lists exactly the 11 matview
-      names enumerated in the matview gate block above.
+- [ ] The matview-set assertion `DO` block in Gate commands exits 0 —
+      i.e., `pg_matviews` for the `public` schema is exactly the
+      11-name set hard-coded in that block (`driver_session_summary_mat`,
+      `grid_vs_finish_mat`, `lap_context_summary_mat`,
+      `lap_phase_summary_mat`, `laps_enriched_mat`,
+      `pit_cycle_summary_mat`, `race_progression_summary_mat`,
+      `stint_summary_mat`, `strategy_evidence_summary_mat`,
+      `strategy_summary_mat`, `telemetry_lap_bridge_mat`) with no
+      missing, extra, or renamed matviews. The block `RAISE EXCEPTION`s
+      on any mismatch, so a non-zero `psql` exit means the gate failed.
 - [ ] `cd web && npm run build` and `cd web && npm run typecheck` exit
       0; `bash scripts/loop/test_grading_gate.sh` exits 0 (or only
       reports pre-baseline failures).
@@ -324,11 +392,11 @@ and confirm every Acceptance criterion checkbox.)
 **Status: REVISE**
 
 ### High
-- [ ] Split the fresh-DB gate into separate `psql -c` invocations (or equivalent non-transactional commands); PostgreSQL executes multiple SQL statements passed via one `-c` as a single transaction, so `DROP DATABASE ...; CREATE DATABASE ...` will fail because `DROP DATABASE` cannot run inside a transaction block.
+- [x] Split the fresh-DB gate into separate `psql -c` invocations (or equivalent non-transactional commands); PostgreSQL executes multiple SQL statements passed via one `-c` as a single transaction, so `DROP DATABASE ...; CREATE DATABASE ...` will fail because `DROP DATABASE` cannot run inside a transaction block.
 
 ### Medium
-- [ ] Resolve the Sqitch project-root/layout contradiction by making Step 1, Changed files expected, and the `sqitch --chdir ...` gates agree on where `sqitch.conf` and `sqitch.plan` live; `sqitch init ... --top-dir sql/migrations` defaults the plan file under `sql/migrations/`, but the plan currently expects a repo-root `sqitch.conf` while all gates run from `sql/migrations`.
-- [ ] Replace the matview acceptance check with an executable assertion that the `public` schema contains exactly the 11 named matviews and no extras; the current gate only prints `pg_matviews` rows and refreshes named views, so extra or renamed matviews would not fail the gate.
+- [x] Resolve the Sqitch project-root/layout contradiction by making Step 1, Changed files expected, and the `sqitch --chdir ...` gates agree on where `sqitch.conf` and `sqitch.plan` live; `sqitch init ... --top-dir sql/migrations` defaults the plan file under `sql/migrations/`, but the plan currently expects a repo-root `sqitch.conf` while all gates run from `sql/migrations`.
+- [x] Replace the matview acceptance check with an executable assertion that the `public` schema contains exactly the 11 named matviews and no extras; the current gate only prints `pg_matviews` rows and refreshes named views, so extra or renamed matviews would not fail the gate.
 
 ### Low
 - [ ] None.
