@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01
+updated: 2026-05-01T20:30:00Z
 ---
 
 ## Goal
@@ -112,3 +112,30 @@ bash -lc 'tmp=$(mktemp); scripts/loop/update_state.sh > "$tmp" 2>&1; \
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-2 forced-findings ratchet: not applied — substantive findings present)**
+
+### High
+- [ ] Fix the fixture filename: step 4 and `## Changed files expected` reference `web/scripts/tests/fixtures/semantic-conformance.fixture.json`, but the actual file on disk is `web/scripts/tests/fixtures/semantic.fixture.json` (sibling rubric `semantic.rubric.json`). The implementer will fail to find the named file.
+- [ ] Enumerate the missed in-tree consumers of the legacy fields and add them to step 3/4 and `## Changed files expected`: `web/scripts/chat-health-check.mjs` (live healthcheck runner — emits `answer_grade_counts` / `semantic_conformance_grade_counts` at lines 87-88, renders `Answer grade` / `Semantic conformance grade` markdown rows at 253 and 271-273) and `web/scripts/build-rerun-comparison-md.mjs` (the deterministic `.md` generator from slice 11-rerun-benchmark-baseline; lines 139-153 read `r.answer_grade` / `r.semantic_conformance_grade`). The slice's Decisions claim that "no other repo-wide consumer of `answer_grade` / `semantic_conformance_grade` exists" is incorrect — `git grep` still surfaces these two on author day.
+- [ ] Bring `report.fixture.json`, `report.rubric.json`, `synthesis.fixture.json`, and `synthesis.rubric.json` into scope: `web/scripts/tests/grading-regression.test.mjs` lines 78-109 assert root-cause fields on `synthesis.fixture.json`, and lines 111-171 assert `summary.summary.answerGradeCounts`, `summary.summary.semanticConformanceGradeCounts`, `summary.actionable.answer_grade_counts`, `summary.actionable.semantic_conformance_grade_counts`, and per-row `answer_grade` / `semantic_conformance_grade` / `semantic_conformance_reason` against `report.fixture.json`. The slice's step 4 only edits the clarification + semantic fixtures, so the report-fixture test will fail under the new schema.
+- [ ] Cover the markdown-report assertions in the same test (`grading-regression.test.mjs:167-168` — `assert.match(markdown, /Answer Grade/i)` and `/Semantic Grade/i`). When the offline grader's markdown builder is rebuilt around the three new axes, these regex assertions break unless the test (or the report header strings) is updated. Add an explicit step + acceptance criterion for this.
+- [ ] The "previously-failing axis improves by at least one grade step (e.g. C → B or B → A)" acceptance criterion has no defined mapping from the legacy single-field grades (`answer_grade`, `semantic_conformance_grade`) to one of the three new axes (`factual_correctness`, `completeness`, `clarity`). A single legacy `answer_grade=B` row gets split into three independent axis grades; "the previously-failing axis" is undefined. Either (a) declare a deterministic mapping in `## Decisions` (e.g. legacy `answer_grade` → `factual_correctness`, legacy `semantic_conformance_grade` → `completeness`, with `clarity` newly introduced and exempt from the improvement criterion), or (b) drop the per-step "improves" framing and replace it with an absolute axis-grade target (e.g. "the regenerated row has at least two A-grade axes").
+
+### Medium
+- [ ] Pin the regrade artifact's mtime/discoverability: `scripts/loop/update_state.sh:45-53` (`latest_file`) selects the healthcheck artifact via `ls -t`. The legacy `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` is currently the latest by mtime and is in legacy schema (current `_state.md` benchmark headline says `(could not parse: 'list' object has no attribute 'get')`). The schema-consumer gate only passes if the regenerated/new regrade artifact is newest by mtime at gate time. Add an explicit pre-gate assertion (e.g. `test "$(ls -t diagnostic/artifacts/healthcheck/*.json | head -1)" = "$ARTIFACT"`) or move/rename the legacy file in scope.
+- [ ] The category-mate non-regression criterion ("for every other question ID in the same category as a target ID, no axis grade decreases versus `11-rerun_2026-04-30.json`") inherits the same legacy-vs-new-axis mapping gap as the High item above and is non-testable as written. Resolve via the same mapping rule, or reframe as e.g. "no row drops below absolute axis-grade `B` on any axis".
+- [ ] Address test-grading baseline drift: rewriting `grading-regression.test.mjs` may change `slice_fails` vs the pinned 39 baseline in `scripts/loop/state/test_grading_baseline.txt`. State explicitly whether that baseline file must be regenerated — if yes, add it to `## Changed files expected` with the regeneration command; if no, justify why the new failure set is a strict subset of the baseline.
+- [ ] Step 1's "Record the IDs in the Decisions subsection" is unenforced — no gate fails when the Decisions block is empty. Either add a gate command (e.g. `grep -E '^- id=[0-9]+' diagnostic/slices/11-multi-axis-grader-redesign.md`) or fold the requirement into an acceptance criterion that the audit can verify.
+- [ ] `docs/prompt_outcomes_summary.md:124-125` references `answer_grade` and `semantic_conformance_grade` as documented field names. The slice's risk-section grep (`answer_grade\|semantic_conformance_grade\|...`) will still surface this file. Either add it to `## Changed files expected` so the doc gets refreshed, or carve it out explicitly (e.g. limit the grep to source/test/fixture/artifact paths).
+
+### Low
+- [ ] Schema-consumer gate's `grep -q "Factual correctness\|Completeness\|Clarity"` uses BRE `\|` for alternation. This works under GNU grep / ugrep but on stock BSD grep (default macOS) it matches the literal string `\|`. Switch to `grep -qE "Factual correctness|Completeness|Clarity"` for portability across the developer fleet.
+- [ ] The compound `A && B || C` boolean in the schema-consumer gate is hard to read and easy to break under shell rewrites. Consider an explicit `if grep -q "could not parse" "$tmp"; then …; elif ! grep -qE "..."; then …; fi` form.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
+- Round 1 already addressed the goal/acceptance schema rewrite. The round-2 findings above are net-new — they surface during a fresh repo-wide grep for legacy field consumers and a careful read of `web/scripts/tests/grading-regression.test.mjs`.
