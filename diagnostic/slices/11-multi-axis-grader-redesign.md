@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T22:30:00Z
+updated: 2026-05-01T18:57:34Z
 ---
 
 ## Goal
@@ -234,3 +234,17 @@ fi
 - This is round 3 — the claude self-audit cap. Per dispatcher contract, the reviser will set `owner: codex` after addressing these items, and codex's external plan audit becomes the next gatekeeper. The High items above are concrete enough for the reviser to act on in one pass; codex will see whatever lands.
 - The Decisions-block gate is correctly enforced: the placeholder italic text in `## Decisions` does not begin with `- id=`, and the example in backticks `(e.g. \`- id=12 ...\`)` is preceded by `(e.g. ` so does not anchor at `^- id=`. Verified via the slice file body.
 - The `Notes for auditors` section in `diagnostic/_state.md` already has 11 entries (lines 55-65) against the documented cap of 10. Not appending a new lesson this round to avoid a drop+add edit; if a future auditor wants to carry forward the lesson "When a slice declares a repo-wide grep gate, exclude `diagnostic/slices/` or scope to positive source/test/docs paths so historical plan records do not surface legacy field names", they can add it then.
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Make the artifact output contract consistent: either require the canonical regenerated artifact path to be `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` everywhere, or rewrite the mtime-pin gate so it validates whichever single path step 3 / `## Artifact paths` actually allow. The current plan still says step 3 may regenerate `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` in place, but the gate hard-fails unless `ls -t diagnostic/artifacts/healthcheck/11-multi-axis-regrade_*.json` finds a sibling regrade file.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
