@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T18:00:00-04:00
+updated: 2026-05-01T13:49:17-04:00
 ---
 
 ## Goal
@@ -102,6 +102,22 @@ Rollback: `git revert <commit>`. The disambiguation tightening is a localized sc
 
 ### Low
 - [x] Replace `(determined by diagnosis)` at `diagnostic/slices/11-resolver-disambiguation-tightening.md:32` with the expected resolver/test file scope once the intended rerun path is defined, so implementers are not left with an unbounded edit surface.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T15:42:52Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the load-bearing "call the scoring function directly" test plan with at least one deterministic test at the resolver entrypoint that proves a bare `Verstappen` query in a pre-2024 session returns an explicit ambiguity result rather than silently selecting a driver, because score-only assertions do not verify the resolver-level behavior promised in Step 2 and the Goal.
+
+### Medium
+- [ ] Add an explicit gate assertion that the new resolver-disambiguation test is actually discovered and executed by the `bash scripts/loop/test_grading_gate.sh` path, because the baseline-aware wrapper can still exit 0 if the new `.test.mjs` file is never wired into the grading harness.
+- [ ] Fix the optional live-regrade grade assertion to use the current healthcheck row schema (`baselineGrade`, or a schema-agnostic fallback) instead of only `baseline_grade`, because the documented operator procedure should not fail on the repo's current artifact shape.
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T15:42:52Z`).
