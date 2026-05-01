@@ -1,11 +1,11 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T21:30:00Z
+updated: 2026-05-01T22:10:00Z
 ---
 
 ## Goal
@@ -155,6 +155,23 @@ No production state, schema, or external service is touched, so the rollback is 
 ### Medium
 - [x] Align the Goal text with `web/src/lib/db.ts` branch selection by naming `DATABASE_URL` alongside `NEON_DATABASE_URL`/`NEON_DB_HOST`; as written, "no `NEON_*` URL/host is set" does not imply the local `DB_*` branch because `DATABASE_URL` still bypasses it.
 - [x] Preserve or explicitly document the still-supported `DATABASE_URL` and `NEON_DB_*` branches in `.env.example`, or narrow the slice claim from "document the full set of database-env vars"; the current Step 4 would replace the existing `NEON_DB_HOST` block while the code and tests still depend on that branch.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T20:49:40Z`).
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Align the new assertion's branch-detection rules with `web/src/lib/db.ts`: require trimmed-presence checks for `NEON_DATABASE_URL`, `DATABASE_URL`, and `NEON_DB_HOST` (matching `firstUrl(...).trim()` / `NEON_DB_HOST?.trim()`), and add a slice-local test that whitespace-only values do not bypass the local-`DB_*` assertion.
+- [ ] Resolve the `.env.example` scope contradiction: either document the other database env vars `web/src/lib/db.ts` already consumes (`DB_SSL` and `NEON_SSL`) or narrow the Goal/Steps/Acceptance language so it no longer claims to document the "full set" of database env vars from that module.
 
 ### Low
 - [ ] None.
