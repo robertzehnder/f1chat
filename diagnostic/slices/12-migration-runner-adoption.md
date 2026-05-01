@@ -1,8 +1,8 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01
@@ -233,6 +233,23 @@ and confirm every Acceptance criterion checkbox.)
 
 ### Low
 - [x] Clarify where the rollback procedure must live during implementation; `slice-completion note` conflicts with the production-facing nature of the change and does not identify a durable repo artifact.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-05-01T22:56:29Z, so no stale-state note is required.
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the rollback acceptance check `post-revert pg_matviews count matching count(plan_changes) - 1` with an object-level assertion tied to the specific reverted head change; the current formula is wrong because plan changes and materialized views are not 1:1, so it can fail on correct rollback or pass with leftover objects.
+
+### Medium
+- [ ] Add an explicit post-deploy gate command that proves the acceptance criterion “every change in `sqitch.plan` is deployed” instead of relying on `sqitch verify`; the listed gates never run a status/log check after `bash scripts/init_db.sh`, so that criterion is not currently testable from the gate block.
+- [ ] Remove `|| true` from the “sqitch project is well-formed and plan parses” sanity gate or rewrite the command/comment so the gate has a real pass/fail condition; as written it masks malformed-project failures while claiming to validate them.
+
+### Low
+- [ ] None.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-05-01T22:56:29Z, so no stale-state note is required.
