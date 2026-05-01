@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T11:29:24-04:00
+updated: 2026-05-01T11:36:30-04:00
 ---
 
 ## Goal
@@ -98,15 +98,58 @@ psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql
 # below B (its current baseline grade — Q30's routing/template defect is OUT OF SCOPE
 # and handed to a future slice).
 #
-# IMPORTANT: this block uses an explicit `bash -euo pipefail` shebang and a real
-# array for TARGET_IDS so it word-splits identically under bash and zsh (the prior
-# `TARGET_IDS="19 20 …"` form silently passed one argv element under zsh). The
-# `set -euo pipefail` makes the block fail fast — a subset-generation or
-# healthcheck:chat failure must abort gate 5 instead of letting the final
-# acceptance check fall back to a stale artifact.
+# IMPORTANT — gate-5 self-containment requirements (round-2 implementation-audit fix):
+#   - Block uses an explicit `bash -euo pipefail` heredoc so it runs identically under
+#     bash and zsh (the prior `TARGET_IDS="19 20 …"` form silently passed one argv
+#     element under zsh) and aborts on the first non-zero exit.
+#   - `TARGET_IDS` is a real bash array, expanded as `"${TARGET_IDS[@]}"`.
+#   - The block STARTS its own `next dev` instance on a free port (3000 is commonly
+#     held by an unrelated Vite app in this environment, so the gate skips it and
+#     picks the first free port from {3001, 3010, 3030, 3050}), polls
+#     `/api/admin/perf-summary` for readiness, exports the matching
+#     `OPENF1_CHAT_BASE_URL`, and tears the server down on any exit. This eliminates
+#     the round-1-revision failure mode where `npm run healthcheck:chat` defaulted to
+#     `http://127.0.0.1:3000` and produced a fetch-failed artifact full of grade C.
+#   - Requires `ANTHROPIC_API_KEY` and `DATABASE_URL` to be exported before invocation.
 bash -euo pipefail <<'GATE5'
 SLICE_DATE=$(date -u +%Y-%m-%d)
 TARGET_IDS=(19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37)
+
+PORT=
+for candidate in 3001 3010 3030 3050; do
+  if ! lsof -nP -iTCP:"$candidate" -sTCP:LISTEN >/dev/null 2>&1; then
+    PORT="$candidate"
+    break
+  fi
+done
+if [ -z "$PORT" ]; then
+  echo "gate 5: no free port from {3001, 3010, 3030, 3050}"
+  exit 1
+fi
+export OPENF1_CHAT_BASE_URL="http://127.0.0.1:${PORT}"
+DEV_LOG="$(mktemp -t gate5-next-dev.XXXXXX.log)"
+( cd web && PORT="$PORT" HOSTNAME=127.0.0.1 npm run dev ) >"$DEV_LOG" 2>&1 &
+DEV_PID=$!
+trap 'kill -TERM "$DEV_PID" 2>/dev/null || true; wait "$DEV_PID" 2>/dev/null || true; rm -f "$DEV_LOG"' EXIT
+
+ready=0
+for _ in $(seq 1 120); do
+  if curl -fsS -o /dev/null "${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary"; then
+    ready=1; break
+  fi
+  if ! kill -0 "$DEV_PID" 2>/dev/null; then
+    echo "gate 5: next dev exited before becoming ready (log: $DEV_LOG)"
+    sed -n '1,80p' "$DEV_LOG" >&2 || true
+    exit 1
+  fi
+  sleep 1
+done
+if [ "$ready" != "1" ]; then
+  echo "gate 5: next dev on ${OPENF1_CHAT_BASE_URL} did not become ready within 120s (log: $DEV_LOG)"
+  sed -n '1,80p' "$DEV_LOG" >&2 || true
+  exit 1
+fi
+
 node -e '
   const fs = require("fs");
   const all = JSON.parse(fs.readFileSync("web/scripts/chat-health-check.questions.json", "utf8"));
@@ -257,6 +300,52 @@ The slice's actual diagnosis path is unchanged: the round-1 implementation audit
 **Files changed by this round-1 revision (still strictly within the slice's "Changed files expected"):**
 - `diagnostic/slices/11-valid-lap-policy-v2.md` — gate-5 command block rewritten to bash heredoc + array, frontmatter `updated` bumped, and this round-1 revision subsection appended.
 - `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` — overwritten with the fresh re-grade output from the fixed gate-5 block.
+
+No source SQL/UI/template files were modified by this revision either; `sql/006_semantic_lap_layer.sql`, `sql/008_core_build_schema.sql`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/deterministicSql/pace.ts` remain untouched.
+
+### Round-2 implementation-audit revision (2026-05-01)
+
+The round-2 implementation audit (`Audit verdict` section below) marked the slice REVISE because the gate-5 rerun artifact recorded `Q19=C…Q29=C, Q30=C, Q31=C…Q37=C`. Inspecting the rows showed every row was `"ok": false, "httpStatus": 0, "answer": "fetch failed", "adequacyReason": "Health check request failed before a response was returned."` — no `next dev` instance was listening on the gate's hardcoded `OPENF1_CHAT_BASE_URL` default of `http://127.0.0.1:3000`. The slice's prior gate-5 block assumed an externally started dev server but the auditor (correctly) ran the gate verbatim, so the fetch failed and `chat-health-check.mjs` recorded grade C for every row.
+
+This was a gate-self-containment defect, not a regression in the answer pipeline: when run with a live dev server (round-1 revision), Q19–Q29 + Q31–Q37 graded A and Q30 graded B; without one (round-2 audit), every row is grade C from a fetch failure. The slice's diagnosis (no SQL contamination, Q30 routing/template hand-off) is unchanged.
+
+**Fix applied to the gate-5 block in this slice file:**
+- Made gate 5 self-contained: it now picks the first free port from `{3001, 3010, 3030, 3050}` (skipping 3000, which is held by an unrelated Vite app in this environment), starts `( cd web && PORT=$PORT HOSTNAME=127.0.0.1 npm run dev )` in the background, polls `${OPENF1_CHAT_BASE_URL}/api/admin/perf-summary` for up to 120 seconds, exports the matching `OPENF1_CHAT_BASE_URL`, runs the subset healthcheck against it, then tears the dev server down via `trap … EXIT`. The trap also fires on `set -e` early exits (e.g. the readiness probe timing out), so a partial gate run can never leak a `next dev` process.
+- Added a fast-fail path: if `next dev` exits before the readiness probe succeeds, gate 5 prints the first 80 lines of the dev-server log and exits 1 instead of continuing into a failed `npm run healthcheck:chat` and producing another fetch-failed artifact.
+- Documented the new requirements in the gate-5 comment block: gate 5 now requires only `ANTHROPIC_API_KEY` and `DATABASE_URL` to be exported; the auditor no longer has to pre-start a dev server or set `OPENF1_CHAT_BASE_URL`.
+
+The slice's "Required services / env" line about pre-starting `npm run dev` is therefore now informational for ad-hoc reruns, not a hard prerequisite for gate 5 — the gate handles its own service lifecycle.
+
+**Fresh gate 5 run (executed end-to-end with the self-contained block, against the gates-1-4 state on this branch):**
+- Gate 5 selected `PORT=3001` (3000 was held by an unrelated Vite app `node /Users/robertzehnder/Documents/coding/infringement-analysis/frontend/node_modules/.bin/vite`; 3001 was free).
+- `next dev` came up at `http://127.0.0.1:3001` and the perf-summary endpoint returned 200 within the readiness window.
+- Subset file written to `web/scripts/chat-health-check.questions.11-valid-lap-policy-v2.json` (19 questions, generated from `web/scripts/chat-health-check.questions.json`).
+- `npm run healthcheck:chat -- --questions scripts/chat-health-check.questions.11-valid-lap-policy-v2.json` ran 19/19 questions to completion.
+- Raw log: `web/logs/chat_health_check_2026-05-01T15-36-05-995Z.json` → copied to `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` (overwrites the prior round-1 artifact at the same path).
+- Acceptance script printed: `OK: regression-protection set Q19-Q29 + Q31-Q37 remain at A, Q30 not regressed below B`.
+- Per-question grades from the fresh artifact (all rows `ok=true`, `httpStatus=200`, `generationSource=deterministic_template`): Q19=A, Q20=A, Q21=A, Q22=A, Q23=A, Q24=A, Q25=A, Q26=A, Q27=A, Q28=A, Q29=A, Q30=B, Q31=A, Q32=A, Q33=A, Q34=A, Q35=A, Q36=A, Q37=A.
+- Q30 hand-off evidence preserved in this fresh artifact: Q30's `generationNotes=template=max_leclerc_lap_pace_summary | session_pin_verified(session_key=9839)` (the lap-pace template the deterministic router selected for a sector-times question — the routing/template defect handed off to a future slice).
+- `next dev` torn down by the gate's `trap … EXIT` (the gate's parent shell exited 0; `lsof -nP -iTCP:3001 -sTCP:LISTEN` is empty afterwards).
+
+**Fresh gate exit codes (round-2 revision, all 0):**
+
+| Gate | Command | Exit |
+|---|---|---:|
+| 1 | `cd web && npm run build` | 0 |
+| 2 | `cd web && npm run typecheck` | 0 |
+| 3 | `bash scripts/loop/test_grading_gate.sh` | 0 (PASS — `slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`) |
+| 4a | `psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` | 0 |
+| 4b | `psql "$DATABASE_URL" -f sql/010_laps_enriched_mat.sql` (TRUNCATE+INSERT, 167172 rows) | 0 |
+| 4c | `psql "$DATABASE_URL" -f sql/009_driver_session_summary_mat.sql` (5436 rows) | 0 |
+| 4d | `psql "$DATABASE_URL" -f sql/011_stint_summary_mat.sql` (20654 rows) | 0 |
+| 4e | `psql "$DATABASE_URL" -f sql/013_race_progression_summary_mat.sql` (17864 rows) | 0 |
+| 4f | `psql "$DATABASE_URL" -f sql/017_lap_phase_summary_mat.sql` (167172 rows) | 0 |
+| 4g | `psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql` (9414 rows) | 0 |
+| 5 | gate-5 `bash -euo pipefail <<'GATE5' … GATE5` block (self-start `next dev` → readiness probe → subset-build → `npm run healthcheck:chat` → artifact copy → acceptance node script → trap-driven `next dev` teardown) | 0 |
+
+**Files changed by this round-2 revision (still strictly within the slice's "Changed files expected"):**
+- `diagnostic/slices/11-valid-lap-policy-v2.md` — gate-5 block rewritten to self-start `next dev`, frontmatter `updated` bumped, this round-2 revision subsection appended.
+- `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` — overwritten with the fresh re-grade output from the self-contained gate-5 block (this time with real `httpStatus=200` rows and the documented A/B grades).
 
 No source SQL/UI/template files were modified by this revision either; `sql/006_semantic_lap_layer.sql`, `sql/008_core_build_schema.sql`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/deterministicSql/pace.ts` remain untouched.
 
