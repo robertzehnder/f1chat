@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T11:20:00-04:00
+updated: 2026-05-01T11:20:27-04:00
 ---
 
 ## Goal
@@ -97,11 +97,18 @@ psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql
 # each remain A (no regression vs the 2026-04-30 baseline); Q30 must not regress
 # below B (its current baseline grade — Q30's routing/template defect is OUT OF SCOPE
 # and handed to a future slice).
+#
+# IMPORTANT: this block uses an explicit `bash -euo pipefail` shebang and a real
+# array for TARGET_IDS so it word-splits identically under bash and zsh (the prior
+# `TARGET_IDS="19 20 …"` form silently passed one argv element under zsh). The
+# `set -euo pipefail` makes the block fail fast — a subset-generation or
+# healthcheck:chat failure must abort gate 5 instead of letting the final
+# acceptance check fall back to a stale artifact.
+bash -euo pipefail <<'GATE5'
 SLICE_DATE=$(date -u +%Y-%m-%d)
-TARGET_IDS="19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37"
+TARGET_IDS=(19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37)
 node -e '
   const fs = require("fs");
-  const path = require("path");
   const all = JSON.parse(fs.readFileSync("web/scripts/chat-health-check.questions.json", "utf8"));
   const ids = new Set(process.argv.slice(1).map(Number));
   const subset = all.filter(q => ids.has(Number(q.id)));
@@ -113,7 +120,7 @@ node -e '
     "web/scripts/chat-health-check.questions.11-valid-lap-policy-v2.json",
     JSON.stringify(subset, null, 2) + "\n"
   );
-' $TARGET_IDS
+' "${TARGET_IDS[@]}"
 ( cd web && npm run healthcheck:chat -- --questions scripts/chat-health-check.questions.11-valid-lap-policy-v2.json )
 LATEST_JSON=$(ls -t web/logs/chat_health_check_*.json 2>/dev/null | grep -v '\.summary\.json$' | head -1)
 test -n "$LATEST_JSON" || { echo "no raw chat_health_check_<stamp>.json produced"; exit 1; }
@@ -142,6 +149,7 @@ node -e '
   if (fails.length) { console.error(fails.join("\n")); process.exit(1); }
   console.log("OK: regression-protection set Q19-Q29 + Q31-Q37 remain at A, Q30 not regressed below B");
 '
+GATE5
 ```
 
 ## Acceptance criteria
@@ -164,6 +172,8 @@ Rollback: `git revert <commit>`.
 
 **Commits on this branch (since `integration/perf-roadmap`):**
 - `55dfdb4` — slice 11-valid-lap-policy-v2: no-SQL-change diagnosis + gate-5 regression-protection re-grade (this commit's parent on integration is `8304065 [slice:11-valid-lap-policy-v2][plan-approved]`).
+- `f2798f9` — slice 11-valid-lap-policy-v2: record commit hash in slice-completion note.
+- `657a1cd` — slice 11-valid-lap-policy-v2: fix gate-5 zsh executability + fresh re-grade (round-1 implementation-audit revision; bash heredoc + array for TARGET_IDS, fresh gate-5 artifact).
 
 **Diagnosis path: no-SQL-change.** Per step 3 of the plan: "If no contamination is found that warrants a change, the slice may complete with no SQL change." Both diagnosis prongs were exercised and yielded no in-scope SQL change for this slice:
 
@@ -210,6 +220,45 @@ Acceptance script printed: `OK: regression-protection set Q19-Q29 + Q31-Q37 rema
 - [x] Slice-completion note records the diagnosis (no contamination class fixed; Q30 routing/template hand-off with `generationNotes=template=max_leclerc_lap_pace_summary` evidence).
 
 **Q30 hand-off:** future slice should fix deterministic-template routing in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts` so a sector-times question (Q30) routes to a sector-times template instead of `max_leclerc_lap_pace_summary`. Evidence: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` Q30 row, `generationNotes=template=max_leclerc_lap_pace_summary | session_pin_verified(session_key=9839)`.
+
+### Round-1 implementation-audit revision (2026-05-01)
+
+The round-1 implementation audit (`Audit verdict` section below) marked the slice REVISE because the gate-5 command block was not executable under the repo's `zsh` login shell: `TARGET_IDS="19 20 …"` with `node -e '…' $TARGET_IDS` does not word-split under zsh, so the subset-generation node script received one `NaN` argument and errored with `missing ids in canonical questions file`. The block also lacked a fail-fast contract, so the rest of gate 5 could continue against whatever stale `chat_health_check_*.json` happened to be on disk.
+
+**Fix applied to the gate-5 block in this slice file:**
+- Wrapped gate 5's commands in an explicit `bash -euo pipefail <<'GATE5' … GATE5` heredoc so it runs under bash regardless of the caller's shell, and aborts on the first non-zero exit. This addresses the audit's "fix gate 5 to be executable in the repo's `zsh` environment and fail fast on subset-generation / `healthcheck:chat` errors" requirement.
+- Replaced the space-delimited string `TARGET_IDS="19 20 …"` with a real bash array `TARGET_IDS=(19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37)` and pass it to `node -e` as `"${TARGET_IDS[@]}"`. The array form word-splits identically under bash and zsh (validated empirically by the rerun below).
+
+The slice's actual diagnosis path is unchanged: the round-1 implementation audit's gate exit codes for gates 1–4 were already PASS, and the gate-5 acceptance result is unchanged in substance (Q19–Q29 + Q31–Q37 = A, Q30 = B, no regression). Only the executable form of gate 5 changed; no SQL/UI/template files were touched.
+
+**Fresh gate 5 run (executed end-to-end with the fixed block, against the just-applied gate-4 mats):**
+- Subset file written to `web/scripts/chat-health-check.questions.11-valid-lap-policy-v2.json` (19 questions, generated from `web/scripts/chat-health-check.questions.json`).
+- `npm run healthcheck:chat -- --questions scripts/chat-health-check.questions.11-valid-lap-policy-v2.json` ran against a freshly started `next dev` instance at `http://127.0.0.1:3000`.
+- Raw log: `web/logs/chat_health_check_2026-05-01T15-24-35-153Z.json` → copied to `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` (overwrites the prior round-1 artifact at the same path).
+- Acceptance script printed: `OK: regression-protection set Q19-Q29 + Q31-Q37 remain at A, Q30 not regressed below B`.
+- Per-question grades from the fresh artifact: Q19=A, Q20=A, Q21=A, Q22=A, Q23=A, Q24=A, Q25=A, Q26=A, Q27=A, Q28=A, Q29=A, Q30=B, Q31=A, Q32=A, Q33=A, Q34=A, Q35=A, Q36=A, Q37=A.
+
+**Fresh gate exit codes (round-2, all 0):**
+
+| Gate | Command | Exit |
+|---|---|---:|
+| 1 | `cd web && npm run build` | 0 |
+| 2 | `cd web && npm run typecheck` | 0 |
+| 3 | `bash scripts/loop/test_grading_gate.sh` | 0 (PASS — `slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`) |
+| 4a | `psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` | 0 |
+| 4b | `psql "$DATABASE_URL" -f sql/010_laps_enriched_mat.sql` (TRUNCATE+INSERT, 167172 rows) | 0 |
+| 4c | `psql "$DATABASE_URL" -f sql/009_driver_session_summary_mat.sql` (5436 rows) | 0 |
+| 4d | `psql "$DATABASE_URL" -f sql/011_stint_summary_mat.sql` (20654 rows) | 0 |
+| 4e | `psql "$DATABASE_URL" -f sql/013_race_progression_summary_mat.sql` (17864 rows) | 0 |
+| 4f | `psql "$DATABASE_URL" -f sql/017_lap_phase_summary_mat.sql` (167172 rows) | 0 |
+| 4g | `psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql` (9414 rows) | 0 |
+| 5 | gate-5 `bash -euo pipefail <<'GATE5' … GATE5` block (subset-build → `npm run healthcheck:chat` → artifact copy → acceptance node script) | 0 |
+
+**Files changed by this round-1 revision (still strictly within the slice's "Changed files expected"):**
+- `diagnostic/slices/11-valid-lap-policy-v2.md` — gate-5 command block rewritten to bash heredoc + array, frontmatter `updated` bumped, and this round-1 revision subsection appended.
+- `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` — overwritten with the fresh re-grade output from the fixed gate-5 block.
+
+No source SQL/UI/template files were modified by this revision either; `sql/006_semantic_lap_layer.sql`, `sql/008_core_build_schema.sql`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/deterministicSql/pace.ts` remain untouched.
 
 ## Audit verdict
 
