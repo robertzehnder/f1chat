@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T14:05:00Z
+updated: 2026-05-01T13:49:47Z
 ---
 
 ## Goal
@@ -217,3 +217,17 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T13:24:14Z`).
 - Current validity-policy columns in `core.valid_lap_policy` / `core_build.laps_enriched.is_valid` cover pit-out, pit-in, sector-data, compound-known, and slick-compound checks, but no SC/deleted-lap toggles yet (`sql/006_semantic_lap_layer.sql:50-67,273-330`; `sql/008_core_build_schema.sql:7-63`).
+
+## Plan-audit verdict (round 4)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Resolve the no-SQL-change path contradiction: step 4 says to skip DB apply/re-materialization entirely when step 3 makes no SQL edits, but the acceptance criteria still require gate 4 to run and describe it as a mandatory no-op re-apply; make the step, gate block, and acceptance text agree on one executable behavior.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T13:24:14Z`).
