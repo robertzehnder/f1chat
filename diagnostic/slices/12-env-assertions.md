@@ -1,11 +1,11 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T20:59:22Z
+updated: 2026-05-01T21:10:00Z
 ---
 
 ## Goal
@@ -136,6 +136,23 @@ No production state, schema, or external service is touched, so the rollback is 
 - [x] Make the goal, test plan, and acceptance criteria consistently cover all non-`DB_*` branches in `web/src/lib/db.ts`: add explicit slice-local proof that `assertLocalDockerDb` early-returns when `DATABASE_URL` or `NEON_DB_HOST` is set, not only when `NEON_DATABASE_URL` is set.
 - [x] Fix the diff-scope bookkeeping: implementation must update `diagnostic/slices/12-env-assertions.md` when it flips the slice to `awaiting_audit`, so include the slice file in `## Changed files expected` and stop asserting that the diff contains exactly the current three files.
 - [x] Align the diff acceptance check with repo convention by replacing `git diff --stat main...HEAD` with a scope check against `integration/perf-roadmap...HEAD` (using `--name-only`, per loop guidance).
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T20:49:40Z`).
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] None.
+
+### Medium
+- [ ] Align the Goal text with `web/src/lib/db.ts` branch selection by naming `DATABASE_URL` alongside `NEON_DATABASE_URL`/`NEON_DB_HOST`; as written, "no `NEON_*` URL/host is set" does not imply the local `DB_*` branch because `DATABASE_URL` still bypasses it.
+- [ ] Preserve or explicitly document the still-supported `DATABASE_URL` and `NEON_DB_*` branches in `.env.example`, or narrow the slice claim from "document the full set of database-env vars"; the current Step 4 would replace the existing `NEON_DB_HOST` block while the code and tests still depend on that branch.
 
 ### Low
 - [ ] None.
