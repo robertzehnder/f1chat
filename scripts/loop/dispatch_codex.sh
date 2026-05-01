@@ -79,7 +79,14 @@ trap 'rm -f "$worktree_path_file" "$inline_payload"' EXIT
     echo "Files changed: $diff_files. Diff total lines: $diff_lines (cap=$DIFF_LINE_CAP)."
     echo
     echo '```diff'
-    git diff integration/perf-roadmap...HEAD | head -n "$DIFF_LINE_CAP"
+    # Use a temp file to avoid SIGPIPE: under `set -o pipefail`, when head
+    # reads its line cap and closes the pipe, git diff is killed by SIGPIPE
+    # (exit 141) and pipefail propagates it, aborting the subshell.
+    # Observed first on slice 11-rerun-benchmark-baseline (4731 diff lines).
+    diff_tmp=$(mktemp -t codex_audit_diff.XXXXXX)
+    git diff integration/perf-roadmap...HEAD > "$diff_tmp" 2>/dev/null || true
+    head -n "$DIFF_LINE_CAP" "$diff_tmp"
+    rm -f "$diff_tmp"
     if [[ "$diff_lines" -gt "$DIFF_LINE_CAP" ]]; then
       echo
       echo "[diff truncated at $DIFF_LINE_CAP lines — re-run \`git diff\` yourself if you need more]"
