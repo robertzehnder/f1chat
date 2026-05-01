@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:15:02Z
+updated: 2026-05-01T19:30:00Z
 ---
 
 ## Goal
@@ -106,8 +106,12 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
 
 ## Gate commands
 ```bash
-cd web && npm run build
-cd web && npm run typecheck
+# Each `cd web` runs in its own subshell so the next gate starts back at
+# repo root; otherwise gate 2's `cd web` would resolve to `web/web/` and
+# the later root-relative paths (`scripts/loop/...`, `diagnostic/...`)
+# would break.
+( cd web && npm run build )
+( cd web && npm run typecheck )
 bash scripts/loop/test_grading_gate.sh
 
 # Decisions-block gate: prove step 1 was actually performed and the
@@ -128,10 +132,16 @@ NEWEST="$(ls -t diagnostic/artifacts/healthcheck/*.json 2>/dev/null | head -1)"
 
 # Canonical-shape gate: prove the regenerated artifact is a single JSON
 # object (not a top-level array, and not a rows-only file with the summary
-# split into a `.summary.json` sidecar) carrying the keys update_state.sh
-# expects. This blocks the round-6 failure mode where the grader emits
-# a rows-array + sidecar and the schema-consumer gate then trips on
-# `'list' object has no attribute 'get'`.
+# split into a `.summary.json` sidecar) carrying EXACTLY the keys
+# declared in `## Decisions` (`Canonical artifact top-level shape`).
+# Extra top-level keys fail the gate so the artifact contract is exactly
+# testable. Additionally, fail if any `*.summary.json` sidecar exists
+# under `diagnostic/artifacts/healthcheck/` (the canonical multi-axis
+# artifact is a single in-tree file). This blocks the round-6 failure
+# mode where the grader emits a rows-array + sidecar and the
+# schema-consumer gate then trips on `'list' object has no attribute 'get'`.
+SIDECARS="$(ls diagnostic/artifacts/healthcheck/*.summary.json 2>/dev/null || true)"
+[[ -z "$SIDECARS" ]] || { echo "FAIL: forbidden *.summary.json sidecar(s) present under diagnostic/artifacts/healthcheck/: $SIDECARS"; exit 1; }
 python3 - "$REGRADE_ARTIFACT" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -139,9 +149,14 @@ if not isinstance(d, dict):
     print(f"FAIL: regrade artifact root is {type(d).__name__}, expected dict")
     sys.exit(1)
 required_top = {"generatedAt", "sourceFile", "rubricPath", "gradingModel", "results", "summary", "actionable"}
-missing = required_top - set(d.keys())
+got_top = set(d.keys())
+missing = required_top - got_top
 if missing:
     print(f"FAIL: regrade artifact missing top-level keys: {sorted(missing)}")
+    sys.exit(1)
+extra = got_top - required_top
+if extra:
+    print(f"FAIL: regrade artifact has unexpected top-level keys: {sorted(extra)} (canonical shape allows only {sorted(required_top)})")
     sys.exit(1)
 if not isinstance(d["results"], list):
     print(f"FAIL: regrade artifact 'results' is {type(d['results']).__name__}, expected list")
@@ -349,10 +364,10 @@ fi
 **Status: REVISE**
 
 ### High
-- [ ] Rewrite the `## Gate commands` block so every `web` command runs in a subshell or otherwise restores the repo-root cwd before the next gate. As written, the first line `cd web && npm run build` leaves the shell in `web/`, so the next `cd web && npm run typecheck` resolves to `web/web` and later root-relative paths like `scripts/loop/test_grading_gate.sh` / `diagnostic/...` break when the block is executed as written.
+- [x] Rewrite the `## Gate commands` block so every `web` command runs in a subshell or otherwise restores the repo-root cwd before the next gate. As written, the first line `cd web && npm run build` leaves the shell in `web/`, so the next `cd web && npm run typecheck` resolves to `web/web` and later root-relative paths like `scripts/loop/test_grading_gate.sh` / `diagnostic/...` break when the block is executed as written.
 
 ### Medium
-- [ ] Align the canonical-artifact gate coverage with the acceptance text that says the regenerated artifact top-level keys are exactly `{generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable}` and that no `*.summary.json` sidecar exists under `diagnostic/artifacts/healthcheck/`. The current canonical-shape gate only checks that those keys are present as a subset and does not fail on an extra in-tree sidecar, so the stated contract is not fully testable.
+- [x] Align the canonical-artifact gate coverage with the acceptance text that says the regenerated artifact top-level keys are exactly `{generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable}` and that no `*.summary.json` sidecar exists under `diagnostic/artifacts/healthcheck/`. The current canonical-shape gate only checks that those keys are present as a subset and does not fail on an extra in-tree sidecar, so the stated contract is not fully testable.
 
 ### Low
 
