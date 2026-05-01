@@ -1,11 +1,11 @@
 ---
 slice_id: 11-residual-raw-table-regressions
 phase: 11
-status: pending
-owner: claude
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T01:30:00-04:00
+updated: 2026-05-01T08:46:30-04:00
 ---
 
 ## Goal
@@ -161,7 +161,105 @@ node -e '
 Rollback: `git revert <commit>`. The targeted re-grade gate is LLM-graded; per Decisions, transient grading noise is handled by re-running the gate once, not by lowering the bar.
 
 ## Slice-completion note
-(filled by Claude)
+
+Branch: `slice/11-residual-raw-table-regressions` (off `integration/perf-roadmap`, base `b02b150` plan-pass-with-deferred commit).
+
+**Status: BLOCKED** — escalating to `owner: user` per slice Decisions. Acceptance criterion (a) passes in both gate-3 runs; acceptance criterion (b) fails persistently on Q7 (a same-category previously-A id). This slice is on the **no-source-change branch** of Step 2, so there is no "fix to revise" per the rerun-rule in Decisions; the only paths forward are out of slice scope.
+
+### Step 1 — IDs locked
+Re-derived from `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` exactly as the slice prescribes: targeted IDs are **Q2, Q10, Q30**. Categories cross-checked against `web/scripts/chat-health-check.questions.json`: Q2 and Q10 are `Session discovery and metadata`; Q30 is `Head-to-head driver comparison`. Subset of all questions in those two categories has 19 rows (Q1–Q10 plus Q29–Q37).
+
+### Step 2 — Diagnosis (raw-table regex on each targeted row's `sql`)
+
+For every targeted ID, the executed SQL touches **only `core.*` matviews**; the `\bf1\.[a-z_]+\b` regex matches **0** times in each row. Diagnostic command (run from worktree root):
+
+```bash
+node -e '
+  const rows = require("./diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json");
+  const TARGET_IDS = new Set([2, 10, 30]);
+  const RAW = /\bf1\.[a-z_]+\b/g;
+  for (const r of rows.filter(x => TARGET_IDS.has(Number(x.id)))) {
+    const sql = r.sql || "";
+    const matches = sql.match(RAW) || [];
+    console.log("Q" + r.id, "raw_f1_hits=" + matches.length);
+  }
+'
+# Output: Q2 raw_f1_hits=0 / Q10 raw_f1_hits=0 / Q30 raw_f1_hits=0
+```
+
+Per-ID findings:
+
+- **Q2 — `Which sessions in the warehouse are Race vs Qualifying vs Practice?`** (category: `Session discovery and metadata`). SQL is a single `SELECT … FROM core.sessions ORDER BY session_type, year, date_start LIMIT 200` with a `CASE WHEN LOWER(session_name) LIKE '%race%' …` classifier and `COUNT(*) OVER (PARTITION BY …)` window. No `f1.*` tables. Prior `answer_grade_reason: "Answer quality gaps: non_generic_answer."` and empty `root_cause_labels`. The B grade is therefore an answer-synthesis quality / rubric-genericity issue, not a raw-table regression. **No source change required by this slice.**
+- **Q10 — `Which sessions appear to be partially loaded or placeholder sessions?`** (category: `Session discovery and metadata`). SQL is `SELECT … FROM core.sessions s WHERE s.meeting_name IS NULL OR s.meeting_name = '' OR …`, computing `missing_fields` and `missing_field_count`. Only `core.sessions`. No `f1.*` tables. Prior `answer_grade_reason: "Answer quality gaps: non_generic_answer."` and empty `root_cause_labels`. Same conclusion as Q2: synthesis-quality / rubric-genericity, not raw-table. **No source change required by this slice.**
+- **Q30 — `Compare Max Verstappen and Charles Leclerc on sector times in the Abu Dhabi 2025 race session.`** (category: `Head-to-head driver comparison`). SQL is a `WITH lap_data AS (SELECT … FROM core.laps_enriched l LEFT JOIN core.session_drivers d …) SELECT driver_number, full_name, COUNT(*), MIN/AVG/MEDIAN/STDDEV…`. Only `core.laps_enriched` + `core.session_drivers`. No `f1.*` tables. Prior `answer_grade_reason: "Answer quality gaps: sector_summary_matches_metrics."` and `root_cause_labels: ["sector_summary_matches_metrics","synthesis_contradiction"]`. The B grade is a synthesis-quality issue (sector summary text disagreeing with the per-sector metrics rendered alongside it), not a raw-table regression. **No source change required by this slice.**
+
+Step 2's branch (only-`core.*` for every targeted ID) was therefore taken: no source files modified.
+
+### Step 3 — Skipped per Step 2's branch
+No SQL-prompt / answer-synthesis / question-metadata change.
+
+### Step 4 — Targeted re-grade (gate 3) — both consecutive runs
+
+Subset built deterministically: 19 rows (every question in `Session discovery and metadata` ∪ `Head-to-head driver comparison`, which already includes the three targeted IDs). The shell variable `SUBSET` was passed via env-prefix `SUBSET=… node -e …` rather than the trailing `node -e '…' SUBSET="$SUBSET"` form that the slice's gate command literally writes — bash treats the trailing `VAR=val` after a command as positional argv, not as an env assignment, so without the prefix `process.env.SUBSET` is undefined and `fs.writeFileSync` throws. Same intent, same `SUBSET` value (`/tmp/11-residual-subset.questions.json`); only the shell-level invocation is corrected. Flagging here so the auditor can decide whether the plan literal needs a typo-fix in a follow-up.
+
+Run 1 raw output: `web/logs/chat_health_check_2026-05-01T12-40-11-978Z.json`. Run 2 raw output: `web/logs/chat_health_check_2026-05-01T12-41-40-786Z.json`.
+
+| ID | Category | Prior (`11-rerun_2026-04-30.json`) | Run 1 | Run 2 |
+|---:|---|---|---|---|
+| Q2  | Session discovery and metadata    | B (targeted) | **A** | **A** |
+| Q10 | Session discovery and metadata    | B (targeted) | **B** | **B** |
+| Q30 | Head-to-head driver comparison    | B (targeted) | **B** | **B** |
+| Q5  | Session discovery and metadata    | A            | B (regressed) | A (recovered) |
+| Q7  | Session discovery and metadata    | A            | B (regressed) | B (still regressed) |
+
+Acceptance (a): targeted IDs grade A or B in **both** runs (Q2 actually improved A; Q10/Q30 stayed B). PASS.
+
+Acceptance (b): same-category previously-A regression check.
+- Run 1: 2 A→B regressions (Q5, Q7), both with `Answer quality gaps: non_generic_answer.`.
+- Run 2: 1 A→B regression (Q7), same `non_generic_answer` reason.
+
+Per slice Decisions: "if it persists across two consecutive runs, treat it as a real regression and revise the fix or escalate." Q5 did not persist (it recovered to A in run 2 — classic LLM-grading variance). Q7 **persisted across both consecutive runs**, so per the rule it must be treated as a real regression.
+
+### Why this slice cannot fix Q7 in scope
+
+1. Step 2's diagnosis branch is the no-source-change branch (no `f1.*` tables for any targeted ID, so no routing fix to apply).
+2. Q7 is **not a targeted ID** of this slice — it is a same-category previously-A control row. The slice's `## Out of scope` explicitly excludes "Raw-table → contract routing for IDs not in {Q2, Q10, Q30}".
+3. Q7's failure mode (`non_generic_answer` rubric quality gap) is the same one that produced Q2/Q10's B grades in the prior rerun. The prior slice (`slice/11-rerun-benchmark-baseline`, commit `ff9262a`) already documented Q7 as the single per-question regression vs the 2026-04-26 baseline ("Q7 A→B; baseline-grade dimension"), confirming Q7 sits structurally on the rubric's A/B boundary independent of raw-table routing.
+4. Tightening the rubric or the answer-synthesis genericity check is also explicitly out of scope ("Changes to the rubric (`web/scripts/chat-health-check.rubric.json`) or the grader (`web/scripts/chat-health-check-baseline.mjs`)"), and the chat path itself produced no `f1.*` SQL for Q7's category in either run, so an in-scope rerouting change has nothing to land on.
+
+### Escalation recommendation (for the user)
+
+The user has three reasonable paths; this slice cannot pick one without violating its declared scope:
+
+a. **Accept noise + override.** Issue an impl-audit PASS-WITH-DEFERRED noting Q7 is a known fragile A/B-boundary answer (already documented in `slice/11-rerun-benchmark-baseline`'s completion note) and that the no-source-change diagnosis is itself the correct outcome of this slice. The chat path is already on `core.*` for all targeted IDs and for Q7.
+b. **Open a follow-up rubric-tightening slice** that is explicitly scoped to either (i) tighten the `non_generic_answer` quality gap so it does not flap on Q7-shaped marginal answers, or (ii) tighten Q7's expected-answer pattern. Both paths touch `web/scripts/chat-health-check.rubric.json`, which this slice's Out-of-scope list excludes.
+c. **Open a follow-up answer-synthesis slice** that strengthens the `Session discovery and metadata` synthesis prompt to consistently produce non-generic answers — addresses Q2, Q10, and Q7 simultaneously. Touches `web/src/lib/answerSynthesis/**` (in *that* hypothetical slice's scope, not this slice's).
+
+### Gate command exit codes
+
+| Gate | Command | Exit code |
+|---|---|---:|
+| 1a | `cd web && npm run build` | 0 |
+| 1b | `cd web && npm run typecheck` | 0 |
+| 2  | `bash scripts/loop/test_grading_gate.sh` | 0 (`slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`) |
+| 3-prep-r1 | subset JSON build (`SUBSET=/tmp/11-residual-subset.questions.json node -e '…'`) | 0 (`subset rows: 19`) |
+| 3-hc-r1   | `( cd web && OPENF1_CHAT_BASE_URL=http://127.0.0.1:3001 npm run healthcheck:chat -- --questions "$SUBSET" )` (run 1; `PORT=3001 npm run dev` running in `web/` because port 3000 was held by an unrelated Vite process — same precedent as `slice/11-rerun-benchmark-baseline`) | 0 (raw `web/logs/chat_health_check_2026-05-01T12-40-11-978Z.json`) |
+| 3-assert-r1 | targeted+regression node assertion (run 1) | **1** (`same-category A->non-A regressions: 5 A->B, 7 A->B`) |
+| 3-hc-r2   | rerun per Decisions | 0 (raw `web/logs/chat_health_check_2026-05-01T12-41-40-786Z.json`) |
+| 3-assert-r2 | targeted+regression node assertion (run 2) | **1** (`same-category A->non-A regressions: 7 A->B`) |
+
+### Self-check vs acceptance criteria
+
+- [x] Targeted IDs Q2, Q10, Q30 each grade A or B in the gate-3 targeted re-grade — PASS in **both** runs (Q2=A/A, Q10=B/B, Q30=B/B).
+- [ ] No question that was `baselineGrade: "A"` in `11-rerun_2026-04-30.json` and is in the same category as a targeted ID drops below A in the gate-3 targeted re-grade — **FAIL**: Q7 (`Session discovery and metadata`) regressed A→B in both consecutive runs. Per slice Decisions, this is treated as a real regression. The slice's no-source-change branch leaves no in-scope fix to apply, so the slice escalates rather than declares pass.
+- [x] `bash scripts/loop/test_grading_gate.sh` (gate 2) exits 0.
+- [x] `cd web && npm run build` and `cd web && npm run typecheck` (gate 1) exit 0.
+
+### Files changed
+- `diagnostic/slices/11-residual-raw-table-regressions.md` — frontmatter (`status: blocked`, `owner: user`, `updated: 2026-05-01T08:46:30-04:00`) and this Slice-completion note. No source files touched.
+
+Commit hash:
+- (to be filled by the commit step below)
 
 ## Audit verdict
 (filled by Codex)
