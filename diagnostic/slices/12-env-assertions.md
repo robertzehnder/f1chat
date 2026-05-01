@@ -1,8 +1,8 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: ready_to_merge
-owner: user
+status: done
+owner: -
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01T18:55:13-04:00
