@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:03:18Z
+updated: 2026-05-01T19:05:03Z
 ---
 
 ## Goal
@@ -257,6 +257,20 @@ fi
 
 ### Medium
 - [x] Reconcile the legacy-artifact instructions into one implementation path: step 3 and `## Changed files expected` now say `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` is preserved as the legacy baseline and the canonical output is the sibling `11-multi-axis-regrade_<YYYY-MM-DD>.json`, but the `## Decisions` bullet `Pre-rewrite legacy snapshot (Medium-1 resolution)` still says step 3 rewrites `11-rerun_2026-04-30.json` in place; remove the in-place rewrite language or switch the rest of the plan back to that model so the implementer has one artifact contract.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
+
+## Plan-audit verdict (round 6)
+
+**Status: REVISE**
+
+### High
+- [ ] Define the canonical top-level schema of the regenerated healthcheck artifact and make every step/gate/acceptance criterion use that same shape: today the plan requires one `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` file whose rows carry the new axes and whose `summary` is parseable by `scripts/loop/update_state.sh`, but the current offline grader contract writes rows to `chat_health_check_baseline_<stamp>.json` and the summary to a separate `chat_health_check_baseline_<stamp>.summary.json`; without an explicit decision such as `{ results: [...], summary: ..., actionable: ... }` in the canonical artifact (or an explicit sidecar-reading consumer rewrite), the implementer can satisfy one half of the plan and still fail the schema-consumer gate.
+
+### Medium
 
 ### Low
 
