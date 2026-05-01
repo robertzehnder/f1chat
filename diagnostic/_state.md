@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-05-01T19:39:40Z
+# Project state — last updated: 2026-05-01T19:41:25Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
