@@ -1,11 +1,11 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01
+updated: 2026-05-01T20:59:22Z
 ---
 
 ## Goal
@@ -15,7 +15,7 @@ Concretely:
 1. Add `assertLocalDockerDb(env)` to `web/src/lib/db.ts` that, when `NODE_ENV !== "production"` AND no `NEON_*` URL/host is set (i.e. the local-Docker `DB_*` branch will be taken in `createPool()`), asserts `DB_HOST` resolves to a local/Docker-internal target (`127.0.0.1`, `localhost`, `::1`, `db`, `postgres`). Throw with a clear message naming the offending host and the allowed set.
 2. Wire that assertion into the same module-load site that currently invokes `assertPooledDatabaseUrl(process.env)` (`web/src/lib/db.ts:131`) so it runs once at startup before `createPool()`.
 3. Document the full set of database-env vars in root `.env.example`: keep existing `DB_*` defaults; uncomment-style placeholder lines for `NEON_DATABASE_URL` (pooled — Phase 6 contract) and `NEON_DATABASE_URL_REPLICA` (Phase 12 read-replica contract); brief 1-line comment per group naming the precedence (NEON_* wins over `DATABASE_URL` / `DB_*`).
-4. Add focused unit tests in a NEW file `web/scripts/tests/local-docker-db-assertion.test.mjs` mirroring the transpile-stub pattern of `web/scripts/tests/pooled-url-assertion.test.mjs`. Cover: throws on remote host (e.g. `db.example.com`) when local branch active; passes for each allowed host; no-ops when `NODE_ENV=production`; no-ops when any `NEON_*` URL/host is set (Neon branch will be chosen, not Docker branch).
+4. Add focused unit tests in a NEW file `web/scripts/tests/local-docker-db-assertion.test.mjs` mirroring the transpile-stub pattern of `web/scripts/tests/pooled-url-assertion.test.mjs`. Cover: throws on remote host (e.g. `db.example.com`) when local branch active; passes for each allowed host; no-ops when `NODE_ENV=production`; no-ops when **each** of `NEON_DATABASE_URL`, `DATABASE_URL`, or `NEON_DB_HOST` is set (each one drives a non-`DB_*` branch in `createPool()` per `web/src/lib/db.ts:83-128`, so the assertion must early-return for every one — not only the `NEON_DATABASE_URL` case).
 
 Out of scope for this slice: read-replica pool plumbing (Phase 12 item 1), migration-runner adoption (Phase 12 item 4), and any LLM/`OPENF1_*` env assertions — those are not part of Phase 12's scope per the roadmap and are not gated here.
 
@@ -40,11 +40,13 @@ None — all deliverables and gates are repo-local. Tests use the same in-proces
    - Early-return if any of `env.NEON_DATABASE_URL`, `env.DATABASE_URL`, or `env.NEON_DB_HOST` is non-empty (those branches drive `createPool()`, not the Docker `DB_*` branch).
    - Otherwise, read `env.DB_HOST` (default `"127.0.0.1"`, matching `createPool()` line 119). If trimmed value is not in the allowed set `{"127.0.0.1", "localhost", "::1", "db", "postgres"}`, throw an `Error` whose message names the offending host and lists the allowed set.
 2. Add a second module-load invocation directly after the existing `assertPooledDatabaseUrl(process.env)` line: `assertLocalDockerDb(process.env);`. Export `assertLocalDockerDb` for testability, mirroring `assertPooledDatabaseUrl`.
-3. Add `web/scripts/tests/local-docker-db-assertion.test.mjs`. Reuse the transpile + `pg.stub.mjs` pattern from `pooled-url-assertion.test.mjs` verbatim (same `loadAssertPooledDatabaseUrl`-style helper renamed appropriately, same env-clearing prologue so the module-load calls are no-ops). Required cases:
+3. Add `web/scripts/tests/local-docker-db-assertion.test.mjs`. Reuse the transpile + `pg.stub.mjs` pattern from `pooled-url-assertion.test.mjs` verbatim (same `loadAssertPooledDatabaseUrl`-style helper renamed appropriately, same env-clearing prologue so the module-load calls are no-ops). Required cases — covering every non-`DB_*` branch in `web/src/lib/db.ts:83-128` so the assertion provably defers to each Neon branch:
    - throws when `DB_HOST="db.example.com"` and no `NEON_*`/`DATABASE_URL` is set (local-Docker branch active, remote host).
    - does not throw for each of `127.0.0.1`, `localhost`, `::1`, `db`, `postgres`.
    - does not throw when `NODE_ENV="production"` regardless of `DB_HOST`.
-   - does not throw when `NEON_DATABASE_URL` is set even if `DB_HOST` would otherwise be invalid (Neon branch wins; assertion early-returns).
+   - does not throw when `NEON_DATABASE_URL` is set even if `DB_HOST` would otherwise be invalid (Neon-URL branch wins; assertion early-returns).
+   - does not throw when `DATABASE_URL` is set even if `DB_HOST` would otherwise be invalid (generic-URL branch wins via `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`; assertion early-returns).
+   - does not throw when `NEON_DB_HOST` is set even if `DB_HOST` would otherwise be invalid (Neon-host branch wins; assertion early-returns).
    - does not throw when `DB_HOST` is unset (defaults to `127.0.0.1`).
 4. Update root `.env.example`:
    - Replace the existing one-line NEON comment block with explicit, line-per-var commented placeholders for `NEON_DATABASE_URL` and add a new `NEON_DATABASE_URL_REPLICA` placeholder (commented, since Phase 12 item 1 / read-replica plumbing is a later slice).
@@ -56,6 +58,7 @@ None — all deliverables and gates are repo-local. Tests use the same in-proces
 - `web/src/lib/db.ts` — adds and invokes `assertLocalDockerDb`; exports it.
 - `web/scripts/tests/local-docker-db-assertion.test.mjs` — NEW test file.
 - `.env.example` — documents `NEON_DATABASE_URL`, `NEON_DATABASE_URL_REPLICA`, and the local-Docker block.
+- `diagnostic/slices/12-env-assertions.md` — slice file itself (frontmatter / completion-note / verdict updates as the slice progresses through statuses).
 
 (Note: the previously-listed `web/src/lib/env.ts` and `web/src/app/layout.tsx` are removed from scope — they don't exist / aren't where env assertions live, and the Phase 12 contract is satisfied by extending `db.ts`.)
 
@@ -75,10 +78,10 @@ The two `node --test …` lines are the slice-local proofs that (a) the existing
 
 ## Acceptance criteria
 - [ ] `cd web && npm run build` and `cd web && npm run typecheck` exit 0 on the slice branch.
-- [ ] `cd web && node --test scripts/tests/local-docker-db-assertion.test.mjs` exits 0 with all five named cases passing.
+- [ ] `cd web && node --test scripts/tests/local-docker-db-assertion.test.mjs` exits 0 with all seven named cases passing (including the explicit `DATABASE_URL`-set and `NEON_DB_HOST`-set early-return cases).
 - [ ] `cd web && node --test scripts/tests/pooled-url-assertion.test.mjs` exits 0 (regression guard — adding the second module-load assertion must not break the existing pooler tests).
 - [ ] `bash scripts/loop/test_grading_gate.sh` exits 0 (no new failures vs. `scripts/loop/state/test_grading_baseline.txt`).
-- [ ] `git diff --stat main...HEAD` lists exactly the three files in `## Changed files expected` (no unexpected modifications).
+- [ ] `git diff --name-only integration/perf-roadmap...HEAD` lists only paths from `## Changed files expected` (no unexpected modifications). Per loop convention, scope is checked against the integration branch using `--name-only`; the slice file itself is in the expected list because frontmatter/status updates land on this branch.
 - [ ] `web/src/lib/db.ts` exports `assertLocalDockerDb` and invokes it at module load directly after `assertPooledDatabaseUrl(process.env)`.
 - [ ] `.env.example` contains commented placeholder lines for `NEON_DATABASE_URL` and `NEON_DATABASE_URL_REPLICA`, and a header comment on the local-Docker block.
 
@@ -130,9 +133,9 @@ No production state, schema, or external service is touched, so the rollback is 
 - [ ] None.
 
 ### Medium
-- [ ] Make the goal, test plan, and acceptance criteria consistently cover all non-`DB_*` branches in `web/src/lib/db.ts`: add explicit slice-local proof that `assertLocalDockerDb` early-returns when `DATABASE_URL` or `NEON_DB_HOST` is set, not only when `NEON_DATABASE_URL` is set.
-- [ ] Fix the diff-scope bookkeeping: implementation must update `diagnostic/slices/12-env-assertions.md` when it flips the slice to `awaiting_audit`, so include the slice file in `## Changed files expected` and stop asserting that the diff contains exactly the current three files.
-- [ ] Align the diff acceptance check with repo convention by replacing `git diff --stat main...HEAD` with a scope check against `integration/perf-roadmap...HEAD` (using `--name-only`, per loop guidance).
+- [x] Make the goal, test plan, and acceptance criteria consistently cover all non-`DB_*` branches in `web/src/lib/db.ts`: add explicit slice-local proof that `assertLocalDockerDb` early-returns when `DATABASE_URL` or `NEON_DB_HOST` is set, not only when `NEON_DATABASE_URL` is set.
+- [x] Fix the diff-scope bookkeeping: implementation must update `diagnostic/slices/12-env-assertions.md` when it flips the slice to `awaiting_audit`, so include the slice file in `## Changed files expected` and stop asserting that the diff contains exactly the current three files.
+- [x] Align the diff acceptance check with repo convention by replacing `git diff --stat main...HEAD` with a scope check against `integration/perf-roadmap...HEAD` (using `--name-only`, per loop guidance).
 
 ### Low
 - [ ] None.
