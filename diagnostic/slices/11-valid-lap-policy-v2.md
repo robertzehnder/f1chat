@@ -162,6 +162,9 @@ Rollback: `git revert <commit>`.
 
 **Branch:** `slice/11-valid-lap-policy-v2`
 
+**Commits on this branch (since `integration/perf-roadmap`):**
+- `55dfdb4` — slice 11-valid-lap-policy-v2: no-SQL-change diagnosis + gate-5 regression-protection re-grade (this commit's parent on integration is `8304065 [slice:11-valid-lap-policy-v2][plan-approved]`).
+
 **Diagnosis path: no-SQL-change.** Per step 3 of the plan: "If no contamination is found that warrants a change, the slice may complete with no SQL change." Both diagnosis prongs were exercised and yielded no in-scope SQL change for this slice:
 
 1. **Q30 routing/template defect (step 2, out of scope, hand-off):** confirmed against `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json`. Q30's question is "Compare Max Verstappen and Charles Leclerc on sector times in the Abu Dhabi 2025 race session," but the row records `generationNotes=template=max_leclerc_lap_pace_summary | session_pin_verified(session_key=9839)` — i.e. the deterministic router selected a lap-pace template, not a sector-times template. This is a routing/template-selection defect in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts`, not a contamination of `core.laps_enriched.is_valid`. Per the plan, this is explicitly handed off to a future routing/template slice; Q30 is held to a "must not regress below B" check and was not modified by this slice.
