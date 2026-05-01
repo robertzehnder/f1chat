@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:30:00Z
+updated: 2026-05-01T19:10:43Z
 ---
 
 ## Goal
@@ -322,6 +322,22 @@ fi
 ### Medium
 
 ### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
+
+## Plan-audit verdict (round 7)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Rewrite step 4 so it verifies the target IDs inside the full regenerated artifact instead of saying "Re-grade just the target question IDs": step 3 and the acceptance criteria require one canonical artifact whose `results`, `summary`, and `actionable` cover every row, so the current wording implies a partial regrade flow that conflicts with the slice’s whole-artifact contract.
+- [ ] Add the mandatory moved legacy-artifact path to `## Changed files expected`: the plan now requires `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` to be relocated to `diagnostic/artifacts/healthcheck/legacy/`, but that destination path is not listed even though the audit scope rules require moved/created paths to be named explicitly.
+
+### Low
+- [ ] Reconcile the target-ID scope wording between `## Inputs` ("rows where `answer_grade` is `C` or `semantic_conformance_grade` is `C`") and step 1 ("rows where ... `≠ A`"): pick one target population so the implementer is not left choosing between C-only fixes and all non-A rows.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
