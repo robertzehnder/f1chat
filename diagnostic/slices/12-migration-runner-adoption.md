@@ -1,11 +1,11 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-05-01
 ---
 
 ## Goal
@@ -56,3 +56,22 @@ Production-touching, requires user-approved sentinel before merge. Full rollback
 
 ## Audit verdict
 (filled by Codex)
+
+## Plan-audit verdict (round 1)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace the web-only gate block with migration-runner gates that exercise the declared scope end-to-end in a non-prod database, including applying the migrations, verifying the migrated matview objects exist/refresh correctly, and proving the rollback procedure works.
+- [ ] Replace `Production DATABASE_URL` in Required services / env with the exact non-prod/staging database and deployment prerequisites needed for Step 2, and state the production approval/deploy inputs separately so the implementer does not run first-pass validation against production.
+
+### Medium
+- [ ] Commit to one migration-runner path in the plan and expand Changed files expected to cover the runner-specific config, invocation, and documentation files the implementation will necessarily touch; `sqitch / Atlas / custom python` is too open-ended to audit.
+- [ ] Rewrite the acceptance criteria as command- or artifact-based checks owned by this slice instead of `Implementation works in staging` and a slice-completion note; they must be testable without subjective judgment.
+- [ ] If a grading gate remains, invoke it via `bash scripts/loop/test_grading_gate.sh` rather than raw `cd web && npm run test:grading`, per loop policy.
+
+### Low
+- [ ] Clarify where the rollback procedure must live during implementation; `slice-completion note` conflicts with the production-facing nature of the change and does not identify a durable repo artifact.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-05-01T22:56:29Z, so no stale-state note is required.
