@@ -1,15 +1,17 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T15:05:00-04:00
+updated: 2026-05-01T13:41:10Z
 ---
 
 ## Goal
 Refine the lap-validity policy that governs clean-lap analytics: improve handling of out-laps, in-laps, SC laps, and deleted laps. The policy lives in `core.valid_lap_policy` (default-row driven) and is materialized as the `is_valid` column on `core.laps_enriched`, both defined in `sql/006_semantic_lap_layer.sql`. Downstream summary contracts that depend on `is_valid` filtering are also in scope where the diagnosis shows their output is contaminated by an inadequate validity rule.
+
+**Q30 scope clarification (per round-2 audit):** the 2026-04-30 rerun records Q30 as routed to deterministic template `max_leclerc_lap_pace_summary` (lap-pace), not to a sector-times template. That is a routing/template defect, not a lap-validity contamination, so this slice does **not** commit to lifting Q30. Q30 is held to a regression-only bar (must not drop below its current B grade) and the routing/template fix is handed off to a future slice.
 
 ## Inputs
 - `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (latest healthcheck baseline; supersedes the never-produced 2026-04-26 file).
@@ -17,11 +19,12 @@ Refine the lap-validity policy that governs clean-lap analytics: improve handlin
 - `web/scripts/chat-health-check.questions.json` (canonical id → category mapping).
 
 ### Target question IDs (from `11-rerun_2026-04-30.json`)
-- **Primary lap-policy target (B in latest baseline):** Q30 — "Compare Max Verstappen and Charles Leclerc on sector times in the Abu Dhabi 2025 race session." Root cause logged in the rerun .md: `sector_summary_matches_metrics` — the sector-summary contract that drives this answer is filtered by `core.laps_enriched.is_valid`, so an inadequate validity rule (e.g. failing to exclude SC/deleted laps from sector aggregates) is a plausible source.
-- **Regression-protection set (A in latest baseline, same lap-policy-sensitive scope):**
+- **No primary lift target.** The slice's measurable bar is "no regression on lap-policy-sensitive questions" (see regression-protection set below). Round-2 audit evidence — `generationNotes=template=max_leclerc_lap_pace_summary` for Q30 — shows Q30's B grade is caused by deterministic-template routing to a lap-pace template instead of a sector-times template, which is independent from the validity policy. Q30 is therefore demoted to regression-protection only; lifting Q30 requires a separate routing/template slice.
+- **Regression-protection set (A in latest baseline, lap-policy-sensitive scope):**
   - Lap-pace and fastest-lap category — Q19–Q28 (10 questions, all currently A).
-  - Head-to-head driver comparison category — Q29, Q31–Q37 (8 questions, all currently A; Q30 itself is the primary target above).
-- **Explicitly out of scope (B in latest baseline but unrelated to lap-validity policy — handled by a future Phase-11 slice):** Q2, Q10 from the "Session discovery and metadata" category. Their failure modes (Q2: row-cap truncation in a Race-vs-Quali-vs-Practice count; Q10: 50-row limit on partial-session listing) do not flow through `is_valid`/`core.valid_lap_policy`.
+  - Head-to-head driver comparison category — Q29, Q31–Q37 (8 questions, all currently A).
+- **Regression-protection (current B, must not drop further):** Q30 — held at its current B grade (i.e., gate 5 must not let Q30 drop to C/D). Lifting Q30 to A is **out of scope** because the proximate cause is template routing, not the validity policy.
+- **Explicitly out of scope (B in latest baseline but unrelated to lap-validity policy — handled by a future Phase-11 slice):** Q2, Q10 from the "Session discovery and metadata" category. Their failure modes (Q2: row-cap truncation in a Race-vs-Quali-vs-Practice count; Q10: 50-row limit on partial-session listing) do not flow through `is_valid`/`core.valid_lap_policy`. Q30's routing/template defect is also out of scope and handed off to a future slice.
 
 ## Prior context
 - `diagnostic/_state.md`
@@ -39,18 +42,18 @@ Refine the lap-validity policy that governs clean-lap analytics: improve handlin
 
 ## Steps
 1. Inspect the current `is_valid` rule (`core.valid_lap_policy` defaults + `is_valid` derivation in `sql/006_semantic_lap_layer.sql`) and enumerate the four target signals: out-laps (`is_pit_out_lap`), in-laps (`is_pit_lap` / pit-stop on this lap), SC laps (track-status / safety-car flag), deleted laps (any `deleted` / `lap_deleted` / sanity-band flag carried in `raw.laps` or available via the lap-context summary).
-2. Diagnose Q30 against the rerun answer: confirm whether the sector-summary contract feeding the answer is filtered by `is_valid` and whether its sector aggregates are being polluted by SC/deleted/out-of-band laps. Pull the per-driver rerun answer text from `11-rerun_2026-04-30.json` and compare against the raw sector data to identify the contamination class.
-3. Update `sql/006_semantic_lap_layer.sql` (`core.valid_lap_policy` defaults and/or the `is_valid` boolean expression) so the policy correctly excludes the diagnosed contamination class. Mirror the change in `sql/008_core_build_schema.sql` if and only if the diagnosis shows the `core` schema's lap-clean view family carries the same defect.
-4. Apply the schema change to the dev DB (`psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` and, if touched, `sql/008_core_build_schema.sql`), then refresh the dependent materializations.
-5. Re-grade the slice's targeted questions and the same-category regression-protection set (see Gate commands gate 5) to verify Q30 lifts to A and Q19–Q28 / Q29 / Q31–Q37 remain A.
-6. If diagnosis in step 2 shows Q30 is unrelated to lap-validity (e.g. it is a pure synthesis-formatter bug), record that finding in the slice-completion note, leave the policy unchanged, and explicitly hand Q30 off to a future slice — but still execute gate 5 to prove no regression.
+2. **Routing/template check first (Q30):** before treating Q30 as lap-validity contamination, confirm what the 2026-04-30 rerun already shows — Q30's `generationNotes` records `template=max_leclerc_lap_pace_summary` (a lap-pace template), not a sector-times template. Read the Q30 row in `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` and the routing logic in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts` to verify the routing mismatch. If Q30 is failing because of routing/template selection (the documented case), do **not** modify the validity policy on Q30's behalf; record the finding in the slice-completion note and hand Q30 off to a future routing/template slice. Q30's grade is a regression-only check in gate 5 (must not drop below B).
+3. **Lap-validity contamination check (independent of Q30):** for the lap-policy-sensitive contracts that drive Q19–Q29 and Q31–Q37, audit whether SC laps, deleted laps, in-laps, or out-laps slip past the current `is_valid` rule and contaminate aggregates. If contamination is found that risks regression (or that demonstrably degrades any of these answers in the rerun), update `sql/006_semantic_lap_layer.sql` (`core.valid_lap_policy` defaults and/or the `is_valid` boolean expression) accordingly. Mirror in `sql/008_core_build_schema.sql` only if the `core.laps_clean_*` view family carries the same defect. If no contamination is found that warrants a change, the slice may complete with **no SQL change** and only the slice-file/diagnosis updates committed (still subject to gate 5).
+4. Apply any schema change(s) to the dev DB (`psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` and, if touched, `sql/008_core_build_schema.sql`), then refresh the dependent materializations. Skip if step 3 produced no SQL edits.
+5. Re-grade the lap-policy-sensitive question set (Q19–Q37) per gate 5 to verify regression-protection holds: Q19–Q29 and Q31–Q37 remain at A, and Q30 does not regress below B.
+6. Record the diagnosis in the slice-completion note: which contamination class (if any) was fixed, and the explicit Q30 hand-off to a routing/template slice with its evidence (`generationNotes=template=max_leclerc_lap_pace_summary`).
 
 ## Changed files expected
-- `sql/006_semantic_lap_layer.sql` — `core.valid_lap_policy` default row and/or the `is_valid` boolean expression on `core.laps_enriched`.
+- `sql/006_semantic_lap_layer.sql` — `core.valid_lap_policy` default row and/or the `is_valid` boolean expression on `core.laps_enriched`. Optional: omitted entirely if step 3 finds no contamination class warranting a policy change.
 - `sql/008_core_build_schema.sql` — only if step 3's diagnosis shows the `core.laps_clean_*` view family carries the same defect.
-- `web/src/lib/deterministicSql.ts` and/or `web/src/lib/deterministicSql/pace.ts` — only if the policy change requires the client-side SQL templates to drop or replace ad-hoc `is_pit_out_lap` filters.
-- `diagnostic/slices/11-valid-lap-policy-v2.md` — this slice file (plan + slice-completion note).
-- `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json` — re-grade artifact written by gate 5 (target-set + regression-protection-set re-grade output).
+- `web/src/lib/deterministicSql.ts` and/or `web/src/lib/deterministicSql/pace.ts` — only if the policy change requires the client-side SQL templates to drop or replace ad-hoc `is_pit_out_lap` filters. **NOT** to be edited for Q30 routing/template selection — that defect is out of scope and handed to a future slice.
+- `diagnostic/slices/11-valid-lap-policy-v2.md` — this slice file (plan + slice-completion note); always touched.
+- `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json` — re-grade artifact written by gate 5 (Q19–Q37 regression-protection re-grade output); always produced.
 
 ## Artifact paths
 - `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json` — re-grade output from gate 5 (15-row subset: Q19–Q37; Q30 is the primary target, the rest are regression protection).
@@ -73,9 +76,11 @@ psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql
 # psql "$DATABASE_URL" -f sql/008_core_build_schema.sql
 psql "$DATABASE_URL" -c "REFRESH MATERIALIZED VIEW CONCURRENTLY core.laps_enriched;"
 
-# Gate 5 — re-grade the target question (Q30) and the same-category regression-protection
-# set (Q19–Q29, Q31–Q37) using a filtered questions file built from the canonical mapping.
-# Acceptance: Q30 grades A; Q19–Q29 and Q31–Q37 each grade A (no regression).
+# Gate 5 — re-grade the lap-policy-sensitive question set (Q19–Q37) using a filtered
+# questions file built from the canonical mapping. Acceptance: Q19–Q29 and Q31–Q37
+# each remain A (no regression vs the 2026-04-30 baseline); Q30 must not regress
+# below B (its current baseline grade — Q30's routing/template defect is OUT OF SCOPE
+# and handed to a future slice).
 SLICE_DATE=$(date -u +%Y-%m-%d)
 TARGET_IDS="19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37"
 node -e '
@@ -103,27 +108,33 @@ node -e '
   if (!Array.isArray(rows)) { console.error("artifact is not an array"); process.exit(1); }
   const expected = new Set([19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37]);
   if (rows.length !== expected.size) { console.error("expected " + expected.size + " rows, got " + rows.length); process.exit(1); }
+  // Grade ordering for "no regression" comparisons (higher index = better grade).
+  const order = { F: 0, D: 1, C: 2, B: 3, A: 4 };
   const fails = [];
   for (const r of rows) {
     const id = Number(r.id);
     const grade = r.baselineGrade;
+    if (!(grade in order)) { fails.push("Q" + id + " has unrecognized grade " + grade); continue; }
     if (id === 30) {
-      if (grade !== "A") fails.push("Q30 expected A (target lift), got " + grade);
+      // Q30: routing/template defect, out of scope. Must not drop below B (its 2026-04-30 baseline).
+      if (order[grade] < order["B"]) fails.push("Q30 regressed below B (routing-defect baseline): got " + grade);
     } else {
+      // Q19-Q29, Q31-Q37: regression-protection at A.
       if (grade !== "A") fails.push("Q" + id + " regressed: expected A, got " + grade);
     }
   }
   if (fails.length) { console.error(fails.join("\n")); process.exit(1); }
-  console.log("OK: Q30 lifted to A and regression-protection set unchanged at A");
+  console.log("OK: regression-protection set Q19-Q29 + Q31-Q37 remain at A, Q30 not regressed below B");
 '
 ```
 
 ## Acceptance criteria
 - [ ] Build (gate 1) and typecheck (gate 2) exit 0.
 - [ ] `bash scripts/loop/test_grading_gate.sh` (gate 3) exits 0 (no new failures vs the loop baseline).
-- [ ] Schema apply / materialized-view refresh (gate 4) exits 0 against the pooled `DATABASE_URL`.
-- [ ] Re-grade gate (gate 5) exits 0: target ID **Q30 grades A** in `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json`.
-- [ ] Re-grade gate (gate 5) exits 0: regression-protection set Q19–Q29 and Q31–Q37 each remain at grade **A** in the same artifact (no regression vs the 2026-04-30 baseline).
+- [ ] Schema apply / materialized-view refresh (gate 4) exits 0 against the pooled `DATABASE_URL`. (If step 3 produced no SQL edits, gate 4 is a no-op `psql` re-apply of the unchanged file — still must exit 0.)
+- [ ] Re-grade gate (gate 5) exits 0: regression-protection set Q19–Q29 and Q31–Q37 each remain at grade **A** in `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_<date>.json` (no regression vs the 2026-04-30 baseline).
+- [ ] Re-grade gate (gate 5) exits 0: Q30 does **not** regress below grade **B** in the same artifact. (Q30's lift to A is out of scope — handed off to a future routing/template slice.)
+- [ ] Slice-completion note records the diagnosis: which contamination class (if any) was fixed by the policy change, and the explicit Q30 hand-off to a routing/template slice with the `generationNotes=template=max_leclerc_lap_pace_summary` evidence from the 2026-04-30 rerun.
 
 ## Out of scope
 - Anything outside the slice's declared scope.
@@ -160,12 +171,12 @@ Rollback: `git revert <commit>`.
 **Status: REVISE**
 
 ### High
-- [ ] Resolve the contradiction between step 6 and gate 5 / the acceptance criteria: if step 2 shows Q30 is unrelated to lap-validity and must be handed off unchanged, gate 5 cannot still require Q30 to grade `A` for this slice to pass.
-- [ ] Re-scope the slice or its success criterion for Q30 to match the actual prior-context evidence: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` shows Q30 was answered by deterministic template `max_leclerc_lap_pace_summary` instead of the sector-times template, so a lap-validity-only slice cannot assume Q30 will lift to `A` without also planning the routing/template fix.
+- [x] Resolve the contradiction between step 6 and gate 5 / the acceptance criteria: if step 2 shows Q30 is unrelated to lap-validity and must be handed off unchanged, gate 5 cannot still require Q30 to grade `A` for this slice to pass.
+- [x] Re-scope the slice or its success criterion for Q30 to match the actual prior-context evidence: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` shows Q30 was answered by deterministic template `max_leclerc_lap_pace_summary` instead of the sector-times template, so a lap-validity-only slice cannot assume Q30 will lift to `A` without also planning the routing/template fix.
 
 ### Medium
-- [ ] Update step 2 so the diagnostic explicitly checks whether Q30 is failing because the wrong deterministic SQL template/routing path was selected before treating sector aggregates as contaminated by `is_valid`.
-- [ ] Expand `Changed files expected` if the slice is intended to fix the demonstrated Q30 routing/template defect, or otherwise remove deterministic-template-driven Q30 uplift from this slice’s acceptance target.
+- [x] Update step 2 so the diagnostic explicitly checks whether Q30 is failing because the wrong deterministic SQL template/routing path was selected before treating sector aggregates as contaminated by `is_valid`.
+- [x] Expand `Changed files expected` if the slice is intended to fix the demonstrated Q30 routing/template defect, or otherwise remove deterministic-template-driven Q30 uplift from this slice’s acceptance target.
 
 ### Low
 
