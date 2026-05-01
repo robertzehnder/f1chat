@@ -147,7 +147,7 @@ Branch: `slice/11-rerun-benchmark-baseline` (off `integration/perf-roadmap`, bas
 
 Commit hashes:
 - `f4b1cd1` — initial submission of artifacts and note (superseded by this revision).
-- This revision commit records the regenerated artifacts + updated note for auditor traceability.
+- `1338130` — revision: regenerated artifacts from a fresh 2026-04-30 EDT rerun and updated note (this commit).
 
 ## Audit verdict
 
