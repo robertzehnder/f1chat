@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T17:56:17Z
+updated: 2026-05-01T18:42:00Z
 ---
 
 ## Goal
@@ -24,6 +24,8 @@ Tighten resolver disambiguation: when a query mentions "Verstappen", default to 
 - **Input filename correction.** The original audit cited `11-rerun_2026-04-26.json`; that file does not exist in the repo. The actual rerun artifact is `11-rerun_2026-04-30.json`. Inputs above are corrected.
 - **Slice is hardening, not repair.** Q26 (the only `resolver_failure` row in the 2026-04-26 baseline) already grades A in the 2026-04-30 rerun. We therefore replace the brittle "live re-grade Q26 over a running stack" workflow with deterministic unit tests against `web/src/lib/chatRuntime/resolution.ts`. The unit-test gate runs fully locally (no DB, no LLM, no dev server) and is the load-bearing acceptance signal. The optional live-regrade procedure is documented under **Optional live regrade** for reproducibility but is not a gate.
 - **Why this preserves the auditor's intent.** The auditor's High-1 asked for an explicit command path that ties target IDs → re-run → A/B assertion. The deterministic unit test makes that path strictly tighter (no LLM grading variance) while still exercising the disambiguation rules that drove Q26's `resolver_failure`.
+- **Disambiguation contract preserves multi-driver scoring (round-3 High-1).** Q26 is a `comparison_analysis` query naming both Max Verstappen and Charles Leclerc (verified: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` Q26 → `questionType: "comparison_analysis"`, two `previewRows` for #1 and #16). A single-winner `{ resolved } | { ambiguous }` shape would collapse this to one driver and break `selectComparisonDriverNumbers` at `web/src/lib/chatRuntime.ts:343`. `disambiguateDrivers` therefore returns the **full scored list** (`scoredCandidates`) plus a separate `ambiguousSurnames` metadata array; the year-aware logic is implemented as score boosts and ambiguity flagging, not as a winner-pick.
+- **Q26 actual session year = 2025 (round-3 Medium-1).** Verified: the artifact's Q26 question text is "Within the Abu Dhabi 2025 weekend ...". Case D below uses `sessionYear=2025`.
 
 ## Required services / env
 - **Gate path (fully local, used in CI/loop):** none. Node 20 + repo dev deps (already installed in the worktree) are sufficient. No DB, no dev server, no env vars.
@@ -31,25 +33,42 @@ Tighten resolver disambiguation: when a query mentions "Verstappen", default to 
 
 ## Steps
 1. Identify the resolver-disambiguation surface area in `web/src/lib/chatRuntime/resolution.ts` (the `containsWholePhrase(... "max verstappen") && row.driver_number === 1` branch in `scoreDriverCandidate`) and its lone caller in `web/src/lib/chatRuntime.ts` around line 1290 (`scoredDrivers = driverRows.map(... scoreDriverCandidate ...)` → `driverCandidates`). Confirm that "Verstappen" alone (without "max") currently falls through to surname-only matching with no year-aware tiebreak.
-2. Add a new exported pure function `disambiguateDrivers(rows: DriverResolutionRow[], normalizedMessage: string, sessionYear: number | null): { resolved: DriverResolutionRow; matchedOn: string[]; score: number } | { ambiguous: { row: DriverResolutionRow; matchedOn: string[]; score: number }[] }` in `web/src/lib/chatRuntime/resolution.ts`. This function is the **resolver entrypoint under test**: it scores each row via `scoreDriverCandidate`, then applies the disambiguation rules below and returns either a single resolved candidate or the ambiguity set. Rules:
-   - A bare-"verstappen" mention with no first name and a `sessionYear >= 2024` resolves to Max Verstappen (driver_number 1) when Max is in the input rows. Returned `matchedOn` includes `bare_verstappen_2024_default`.
-   - A bare-"verstappen" mention with `sessionYear < 2024` (or `sessionYear === null`) and multiple Verstappen surname matches returns `{ ambiguous: [...] }` containing every row whose `last_name` matches "verstappen" (case-insensitive) — it does not silently pick Max.
-   - Explicit "max verstappen" returns `{ resolved: Max }` regardless of `sessionYear` (existing behavior preserved via the existing `canonical_full_name_match` boost).
-   - When neither case fires, fall back to the current "highest score wins, ties → lowest driver_number" behavior already implemented inline in `chatRuntime.ts:1304`.
-3. Refactor `web/src/lib/chatRuntime.ts:1291-1320` to call `disambiguateDrivers(driverRows, normalizedMessage, selectedSession?.year ?? null)` and use the returned `resolved` row (or build `driverCandidates` from the `ambiguous` set so downstream `forceDriverClarification` / `needsDriverPair` paths still trigger). Preserve the existing `explicitDriverNumbers` short-circuit at `chatRuntime.ts:1294` (explicit numbers still win unconditionally).
-4. Add a deterministic Node test file `web/scripts/tests/resolver-disambiguation.test.mjs` that imports `disambiguateDrivers` directly from a TS-stripped entrypoint (use the existing pattern from `web/scripts/tests/grading-regression.test.mjs` or `resolver-lru.test.mjs` for how peer tests load `@/lib/chatRuntime/...` modules under `node --test`). The test asserts at the resolver entrypoint, not the score function:
-   - **Case A — bare-Verstappen 2024+ resolves Max:** input rows = [Max(#1), Jos(#33-historic)], message "verstappen lap times", `sessionYear=2024` → result has `.resolved.driver_number === 1` and `matchedOn` includes `bare_verstappen_2024_default`.
-   - **Case B — bare-Verstappen pre-2024 returns explicit ambiguity:** same rows, same message, `sessionYear=2003` → result has `.ambiguous.length === 2`, both Verstappens present, and `.resolved` is `undefined` (asserts no silent pick).
-   - **Case C — explicit "max verstappen" resolves Max regardless of year:** message "max verstappen pace", `sessionYear=2003` → `.resolved.driver_number === 1` and `matchedOn` includes `canonical_full_name_match`.
-   - **Case D — Q26-phrasing regression:** message replicating Q26's exact phrasing from the rerun artifact, `sessionYear=2024` → `.resolved.driver_number === 1` (Max wins, no ambiguity).
-   No DB / fetch / LLM. The test file glob (`scripts/tests/*.test.mjs` per `web/package.json:10`) auto-discovers the new file; no `package.json` change is required.
+2. Add a new exported pure function in `web/src/lib/chatRuntime/resolution.ts`:
+   ```ts
+   export function disambiguateDrivers(
+     rows: DriverResolutionRow[],
+     normalizedMessage: string,
+     sessionYear: number | null
+   ): {
+     scoredCandidates: { row: DriverResolutionRow; matchedOn: string[]; score: number }[];
+     ambiguousSurnames: { surname: string; rows: DriverResolutionRow[] }[];
+   }
+   ```
+   This is the **resolver entrypoint under test**. It does NOT pick a single winner — it returns the full scored list so downstream comparison queries (e.g. Q26's "Max Verstappen and Charles Leclerc") still receive both candidates. Implementation:
+   - Score every row via the existing `scoreDriverCandidate` helper. The returned `scoredCandidates` is sorted by `score` desc, then `driver_number` asc, and includes every row with `score > 0` (caller still applies its own `.slice(0, 6)` cap; this function does not truncate).
+   - **Year-aware boost rule:** when `normalizedMessage` mentions the surname "verstappen" but does NOT also include "max" (case-insensitive whole-word check), and `sessionYear !== null && sessionYear >= 2024`, add a `+5` score boost to the row whose `driver_number === 1` (Max) and append `bare_verstappen_2024_default` to its `matchedOn`. The boost is large enough to outrank a same-surname tiebreak but does not displace explicit-driver-number boosts applied later in `chatRuntime.ts`.
+   - **Ambiguity-flagging rule:** when the same bare-"verstappen" condition holds but `sessionYear === null || sessionYear < 2024` AND ≥2 rows match the surname "verstappen" (case-insensitive on `last_name`), populate `ambiguousSurnames` with `{ surname: "verstappen", rows: [...allMatches] }`. No score boost is applied; all matching rows remain in `scoredCandidates` with their natural scores so the caller can decide whether to clarify.
+   - **Explicit "max verstappen":** falls through to the existing `canonical_full_name_match` boost in `scoreDriverCandidate`; no special-case logic is needed in `disambiguateDrivers`.
+   - The function is **pure**: no DB, no fetch, no module-level state.
+3. Refactor `web/src/lib/chatRuntime.ts:1291-1320` to call `disambiguateDrivers(driverRows, normalizedMessage, selectedSession?.year ?? null)`. Wiring requirements (each is grep-checked by the discovery gate below):
+   - The call site at the former `scoredDrivers = driverRows.map(...)` block uses `disambiguateDrivers` with `selectedSession?.year ?? null` as the third argument. Pattern that must match: `disambiguateDrivers(\s*driverRows\s*,[^)]*selectedSession\?\.year\s*\?\?\s*null`.
+   - The returned `scoredCandidates` is then mapped to add the existing `explicitDriverNumbers` boost (`+30` per `chatRuntime.ts:1294`), filtered to `score > 0`, sorted, and `.slice(0, 6)` — preserving the existing `driverCandidates` shape so `selectComparisonDriverNumbers` at `chatRuntime.ts:343` still receives a multi-driver list for Q26-style queries.
+   - The `explicitDriverNumbers.length > 0` short-circuit at `chatRuntime.ts:1316` is preserved verbatim (explicit numbers still win unconditionally).
+   - `ambiguousSurnames` is forwarded to the existing clarification path: when it is non-empty AND `explicitDriverNumbers.length === 0` AND no other tiebreaker resolves the surname group, set `forceDriverClarification = true` (extending the current condition at `chatRuntime.ts:1280`) so the caller emits a clarification request rather than silently picking a driver.
+4. Add a deterministic Node test file `web/scripts/tests/resolver-disambiguation.test.mjs` that imports `disambiguateDrivers` directly from a TS-stripped entrypoint (use the existing pattern from `web/scripts/tests/grading-regression.test.mjs` or `resolver-lru.test.mjs` for how peer tests load `@/lib/chatRuntime/...` modules under `node --test`). The test asserts at the resolver entrypoint, not the score function. Test fixtures use the round-3 contract (`scoredCandidates` + `ambiguousSurnames`):
+   - **Case A — bare-Verstappen 2024+ boosts Max:** input rows = [Max(#1), Jos(#33-historic)], message "verstappen lap times", `sessionYear=2024` → `scoredCandidates[0].row.driver_number === 1`, `scoredCandidates[0].matchedOn` includes `bare_verstappen_2024_default`, `ambiguousSurnames.length === 0`.
+   - **Case B — bare-Verstappen pre-2024 flags ambiguity without dropping candidates:** same rows, same message, `sessionYear=2003` → `ambiguousSurnames.length === 1`, `ambiguousSurnames[0].surname === "verstappen"`, both Verstappens present in `ambiguousSurnames[0].rows`. `scoredCandidates` still contains both rows (caller decides whether to clarify); neither row carries `bare_verstappen_2024_default`.
+   - **Case C — explicit "max verstappen" surfaces Max regardless of year:** message "max verstappen pace", `sessionYear=2003` → `scoredCandidates[0].row.driver_number === 1`, `scoredCandidates[0].matchedOn` includes `canonical_full_name_match`, `ambiguousSurnames.length === 0`.
+   - **Case D — Q26 comparison regression (preserves both drivers):** message = the verbatim Q26 question text from `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` ("Within the Abu Dhabi 2025 weekend ..."), input rows = [Max(#1), Jos(#33-historic), Charles Leclerc(#16), Carlos Sainz(#55)], `sessionYear=2025` → `scoredCandidates` contains BOTH `driver_number === 1` (Max) AND `driver_number === 16` (Charles) with positive scores in the top 4 (proves comparison_analysis is not collapsed). `ambiguousSurnames.length === 0` (Max is unambiguously selected via the 2025 boost; Leclerc has no ambiguous twin in fixtures).
+   No DB / fetch / LLM. The test file glob (`scripts/tests/*.test.mjs` per `web/package.json:10`) auto-discovers the new file.
 5. Run the gates listed below and confirm green. Confirm the new test is actually executed by inspecting the isolated `node --test` invocation's TAP output for at least one `ok` line per Case A–D.
 
 ## Changed files expected
 - `web/src/lib/chatRuntime/resolution.ts` — add `disambiguateDrivers` resolver entrypoint and supporting logic.
-- `web/src/lib/chatRuntime.ts` — refactor the `driverRows`→`driverCandidates` block (~lines 1291-1320) to call `disambiguateDrivers`.
+- `web/src/lib/chatRuntime.ts` — refactor the `driverRows`→`driverCandidates` block (~lines 1291-1320) to call `disambiguateDrivers`; extend the `forceDriverClarification` condition at ~line 1280 to OR-in non-empty `ambiguousSurnames` when no explicit driver number is present.
 - `web/scripts/tests/resolver-disambiguation.test.mjs` — new deterministic test file at the resolver entrypoint.
-- `web/package.json` — unchanged. The existing `"test:grading": "node --test scripts/tests/*.test.mjs"` glob auto-discovers the new file.
+
+(`web/package.json` is intentionally not in this list — it is unchanged. The existing `"test:grading": "node --test scripts/tests/*.test.mjs"` glob auto-discovers any new file under `web/scripts/tests/`.)
 
 ## Artifact paths
 None (deterministic unit tests; no captured run artifact required).
@@ -58,9 +77,17 @@ None (deterministic unit tests; no captured run artifact required).
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
+# Wiring gate (round-3 High-2): prove chatRuntime.ts actually routes through
+# disambiguateDrivers with the year arg, AND that the explicit-driver-number
+# short-circuit is preserved. Pure grep — independent of the test file's
+# behavior, so a green entrypoint test cannot mask an un-wired runtime.
+grep -E 'disambiguateDrivers\(\s*driverRows\s*,[^)]*selectedSession\?\.year\s*\?\?\s*null' web/src/lib/chatRuntime.ts \
+  || { echo "FAIL: chatRuntime.ts does not call disambiguateDrivers(driverRows, ..., selectedSession?.year ?? null)"; exit 1; }
+grep -E 'explicitDriverNumbers\.length\s*>\s*0' web/src/lib/chatRuntime.ts \
+  || { echo "FAIL: explicit-driver-number short-circuit removed or renamed"; exit 1; }
 # Discovery gate: prove the new test file is loaded and all four cases run.
-# This complements the baseline-aware wrapper, which can exit 0 even if a
-# new .test.mjs file is silently skipped (the grading harness's glob would
+# Complements the baseline-aware wrapper, which can exit 0 even if a new
+# .test.mjs file is silently skipped (the grading harness's glob would
 # simply miss a typo'd filename).
 cd web && node --test scripts/tests/resolver-disambiguation.test.mjs 2>&1 | tee /tmp/resolver-disamb-tap.txt
 grep -c '^ok ' /tmp/resolver-disamb-tap.txt | awk '{ if ($1 < 4) { print "FAIL: expected ≥4 ok lines, got " $1; exit 1 } else { print "OK: " $1 " ok lines" } }'
@@ -86,7 +113,8 @@ python3 -c "import json,glob,os; f=max(glob.glob('web/logs/chat-health-check-*.j
 ```
 
 ## Acceptance criteria
-- [ ] `web/scripts/tests/resolver-disambiguation.test.mjs` exists and asserts at the **resolver entrypoint** (`disambiguateDrivers`), not just the score function. All four cases (bare-Verstappen 2024+ resolves Max, bare-Verstappen pre-2024 returns explicit `{ ambiguous: [...] }` with no silent pick, explicit "max verstappen" resolves Max, Q26-phrasing regression resolves Max) pass.
+- [ ] `web/scripts/tests/resolver-disambiguation.test.mjs` exists and asserts at the **resolver entrypoint** (`disambiguateDrivers`), not just the score function. All four cases pass: Case A (bare-Verstappen + 2024+ → Max boosted to top of `scoredCandidates` with `bare_verstappen_2024_default`); Case B (bare-Verstappen + pre-2024 → `ambiguousSurnames` populated, both Verstappens still in `scoredCandidates`, no silent pick); Case C (explicit "max verstappen" → Max via `canonical_full_name_match`, no ambiguity); Case D (Q26 verbatim text + 2025 + 4-row fixture → BOTH #1 and #16 in `scoredCandidates`, proving comparison_analysis is preserved).
+- [ ] **Wiring gate** (round-3 High-2): the two `grep` checks listed under Gate commands both succeed — proving `web/src/lib/chatRuntime.ts` actually calls `disambiguateDrivers(driverRows, ..., selectedSession?.year ?? null)` AND retains the `explicitDriverNumbers.length > 0` short-circuit. This signal is independent of the entrypoint test, so a green test cannot mask an un-wired runtime.
 - [ ] **Discovery gate** confirms the new test file is loaded: `cd web && node --test scripts/tests/resolver-disambiguation.test.mjs` exits 0 AND its TAP output contains at least 4 `^ok ` lines (one per Case A–D). This proves the file is not silently skipped by a typo'd filename or import error.
 - [ ] `bash scripts/loop/test_grading_gate.sh` reports no NEW failures vs the baseline at `scripts/loop/state/test_grading_baseline.txt`. Pre-existing baseline failures (e.g. `driver-fallback.test.mjs` Cases A/B/E) are not regressions. Because `web/package.json:10` defines `test:grading` as `node --test scripts/tests/*.test.mjs`, the new file is auto-discovered by the same glob the wrapper uses.
 - [ ] `cd web && npm run typecheck` and `cd web && npm run build` exit 0.
@@ -145,14 +173,14 @@ Rollback: `git revert <commit>`. The disambiguation tightening is a localized sc
 **Status: REVISE**
 
 ### High
-- [ ] Redefine the `disambiguateDrivers` contract and step-3 wiring so comparison prompts keep enough scored driver candidates to select both drivers, because the proposed `{ resolved } | { ambiguous }` single-winner shape would collapse Q26-style "Max Verstappen and Charles Leclerc" queries to one driver and break `comparison_analysis`.
-- [ ] Add a deterministic acceptance signal that `web/src/lib/chatRuntime.ts` actually routes driver resolution through `disambiguateDrivers(..., selectedSession?.year ?? null)` while preserving the explicit-driver-number short-circuit, because the planned entrypoint-only test can pass even if the runtime never wires in the new year-aware helper.
+- [x] Redefine the `disambiguateDrivers` contract and step-3 wiring so comparison prompts keep enough scored driver candidates to select both drivers, because the proposed `{ resolved } | { ambiguous }` single-winner shape would collapse Q26-style "Max Verstappen and Charles Leclerc" queries to one driver and break `comparison_analysis`.
+- [x] Add a deterministic acceptance signal that `web/src/lib/chatRuntime.ts` actually routes driver resolution through `disambiguateDrivers(..., selectedSession?.year ?? null)` while preserving the explicit-driver-number short-circuit, because the planned entrypoint-only test can pass even if the runtime never wires in the new year-aware helper.
 
 ### Medium
-- [ ] Align Case D with the cited artifact by using Q26's actual 2025 session year, not `sessionYear=2024`, so the regression test exercises the same year context as the rerun question it claims to replicate.
+- [x] Align Case D with the cited artifact by using Q26's actual 2025 session year, not `sessionYear=2024`, so the regression test exercises the same year context as the rerun question it claims to replicate.
 
 ### Low
-- [ ] Remove `web/package.json` from `## Changed files expected` or move the auto-discovery note elsewhere, because the file is explicitly unchanged and should not appear in the expected diff scope.
+- [x] Remove `web/package.json` from `## Changed files expected` or move the auto-discovery note elsewhere, because the file is explicitly unchanged and should not appear in the expected diff scope.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T15:42:52Z`).
