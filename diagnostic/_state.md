@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-05-01T19:47:07Z
+# Project state — last updated: 2026-05-01T18:26:26Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -19,18 +19,13 @@ accumulated context the loop carries between slices._
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
+| 11 | 5 | 4 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 
 ## Latest benchmark headline
 
-- File: `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_2026-05-01.json`
-- Overall A/B/C: 47 / 3 / 0
-- Factual correctness A/B/C: 50 / 0 / 0
-- Completeness A/B/C: 47 / 3 / 0
-- Clarity A/B/C: 50 / 0 / 0
-- Root causes: sector_summary_matches_metrics: 1, synthesis_contradiction: 1
-- Total questions: 50
+- File: `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json`
+- (could not parse: 'list' object has no attribute 'get')
 
 ## Latest perf baseline
 
