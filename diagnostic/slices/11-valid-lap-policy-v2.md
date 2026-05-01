@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T11:11:00-04:00
+updated: 2026-05-01T11:20:00-04:00
 ---
 
 ## Goal
@@ -212,7 +212,32 @@ Acceptance script printed: `OK: regression-protection set Q19-Q29 + Q31-Q37 rema
 **Q30 hand-off:** future slice should fix deterministic-template routing in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts` so a sector-times question (Q30) routes to a sector-times template instead of `max_leclerc_lap_pace_summary`. Evidence: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` Q30 row, `generationNotes=template=max_leclerc_lap_pace_summary | session_pin_verified(session_key=9839)`.
 
 ## Audit verdict
-(filled by Codex)
+
+**Status: REVISE**
+
+- Gate 1 `cd web && npm run build` -> exit `0`
+- Gate 2 `cd web && npm run typecheck` -> exit `0`
+- Gate 3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Gate 4a `psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` -> exit `0`
+- Gate 4b `psql "$DATABASE_URL" -f sql/010_laps_enriched_mat.sql` -> exit `0`
+- Gate 4c `psql "$DATABASE_URL" -f sql/009_driver_session_summary_mat.sql` -> exit `0`
+- Gate 4d `psql "$DATABASE_URL" -f sql/011_stint_summary_mat.sql` -> exit `0`
+- Gate 4e `psql "$DATABASE_URL" -f sql/013_race_progression_summary_mat.sql` -> exit `0`
+- Gate 4f `psql "$DATABASE_URL" -f sql/017_lap_phase_summary_mat.sql` -> exit `0`
+- Gate 4g `psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql` -> exit `0`
+- Gate 5 declared command block -> exit `0`
+- Gate 5 failure context:
+  `missing ids in canonical questions file`
+  `Error: ENOENT: no such file or directory, open '/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/web/scripts/chat-health-check.questions.11-valid-lap-policy-v2.json'`
+- Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` and `diagnostic/slices/11-valid-lap-policy-v2.md`.
+- Criterion build/typecheck exit 0: PASS.
+- Criterion gate 3 exits 0: PASS.
+- Criterion gate 4 exits 0: PASS.
+- Criterion gate 5 Q19-Q29 + Q31-Q37 remain A: FAIL — [diagnostic/slices/11-valid-lap-policy-v2.md](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/slices/11-valid-lap-policy-v2.md:100) passes `$TARGET_IDS` as one `zsh` argument at [diagnostic/slices/11-valid-lap-policy-v2.md](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/slices/11-valid-lap-policy-v2.md:116), so subset generation aborts before `healthcheck:chat` can read the file; because the block does not stop on failure, it can still validate a stale artifact instead of the just-run re-grade.
+- Criterion gate 5 Q30 stays at least B: FAIL — same gate-5 shell bug means the checked-in command block does not actually prove the rerun artifact came from the just-run healthcheck.
+- Criterion slice-completion note records the Q30 hand-off diagnosis: PASS ([diagnostic/slices/11-valid-lap-policy-v2.md](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/slices/11-valid-lap-policy-v2.md:168)).
+- Decision: REVISE.
+- Rationale: fix gate 5 to be executable in the repo's `zsh` environment and fail fast on subset-generation / `healthcheck:chat` errors, then rerun gate 5 and refresh the artifact and slice note from that real rerun.
 
 ## Plan-audit verdict (round 1)
 
