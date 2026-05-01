@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T14:30:00-04:00
+updated: 2026-05-01T15:05:00-04:00
 ---
 
 ## Goal
@@ -154,3 +154,21 @@ Rollback: `git revert <commit>`.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T13:24:14Z`).
+
+## Plan-audit verdict (round 2)
+
+**Status: REVISE**
+
+### High
+- [ ] Resolve the contradiction between step 6 and gate 5 / the acceptance criteria: if step 2 shows Q30 is unrelated to lap-validity and must be handed off unchanged, gate 5 cannot still require Q30 to grade `A` for this slice to pass.
+- [ ] Re-scope the slice or its success criterion for Q30 to match the actual prior-context evidence: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` shows Q30 was answered by deterministic template `max_leclerc_lap_pace_summary` instead of the sector-times template, so a lap-validity-only slice cannot assume Q30 will lift to `A` without also planning the routing/template fix.
+
+### Medium
+- [ ] Update step 2 so the diagnostic explicitly checks whether Q30 is failing because the wrong deterministic SQL template/routing path was selected before treating sector aggregates as contaminated by `is_valid`.
+- [ ] Expand `Changed files expected` if the slice is intended to fix the demonstrated Q30 routing/template defect, or otherwise remove deterministic-template-driven Q30 uplift from this slice’s acceptance target.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T13:24:14Z`).
+- Prior-context evidence for the routing mismatch is in `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (Q30 `generationNotes=template=max_leclerc_lap_pace_summary`; SQL aggregates lap pace, not sector summaries).
