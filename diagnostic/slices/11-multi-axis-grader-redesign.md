@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:30:00Z
+updated: 2026-05-01T20:05:00Z
 ---
 
 ## Goal
@@ -368,6 +368,20 @@ fi
 
 ### Medium
 - [x] Align the canonical-artifact gate coverage with the acceptance text that says the regenerated artifact top-level keys are exactly `{generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable}` and that no `*.summary.json` sidecar exists under `diagnostic/artifacts/healthcheck/`. The current canonical-shape gate only checks that those keys are present as a subset and does not fail on an extra in-tree sidecar, so the stated contract is not fully testable.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
+
+## Plan-audit verdict (round 9)
+
+**Status: REVISE**
+
+### High
+
+### Medium
+- [ ] Add `diagnostic/slices/11-multi-axis-grader-redesign.md` to `## Changed files expected`. Step 1 requires the implementer to append target-ID lines in `## Decisions`, `## Artifact paths` says the resolved artifact date is recorded in this slice, and `## Slice-completion note` must be filled, so the slice file itself is an expected changed path and should be declared explicitly for scope-auditability.
 
 ### Low
 
