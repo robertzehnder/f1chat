@@ -1,20 +1,20 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T21:10:00Z
+updated: 2026-05-01T21:30:00Z
 ---
 
 ## Goal
 Complete Phase 12 item 2 ("prod must use Neon URL; local must use Docker") and item 3 (`.env.example` documentation) of the database-env hardening work in `diagnostic/roadmap_2026-04_performance_and_upgrade.md` §4 Phase 12. The Neon pooler-URL production assertion already exists in `web/src/lib/db.ts` (`assertPooledDatabaseUrl`); this slice extends that file with a parallel local-Docker assertion and rounds out `.env.example` so the Phase 12 contract is fully documented.
 
 Concretely:
-1. Add `assertLocalDockerDb(env)` to `web/src/lib/db.ts` that, when `NODE_ENV !== "production"` AND no `NEON_*` URL/host is set (i.e. the local-Docker `DB_*` branch will be taken in `createPool()`), asserts `DB_HOST` resolves to a local/Docker-internal target (`127.0.0.1`, `localhost`, `::1`, `db`, `postgres`). Throw with a clear message naming the offending host and the allowed set.
+1. Add `assertLocalDockerDb(env)` to `web/src/lib/db.ts` that, when `NODE_ENV !== "production"` AND none of `NEON_DATABASE_URL`, `DATABASE_URL`, or `NEON_DB_HOST` is set (i.e. the local-Docker `DB_*` branch will be taken in `createPool()` — every other branch is bypassed by one of those three), asserts `DB_HOST` resolves to a local/Docker-internal target (`127.0.0.1`, `localhost`, `::1`, `db`, `postgres`). Throw with a clear message naming the offending host and the allowed set.
 2. Wire that assertion into the same module-load site that currently invokes `assertPooledDatabaseUrl(process.env)` (`web/src/lib/db.ts:131`) so it runs once at startup before `createPool()`.
-3. Document the full set of database-env vars in root `.env.example`: keep existing `DB_*` defaults; uncomment-style placeholder lines for `NEON_DATABASE_URL` (pooled — Phase 6 contract) and `NEON_DATABASE_URL_REPLICA` (Phase 12 read-replica contract); brief 1-line comment per group naming the precedence (NEON_* wins over `DATABASE_URL` / `DB_*`).
+3. Document the full set of database-env vars actually consumed by `web/src/lib/db.ts` in root `.env.example`: keep existing `DB_*` defaults; add commented placeholder lines for `NEON_DATABASE_URL` (Phase 6 pooled URL), `NEON_DATABASE_URL_REPLICA` (Phase 12 read-replica contract — item 1, later slice), `DATABASE_URL` (generic fallback URL — still consumed via `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`), and the per-component Neon override block `NEON_DB_HOST` / `NEON_DB_PORT` / `NEON_DB_NAME` / `NEON_DB_USER` / `NEON_DB_PASSWORD` (still consumed by the `NEON_DB_HOST` branch in `createPool()`). One-line comment per branch naming precedence (`NEON_DATABASE_URL` > `DATABASE_URL` > `NEON_DB_*` > local `DB_*`).
 4. Add focused unit tests in a NEW file `web/scripts/tests/local-docker-db-assertion.test.mjs` mirroring the transpile-stub pattern of `web/scripts/tests/pooled-url-assertion.test.mjs`. Cover: throws on remote host (e.g. `db.example.com`) when local branch active; passes for each allowed host; no-ops when `NODE_ENV=production`; no-ops when **each** of `NEON_DATABASE_URL`, `DATABASE_URL`, or `NEON_DB_HOST` is set (each one drives a non-`DB_*` branch in `createPool()` per `web/src/lib/db.ts:83-128`, so the assertion must early-return for every one — not only the `NEON_DATABASE_URL` case).
 
 Out of scope for this slice: read-replica pool plumbing (Phase 12 item 1), migration-runner adoption (Phase 12 item 4), and any LLM/`OPENF1_*` env assertions — those are not part of Phase 12's scope per the roadmap and are not gated here.
@@ -48,16 +48,18 @@ None — all deliverables and gates are repo-local. Tests use the same in-proces
    - does not throw when `DATABASE_URL` is set even if `DB_HOST` would otherwise be invalid (generic-URL branch wins via `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`; assertion early-returns).
    - does not throw when `NEON_DB_HOST` is set even if `DB_HOST` would otherwise be invalid (Neon-host branch wins; assertion early-returns).
    - does not throw when `DB_HOST` is unset (defaults to `127.0.0.1`).
-4. Update root `.env.example`:
-   - Replace the existing one-line NEON comment block with explicit, line-per-var commented placeholders for `NEON_DATABASE_URL` and add a new `NEON_DATABASE_URL_REPLICA` placeholder (commented, since Phase 12 item 1 / read-replica plumbing is a later slice).
-   - Keep the local `DB_HOST=127.0.0.1` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` block; add a one-line header comment "Local Docker Postgres (used when no NEON_* var is set)".
+4. Update root `.env.example` so every non-`DB_*` branch in `web/src/lib/db.ts` is documented (do NOT drop existing supported branches — the code and tests still depend on them):
+   - Add commented, line-per-var placeholders for the URL branches in precedence order: `NEON_DATABASE_URL` (Phase 6 pooled URL — wins first), `NEON_DATABASE_URL_REPLICA` (Phase 12 read-replica contract — item 1, later slice; commented), and `DATABASE_URL` (generic fallback URL — still consumed via `firstUrl("NEON_DATABASE_URL", "DATABASE_URL")`).
+   - Add a commented per-component Neon override block: `NEON_DB_HOST`, `NEON_DB_PORT`, `NEON_DB_NAME`, `NEON_DB_USER`, `NEON_DB_PASSWORD` (still consumed by the `NEON_DB_HOST` branch in `createPool()`; preserves the existing `NEON_DB_*` documentation rather than replacing it).
+   - Keep the local `DB_HOST=127.0.0.1` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` block as the only un-commented block; add a one-line header comment "Local Docker Postgres (used when none of `NEON_DATABASE_URL`, `DATABASE_URL`, or `NEON_DB_HOST` is set)".
+   - Each block gets a one-line comment naming precedence: `NEON_DATABASE_URL` > `DATABASE_URL` > `NEON_DB_*` > local `DB_*`.
    - Leave `OPENF1_*` ingestion lines untouched.
 5. Run gate commands locally; they must all pass before flipping status to `awaiting_audit`.
 
 ## Changed files expected
 - `web/src/lib/db.ts` — adds and invokes `assertLocalDockerDb`; exports it.
 - `web/scripts/tests/local-docker-db-assertion.test.mjs` — NEW test file.
-- `.env.example` — documents `NEON_DATABASE_URL`, `NEON_DATABASE_URL_REPLICA`, and the local-Docker block.
+- `.env.example` — documents `NEON_DATABASE_URL`, `NEON_DATABASE_URL_REPLICA`, `DATABASE_URL`, the per-component `NEON_DB_*` override block, and the local-Docker block.
 - `diagnostic/slices/12-env-assertions.md` — slice file itself (frontmatter / completion-note / verdict updates as the slice progresses through statuses).
 
 (Note: the previously-listed `web/src/lib/env.ts` and `web/src/app/layout.tsx` are removed from scope — they don't exist / aren't where env assertions live, and the Phase 12 contract is satisfied by extending `db.ts`.)
@@ -83,7 +85,7 @@ The two `node --test …` lines are the slice-local proofs that (a) the existing
 - [ ] `bash scripts/loop/test_grading_gate.sh` exits 0 (no new failures vs. `scripts/loop/state/test_grading_baseline.txt`).
 - [ ] `git diff --name-only integration/perf-roadmap...HEAD` lists only paths from `## Changed files expected` (no unexpected modifications). Per loop convention, scope is checked against the integration branch using `--name-only`; the slice file itself is in the expected list because frontmatter/status updates land on this branch.
 - [ ] `web/src/lib/db.ts` exports `assertLocalDockerDb` and invokes it at module load directly after `assertPooledDatabaseUrl(process.env)`.
-- [ ] `.env.example` contains commented placeholder lines for `NEON_DATABASE_URL` and `NEON_DATABASE_URL_REPLICA`, and a header comment on the local-Docker block.
+- [ ] `.env.example` contains commented placeholder lines for `NEON_DATABASE_URL`, `NEON_DATABASE_URL_REPLICA`, `DATABASE_URL`, and the `NEON_DB_HOST` / `NEON_DB_PORT` / `NEON_DB_NAME` / `NEON_DB_USER` / `NEON_DB_PASSWORD` override block, plus a header comment on the local-Docker block naming precedence (`NEON_DATABASE_URL` > `DATABASE_URL` > `NEON_DB_*` > local `DB_*`).
 
 ## Out of scope
 - Read-replica pool wiring (`pool.read` / `pool.write`) — Phase 12 item 1, separate slice.
@@ -151,8 +153,8 @@ No production state, schema, or external service is touched, so the rollback is 
 - [ ] None.
 
 ### Medium
-- [ ] Align the Goal text with `web/src/lib/db.ts` branch selection by naming `DATABASE_URL` alongside `NEON_DATABASE_URL`/`NEON_DB_HOST`; as written, "no `NEON_*` URL/host is set" does not imply the local `DB_*` branch because `DATABASE_URL` still bypasses it.
-- [ ] Preserve or explicitly document the still-supported `DATABASE_URL` and `NEON_DB_*` branches in `.env.example`, or narrow the slice claim from "document the full set of database-env vars"; the current Step 4 would replace the existing `NEON_DB_HOST` block while the code and tests still depend on that branch.
+- [x] Align the Goal text with `web/src/lib/db.ts` branch selection by naming `DATABASE_URL` alongside `NEON_DATABASE_URL`/`NEON_DB_HOST`; as written, "no `NEON_*` URL/host is set" does not imply the local `DB_*` branch because `DATABASE_URL` still bypasses it.
+- [x] Preserve or explicitly document the still-supported `DATABASE_URL` and `NEON_DB_*` branches in `.env.example`, or narrow the slice claim from "document the full set of database-env vars"; the current Step 4 would replace the existing `NEON_DB_HOST` block while the code and tests still depend on that branch.
 
 ### Low
 - [ ] None.
