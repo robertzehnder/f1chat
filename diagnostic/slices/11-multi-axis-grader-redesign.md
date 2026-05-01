@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: pending_plan_audit
+status: revising_plan
 owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T21:15:00Z
+updated: 2026-05-01T21:45:00Z
 ---
 
 ## Goal
@@ -205,3 +205,25 @@ fi
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
 - Round 1 already addressed the goal/acceptance schema rewrite. The round-2 findings above are net-new — they surface during a fresh repo-wide grep for legacy field consumers and a careful read of `web/scripts/tests/grading-regression.test.mjs`.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+**Auditor: claude-plan-audit (round-3 forced-findings ratchet: not applicable — final claude self-audit round; substantive findings present)**
+
+### High
+- [ ] The risk-section grep (`! git grep -nE 'answer_grade|semantic_conformance_grade|answerGradeCounts|semanticConformanceGradeCounts' -- ':!diagnostic/slices/11-multi-axis-grader-redesign.md' ':!scripts/loop/test_grading_gate.sh'`) cannot return zero hits as written. On 2026-05-01 in this worktree, `git grep` of those four patterns matches at least: `diagnostic/slices/00-fresh-benchmark.md:92-93` (`answerGradeCounts`, `semanticConformanceGradeCounts`), `diagnostic/slices/11-rerun-benchmark-baseline.md:41-42` (`r.answer_grade`, `r.semantic_conformance_grade`, `summary.answerGradeCounts`, `summary.semanticConformanceGradeCounts`), and `diagnostic/slices/11-residual-raw-table-regressions.md:37, 192, 193` (`answer_grade_reason`, which substring-matches `answer_grade`). These are historical slice plans that must NOT be rewritten — they record what the codebase used to look like. Either (a) extend the exclusion list to `':!diagnostic/slices/'` (or an enumerated list of past plan files), (b) scope the grep to source/test/docs/fixtures via positive paths (e.g. `-- web/ scripts/loop/ docs/`), or (c) limit the patterns to whole-word matches AND add slice-plan exclusion. Without one of these, the slice's own gate fails and the implementer cannot make it pass without corrupting the historical record.
+- [ ] Step 2's runtime grader scope is materially under-specified for `web/src/app/api/chat/orchestration.ts`. The slice lists 5 "call sites" at lines 415, 483, 993, 1126, 1191 — those are the 5 `assessChatQuality(` invocation lines. But the produced `quality` value is read at ~40+ downstream lines (`quality.grade` / `quality.reason` at 426-429, 462-465, 498-501, 535-538, 1010, 1021-1024, 1087-1090, 1109-1112, 1140-1143, 1179-1182, 1205-1208, 1244-1247), and the values flow further into persisted / cached fields (`responseGrade`, `gradeReason`, `adequacyGrade`, `adequacyReason`, plus `cachedAnswer.gradeReason` reads at lines 685, 734) — `grep -rn 'responseGrade\|gradeReason\|adequacyGrade' web/src/` returns 54 lines. Step 2 instructs "consume the new shape **instead of** the single `grade` field", which is a removal, but: (i) the step lists only the 5 invocation lines so the implementer will miss the ~40+ downstream reads, (ii) the slice never says how `responseGrade` / `gradeReason` / `adequacyGrade` map under the new schema (composite of three axes? one chosen axis? removed entirely?), and (iii) the cache-shape question (`cachedAnswer.gradeReason`) is unaddressed — that field flows from prior persisted records, so a one-version compatibility plan or cache-invalidation plan is needed. Resolve by either (a) declaring runtime grader changes out of scope and limiting step 2 to the offline pipeline (matching the "Required services / env: None ... offline" claim), or (b) explicitly enumerating the full read-site set + the legacy→new mapping for `responseGrade` / `gradeReason` / `adequacyGrade` and the cache-record migration.
+
+### Medium
+- [ ] The category-mate non-regression acceptance criterion needs the legacy per-axis grades from `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` to compute the diff, but step 4 (option a) instructs the implementer to **rewrite that file in place** to the new schema. Once rewritten, the legacy `answer_grade` / `semantic_conformance_grade` per-row values are lost (only the targets' baselines are captured in the Decisions block, not all category mates). Add an explicit instruction in step 4 to (a) snapshot the pre-rewrite legacy grades from `git show HEAD:diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (or a temp-file copy taken before the rewrite) and (b) record the per-ID, per-mapped-axis diff in the slice-completion note. Without this, the criterion is non-verifiable post-rewrite.
+- [ ] Step 4 says "`scripts/loop/update_state.sh` (`render_benchmark_headline`, lines 99–122)" but `## Decisions` and `## Changed files expected` say "lines 109-113". The function actually spans roughly lines 92-124 with the legacy-key reads at 109-113. Pick one canonical range so the implementer doesn't have to reconcile two pointers.
+
+### Low
+- [ ] `summary.gradeCounts` (overall A/B/C aggregate of `baselineGrade`) is read by `update_state.sh:106-108` and emitted by `web/scripts/chat-health-check-baseline.mjs`, but the slice never says whether it is kept, removed, or repurposed under the new schema. Likely keep-as-is (the per-axis counts are orthogonal to overall baseline quality), but state this explicitly so the implementer doesn't accidentally drop it and break the existing `Overall A/B/C:` headline render.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T18:26:26Z`).
+- This is round 3 — the claude self-audit cap. Per dispatcher contract, the reviser will set `owner: codex` after addressing these items, and codex's external plan audit becomes the next gatekeeper. The High items above are concrete enough for the reviser to act on in one pass; codex will see whatever lands.
+- The Decisions-block gate is correctly enforced: the placeholder italic text in `## Decisions` does not begin with `- id=`, and the example in backticks `(e.g. \`- id=12 ...\`)` is preceded by `(e.g. ` so does not anchor at `^- id=`. Verified via the slice file body.
+- The `Notes for auditors` section in `diagnostic/_state.md` already has 11 entries (lines 55-65) against the documented cap of 10. Not appending a new lesson this round to avoid a drop+add edit; if a future auditor wants to carry forward the lesson "When a slice declares a repo-wide grep gate, exclude `diagnostic/slices/` or scope to positive source/test/docs paths so historical plan records do not surface legacy field names", they can add it then.
