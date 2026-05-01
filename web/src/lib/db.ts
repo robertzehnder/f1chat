@@ -24,6 +24,30 @@ function firstUrl(...keys: string[]): string | undefined {
   return undefined;
 }
 
+const ALLOWED_LOCAL_DB_HOSTS = ["127.0.0.1", "localhost", "::1", "db", "postgres"] as const;
+
+export function assertLocalDockerDb(env: NodeJS.ProcessEnv): void {
+  if (env.NODE_ENV === "production") {
+    return;
+  }
+  if (env.NEON_DATABASE_URL?.trim()) {
+    return;
+  }
+  if (env.DATABASE_URL?.trim()) {
+    return;
+  }
+  if (env.NEON_DB_HOST?.trim()) {
+    return;
+  }
+  const host = (env.DB_HOST ?? "127.0.0.1").trim();
+  if (!ALLOWED_LOCAL_DB_HOSTS.includes(host as (typeof ALLOWED_LOCAL_DB_HOSTS)[number])) {
+    throw new Error(
+      `Local Docker Postgres required when no Neon URL/host is set: got DB_HOST='${host}'. ` +
+        `Allowed hosts: ${ALLOWED_LOCAL_DB_HOSTS.join(", ")}.`
+    );
+  }
+}
+
 export function assertPooledDatabaseUrl(env: NodeJS.ProcessEnv): void {
   if (env.NODE_ENV !== "production") {
     return;
@@ -129,6 +153,7 @@ function createPool(): Pool {
 }
 
 assertPooledDatabaseUrl(process.env);
+assertLocalDockerDb(process.env);
 
 export const pool = globalForPool.__openf1Pool ?? createPool();
 if (!globalForPool.__openf1Pool) {
