@@ -162,7 +162,7 @@ Commit hashes:
 - `1338130` — first revision (superseded).
 - `ac87b59` — revision round 2: subshell-wrap gate 5, fresh benchmark rerun.
 - `8a8c1a4` — note-only follow-up to record the `ac87b59` hash inline.
-- (this revision) — revision round 3: fresh benchmark rerun (`web/logs/chat_health_check_2026-05-01T02-01-45-454Z.json`), regenerated `.json` + `.md` artifacts so the comparison artifact matches the rerun, restated build→typecheck ordering. Hash will be filled in by an immediate amend or recorded by the loop runner.
+- `e118b20` — revision round 3: fresh benchmark rerun (`web/logs/chat_health_check_2026-05-01T02-01-45-454Z.json`), regenerated `.json` + `.md` artifacts so the comparison artifact matches the rerun, restated build→typecheck ordering.
 
 ## Audit verdict
 
