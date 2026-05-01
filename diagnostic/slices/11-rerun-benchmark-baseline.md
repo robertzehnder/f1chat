@@ -1,11 +1,11 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-04-30T19:47:10-04:00
+updated: 2026-05-01T00:59:58Z
 ---
 
 ## Goal
@@ -151,7 +151,24 @@ Commit hashes:
 - This trailing commit records the hash above into the note for auditor traceability.
 
 ## Audit verdict
-(filled by Codex)
+
+**Status: REVISE**
+
+- Gate 1 `cd web && npm run build` -> exit `0`
+- Gate 2 `cd web && npm run typecheck` -> exit `0`
+- Gate 3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Gate 4 `cd web && npm run healthcheck:chat` -> exit `0`
+- Gate 5 benchmark copy + 50-row validation -> exit `0`
+- Gate 6 comparison-summary grep gate -> exit `0`
+- Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to the two declared artifacts plus `diagnostic/slices/11-rerun-benchmark-baseline.md`.
+- Criterion `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` exists with 50 non-empty answers: PASS.
+- Criterion `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` accurately documents new-run counts and aggregate delta: FAIL. A fresh local rerun produced `baseline=48/2/0`, `answer=48/2/0`, `semantic=50/0/0`, but `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:11`, `:12`, `:44`, and `:45` still document `46/4/0` and the older `+22/-7/-15`, `+2/-2/0` deltas.
+- Criterion per-question improved / unchanged / regressed delta is correct: FAIL. `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:69` lists Q30 under Improved (`C -> B`) even though the fresh rerun makes Q30 the single regression; `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:87` leaves Q12 under Unchanged even though the rerun improved Q12 from `B -> A`; `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:93` and `:95` say Q14 regressed `A -> B`, but the rerun kept Q14 at `A`.
+- Criterion `bash scripts/loop/test_grading_gate.sh` exits `0`: PASS.
+- Criterion build and typecheck gates exit `0`: PASS.
+- Criterion comparison vs prior baseline is documented regardless of direction: FAIL. The `.md` deliverable is stale relative to the rerun artifact it is supposed to summarize.
+- Decision: REVISE.
+- Rationale: the benchmark rerun is reproducible, but the required comparison summary was not regenerated from that rerun, so the slice does not yet satisfy the artifact-accuracy acceptance criteria.
 
 ## Plan-audit verdict (round 1)
 
