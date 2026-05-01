@@ -1,11 +1,11 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T00:59:58Z
+updated: 2026-04-30T21:01:54-04:00
 ---
 
 ## Goal
@@ -117,9 +117,10 @@ Rollback: `git revert <commit>`.
 Branch: `slice/11-rerun-benchmark-baseline` (off `integration/perf-roadmap`, base `8b3ff71`).
 
 ### Decisions
-- No source code changes. The deliverable is purely the two artifacts under `diagnostic/artifacts/healthcheck/`. Filename stays date-stamped to the slice `updated:` date (2026-04-30); the actual benchmark run also occurred on 2026-04-30 (UTC stamp `2026-04-30T23:51:34.944Z`), so no rename was needed.
-- Per slice Decisions, the documented regression on Q14 (A → B) is recorded as a finding in the `.md` artifact and is NOT treated as an auto-fail; this slice's purpose is to capture the new baseline and document the delta, not to act on regressions.
-- Aggregate direction is a clear improvement: overall A/B/C went from 24/11/15 → 46/4/0; semantic conformance went from 29/6/15 → 50/0/0. 24 questions improved, 25 unchanged, 1 regressed.
+- No source code changes. The deliverable is purely the two artifacts under `diagnostic/artifacts/healthcheck/`. Filename stays date-stamped to the slice `updated:` date (2026-04-30); the actual benchmark run also occurred on 2026-04-30 EDT (UTC stamp `2026-05-01T01:06:41.168Z` ≡ 2026-04-30 21:06 EDT), so no rename was needed.
+- Revision pass: the prior submission's `.md` was stale relative to a fresh rerun (auditor flagged drift on Q12/Q14/Q30 and aggregate counts). The benchmark was re-run from scratch on 2026-04-30 EDT, the JSON artifact was overwritten with the new graded results, and the `.md` was regenerated end-to-end from that JSON.
+- Per slice Decisions, the regression documented on Q7 (A → B) is recorded as a finding in the `.md` artifact and is NOT treated as an auto-fail; this slice's purpose is to capture the new baseline and document the delta, not to act on regressions.
+- Aggregate direction is a clear improvement: overall A/B/C went from 24/11/15 → 47/3/0; semantic conformance went from 29/6/15 → 50/0/0. 25 questions improved, 24 unchanged, 1 regressed.
 
 ### Gate command exit codes (run from worktree root unless noted)
 
@@ -132,23 +133,21 @@ Branch: `slice/11-rerun-benchmark-baseline` (off `integration/perf-roadmap`, bas
 | 5 | benchmark gate copy + 50-row validation (`node -e ...`) | 0 (`OK: 50/50 answered`) |
 | 6 | comparison-summary gate (grep checks on `11-rerun_2026-04-30.md`) | 0 (`OK: ... has new-run counts, prior-baseline counts, and per-question delta`) |
 
-Note: `cd web && npm install` was run once before gate 1 because the worktree's `web/node_modules/` did not exist; this is a workspace setup step, not a code change.
-
 ### Self-check vs acceptance criteria
 - [x] `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` exists, contains 50 rows, every row has a non-empty `answer` (asserted by gate 5).
-- [x] `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` exists; contains: per-aspect/per-category A/B/C counts for the new run, prior-baseline A/B/C counts copied from `00-fresh-benchmark_2026-04-26.json`, and explicit Improved (24) / Unchanged (25) / Regressed (1) sections with per-question IDs (asserted by gate 6).
+- [x] `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` exists; contains: per-aspect/per-category A/B/C counts for the new run (47/3/0 baseline, 47/3/0 answer, 50/0/0 semantic), prior-baseline A/B/C counts copied from `00-fresh-benchmark_2026-04-26.json`, and explicit Improved (25) / Unchanged (24) / Regressed (1) sections with per-question IDs (asserted by gate 6).
 - [x] Test-grading gate (gate 3) exits 0; no new failures vs the loop integration baseline.
 - [x] Build and typecheck gates (gates 1 and 2) exit 0.
-- [x] Comparison vs prior baseline is documented in the `.md` artifact (improvement direction at aggregate, plus the single per-question regression on Q14).
+- [x] Comparison vs prior baseline is documented in the `.md` artifact (improvement direction at aggregate, plus the single per-question regression on Q7).
 
 ### Files changed
-- `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (new, 50-row graded result set)
-- `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` (new, comparison summary)
+- `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (regenerated 50-row graded result set from the 2026-04-30 EDT rerun)
+- `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` (regenerated comparison summary aligned to the new JSON)
 - `diagnostic/slices/11-rerun-benchmark-baseline.md` (frontmatter status + this note)
 
 Commit hashes:
-- `f4b1cd1` — slice 11-rerun-benchmark-baseline: capture new healthcheck baseline + delta (artifacts + frontmatter + this note).
-- This trailing commit records the hash above into the note for auditor traceability.
+- `f4b1cd1` — initial submission of artifacts and note (superseded by this revision).
+- `1338130` — revision: regenerated artifacts from a fresh 2026-04-30 EDT rerun and updated note (this commit).
 
 ## Audit verdict
 
