@@ -1,8 +1,8 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01
@@ -312,6 +312,23 @@ and confirm every Acceptance criterion checkbox.)
 ### Medium
 - [x] Add an explicit post-deploy gate command that proves the acceptance criterion “every change in `sqitch.plan` is deployed” instead of relying on `sqitch verify`; the listed gates never run a status/log check after `bash scripts/init_db.sh`, so that criterion is not currently testable from the gate block.
 - [x] Remove `|| true` from the “sqitch project is well-formed and plan parses” sanity gate or rewrite the command/comment so the gate has a real pass/fail condition; as written it masks malformed-project failures while claiming to validate them.
+
+### Low
+- [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-05-01T22:56:29Z, so no stale-state note is required.
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Split the fresh-DB gate into separate `psql -c` invocations (or equivalent non-transactional commands); PostgreSQL executes multiple SQL statements passed via one `-c` as a single transaction, so `DROP DATABASE ...; CREATE DATABASE ...` will fail because `DROP DATABASE` cannot run inside a transaction block.
+
+### Medium
+- [ ] Resolve the Sqitch project-root/layout contradiction by making Step 1, Changed files expected, and the `sqitch --chdir ...` gates agree on where `sqitch.conf` and `sqitch.plan` live; `sqitch init ... --top-dir sql/migrations` defaults the plan file under `sql/migrations/`, but the plan currently expects a repo-root `sqitch.conf` while all gates run from `sql/migrations`.
+- [ ] Replace the matview acceptance check with an executable assertion that the `public` schema contains exactly the 11 named matviews and no extras; the current gate only prints `pg_matviews` rows and refreshes named views, so extra or renamed matviews would not fail the gate.
 
 ### Low
 - [ ] None.
