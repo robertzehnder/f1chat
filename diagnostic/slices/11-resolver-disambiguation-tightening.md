@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T13:49:17-04:00
+updated: 2026-05-01T17:53:32Z
 ---
 
 ## Goal
@@ -30,19 +30,26 @@ Tighten resolver disambiguation: when a query mentions "Verstappen", default to 
 - **Optional live regrade (not a gate):** requires `OPENF1_DATABASE_URL` (Neon / local Postgres URL), `ANTHROPIC_API_KEY` (LLM grading), and a running `npm run dev` on `OPENF1_CHAT_BASE_URL` (default `http://127.0.0.1:3000`). Operator-only; not invoked by the loop.
 
 ## Steps
-1. Identify the resolver-disambiguation surface area in `web/src/lib/chatRuntime/resolution.ts` (the `containsWholePhrase(... "max verstappen") && row.driver_number === 1` branch and surrounding scoring at the file's `scoreDriverRow`/equivalent function). Confirm that "Verstappen" alone (without "max") falls through to surname-only matching.
-2. Tighten the disambiguation rules so that:
-   - A bare-"verstappen" mention with no first name and a session whose `year >= 2024` resolves to Max Verstappen (driver_number 1) when Max is in the session roster.
-   - A bare-"verstappen" mention in a session whose `year < 2024` does not auto-prefer Max; it returns the candidate set with explicit ambiguity rather than silently picking one.
-   - Explicit "max verstappen" continues to score uniquely highest (existing behavior preserved).
-3. Add a deterministic Node test file `web/scripts/tests/resolver-disambiguation.test.mjs` covering the three cases above plus a regression case for the historical Q26 phrasing (which already names "Max Verstappen" explicitly — the regression assertion is that Max still wins by a wide score margin and `matchedOn` includes `canonical_full_name_match`). Tests construct the candidate rows in-memory and call the scoring function directly; no DB / fetch / LLM.
-4. Wire the new test into `web/package.json`'s `test:grading` script (or the umbrella runner that `test:grading` invokes — discover during implementation; do not duplicate harness).
-5. Run the gates listed below and confirm green.
+1. Identify the resolver-disambiguation surface area in `web/src/lib/chatRuntime/resolution.ts` (the `containsWholePhrase(... "max verstappen") && row.driver_number === 1` branch in `scoreDriverCandidate`) and its lone caller in `web/src/lib/chatRuntime.ts` around line 1290 (`scoredDrivers = driverRows.map(... scoreDriverCandidate ...)` → `driverCandidates`). Confirm that "Verstappen" alone (without "max") currently falls through to surname-only matching with no year-aware tiebreak.
+2. Add a new exported pure function `disambiguateDrivers(rows: DriverResolutionRow[], normalizedMessage: string, sessionYear: number | null): { resolved: DriverResolutionRow; matchedOn: string[]; score: number } | { ambiguous: { row: DriverResolutionRow; matchedOn: string[]; score: number }[] }` in `web/src/lib/chatRuntime/resolution.ts`. This function is the **resolver entrypoint under test**: it scores each row via `scoreDriverCandidate`, then applies the disambiguation rules below and returns either a single resolved candidate or the ambiguity set. Rules:
+   - A bare-"verstappen" mention with no first name and a `sessionYear >= 2024` resolves to Max Verstappen (driver_number 1) when Max is in the input rows. Returned `matchedOn` includes `bare_verstappen_2024_default`.
+   - A bare-"verstappen" mention with `sessionYear < 2024` (or `sessionYear === null`) and multiple Verstappen surname matches returns `{ ambiguous: [...] }` containing every row whose `last_name` matches "verstappen" (case-insensitive) — it does not silently pick Max.
+   - Explicit "max verstappen" returns `{ resolved: Max }` regardless of `sessionYear` (existing behavior preserved via the existing `canonical_full_name_match` boost).
+   - When neither case fires, fall back to the current "highest score wins, ties → lowest driver_number" behavior already implemented inline in `chatRuntime.ts:1304`.
+3. Refactor `web/src/lib/chatRuntime.ts:1291-1320` to call `disambiguateDrivers(driverRows, normalizedMessage, selectedSession?.year ?? null)` and use the returned `resolved` row (or build `driverCandidates` from the `ambiguous` set so downstream `forceDriverClarification` / `needsDriverPair` paths still trigger). Preserve the existing `explicitDriverNumbers` short-circuit at `chatRuntime.ts:1294` (explicit numbers still win unconditionally).
+4. Add a deterministic Node test file `web/scripts/tests/resolver-disambiguation.test.mjs` that imports `disambiguateDrivers` directly from a TS-stripped entrypoint (use the existing pattern from `web/scripts/tests/grading-regression.test.mjs` or `resolver-lru.test.mjs` for how peer tests load `@/lib/chatRuntime/...` modules under `node --test`). The test asserts at the resolver entrypoint, not the score function:
+   - **Case A — bare-Verstappen 2024+ resolves Max:** input rows = [Max(#1), Jos(#33-historic)], message "verstappen lap times", `sessionYear=2024` → result has `.resolved.driver_number === 1` and `matchedOn` includes `bare_verstappen_2024_default`.
+   - **Case B — bare-Verstappen pre-2024 returns explicit ambiguity:** same rows, same message, `sessionYear=2003` → result has `.ambiguous.length === 2`, both Verstappens present, and `.resolved` is `undefined` (asserts no silent pick).
+   - **Case C — explicit "max verstappen" resolves Max regardless of year:** message "max verstappen pace", `sessionYear=2003` → `.resolved.driver_number === 1` and `matchedOn` includes `canonical_full_name_match`.
+   - **Case D — Q26-phrasing regression:** message replicating Q26's exact phrasing from the rerun artifact, `sessionYear=2024` → `.resolved.driver_number === 1` (Max wins, no ambiguity).
+   No DB / fetch / LLM. The test file glob (`scripts/tests/*.test.mjs` per `web/package.json:10`) auto-discovers the new file; no `package.json` change is required.
+5. Run the gates listed below and confirm green. Confirm the new test is actually executed by inspecting the isolated `node --test` invocation's TAP output for at least one `ok` line per Case A–D.
 
 ## Changed files expected
-- `web/src/lib/chatRuntime/resolution.ts` — disambiguation logic edits.
-- `web/scripts/tests/resolver-disambiguation.test.mjs` — new deterministic test file.
-- `web/package.json` — only if `test:grading` does not auto-discover `web/scripts/tests/*.test.mjs`; otherwise unchanged.
+- `web/src/lib/chatRuntime/resolution.ts` — add `disambiguateDrivers` resolver entrypoint and supporting logic.
+- `web/src/lib/chatRuntime.ts` — refactor the `driverRows`→`driverCandidates` block (~lines 1291-1320) to call `disambiguateDrivers`.
+- `web/scripts/tests/resolver-disambiguation.test.mjs` — new deterministic test file at the resolver entrypoint.
+- `web/package.json` — unchanged. The existing `"test:grading": "node --test scripts/tests/*.test.mjs"` glob auto-discovers the new file.
 
 ## Artifact paths
 None (deterministic unit tests; no captured run artifact required).
@@ -51,6 +58,13 @@ None (deterministic unit tests; no captured run artifact required).
 ```bash
 cd web && npm run build
 cd web && npm run typecheck
+# Discovery gate: prove the new test file is loaded and all four cases run.
+# This complements the baseline-aware wrapper, which can exit 0 even if a
+# new .test.mjs file is silently skipped (the grading harness's glob would
+# simply miss a typo'd filename).
+cd web && node --test scripts/tests/resolver-disambiguation.test.mjs 2>&1 | tee /tmp/resolver-disamb-tap.txt
+grep -c '^ok ' /tmp/resolver-disamb-tap.txt | awk '{ if ($1 < 4) { print "FAIL: expected ≥4 ok lines, got " $1; exit 1 } else { print "OK: " $1 " ok lines" } }'
+# Baseline-aware grading-suite gate.
 bash scripts/loop/test_grading_gate.sh
 ```
 
@@ -64,13 +78,17 @@ Reproducible procedure for operators wanting to confirm Q26 still grades A end-t
 python3 -c "import json; qs=json.load(open('web/scripts/chat-health-check.questions.json')); json.dump([q for q in qs if q['id']==26], open('/tmp/q26.json','w'))"
 # 3. Run health-check restricted to Q26 (writes a fresh artifact under web/logs/):
 cd web && OPENF1_CHAT_BASE_URL=http://127.0.0.1:3000 node scripts/chat-health-check.mjs --questions /tmp/q26.json
-# 4. Assert Q26 baseline grade is A or B (rerun JSON is the latest under web/logs/):
-python3 -c "import json,glob,os; f=max(glob.glob('web/logs/chat-health-check-*.json'), key=os.path.getmtime); rows=json.load(open(f)); r=next(x for x in rows if x['id']==26); g=r.get('baseline_grade'); print('Q26 grade:', g); assert g in ('A','B'), g"
+# 4. Assert Q26 baseline grade is A or B (rerun JSON is the latest under web/logs/).
+#    The current healthcheck schema uses camelCase `baselineGrade`; we also
+#    fall back to the legacy snake_case `baseline_grade` so this command works
+#    against historical artifacts.
+python3 -c "import json,glob,os; f=max(glob.glob('web/logs/chat-health-check-*.json'), key=os.path.getmtime); rows=json.load(open(f)); r=next(x for x in rows if x['id']==26); g=r.get('baselineGrade') or r.get('baseline_grade'); print('Q26 grade:', g); assert g in ('A','B'), g"
 ```
 
 ## Acceptance criteria
-- [ ] `web/scripts/tests/resolver-disambiguation.test.mjs` exists and is invoked by `bash scripts/loop/test_grading_gate.sh`; all four cases (bare-Verstappen 2024+, bare-Verstappen pre-2024, explicit "max verstappen", Q26-phrasing regression) pass.
-- [ ] `bash scripts/loop/test_grading_gate.sh` reports no NEW failures vs the baseline at `scripts/loop/state/test_grading_baseline.txt`. Pre-existing baseline failures (e.g. `driver-fallback.test.mjs` Cases A/B/E) are not regressions.
+- [ ] `web/scripts/tests/resolver-disambiguation.test.mjs` exists and asserts at the **resolver entrypoint** (`disambiguateDrivers`), not just the score function. All four cases (bare-Verstappen 2024+ resolves Max, bare-Verstappen pre-2024 returns explicit `{ ambiguous: [...] }` with no silent pick, explicit "max verstappen" resolves Max, Q26-phrasing regression resolves Max) pass.
+- [ ] **Discovery gate** confirms the new test file is loaded: `cd web && node --test scripts/tests/resolver-disambiguation.test.mjs` exits 0 AND its TAP output contains at least 4 `^ok ` lines (one per Case A–D). This proves the file is not silently skipped by a typo'd filename or import error.
+- [ ] `bash scripts/loop/test_grading_gate.sh` reports no NEW failures vs the baseline at `scripts/loop/state/test_grading_baseline.txt`. Pre-existing baseline failures (e.g. `driver-fallback.test.mjs` Cases A/B/E) are not regressions. Because `web/package.json:10` defines `test:grading` as `node --test scripts/tests/*.test.mjs`, the new file is auto-discovered by the same glob the wrapper uses.
 - [ ] `cd web && npm run typecheck` and `cd web && npm run build` exit 0.
 
 ## Out of scope
@@ -111,11 +129,11 @@ Rollback: `git revert <commit>`. The disambiguation tightening is a localized sc
 **Status: REVISE**
 
 ### High
-- [ ] Replace the load-bearing "call the scoring function directly" test plan with at least one deterministic test at the resolver entrypoint that proves a bare `Verstappen` query in a pre-2024 session returns an explicit ambiguity result rather than silently selecting a driver, because score-only assertions do not verify the resolver-level behavior promised in Step 2 and the Goal.
+- [x] Replace the load-bearing "call the scoring function directly" test plan with at least one deterministic test at the resolver entrypoint that proves a bare `Verstappen` query in a pre-2024 session returns an explicit ambiguity result rather than silently selecting a driver, because score-only assertions do not verify the resolver-level behavior promised in Step 2 and the Goal.
 
 ### Medium
-- [ ] Add an explicit gate assertion that the new resolver-disambiguation test is actually discovered and executed by the `bash scripts/loop/test_grading_gate.sh` path, because the baseline-aware wrapper can still exit 0 if the new `.test.mjs` file is never wired into the grading harness.
-- [ ] Fix the optional live-regrade grade assertion to use the current healthcheck row schema (`baselineGrade`, or a schema-agnostic fallback) instead of only `baseline_grade`, because the documented operator procedure should not fail on the repo's current artifact shape.
+- [x] Add an explicit gate assertion that the new resolver-disambiguation test is actually discovered and executed by the `bash scripts/loop/test_grading_gate.sh` path, because the baseline-aware wrapper can still exit 0 if the new `.test.mjs` file is never wired into the grading harness.
+- [x] Fix the optional live-regrade grade assertion to use the current healthcheck row schema (`baselineGrade`, or a schema-agnostic fallback) instead of only `baseline_grade`, because the documented operator procedure should not fail on the repo's current artifact shape.
 
 ### Low
 
