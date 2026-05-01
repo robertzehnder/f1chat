@@ -1,8 +1,8 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: awaiting_audit
-owner: codex
+status: blocked
+owner: user
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-05-01T16:00:00-04:00
@@ -341,7 +341,29 @@ Commit hashes (slice branch ahead of `integration/perf-roadmap`):
 - `2a16290` — `[slice:11-multi-axis-grader-redesign][awaiting-audit]` slice implementation commit (multi-axis grader rewrite + canonical artifact + downstream consumers).
 
 ## Audit verdict
-(filled by Codex)
+**Status: REJECT**
+
+- Gate 1 `( cd web && npm run build )` -> exit `0`
+- Gate 2 `( cd web && npm run typecheck )` -> exit `0`
+- Gate 3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Gate 4 `grep -E '^- id=[0-9]+ legacy_axis=(answer_grade|semantic_conformance_grade) from=[ABC]$' diagnostic/slices/11-multi-axis-grader-redesign.md` -> exit `0`
+- Gate 5 mtime-pin gate -> exit `0`
+- Gate 6 canonical-shape gate -> exit `0`
+- Gate 7 schema-consumer gate (`scripts/loop/update_state.sh`) -> exit `0`
+- Gate 8 risk-section grep -> exit `0`
+- Scope diff: REJECT — `git diff --name-only integration/perf-roadmap...HEAD` includes `diagnostic/_state.md`, and its hunks are not append-only additions under `## Notes for auditors`; they rewrite the timestamp at [diagnostic/_state.md](/Users/robertzehnder/.openf1-loop-worktrees/11-multi-axis-grader-redesign/diagnostic/_state.md:1), the phase-status table at [diagnostic/_state.md](/Users/robertzehnder/.openf1-loop-worktrees/11-multi-axis-grader-redesign/diagnostic/_state.md:22), and the benchmark headline block at [diagnostic/_state.md](/Users/robertzehnder/.openf1-loop-worktrees/11-multi-axis-grader-redesign/diagnostic/_state.md:27). The implicit allow-list does not cover these edits.
+- Criterion canonical single-file artifact shape: PASS.
+- Criterion row schema (`factual_correctness`, `completeness`, `clarity` objects; no legacy axis fields): PASS.
+- Criterion summary/actionable per-axis counts and `update_state.sh` consumption: PASS.
+- Criterion Decisions block target IDs present: PASS.
+- Criterion target-ID mapped-axis improvement: PASS (`id=2`, `id=10`, `id=30` each improve `answer_grade B -> factual_correctness A`).
+- Criterion `clarity` absolute target: PASS (`0` rows with `clarity.grade = C`).
+- Criterion category-mate mapped-axis non-regression: PASS (`0` regressions across the target categories).
+- Criterion newest live healthcheck artifact is the regrade artifact: PASS.
+- Criterion grading regression gate exits `0`: PASS.
+- Criterion legacy-field risk grep returns zero hits: PASS.
+- Decision: REJECT.
+- Rationale: the slice is substantively correct, but the branch contains out-of-scope `_state.md` mutations, which the audit contract defines as a reject condition.
 
 ## Prior audit verdict (round 1, REJECT, superseded by re-audit after _state.md revert)
 **Status: REJECT (superseded)**
