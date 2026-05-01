@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T11:20:27-04:00
+updated: 2026-05-01T11:29:24-04:00
 ---
 
 ## Goal
@@ -274,19 +274,36 @@ No source SQL/UI/template files were modified by this revision either; `sql/006_
 - Gate 4e `psql "$DATABASE_URL" -f sql/013_race_progression_summary_mat.sql` -> exit `0`
 - Gate 4f `psql "$DATABASE_URL" -f sql/017_lap_phase_summary_mat.sql` -> exit `0`
 - Gate 4g `psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql` -> exit `0`
-- Gate 5 declared command block -> exit `0`
+- Gate 5 `bash -euo pipefail <<'GATE5' ... GATE5` -> exit `1`
 - Gate 5 failure context:
-  `missing ids in canonical questions file`
-  `Error: ENOENT: no such file or directory, open '/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/web/scripts/chat-health-check.questions.11-valid-lap-policy-v2.json'`
+  `Q19 regressed: expected A, got C`
+  `Q20 regressed: expected A, got C`
+  `Q21 regressed: expected A, got C`
+  `Q22 regressed: expected A, got C`
+  `Q23 regressed: expected A, got C`
+  `Q24 regressed: expected A, got C`
+  `Q25 regressed: expected A, got C`
+  `Q26 regressed: expected A, got C`
+  `Q27 regressed: expected A, got C`
+  `Q28 regressed: expected A, got C`
+  `Q29 regressed: expected A, got C`
+  `Q30 regressed below B (routing-defect baseline): got C`
+  `Q31 regressed: expected A, got C`
+  `Q32 regressed: expected A, got C`
+  `Q33 regressed: expected A, got C`
+  `Q34 regressed: expected A, got C`
+  `Q35 regressed: expected A, got C`
+  `Q36 regressed: expected A, got C`
+  `Q37 regressed: expected A, got C`
 - Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` and `diagnostic/slices/11-valid-lap-policy-v2.md`.
 - Criterion build/typecheck exit 0: PASS.
 - Criterion gate 3 exits 0: PASS.
 - Criterion gate 4 exits 0: PASS.
-- Criterion gate 5 Q19-Q29 + Q31-Q37 remain A: FAIL — [diagnostic/slices/11-valid-lap-policy-v2.md](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/slices/11-valid-lap-policy-v2.md:100) passes `$TARGET_IDS` as one `zsh` argument at [diagnostic/slices/11-valid-lap-policy-v2.md](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/slices/11-valid-lap-policy-v2.md:116), so subset generation aborts before `healthcheck:chat` can read the file; because the block does not stop on failure, it can still validate a stale artifact instead of the just-run re-grade.
-- Criterion gate 5 Q30 stays at least B: FAIL — same gate-5 shell bug means the checked-in command block does not actually prove the rerun artifact came from the just-run healthcheck.
-- Criterion slice-completion note records the Q30 hand-off diagnosis: PASS ([diagnostic/slices/11-valid-lap-policy-v2.md](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/slices/11-valid-lap-policy-v2.md:168)).
+- Criterion gate 5 Q19-Q29 + Q31-Q37 remain A: FAIL — the fresh rerun artifact records `Q19=C` through `Q29=C` and `Q31=C` through `Q37=C` in [11-valid-lap-policy-v2_2026-05-01.json](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json:1).
+- Criterion gate 5 Q30 stays at least B: FAIL — the same fresh rerun artifact records `Q30=C` in [11-valid-lap-policy-v2_2026-05-01.json](/Users/robertzehnder/.openf1-loop-worktrees/11-valid-lap-policy-v2/diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json:1).
+- Criterion slice-completion note records the Q30 hand-off diagnosis: PASS.
 - Decision: REVISE.
-- Rationale: fix gate 5 to be executable in the repo's `zsh` environment and fail fast on subset-generation / `healthcheck:chat` errors, then rerun gate 5 and refresh the artifact and slice note from that real rerun.
+- Rationale: gates 1-4 pass, but the required regression-protection rerun fails substantively on every guarded question in the fresh artifact, so the slice does not meet its acceptance bar.
 
 ## Plan-audit verdict (round 1)
 
