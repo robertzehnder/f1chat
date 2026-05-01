@@ -1,7 +1,7 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: ready_to_merge
+status: done
 owner: codex
 user_approval_required: no
 created: 2026-04-26
