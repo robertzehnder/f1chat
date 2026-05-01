@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T13:41:10Z
+updated: 2026-05-01T13:44:04Z
 ---
 
 ## Goal
@@ -183,3 +183,20 @@ Rollback: `git revert <commit>`.
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T13:24:14Z`).
 - Prior-context evidence for the routing mismatch is in `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` (Q30 `generationNotes=template=max_leclerc_lap_pace_summary`; SQL aggregates lap pace, not sector summaries).
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Replace gate 4's `REFRESH MATERIALIZED VIEW CONCURRENTLY core.laps_enriched;` with the repo's actual refresh path for this contract graph: `core.laps_enriched` is a view facade over `core.laps_enriched_mat` (`sql/010_laps_enriched_mat.sql:12-13,71-83`), so the plan must name the executable re-materialization step(s) that repopulate `core.laps_enriched_mat` and any downstream summary mats the slice relies on before gate 5 re-grades.
+- [ ] Resolve the deleted-lap scope against real repository sources: `raw.laps` has no `deleted`/`lap_deleted` field (`sql/002_create_tables.sql:57-77`) and `core.lap_context_summary` exposes only per-lap-number aggregates (`sql/007_semantic_summary_contracts.sql:763-790`), so the slice must either remove deleted-lap handling from scope or name the actual source relation/column that can drive it.
+
+### Medium
+- [ ] Fix the gate-5 artifact contract so its row-count and targeting language match the declared question set: the slice re-grades Q19-Q37 inclusive (19 IDs) with no primary lift target, but `## Artifact paths` still says `15-row subset` and calls Q30 the primary target.
+
+### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T13:24:14Z`).
+- Current validity-policy columns in `core.valid_lap_policy` / `core_build.laps_enriched.is_valid` cover pit-out, pit-in, sector-data, compound-known, and slick-compound checks, but no SC/deleted-lap toggles yet (`sql/006_semantic_lap_layer.sql:50-67,273-330`; `sql/008_core_build_schema.sql:7-63`).
