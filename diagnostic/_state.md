@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-05-01T19:41:25Z
+# Project state — last updated: 2026-05-01T19:47:07Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -19,7 +19,7 @@ accumulated context the loop carries between slices._
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 11 | 5 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 
 ## Latest benchmark headline
