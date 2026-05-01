@@ -1,11 +1,11 @@
 ---
 slice_id: 12-env-assertions
 phase: 12
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T18:49:24-04:00
+updated: 2026-05-01T18:55:13-04:00
 ---
 
 ## Goal
@@ -143,7 +143,19 @@ No production state, schema, or external service is touched, so the rollback is 
 - [x] `.env.example` preserves the local `DB_*` defaults verbatim (`DB_HOST=127.0.0.1`, `DB_PORT=5432`, `DB_NAME=openf1`, `DB_USER=openf1`, `DB_PASSWORD=openf1_local_dev`) as the only uncommented database block; every `NEON_*`, `DATABASE_URL`, and `DB_SSL`/`NEON_SSL` line is `#`-commented.
 
 ## Audit verdict
-(filled by Codex)
+**PASS**
+
+- Gate #1 `cd web && npm run build` -> exit `0`
+- Gate #2 `cd web && npm run typecheck` -> exit `0`
+- Gate #3 `cd web && node --test scripts/tests/pooled-url-assertion.test.mjs` -> exit `0`
+- Gate #4 `cd web && node --test scripts/tests/local-docker-db-assertion.test.mjs` -> exit `0`
+- Gate #5 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
+- Scope diff `git diff --name-only integration/perf-roadmap...HEAD` -> exit `0`; paths limited to `.env.example`, `diagnostic/slices/12-env-assertions.md`, `web/scripts/tests/local-docker-db-assertion.test.mjs`, `web/src/lib/db.ts`
+- Acceptance: `assertLocalDockerDb` exported and wired directly after `assertPooledDatabaseUrl(process.env)` at `web/src/lib/db.ts:29`, `web/src/lib/db.ts:155`, `web/src/lib/db.ts:156`
+- Acceptance: local-host guard trims `NEON_DATABASE_URL`, `DATABASE_URL`, `NEON_DB_HOST`, defaults `DB_HOST` to `127.0.0.1`, and throws with offending host plus allowed set at `web/src/lib/db.ts:33`, `web/src/lib/db.ts:36`, `web/src/lib/db.ts:39`, `web/src/lib/db.ts:42`, `web/src/lib/db.ts:45`
+- Acceptance: slice-local test covers 10 named cases, including message-content checks on every throws path, at `web/scripts/tests/local-docker-db-assertion.test.mjs:69`, `web/scripts/tests/local-docker-db-assertion.test.mjs:89`, `web/scripts/tests/local-docker-db-assertion.test.mjs:101`, `web/scripts/tests/local-docker-db-assertion.test.mjs:111`, `web/scripts/tests/local-docker-db-assertion.test.mjs:118`, `web/scripts/tests/local-docker-db-assertion.test.mjs:129`, `web/scripts/tests/local-docker-db-assertion.test.mjs:140`, `web/scripts/tests/local-docker-db-assertion.test.mjs:151`, `web/scripts/tests/local-docker-db-assertion.test.mjs:156`, `web/scripts/tests/local-docker-db-assertion.test.mjs:172`, `web/scripts/tests/local-docker-db-assertion.test.mjs:188`
+- Acceptance: `.env.example` documents `NEON_DATABASE_URL`, `NEON_DATABASE_URL_REPLICA`, `DATABASE_URL`, `NEON_DB_*`, `DB_SSL`, `NEON_SSL`, and preserves the local `DB_*` defaults as the only uncommented database block at `.env.example:1`, `.env.example:5`, `.env.example:8`, `.env.example:11`, `.env.example:14`, `.env.example:21`, `.env.example:24`, `.env.example:25`, `.env.example:26`, `.env.example:27`, `.env.example:28`, `.env.example:29`
+- Decision: PASS — all acceptance criteria verified; no scope creep.
 
 ## Plan-audit verdict (round 1)
 
