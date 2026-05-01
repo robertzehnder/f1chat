@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-04-30T23:32:00Z
+# Project state — last updated: 2026-05-01T03:00:31Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -19,17 +19,13 @@ accumulated context the loop carries between slices._
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 11 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
+| 11 | 5 | 1 | 0 | 4 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 
 ## Latest benchmark headline
 
-- File: `diagnostic/artifacts/healthcheck/00-fresh-benchmark_2026-04-26.json`
-- Overall A/B/C: 24 / 11 / 15
-- Answer A/B/C: 44 / 6 / 0
-- Semantic conformance A/B/C: 29 / 6 / 15
-- Root causes: raw_table_regression: 1, semantic_contract_missed: 1, resolver_failure: 1
-- Total questions: 50
+- File: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json`
+- (could not parse: 'list' object has no attribute 'get')
 
 ## Latest perf baseline
 
@@ -38,6 +34,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `d06e7e4` merge: 11-rerun-benchmark-baseline [pass] — 2026-04-30
 - `3318644` merge: 10-replay-viewer-mvp [pass] — 2026-04-30
 - `2bc21df` merge: 10-saved-analyses-persistence [pass] — 2026-04-30
 - `fc7e4f1` merge: 10-catalog-completeness-page [pass] — 2026-04-30
@@ -47,7 +44,6 @@ accumulated context the loop carries between slices._
 - `8909d6a` merge: 09-line-count-gate [pass] — 2026-04-30
 - `9e6ffc7` merge: 09-split-answerSanity-count-list [pass] — 2026-04-30
 - `c4500a3` merge: 09-split-answerSanity-strategy-evidence [pass] — 2026-04-30
-- `ea34fad` merge: 09-split-answerSanity-grid-finish [pass] — 2026-04-30
 
 ## Open architectural decisions
 
