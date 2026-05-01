@@ -172,6 +172,8 @@ Rollback: `git revert <commit>`.
 
 **Commits on this branch (since `integration/perf-roadmap`):**
 - `55dfdb4` — slice 11-valid-lap-policy-v2: no-SQL-change diagnosis + gate-5 regression-protection re-grade (this commit's parent on integration is `8304065 [slice:11-valid-lap-policy-v2][plan-approved]`).
+- `f2798f9` — slice 11-valid-lap-policy-v2: record commit hash in slice-completion note.
+- `657a1cd` — slice 11-valid-lap-policy-v2: fix gate-5 zsh executability + fresh re-grade (round-1 implementation-audit revision; bash heredoc + array for TARGET_IDS, fresh gate-5 artifact).
 
 **Diagnosis path: no-SQL-change.** Per step 3 of the plan: "If no contamination is found that warrants a change, the slice may complete with no SQL change." Both diagnosis prongs were exercised and yielded no in-scope SQL change for this slice:
 
