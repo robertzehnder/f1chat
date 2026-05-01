@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: pending
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T13:53:28Z
+updated: 2026-05-01T11:11:00-04:00
 ---
 
 ## Goal
@@ -159,7 +159,57 @@ node -e '
 Rollback: `git revert <commit>`.
 
 ## Slice-completion note
-(filled by Claude)
+
+**Branch:** `slice/11-valid-lap-policy-v2`
+
+**Commits on this branch (since `integration/perf-roadmap`):**
+- `55dfdb4` — slice 11-valid-lap-policy-v2: no-SQL-change diagnosis + gate-5 regression-protection re-grade (this commit's parent on integration is `8304065 [slice:11-valid-lap-policy-v2][plan-approved]`).
+
+**Diagnosis path: no-SQL-change.** Per step 3 of the plan: "If no contamination is found that warrants a change, the slice may complete with no SQL change." Both diagnosis prongs were exercised and yielded no in-scope SQL change for this slice:
+
+1. **Q30 routing/template defect (step 2, out of scope, hand-off):** confirmed against `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json`. Q30's question is "Compare Max Verstappen and Charles Leclerc on sector times in the Abu Dhabi 2025 race session," but the row records `generationNotes=template=max_leclerc_lap_pace_summary | session_pin_verified(session_key=9839)` — i.e. the deterministic router selected a lap-pace template, not a sector-times template. This is a routing/template-selection defect in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts`, not a contamination of `core.laps_enriched.is_valid`. Per the plan, this is explicitly handed off to a future routing/template slice; Q30 is held to a "must not regress below B" check and was not modified by this slice.
+2. **Lap-validity contamination audit (step 3):** every regression-protection question (Q19–Q29 and Q31–Q37) was already grade A in the 2026-04-30 baseline. The current `core.valid_lap_policy` default already excludes pit-out laps, pit-in laps, sector-data-missing laps, unknown-compound laps, and non-slick laps, plus a `[50, 200]` lap-duration band (`sql/006_semantic_lap_layer.sql:50-116,272-329`). The `track_flag` column is projected onto `core.laps_enriched` from `raw.race_control` (`sql/006_semantic_lap_layer.sql:241-254,387`) but is not consulted by the `is_valid` derivation. Because the regression-protection set is already at A in the rerun, no current contamination class is degrading any in-scope answer; therefore no SQL change is warranted by this slice's measurable bar. Adding an SC/track_flag exclusion in the absence of a demonstrable failing answer would be scope creep relative to the slice's regression-only success criterion.
+
+Per the plan, gate 4 was still run as the mandatory no-op `psql` re-apply of the unchanged `sql/006_semantic_lap_layer.sql` plus the dependency-ordered re-materialization of the storage tables (each migration is an idempotent TRUNCATE+INSERT, per `sql/010_laps_enriched_mat.sql:71-83`). Gate 4 exited 0; no SQL change was committed.
+
+**Changed files in this slice:**
+- `diagnostic/slices/11-valid-lap-policy-v2.md` — frontmatter + this slice-completion note.
+- `diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json` — gate-5 re-grade artifact (19 rows, Q19–Q37).
+
+**No-SQL-change path actually taken:** `sql/006_semantic_lap_layer.sql`, `sql/008_core_build_schema.sql`, `web/src/lib/deterministicSql.ts`, and `web/src/lib/deterministicSql/pace.ts` were NOT modified (each is conditional in the slice's "Changed files expected").
+
+**Gate command exit codes (all 0):**
+
+| Gate | Command | Exit |
+|---|---|---:|
+| 1 | `cd web && npm run build` | 0 |
+| 2 | `cd web && npm run typecheck` | 0 |
+| 3 | `bash scripts/loop/test_grading_gate.sh` | 0 (PASS — `slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`, no new failures vs integration baseline) |
+| 4a | `psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` | 0 |
+| 4b | `psql "$DATABASE_URL" -f sql/010_laps_enriched_mat.sql` (TRUNCATE+INSERT, 167172 rows) | 0 |
+| 4c | `psql "$DATABASE_URL" -f sql/009_driver_session_summary_mat.sql` (5436 rows) | 0 |
+| 4d | `psql "$DATABASE_URL" -f sql/011_stint_summary_mat.sql` (20654 rows) | 0 |
+| 4e | `psql "$DATABASE_URL" -f sql/013_race_progression_summary_mat.sql` (17864 rows) | 0 |
+| 4f | `psql "$DATABASE_URL" -f sql/017_lap_phase_summary_mat.sql` (167172 rows) | 0 |
+| 4g | `psql "$DATABASE_URL" -f sql/018_lap_context_summary_mat.sql` (9414 rows) | 0 |
+| 5 | `cd web && npm run healthcheck:chat -- --questions scripts/chat-health-check.questions.11-valid-lap-policy-v2.json` + acceptance node script | 0 |
+
+**Gate 5 per-question grades (`diagnostic/artifacts/healthcheck/11-valid-lap-policy-v2_2026-05-01.json`):**
+- Q19=A, Q20=A, Q21=A, Q22=A, Q23=A, Q24=A, Q25=A, Q26=A, Q27=A, Q28=A, Q29=A
+- Q30=B (held at 2026-04-30 baseline; routing/template defect, out of scope)
+- Q31=A, Q32=A, Q33=A, Q34=A, Q35=A, Q36=A, Q37=A
+
+Acceptance script printed: `OK: regression-protection set Q19-Q29 + Q31-Q37 remain at A, Q30 not regressed below B`.
+
+**Self-check vs acceptance criteria:**
+- [x] Build (gate 1) and typecheck (gate 2) exit 0.
+- [x] `bash scripts/loop/test_grading_gate.sh` (gate 3) exits 0 (no new failures vs the loop baseline).
+- [x] Schema apply / re-materialization (gate 4) exits 0 against the pooled `DATABASE_URL` (no-op re-apply of the unchanged `sql/006_semantic_lap_layer.sql` per the slice's explicit no-SQL-change behavior).
+- [x] Re-grade gate (gate 5) exits 0: Q19–Q29 and Q31–Q37 each remain at grade A.
+- [x] Re-grade gate (gate 5) exits 0: Q30 does not regress below B (still B).
+- [x] Slice-completion note records the diagnosis (no contamination class fixed; Q30 routing/template hand-off with `generationNotes=template=max_leclerc_lap_pace_summary` evidence).
+
+**Q30 hand-off:** future slice should fix deterministic-template routing in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts` so a sector-times question (Q30) routes to a sector-times template instead of `max_leclerc_lap_pace_summary`. Evidence: `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` Q30 row, `generationNotes=template=max_leclerc_lap_pace_summary | session_pin_verified(session_key=9839)`.
 
 ## Audit verdict
 (filled by Codex)
