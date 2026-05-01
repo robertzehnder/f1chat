@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: pending_plan_audit
-owner: codex
+status: revising_plan
+owner: claude
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T17:53:32Z
+updated: 2026-05-01T17:56:17Z
 ---
 
 ## Goal
@@ -136,6 +136,23 @@ Rollback: `git revert <commit>`. The disambiguation tightening is a localized sc
 - [x] Fix the optional live-regrade grade assertion to use the current healthcheck row schema (`baselineGrade`, or a schema-agnostic fallback) instead of only `baseline_grade`, because the documented operator procedure should not fail on the repo's current artifact shape.
 
 ### Low
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T15:42:52Z`).
+
+## Plan-audit verdict (round 3)
+
+**Status: REVISE**
+
+### High
+- [ ] Redefine the `disambiguateDrivers` contract and step-3 wiring so comparison prompts keep enough scored driver candidates to select both drivers, because the proposed `{ resolved } | { ambiguous }` single-winner shape would collapse Q26-style "Max Verstappen and Charles Leclerc" queries to one driver and break `comparison_analysis`.
+- [ ] Add a deterministic acceptance signal that `web/src/lib/chatRuntime.ts` actually routes driver resolution through `disambiguateDrivers(..., selectedSession?.year ?? null)` while preserving the explicit-driver-number short-circuit, because the planned entrypoint-only test can pass even if the runtime never wires in the new year-aware helper.
+
+### Medium
+- [ ] Align Case D with the cited artifact by using Q26's actual 2025 session year, not `sessionYear=2024`, so the regression test exercises the same year context as the rerun question it claims to replicate.
+
+### Low
+- [ ] Remove `web/package.json` from `## Changed files expected` or move the auto-discovery note elsewhere, because the file is explicitly unchanged and should not appear in the expected diff scope.
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was current when audited (`last updated: 2026-05-01T15:42:52Z`).
