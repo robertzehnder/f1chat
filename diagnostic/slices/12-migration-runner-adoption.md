@@ -1,8 +1,8 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: pending_plan_audit
-owner: codex
+status: pending
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
 updated: 2026-05-01
@@ -400,6 +400,19 @@ and confirm every Acceptance criterion checkbox.)
 
 ### Low
 - [ ] None.
+
+### Notes (informational only — no action)
+- `diagnostic/_state.md` was updated on 2026-05-01T22:56:29Z, so no stale-state note is required.
+
+## Plan-audit verdict (round 4)
+
+**Status: APPROVED**
+
+### High
+
+### Medium
+
+### Low
 
 ### Notes (informational only — no action)
 - `diagnostic/_state.md` was updated on 2026-05-01T22:56:29Z, so no stale-state note is required.
