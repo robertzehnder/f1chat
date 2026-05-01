@@ -1,11 +1,11 @@
 ---
 slice_id: 11-resolver-disambiguation-tightening
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T19:05:00Z
+updated: 2026-05-01T19:30:00Z
 ---
 
 ## Goal
@@ -85,6 +85,16 @@ grep -E 'disambiguateDrivers\(\s*driverRows\s*,[^)]*selectedSession\?\.year\s*\?
   || { echo "FAIL: chatRuntime.ts does not call disambiguateDrivers(driverRows, ..., selectedSession?.year ?? null)"; exit 1; }
 grep -E 'explicitDriverNumbers\.length\s*>\s*0' web/src/lib/chatRuntime.ts \
   || { echo "FAIL: explicit-driver-number short-circuit removed or renamed"; exit 1; }
+# Clarification-wiring gate (round-4 Medium-1): prove the runtime actually
+# consumes `ambiguousSurnames` in the forceDriverClarification decision, not
+# just the call signature of `disambiguateDrivers`. Without this, a green
+# entrypoint test could still mask a silent pre-2024 bare-`Verstappen`
+# misresolution if the ambiguity metadata is dropped on the way back into
+# the runtime.
+grep -E 'ambiguousSurnames' web/src/lib/chatRuntime.ts \
+  || { echo "FAIL: chatRuntime.ts does not reference ambiguousSurnames"; exit 1; }
+grep -E 'forceDriverClarification[^=;]*=[^;]*ambiguousSurnames|ambiguousSurnames[^;]*forceDriverClarification' web/src/lib/chatRuntime.ts \
+  || { echo "FAIL: forceDriverClarification declaration does not consume ambiguousSurnames"; exit 1; }
 # Discovery gate: prove the new test file is loaded and all four cases run.
 # Complements the baseline-aware wrapper, which can exit 0 even if a new
 # .test.mjs file is silently skipped (the grading harness's glob would
@@ -115,6 +125,7 @@ python3 -c "import json,glob,os; f=max(glob.glob('web/logs/chat-health-check-*.j
 ## Acceptance criteria
 - [ ] `web/scripts/tests/resolver-disambiguation.test.mjs` exists and asserts at the **resolver entrypoint** (`disambiguateDrivers`), not just the score function. All four cases pass: Case A (bare-Verstappen + 2024+ → Max boosted to top of `scoredCandidates` with `bare_verstappen_2024_default`); Case B (bare-Verstappen + pre-2024 → `ambiguousSurnames` populated, both Verstappens still in `scoredCandidates`, no silent pick); Case C (explicit "max verstappen" → Max via `canonical_full_name_match`, no ambiguity); Case D (Q26 verbatim text + 2025 + 4-row fixture → BOTH #1 and #16 in `scoredCandidates`, proving comparison_analysis is preserved).
 - [ ] **Wiring gate** (round-3 High-2): the two `grep` checks listed under Gate commands both succeed — proving `web/src/lib/chatRuntime.ts` actually calls `disambiguateDrivers(driverRows, ..., selectedSession?.year ?? null)` AND retains the `explicitDriverNumbers.length > 0` short-circuit. This signal is independent of the entrypoint test, so a green test cannot mask an un-wired runtime.
+- [ ] **Clarification-wiring gate** (round-4 Medium-1): the two grep checks listed under Gate commands both succeed — proving `web/src/lib/chatRuntime.ts` references `ambiguousSurnames` AND that the `forceDriverClarification` declaration consumes it (e.g. `forceDriverClarification = (asksSpecificDriverClarification || ambiguousSurnames.length > 0) && explicitDriverNumbers.length === 0`). Without this, the entrypoint test (Case B) can pass while the runtime silently drops the metadata and still picks a single Verstappen for pre-2024 sessions.
 - [ ] **Discovery gate** confirms the new test file is loaded: `cd web && node --test scripts/tests/resolver-disambiguation.test.mjs` exits 0 AND its TAP output contains at least 4 `^ok ` lines (one per Case A–D). This proves the file is not silently skipped by a typo'd filename or import error.
 - [ ] `bash scripts/loop/test_grading_gate.sh` reports no NEW failures vs the baseline at `scripts/loop/state/test_grading_baseline.txt`. Pre-existing baseline failures (e.g. `driver-fallback.test.mjs` Cases A/B/E) are not regressions. Because `web/package.json:10` defines `test:grading` as `node --test scripts/tests/*.test.mjs`, the new file is auto-discovered by the same glob the wrapper uses.
 - [ ] `cd web && npm run typecheck` and `cd web && npm run build` exit 0.
@@ -192,7 +203,7 @@ Rollback: `git revert <commit>`. The disambiguation tightening is a localized sc
 ### High
 
 ### Medium
-- [ ] Add a gate/acceptance assertion that `ambiguousSurnames` is actually wired into the runtime clarification path in `web/src/lib/chatRuntime.ts`, because the current plan only proves `disambiguateDrivers(..., selectedSession?.year ?? null)` is called and that explicit-driver-number handling remains, so a green entrypoint test could still mask a silent pre-2024 bare-`Verstappen` misresolution if `forceDriverClarification` never consumes the ambiguity metadata.
+- [x] Add a gate/acceptance assertion that `ambiguousSurnames` is actually wired into the runtime clarification path in `web/src/lib/chatRuntime.ts`, because the current plan only proves `disambiguateDrivers(..., selectedSession?.year ?? null)` is called and that explicit-driver-number handling remains, so a green entrypoint test could still mask a silent pre-2024 bare-`Verstappen` misresolution if `forceDriverClarification` never consumes the ambiguity metadata.
 
 ### Low
 
