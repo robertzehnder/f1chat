@@ -1,11 +1,11 @@
 ---
 slice_id: 11-valid-lap-policy-v2
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T13:49:47Z
+updated: 2026-05-01T13:51:42Z
 ---
 
 ## Goal
@@ -46,10 +46,9 @@ Refine the lap-validity policy that governs clean-lap analytics: improve handlin
 1. Inspect the current `is_valid` rule (`core.valid_lap_policy` defaults + `is_valid` derivation in `sql/006_semantic_lap_layer.sql`) and enumerate the three in-scope target signals available in this repo: out-laps (`is_pit_out_lap`), in-laps (`is_pit_lap` / pit-stop on this lap), and SC laps (the `track_flag` column already projected from `raw.race_control` onto `core.laps_enriched` via the `race_control_at_lap` CTE in `sql/006_semantic_lap_layer.sql`). Deleted-lap handling is out of scope (no source column exists in `raw.laps`).
 2. **Routing/template check first (Q30):** before treating Q30 as lap-validity contamination, confirm what the 2026-04-30 rerun already shows — Q30's `generationNotes` records `template=max_leclerc_lap_pace_summary` (a lap-pace template), not a sector-times template. Read the Q30 row in `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` and the routing logic in `web/src/lib/deterministicSql.ts` / `web/src/lib/deterministicSql/pace.ts` to verify the routing mismatch. If Q30 is failing because of routing/template selection (the documented case), do **not** modify the validity policy on Q30's behalf; record the finding in the slice-completion note and hand Q30 off to a future routing/template slice. Q30's grade is a regression-only check in gate 5 (must not drop below B).
 3. **Lap-validity contamination check (independent of Q30):** for the lap-policy-sensitive contracts that drive Q19–Q29 and Q31–Q37, audit whether SC laps (via `track_flag`), in-laps, or out-laps slip past the current `is_valid` rule and contaminate aggregates. If contamination is found that risks regression (or that demonstrably degrades any of these answers in the rerun), update `sql/006_semantic_lap_layer.sql` (`core.valid_lap_policy` defaults and/or the `is_valid` boolean expression) accordingly. Mirror in `sql/008_core_build_schema.sql` only if the `core_build.laps_enriched` view's `is_valid` derivation (`sql/008_core_build_schema.sql:7-67`) carries the same defect. If no contamination is found that warrants a change, the slice may complete with **no SQL change** and only the slice-file/diagnosis updates committed (still subject to gate 5).
-4. Apply any schema change(s) to the dev DB (`psql "$DATABASE_URL" -f sql/006_semantic_lap_layer.sql` and, if touched, `sql/008_core_build_schema.sql`), then re-materialize the dependent storage tables in dependency order. The actual refresh path (per `sql/010_laps_enriched_mat.sql:71-83`) is **TRUNCATE + INSERT** by re-applying the mat migration files, NOT `REFRESH MATERIALIZED VIEW` — `core.laps_enriched` is a CREATE-OR-REPLACE-VIEW facade over the heap table `core.laps_enriched_mat`, not a Postgres materialized view. The order is:
+4. Always run gate 4 (the schema apply + re-materialization sequence in `## Gate commands`), regardless of whether step 3 produced SQL edits. The migrations are idempotent TRUNCATE+INSERT scripts (per `sql/010_laps_enriched_mat.sql:71-83`), so re-applying them when nothing changed is a safe no-op that still exits 0; this preserves a single, executable gate-4 behavior that matches the acceptance criterion. Apply `sql/006_semantic_lap_layer.sql` (and `sql/008_core_build_schema.sql` only if step 3 touched it), then re-materialize the dependent storage tables in dependency order. The actual refresh path is **TRUNCATE + INSERT** by re-applying the mat migration files, NOT `REFRESH MATERIALIZED VIEW` — `core.laps_enriched` is a CREATE-OR-REPLACE-VIEW facade over the heap table `core.laps_enriched_mat`, not a Postgres materialized view. The order is:
    1. `sql/010_laps_enriched_mat.sql` — repopulates `core.laps_enriched_mat` from the (now-updated) `core_build.laps_enriched` view.
    2. Downstream summary mats that filter by `is_valid` and feed Q19–Q37's deterministic templates: `sql/009_driver_session_summary_mat.sql`, `sql/011_stint_summary_mat.sql`, `sql/013_race_progression_summary_mat.sql`, `sql/017_lap_phase_summary_mat.sql`, `sql/018_lap_context_summary_mat.sql`.
-   Skip step 4 entirely if step 3 produced no SQL edits.
 5. Re-grade the lap-policy-sensitive question set (Q19–Q37) per gate 5 to verify regression-protection holds: Q19–Q29 and Q31–Q37 remain at A, and Q30 does not regress below B.
 6. Record the diagnosis in the slice-completion note: which contamination class (if any) was fixed, and the explicit Q30 hand-off to a routing/template slice with its evidence (`generationNotes=template=max_leclerc_lap_pace_summary`).
 
@@ -225,7 +224,7 @@ Rollback: `git revert <commit>`.
 ### High
 
 ### Medium
-- [ ] Resolve the no-SQL-change path contradiction: step 4 says to skip DB apply/re-materialization entirely when step 3 makes no SQL edits, but the acceptance criteria still require gate 4 to run and describe it as a mandatory no-op re-apply; make the step, gate block, and acceptance text agree on one executable behavior.
+- [x] Resolve the no-SQL-change path contradiction: step 4 says to skip DB apply/re-materialization entirely when step 3 makes no SQL edits, but the acceptance criteria still require gate 4 to run and describe it as a mandatory no-op re-apply; make the step, gate block, and acceptance text agree on one executable behavior.
 
 ### Low
 
