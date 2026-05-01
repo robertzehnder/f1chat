@@ -1,11 +1,11 @@
 ---
 slice_id: 11-multi-axis-grader-redesign
 phase: 11
-status: revising_plan
-owner: claude
+status: pending_plan_audit
+owner: codex
 user_approval_required: no
 created: 2026-04-26
-updated: 2026-05-01T20:05:00Z
+updated: 2026-05-01T19:19:46Z
 ---
 
 ## Goal
@@ -100,6 +100,7 @@ None at author time. The slice is offline: it only edits TS/MJS/JSON under `web/
 - `diagnostic/artifacts/healthcheck/legacy/11-rerun_2026-04-30.json` (mandatory destination of the relocated legacy baseline; required under both option (a) and option (b))
 - `diagnostic/artifacts/healthcheck/legacy/11-valid-lap-policy-v2_2026-05-01.json` (only under option (b) — when re-shaping the file in place per option (a) is not chosen, this is its destination after the move)
 - `scripts/loop/state/test_grading_baseline.txt` (regenerated only if `bash scripts/loop/test_grading_gate.sh` reports a non-empty `slice_fails` set after the rewrite that is not a strict subset of the existing baseline; see Decisions note below).
+- `diagnostic/slices/11-multi-axis-grader-redesign.md` (the slice file itself: step 1 appends target-ID lines under `## Decisions`, `## Artifact paths` records the resolved gate-day date, and `## Slice-completion note` is filled at slice close — so the slice file is an expected changed path on this branch).
 
 ## Artifact paths
 - Single canonical regenerated healthcheck artifact written in step 3 at `diagnostic/artifacts/healthcheck/11-multi-axis-regrade_<YYYY-MM-DD>.json` (use the gate-day date). Top-level shape: a single JSON object `{generatedAt, sourceFile, rubricPath, gradingModel, results, summary, actionable}` per `## Decisions` (`Canonical artifact top-level shape`). No sidecar `.summary.json` under `diagnostic/artifacts/healthcheck/`. The slice-completion note records the resolved date and the per-ID, per-mapped-axis legacy→new diff drawn from the step-1 snapshot of `11-rerun_2026-04-30.json`.
@@ -381,7 +382,7 @@ fi
 ### High
 
 ### Medium
-- [ ] Add `diagnostic/slices/11-multi-axis-grader-redesign.md` to `## Changed files expected`. Step 1 requires the implementer to append target-ID lines in `## Decisions`, `## Artifact paths` says the resolved artifact date is recorded in this slice, and `## Slice-completion note` must be filled, so the slice file itself is an expected changed path and should be declared explicitly for scope-auditability.
+- [x] Add `diagnostic/slices/11-multi-axis-grader-redesign.md` to `## Changed files expected`. Step 1 requires the implementer to append target-ID lines in `## Decisions`, `## Artifact paths` says the resolved artifact date is recorded in this slice, and `## Slice-completion note` must be filled, so the slice file itself is an expected changed path and should be declared explicitly for scope-auditability.
 
 ### Low
 
