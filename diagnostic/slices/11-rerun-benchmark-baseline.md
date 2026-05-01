@@ -150,7 +150,7 @@ Commit hashes:
 - `f4b1cd1` — initial submission of artifacts and note (superseded).
 - `1338130` — first revision (superseded by this round).
 - `ac87b59` — revision round 2: subshell-wrap gate 5, fresh benchmark rerun, regenerated artifacts.
-- *(amend below)* — record the `ac87b59` hash in the note.
+- `8a8c1a4` — note-only follow-up to record the `ac87b59` hash inline.
 
 ## Audit verdict
 
