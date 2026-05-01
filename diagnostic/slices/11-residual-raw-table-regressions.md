@@ -259,7 +259,7 @@ c. **Open a follow-up answer-synthesis slice** that strengthens the `Session dis
 - `diagnostic/slices/11-residual-raw-table-regressions.md` — frontmatter (`status: blocked`, `owner: user`, `updated: 2026-05-01T08:46:30-04:00`) and this Slice-completion note. No source files touched.
 
 Commit hash:
-- (to be filled by the commit step below)
+- `d1d82bf` — slice-completion note + frontmatter (status=blocked, owner=user); no source-file changes.
 
 ## Audit verdict
 (filled by Codex)
