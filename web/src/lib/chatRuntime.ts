@@ -25,11 +25,11 @@ import {
   buildSessionLabel,
   compareScoredSessions,
   deriveResolutionStatus,
+  disambiguateDrivers,
   isWarehouseWideQuestion,
   mergeDriverRows,
   mergeSessionRows,
   requiresResolvedSession,
-  scoreDriverCandidate,
   type ResolutionStatus
 } from "./chatRuntime/resolution";
 
@@ -55,6 +55,7 @@ type SessionCandidate = {
   sessionKey: number;
   meetingKey: number | null;
   sessionName: string | null;
+  year: number | null;
   confidence: number;
   score: number;
   label: string;
@@ -1154,6 +1155,7 @@ export async function buildChatRuntime(input: {
         sessionKey: row.session_key,
         meetingKey: row.meeting_key,
         sessionName: row.session_name,
+        year: row.year ?? null,
         confidence: 0.99,
         score: 100,
         label: buildSessionLabel(row),
@@ -1264,6 +1266,7 @@ export async function buildChatRuntime(input: {
         sessionKey: item.row.session_key,
         meetingKey: item.row.meeting_key,
         sessionName: item.row.session_name,
+        year: item.row.year ?? null,
         confidence: clampConfidence(0.45 + item.score / 12),
         score: item.score,
         label: buildSessionLabel(item.row),
@@ -1277,8 +1280,6 @@ export async function buildChatRuntime(input: {
     }
   }
 
-  const forceDriverClarification = asksSpecificDriverClarification && explicitDriverNumbers.length === 0;
-
   let driverRows = await getDriversForResolutionCached({
     sessionKey: selectedSession?.sessionKey
   });
@@ -1288,15 +1289,16 @@ export async function buildChatRuntime(input: {
     limit: 120
   });
   driverRows = mergeDriverRows(driverRows, lookupDriverRows);
-  const scoredDrivers = driverRows
-    .map((row) => {
-      const base = scoreDriverCandidate(row, normalizedMessage);
-      const explicitHit = explicitDriverNumbers.includes(row.driver_number) ? 30 : 0;
+  const { scoredCandidates, ambiguousSurnames } = disambiguateDrivers(driverRows, normalizedMessage, selectedSession?.year ?? null);
+  const forceDriverClarification = (asksSpecificDriverClarification || ambiguousSurnames.length > 0) && explicitDriverNumbers.length === 0;
+  const scoredDrivers = scoredCandidates
+    .map((item) => {
+      const explicitHit = explicitDriverNumbers.includes(item.row.driver_number) ? 30 : 0;
       return {
-        row,
-        score: base.score + explicitHit,
+        row: item.row,
+        score: item.score + explicitHit,
         matchedOn: unique(
-          explicitHit > 0 ? [...base.matchedOn, "context/explicit driver number"] : base.matchedOn
+          explicitHit > 0 ? [...item.matchedOn, "context/explicit driver number"] : item.matchedOn
         )
       };
     })
