@@ -338,7 +338,7 @@ Clarity absolute target (every regenerated row has `clarity.grade ∈ {A, B}`): 
 Commit hashes (slice branch ahead of `integration/perf-roadmap`):
 - `6589013` — `[state-update]` side-effect: legacy artifact moves into `diagnostic/artifacts/healthcheck/legacy/` plus `_state.md` regeneration (triggered by the schema-consumer gate's first invocation of `scripts/loop/update_state.sh`).
 - `6a2a770`, `f3e6142`, `0905e1a` — `[state-update]` follow-up timestamp re-renders during gate-rerun verification (no functional content change beyond the timestamp line).
-- `<HEAD>` — `[slice:11-multi-axis-grader-redesign][awaiting-audit]` slice implementation commit (recorded by the runner; hash logged in the loop log after `git commit` lands).
+- `2a16290` — `[slice:11-multi-axis-grader-redesign][awaiting-audit]` slice implementation commit (multi-axis grader rewrite + canonical artifact + downstream consumers).
 
 ## Audit verdict
 (filled by Codex)
