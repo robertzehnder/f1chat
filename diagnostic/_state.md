@@ -1,4 +1,4 @@
-# Project state — last updated: 2026-05-01T20:01:34Z
+# Project state — last updated: 2026-05-01T20:49:40Z
 
 _Read this file at the start of every plan-audit, plan-revise,
 implementation, and implementation-audit dispatch. It is the
@@ -19,7 +19,7 @@ accumulated context the loop carries between slices._
 | 8 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 10 | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
+| 11 | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 12 | 3 | 1 | 0 | 2 | 0 | 0 | 0 | 0 | 0 |
 
 ## Latest benchmark headline
@@ -39,6 +39,7 @@ accumulated context the loop carries between slices._
 
 ## Recent slice merges (last 10)
 
+- `38c8366` merge: 11-multi-axis-grader-redesign [pass] — 2026-05-01
 - `62c38ca` merge: 11-resolver-disambiguation-tightening [pass] — 2026-05-01
 - `8586a82` merge: 11-valid-lap-policy-v2 [pass] — 2026-05-01
 - `ab49619` merge: 11-residual-raw-table-regressions [pass] — 2026-05-01
@@ -48,7 +49,6 @@ accumulated context the loop carries between slices._
 - `fc7e4f1` merge: 10-catalog-completeness-page [pass] — 2026-04-30
 - `454425e` merge: 10-session-detail-strategy-summary [pass] — 2026-04-30
 - `77b0cac` merge: 10-session-detail-stint-timeline [pass] — 2026-04-30
-- `d732597` merge: 10-session-detail-pace-table [pass] — 2026-04-30
 
 ## Open architectural decisions
 
