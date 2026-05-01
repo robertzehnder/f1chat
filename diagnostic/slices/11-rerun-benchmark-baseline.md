@@ -1,8 +1,8 @@
 ---
 slice_id: 11-rerun-benchmark-baseline
 phase: 11
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: no
 created: 2026-04-26
 updated: 2026-04-30T22:24:11-04:00
@@ -171,15 +171,15 @@ Commit hashes:
 - Gate 1 `cd web && npm run build` -> exit `0`
 - Gate 2 `cd web && npm run typecheck` -> exit `0`
 - Gate 3 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
-- Gate 4 `( cd web && OPENF1_CHAT_BASE_URL=http://127.0.0.1:3001 npm run healthcheck:chat )` -> exit `0`
+- Gate 4 `( cd web && OPENF1_CHAT_BASE_URL=http://127.0.0.1:3000 npm run healthcheck:chat )` -> exit `0`
 - Gate 5 benchmark copy + 50-row validation -> exit `0`
 - Gate 6 comparison-summary grep gate -> exit `0`
 - Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` is limited to the two declared artifacts plus `diagnostic/slices/11-rerun-benchmark-baseline.md`.
 - Criterion `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.json` exists with 50 non-empty answers: PASS.
-- Criterion `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` exists and contains the required sections: FAIL. `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:11`-`diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:15` and `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:21`-`diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:26` still describe the earlier rerun (`46 / 4 / 0` overall, head-to-head `8/1/0`), but the fresh gate-4 rerun copied by gate 5 yields `47 / 3 / 0` overall and head-to-head `9/0/0`.
+- Criterion `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md` exists and contains the required sections: FAIL. `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:5`-`diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:6` still cite the prior rerun timestamp/log, and `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:11`-`diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:25` report `46 / 4 / 0` overall with `Driver roster and participation` at `6/2/0`, but the fresh gate-4 rerun copied by gate 5 yields `48 / 2 / 0` overall with `Driver roster and participation` at `8/0/0`.
 - Criterion `bash scripts/loop/test_grading_gate.sh` exits `0`: PASS.
 - Criterion build and typecheck gates exit `0`: PASS.
-- Criterion comparison vs prior baseline is documented regardless of direction: FAIL. `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:55`-`diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:107` reports `24 improved, 25 unchanged, 1 regressed`, but the fresh gate-4 rerun joined against `00-fresh-benchmark_2026-04-26.md` yields `25 improved, 24 unchanged, 1 regressed`.
+- Criterion comparison vs prior baseline is documented regardless of direction: FAIL. `diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:55`-`diagnostic/artifacts/healthcheck/11-rerun_2026-04-30.md:103` reports `23 improved, 27 unchanged, 0 regressed`, but the fresh gate-4 rerun joined against `00-fresh-benchmark_2026-04-26.md` yields `26 improved, 23 unchanged, 1 regressed` including `Q7 A->B`.
 - Decision: REVISE.
 - Rationale: the benchmark gates pass, but the checked-in `.md` artifact is stale relative to the fresh rerun and therefore does not satisfy the slice’s comparison-summary deliverable.
 
