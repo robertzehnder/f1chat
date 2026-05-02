@@ -1,4 +1,4 @@
-# Phase 17 — LLM SQL-Gen Robustness Plan — 2026-05-02 (rev2. 2026-05-02 post-audit-2)
+# Phase 17 — LLM SQL-Gen Robustness Plan — 2026-05-02 (rev3. 2026-05-02 post-audit-3)
 
 Phase 17 closes the schema-knowledge / failure-loop / cold-pool gap that
 caused an observed **8-minute response** for the question "What were the
@@ -272,8 +272,9 @@ LLM I/O, the orchestration owns SQL execution policy.
      `FROM core.stint_summary ss`) and the implicit form where
      the alias equals the unqualified table name (`FROM core.stint_summary`
      → alias `stint_summary`).
-   - For every column reference in the SELECT / WHERE / GROUP
-     BY / HAVING / ORDER BY clauses, resolve its prefix:
+   - For every column reference in **every clause that can name a
+     column** — `SELECT`, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`,
+     **and `JOIN ... ON`** — resolve its prefix:
      - `ss.compound` → look up `ss` in the alias map → resolve
        to `core.stint_summary` → check `compound` against
        `core.stint_summary`'s columns from `information_schema`
@@ -321,20 +322,38 @@ LLM I/O, the orchestration owns SQL execution policy.
     { table: 'core.stint_summary', column: 'stint_lap_count', sourceRef: 'ss.stint_lap_count' }
   ] }`. This is the exact failure class Phase 17 was opened to fix;
   the test must pass byte-for-byte on this input.
-- **Alias-form coverage fixtures**:
-  - `FROM core.stint_summary AS ss SELECT ss.compound` → catches
-    `ss.compound` as missing, resolved to `core.stint_summary`
-  - `FROM core.stint_summary ss SELECT ss.compound` (no AS) →
+- **Alias-form coverage fixtures** (executable SQL):
+  - `SELECT ss.compound FROM core.stint_summary AS ss` →
+    catches `ss.compound` as missing, resolved to
+    `core.stint_summary`
+  - `SELECT ss.compound FROM core.stint_summary ss` (no AS) →
     same result
-  - `FROM core.stint_summary SELECT compound` (no alias) →
+  - `SELECT compound FROM core.stint_summary` (no alias) →
     catches `compound` as missing on the implicit-aliased table
-  - `FROM core.stint_summary ss JOIN core.session_drivers sd
-    ON ss.session_key = sd.session_key SELECT ss.compound,
-    sd.full_name` → catches `ss.compound` only (sd.full_name is
-    real on `core.session_drivers`)
-- **Negative coverage**: a valid query with `ss.compound_name`,
-  `ss.lap_start`, `ss.stint_length_laps` returns `{ ok: true }`
-  (no false-positive on the correct columns).
+  - `SELECT ss.compound, sd.full_name FROM core.stint_summary ss
+    JOIN core.session_drivers sd ON ss.session_key = sd.session_key`
+    → catches `ss.compound` only (`sd.full_name` is real on
+    `core.session_drivers`)
+- **JOIN-ON predicate fixtures** (mandatory — column hallucination
+  can appear in JOIN predicates and is still column-existence
+  validation, not JOIN semantics):
+  - `SELECT ss.compound_name FROM core.stint_summary ss
+    JOIN core.session_drivers sd
+    ON ss.fake_driver = sd.driver_number` → catches
+    `ss.fake_driver` as missing on `core.stint_summary`
+  - `SELECT ss.compound_name FROM core.stint_summary ss
+    JOIN core.session_drivers sd
+    ON ss.session_key = sd.bogus_key` → catches `sd.bogus_key`
+    as missing on `core.session_drivers`
+  - `SELECT ss.compound_name FROM core.stint_summary ss
+    LEFT JOIN core.session_drivers sd
+    ON ss.session_key = sd.session_key
+    AND sd.invalid_col IS NOT NULL` → catches `sd.invalid_col`
+    as missing (compound JOIN predicate)
+- **Negative coverage**: a valid query
+  `SELECT ss.compound_name, ss.lap_start, ss.stint_length_laps
+  FROM core.stint_summary ss` returns `{ ok: true }` (no
+  false-positive on the correct columns).
 - **CTE / subquery alias skip**: a query with a CTE
   (`WITH foo AS (SELECT ...) SELECT foo.x FROM foo`) does NOT
   emit `foo.x` as missing — the validator skips refs whose
@@ -678,3 +697,25 @@ A second audit caught one critical gap in slice 17-C:
   rows the validator must catch from the production incident SQL.
 
 No open questions remain at rev2.
+
+## Revision 3 (2026-05-02 post-audit-3)
+
+A third audit caught two issues in slice 17-C:
+
+- **JOIN ... ON predicates were excluded from the validation
+  scope** (rev2's Step 3 listed `SELECT / WHERE / GROUP BY /
+  HAVING / ORDER BY` only). Hallucinated columns can appear in
+  join predicates too, and that's still column-existence
+  validation, not JOIN semantics. Step 3 now explicitly includes
+  `JOIN ... ON` in the clause list, and three JOIN-ON predicate
+  fixtures are added to acceptance:
+  - alias-qualified column missing on left side of `=`
+  - alias-qualified column missing on right side of `=`
+  - missing column in a compound `AND`-joined ON predicate
+- **Alias-form fixture SQL was malformed shorthand**
+  (`FROM ... SELECT ...` instead of executable `SELECT ... FROM ...`).
+  Fixtures now use real executable SQL ordering so the slice
+  implementer can paste them directly into the test runner without
+  guessing.
+
+No open questions remain at rev3.
