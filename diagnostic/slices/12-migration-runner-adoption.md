@@ -1,11 +1,11 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: blocked
-owner: user
+status: pending
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T19:11:29-04:00
+updated: 2026-05-01T19:35:00-04:00
 ---
 
 ## Goal
@@ -75,11 +75,17 @@ follow-up step gated on a green non-prod run.
    `sql/migrations/revert/<name>.sql`,
    `sql/migrations/verify/<name>.sql`. Move the existing file content
    into `deploy/`. Author a paired `revert/` script (drop / restore
-   prior state) and a `verify/` script (e.g. `SELECT 1 FROM
-   pg_matviews WHERE matviewname = '...'` for matview changes,
-   `pg_class`/`pg_index` lookups for tables/indexes). Order in
-   `sqitch.plan` must preserve the existing `001 → 021` sequence via
-   the `[requires]` chain.
+   prior state) and a `verify/` script. Verify scripts use
+   `pg_class` / `pg_namespace` / `pg_index` / `pg_constraint` lookups
+   on the actual object kind: the 11 derived `*_mat` objects are
+   PLAIN TABLES in the `core` schema (verified 2026-05-01 against
+   the live `openf1` DB — `pg_matviews` returned 0 rows), so their
+   verify scripts must use `pg_tables WHERE schemaname='core' AND
+   tablename='...'`, NOT `pg_matviews`. Plain tables, indexes, and
+   constraints elsewhere in the `001 → 021` sequence use the
+   appropriate catalog (`pg_class`/`pg_index`/`pg_constraint`).
+   Order in `sqitch.plan` must preserve the existing `001 → 021`
+   sequence via the `[requires]` chain.
 3. **Replace `scripts/init_db.sh`'s psql loop** with `sqitch deploy
    db:pg://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME`. Keep the
    `f1_codex_helpers` post-step. Update the script's header comment to
@@ -210,13 +216,21 @@ psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d
 "
 sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
 
-# Existence / refresh-correctness for the migrated matviews — independent
-# of sqitch's own verify, so a buggy verify script cannot mask a missing
-# object. The DO block asserts pg_matviews in the public schema is
+# Existence check for the 11 derived '*_mat' tables — independent of
+# sqitch's own verify, so a buggy verify script cannot mask a missing
+# object. NOTE (2026-05-01 plan correction): these objects are PLAIN
+# TABLES in the 'core' schema (not MATERIALIZED VIEWs in 'public').
+# Verified against the live openf1 DB on 2026-05-01:
+#   SELECT schemaname, matviewname FROM pg_matviews; -> 0 rows
+#   SELECT schemaname, tablename FROM pg_tables WHERE tablename LIKE '%_mat';
+#     -> 11 rows, all in 'core'
+# The DO block therefore asserts pg_tables in the 'core' schema contains
 # EXACTLY the expected 11-name set (no missing, no extras, no renames);
 # RAISE EXCEPTION on any difference fails the gate via psql's non-zero
-# exit. Refreshes follow as a separate -c so a refresh failure is also
-# loud.
+# exit. There is no REFRESH step because plain tables are not refreshable
+# — converting the 11 tables to MATERIALIZED VIEWs is explicitly out of
+# scope for this slice (see Out of scope) and the ad-hoc refresh path,
+# if any, is owned by the data-load pipeline, not the migration runner.
 psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
   DO \$\$
   DECLARE
@@ -237,39 +251,29 @@ psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d
     missing text[];
     extra text[];
   BEGIN
-    SELECT array_agg(matviewname ORDER BY matviewname)
+    SELECT array_agg(tablename ORDER BY tablename)
       INTO actual
-      FROM pg_matviews
-      WHERE schemaname = 'public';
+      FROM pg_tables
+      WHERE schemaname = 'core'
+        AND tablename = ANY(expected);
     IF actual IS NULL THEN
-      RAISE EXCEPTION 'public schema has no matviews; expected %', expected;
+      RAISE EXCEPTION 'core schema has none of the expected derived tables; expected %', expected;
     END IF;
     SELECT array_agg(x) INTO missing
       FROM unnest(expected) AS x
       WHERE x <> ALL (actual);
-    SELECT array_agg(x) INTO extra
-      FROM unnest(actual) AS x
-      WHERE x <> ALL (expected);
+    SELECT array_agg(t.tablename) INTO extra
+      FROM pg_tables t
+      WHERE t.schemaname = 'core'
+        AND t.tablename LIKE '%_mat'
+        AND t.tablename <> ALL (expected);
     IF missing IS NOT NULL OR extra IS NOT NULL THEN
-      RAISE EXCEPTION 'matview set mismatch: missing=% extra=% (actual=%)',
+      RAISE EXCEPTION 'core *_mat table set mismatch: missing=% extra=% (actual=%)',
         coalesce(missing, ARRAY[]::text[]),
         coalesce(extra,   ARRAY[]::text[]),
         actual;
     END IF;
   END \$\$;
-"
-psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
-  REFRESH MATERIALIZED VIEW driver_session_summary_mat;
-  REFRESH MATERIALIZED VIEW laps_enriched_mat;
-  REFRESH MATERIALIZED VIEW stint_summary_mat;
-  REFRESH MATERIALIZED VIEW strategy_summary_mat;
-  REFRESH MATERIALIZED VIEW race_progression_summary_mat;
-  REFRESH MATERIALIZED VIEW grid_vs_finish_mat;
-  REFRESH MATERIALIZED VIEW pit_cycle_summary_mat;
-  REFRESH MATERIALIZED VIEW strategy_evidence_summary_mat;
-  REFRESH MATERIALIZED VIEW lap_phase_summary_mat;
-  REFRESH MATERIALIZED VIEW lap_context_summary_mat;
-  REFRESH MATERIALIZED VIEW telemetry_lap_bridge_mat;
 "
 
 # Web build + typecheck (still required — schema names are referenced
@@ -326,6 +330,11 @@ bash scripts/loop/test_grading_gate.sh
   separate, user-approved follow-up after this slice merges.
 - Refactoring matview SQL contents — this slice ports them verbatim
   into deploy/ scripts.
+- **Converting the 11 derived `*_mat` objects from plain tables to
+  actual MATERIALIZED VIEWs.** The objects are currently plain tables
+  in the `core` schema (per 2026-05-01 verification); converting them
+  is a substantive schema redesign that belongs in its own slice, not
+  this adoption slice.
 - Replacing `f1_codex_helpers` loading; `scripts/init_db.sh` still
   invokes `load_codex_helpers.sh` after `sqitch deploy`.
 
@@ -345,154 +354,23 @@ Production-touching adoption of a new tool. Mitigations:
 
 ## Slice-completion note
 
-**Status: blocked (owner=user) — slice plan defect; gate is unsatisfiable as written.**
+(filled by Claude)
 
-Branch: `slice/12-migration-runner-adoption` (no implementation commits — partial sqitch scaffold rolled back before push so the branch contains only the frontmatter/blocker note edit).
+### Plan-correction note (2026-05-01 user-approved unblock)
 
-### Blocker
+A prior impl attempt blocked because the gate's existence check
+asserted `pg_matviews WHERE schemaname='public'` and ran
+`REFRESH MATERIALIZED VIEW <name>` against the 11 `*_mat` objects.
+Verification against the live `openf1` DB on 2026-05-01 showed:
+- `pg_matviews` returns 0 rows
+- The 11 `*_mat` objects exist as PLAIN TABLES in the `core` schema
 
-The "Existence / refresh-correctness for the migrated matviews" gate
-command in this slice asserts that `pg_matviews` (PostgreSQL's catalog
-view that lists ONLY `MATERIALIZED VIEW` objects) in the `public`
-schema is exactly the 11-name set:
-
-    driver_session_summary_mat, grid_vs_finish_mat,
-    lap_context_summary_mat, lap_phase_summary_mat,
-    laps_enriched_mat, pit_cycle_summary_mat,
-    race_progression_summary_mat, stint_summary_mat,
-    strategy_evidence_summary_mat, strategy_summary_mat,
-    telemetry_lap_bridge_mat
-
-…and then runs `REFRESH MATERIALIZED VIEW <name>;` against each.
-
-Both predicates are false against the actual SQL this slice ports.
-The 11 named objects are NOT materialized views and are NOT in the
-`public` schema. Verified against the live `openf1` database
-(127.0.0.1:5433) on 2026-05-01:
-
-```
-openf1=# SELECT schemaname, matviewname FROM pg_matviews;
- schemaname | matviewname
-------------+-------------
-(0 rows)
-
-openf1=# SELECT schemaname, tablename FROM pg_tables
-         WHERE tablename LIKE '%_mat' ORDER BY 1,2;
- schemaname |           tablename
-------------+-------------------------------
- core       | driver_session_summary_mat
- core       | grid_vs_finish_mat
- core       | lap_context_summary_mat
- core       | lap_phase_summary_mat
- core       | laps_enriched_mat
- core       | pit_cycle_summary_mat
- core       | race_progression_summary_mat
- core       | stint_summary_mat
- core       | strategy_evidence_summary_mat
- core       | strategy_summary_mat
- core       | telemetry_lap_bridge_mat
-(11 rows)
-```
-
-The 11 names match exactly, but they are heap **TABLES** in the
-`core` schema (the "table + facade view" pattern, populated by
-`TRUNCATE … ; INSERT INTO …`), not `MATERIALIZED VIEW` objects in
-`public`. Confirmed by reading `sql/009_*.sql`–`sql/019_*.sql` and
-by `git log` on those files (commits `0b094ef`, `87b0582`,
-`3f747ac`, `4aa714b`, `b8656d8`, `cd492e8`, `7c28a34`, `bd740d7`,
-`add979b`, `22bd558`, `f9067d4` — every one says "materialize as
-table + facade" or "heap-with-indexes + facade", never "materialized
-view"). `grep -rin "MATERIALIZED" sql/` returns zero matches.
-
-### Why this cannot be fixed inside this slice's scope
-
-1. **Cannot change the gate.** Slice files are not under
-   "Changed files expected"; gate commands are the slice's
-   contract with the auditor.
-2. **Cannot change the SQL semantics.** "Out of scope" §2 is
-   explicit: *"Refactoring matview SQL contents — this slice
-   ports them verbatim into deploy/ scripts."* Converting
-   `CREATE TABLE core.X_mat (...) ; TRUNCATE … ; INSERT …` into
-   `CREATE MATERIALIZED VIEW public.X_mat AS SELECT … ;` is a
-   semantic refactor of the matview SQL contents (object kind
-   changes from heap-table to matview, schema changes from `core`
-   to `public`, populate path changes from
-   `TRUNCATE+INSERT` to `REFRESH MATERIALIZED VIEW`,
-   downstream `core.X` facade view's relkind changes). It is the
-   exact change "Out of scope" forbids.
-3. **No third path satisfies both.** `pg_matviews` returns only
-   relkind='m' relations — heap tables (relkind='r') are
-   unreachable from that catalog view, so no read-only assertion
-   adjustment can make the gate pass.
-
-### What needs to happen (owner=user / planner)
-
-Replanning options, all of which are slice-spec edits and so are
-out of this implementer's scope:
-
-- **(A)** Rewrite the gate to check the 11 `_mat` heap tables
-  where they actually live, e.g.:
-  ```sql
-  SELECT array_agg(relname ORDER BY relname)
-    FROM pg_class c
-    JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'core' AND c.relkind = 'r'
-      AND c.relname LIKE '%\_mat' ESCAPE '\';
-  ```
-  and replace the `REFRESH MATERIALIZED VIEW …` block with
-  whatever existing repopulate path these tables use (the SQL
-  files do `TRUNCATE+INSERT` inline at apply-time, so a fresh
-  `init_db.sh` already populates them — the gate may need
-  nothing more than an existence check). This is the cheapest
-  fix and keeps "verbatim porting" intact.
-- **(B)** Rescope the slice to also convert the 11 `core.*_mat`
-  heap tables into real `public.*_mat` materialized views, and
-  remove "Refactoring matview SQL contents" from "Out of scope".
-  This is a much larger change with web-side fan-out: every
-  `core.X` facade view downstream of these tables needs its
-  definition reviewed (the current facades are
-  `CREATE VIEW core.X AS SELECT * FROM core.X_mat`, which works
-  for either object kind, but any code that targets `core.X_mat`
-  directly — the rebuild SQL itself does — would have to move
-  to `public.X_mat`).
-
-Option (A) is recommended: the gate was almost certainly drafted
-with the *intent* of verifying these 11 specific objects exist
-and refresh, and the only defect is the cataloged object-kind
-the gate queries.
-
-### Self-check / what I did before blocking
-
-- Read the slice end-to-end and the linked `_state.md`.
-- Verified `sqitch` CLI was missing on the host; installed a
-  Docker-backed wrapper at `~/.local/bin/sqitch` (sqitch v1.6.1,
-  `pg` engine). This is a host-environment change only — no
-  repo files touched.
-- Created `.env` (gitignored) overriding `DB_PORT=5433` so the
-  gate URLs would point at the running `openf1-postgres`
-  container; confirmed `psql` reaches it from both host and
-  Docker (via `host.docker.internal`).
-- Started Step 1 by running `sqitch init openf1 --engine pg`
-  inside `sql/migrations/`; rolled back the resulting
-  `sqitch.conf`/`sqitch.plan`/`deploy|revert|verify/`
-  directories with `rm -rf sql/migrations` before commit, so
-  the pushed branch contains zero implementation diff. Stopped
-  before porting any of the 21 SQL files because the matview
-  gate is unsatisfiable regardless of how the port is done.
-- No Step 2–6 work performed; no artifact written under
-  `diagnostic/artifacts/migrations/`.
-
-### Acceptance criteria status
-
-- [ ] `sqitch status` exits 0 — **blocked** (no port performed).
-- [ ] `sqitch verify` exits 0 — **blocked** (no port performed).
-- [ ] Rollback round-trip — **blocked** (no port performed).
-- [ ] Matview-set assertion exits 0 — **unsatisfiable** (defect
-      above; this is the blocker).
-- [ ] `web build` / `typecheck` / `test_grading_gate.sh` — not
-      run; would only be meaningful after a full port.
-- [ ] `sql/migrations/README.md` exists — **blocked**.
-- [ ] `12-sqitch-staging-run-*.log` artifact — **blocked**.
+The gate has been corrected (now `pg_tables WHERE schemaname='core'`,
+no REFRESH step). Step 2's verify-script guidance also corrected
+to use `pg_tables` for the `*_mat` objects. Converting them to
+real MATERIALIZED VIEWs is explicitly listed in `## Out of scope`
+and belongs in a follow-up slice. With those corrections the
+adoption slice is implementable as written.
 
 ## Audit verdict
 (filled by Codex)
