@@ -24,3 +24,4 @@
 021_saved_analysis [020_perf_indexes] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 021_saved_analysis.sql into sqitch
 022_session_result_extend_columns [021_saved_analysis] 2026-05-02T04:27:48Z System Administrator <root@Roberts-MacBook-Pro.local> # Add number_of_laps, duration, gap_to_leader columns to raw.session_result for OpenF1 API parity (Phase 13)
 023_starting_grid_derivation [022_session_result_extend_columns] 2026-05-02T04:27:48Z System Administrator <root@Roberts-MacBook-Pro.local> # Derive raw.starting_grid from qualifying session_result keyed on race session_key (Phase 13)
+024_alias_trgm_indexes [023_starting_grid_derivation] 2026-05-02T04:33:53Z System Administrator <root@Roberts-MacBook-Pro.local> # Phase 14: pg_trgm + unaccent extensions + GIN expression indexes for alias resolver
