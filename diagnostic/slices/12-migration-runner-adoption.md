@@ -1,11 +1,11 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T21:30:31-04:00
+updated: 2026-05-01T21:32:13-04:00
 ---
 
 ## Goal
@@ -152,9 +152,16 @@ sqitch --chdir sql/migrations config --list
 # implicit transaction. Therefore each statement gets its own -c
 # invocation. Both run against the maintenance DB ('postgres') because
 # the target DB is being recreated.
-psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
+# NOTE (2026-05-01 auth correction): every direct `psql` invocation in
+# this gate block prepends `PGPASSWORD="${DB_PASSWORD:-openf1_local_dev}"`
+# so the gate authenticates non-interactively when run outside the
+# `scripts/init_db.sh` environment (the prior gate text relied on the
+# auditor's shell having `PGPASSWORD` already exported, which produced
+# `fe_sendauth: no password supplied` failures during impl-audit). The
+# password default mirrors `scripts/init_db.sh`.
+PGPASSWORD="${DB_PASSWORD:-openf1_local_dev}" psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
   -c "DROP DATABASE IF EXISTS ${DB_NAME:-openf1};"
-psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
+PGPASSWORD="${DB_PASSWORD:-openf1_local_dev}" psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d postgres -v ON_ERROR_STOP=1 \
   -c "CREATE DATABASE ${DB_NAME:-openf1};"
 bash scripts/init_db.sh
 
@@ -189,7 +196,7 @@ sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-o
 # is appended after 021 (so head_objects always names the actual head
 # change's outputs).
 sqitch --chdir sql/migrations revert --to @HEAD^ -y db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
-psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
+PGPASSWORD="${DB_PASSWORD:-openf1_local_dev}" psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
   DO \$\$
   DECLARE
     leftover INT;
@@ -206,7 +213,7 @@ psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d
   END \$\$;
 "
 sqitch --chdir sql/migrations deploy db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
-psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
+PGPASSWORD="${DB_PASSWORD:-openf1_local_dev}" psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
   DO \$\$
   DECLARE
     restored INT;
@@ -239,7 +246,7 @@ sqitch --chdir sql/migrations verify db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-o
 # — converting the 11 tables to MATERIALIZED VIEWs is explicitly out of
 # scope for this slice (see Out of scope) and the ad-hoc refresh path,
 # if any, is owned by the data-load pipeline, not the migration runner.
-psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
+PGPASSWORD="${DB_PASSWORD:-openf1_local_dev}" psql -h "${DB_HOST:-127.0.0.1}" -p "${DB_PORT:-5432}" -U "${DB_USER:-openf1}" -d "${DB_NAME:-openf1}" -v ON_ERROR_STOP=1 -c "
   DO \$\$
   DECLARE
     expected text[] := ARRAY[
@@ -362,51 +369,83 @@ Production-touching adoption of a new tool. Mitigations:
 
 ## Slice-completion note
 
-**Status: ready for codex impl-audit.** Implementation landed in
-commit `1666336`. The prior block on the post-deploy `DEPLOYED_CHANGES`
-count formula has been resolved by the 2026-05-01 plan correction
-that swapped `--format=oneline` to `--format=raw` in the gate (see
-the gate block's NOTE comment). All slice files on this branch are
-unchanged from `1666336`; only the slice file's gate text and
-frontmatter are updated.
+**Status: ready for codex impl-audit (round 2).** Implementation
+landed in commits `1666336` (initial port + scripts/init_db.sh
+swap-over) and `145c8ff` (gate formula correction to
+`--format=raw`); the current revise-pass commit fixes the direct
+`psql` gate authentication and regenerates the staging-run artifact
+log. Branch: `slice/12-migration-runner-adoption`.
 
-### What works (against the local dockerised Postgres, per `1666336`)
+### What changed in this revise-pass
 
-Implementation landed on branch `slice/12-migration-runner-adoption`
-in commit `1666336`. Every functional gate passes; the
-plan/deployed count gate now passes too with the corrected formula:
+The audit at `5347e56` (REVISE) reported that the direct `psql -c`
+gate invocations failed with `fe_sendauth: no password supplied`
+because the gate text relied on the auditor's shell having
+`PGPASSWORD` already exported. Fix: prepend
+`PGPASSWORD="${DB_PASSWORD:-openf1_local_dev}"` to every direct
+`psql` call inside the gate block (gates #3, #4, #10, #12, #14).
+Sqitch invocations already embed the password in the
+`db:pg://USER:PASSWORD@HOST:PORT/DB` URI, so they were never affected.
+The artifact log
+`diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log`
+is regenerated against a freshly DROP/CREATEd database with the
+authenticating gates; every gate exits 0 and `count_eq=PASS`
+(`PLAN_CHANGES=21 DEPLOYED_CHANGES=21`).
+
+### Gate matrix (against the local dockerised Postgres on port 5433)
 
 | Gate (in slice order) | Exit |
 |---|---|
 | `sqitch --chdir sql/migrations plan` | 0 |
 | `sqitch --chdir sql/migrations config --list` | 0 |
-| `psql … DROP DATABASE IF EXISTS openf1` | 0 |
-| `psql … CREATE DATABASE openf1` | 0 |
+| `PGPASSWORD=… psql … DROP DATABASE IF EXISTS openf1` | 0 |
+| `PGPASSWORD=… psql … CREATE DATABASE openf1` | 0 |
 | `bash scripts/init_db.sh` | 0 (deploys all 21 changes) |
 | `sqitch --chdir sql/migrations status <target>` | 0 (Nothing to deploy) |
-| `test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"` | 0 (after `--format=raw` correction; PLAN_CHANGES=21 == DEPLOYED_CHANGES=21) |
+| `test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"` | 0 (PLAN_CHANGES=21 == DEPLOYED_CHANGES=21; `--format=raw` formula) |
 | `sqitch --chdir sql/migrations verify <target>` | 0 |
-| Rollback round-trip (revert HEAD → reapply HEAD) | all 0 |
-| Post-revert head-object assertion | 0 |
-| Post-redeploy head-object assertion | 0 |
+| `sqitch --chdir sql/migrations revert --to @HEAD^ -y <target>` | 0 |
+| Post-revert head-object assertion (`PGPASSWORD=… psql … DO …`) | 0 |
+| `sqitch --chdir sql/migrations deploy <target>` (re-deploy HEAD) | 0 |
+| Post-redeploy head-object assertion (`PGPASSWORD=… psql … DO …`) | 0 |
 | Re-verify | 0 |
 | `*_mat` table-set assertion (11 expected tables in `core`) | 0 |
 | `cd web && npm run build` | 0 |
 | `cd web && npm run typecheck` | 0 |
-| `bash scripts/loop/test_grading_gate.sh` | 0 (`PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39`) |
+| `bash scripts/loop/test_grading_gate.sh` | 0 (`PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0`) |
 
 Full transcript:
 `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log`.
 
-### Audit-trail note (2026-05-01 plan correction)
+### Self-check
 
-The prior `--format=oneline + grep '^deploy '` formula was
-unsatisfiable against sqitch v1.6.1 because oneline-format lines start
-with the change SHA, not the literal token `deploy`. The gate has been
-corrected to `--format=raw`, whose deploy-event lines do start with
-the literal token `deploy ` followed by the SHA. The implementation
-in `1666336` is otherwise unchanged from the prior attempt and now
-satisfies every gate.
+- Scope diff against `integration/perf-roadmap` stays within the
+  declared "Changed files expected" plus the artifact log path
+  (`diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log`).
+- The revise-pass changes are confined to the slice file's gate
+  block (`PGPASSWORD=…` prefix on five `psql` lines plus the auth
+  NOTE comment), the slice frontmatter, and the regenerated artifact
+  log. No code paths under `web/`, `sql/migrations/deploy|revert|verify/`,
+  or `scripts/init_db.sh` were touched in this pass.
+
+### Audit-trail history
+
+- Initial implementation `1666336` ported all 21 SQL changes into
+  sqitch deploy/revert/verify scripts, replaced the psql-loop in
+  `scripts/init_db.sh` with `sqitch deploy`, retained the legacy
+  `sql/NNN_*.sql` files as thin pointer comments (option B in
+  Changed files expected), and wrote `sql/migrations/README.md`.
+- Unblock `bf46f9b` corrected the `*_mat` existence gate from
+  `pg_matviews`/`public` to `pg_tables`/`core` after live-DB
+  verification showed the 11 derived objects are plain tables in
+  the `core` schema.
+- Unblock `145c8ff` swapped the `DEPLOYED_CHANGES` formula from
+  `--format=oneline` to `--format=raw` so `grep -c '^deploy '`
+  actually matches deploy-event lines under sqitch v1.6.1.
+- This revise-pass adds `PGPASSWORD` to the direct `psql` gate
+  invocations and regenerates the staging-run artifact, addressing
+  the `5347e56` audit's two findings (psql auth + the previously
+  committed log's `count_eq=FAIL` line).
 
 ## Audit verdict
 **Status: REVISE**
