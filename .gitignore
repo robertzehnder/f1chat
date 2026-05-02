@@ -72,3 +72,6 @@ f1_codex_helpers/
 # if reports are regenerated
 fastf1_openf1_audit_toolkit/reports/
 
+
+# Phase 13 ingest CLI workspace
+data/ingest/
