@@ -1,0 +1,125 @@
+=== Step 5 staging run starting 2026-05-02T01:01:09Z ===
+DB_HOST=127.0.0.1 DB_PORT=5433 DB_NAME=openf1 DB_USER=openf1
+
+--- DROP DATABASE ---
+DROP DATABASE
+--- CREATE DATABASE ---
+CREATE DATABASE
+
+--- bash scripts/init_db.sh ---
+Deploying schema via sqitch -> openf1@127.0.0.1:5433/openf1
+Adding registry tables to db:pg://openf1@127.0.0.1:5433/openf1
+Deploying changes to db:pg://openf1@127.0.0.1:5433/openf1
+  + 001_create_schemas ................. ok
+  + 002_create_tables .................. ok
+  + 003_indexes ........................ ok
+  + 004_constraints .................... ok
+  + 005_helper_tables .................. psql:deploy/005_helper_tables.sql:117: NOTICE:  constraint "ck_weekend_session_expectation_rules_format" of relation "weekend_session_expectation_rules" does not exist, skipping
+psql:deploy/005_helper_tables.sql:124: NOTICE:  constraint "ck_weekend_session_expectation_rules_counts" of relation "weekend_session_expectation_rules" does not exist, skipping
+ok
+  + 006_semantic_lap_layer ............. ok
+  + 007_semantic_summary_contracts ..... ok
+  + 008_core_build_schema .............. ok
+  + 009_driver_session_summary_mat ..... ok
+  + 010_laps_enriched_mat .............. ok
+  + 011_stint_summary_mat .............. ok
+  + 012_strategy_summary_mat ........... ok
+  + 013_race_progression_summary_mat ... ok
+  + 014_grid_vs_finish_mat ............. ok
+  + 015_pit_cycle_summary_mat .......... ok
+  + 016_strategy_evidence_summary_mat .. ok
+  + 017_lap_phase_summary_mat .......... ok
+  + 018_lap_context_summary_mat ........ ok
+  + 019_telemetry_lap_bridge_mat ....... ok
+  + 020_perf_indexes ................... ok
+  + 021_saved_analysis ................. ok
+Database initialized.
+
+--- sqitch status ---
+# On database db:pg://openf1@127.0.0.1:5433/openf1
+# Project:  openf1
+# Change:   44054fe2fd193fbfd004239ad153a04ddb56adf5
+# Name:     021_saved_analysis
+# Deployed: 2026-05-01 21:01:11 -0400
+# By:       System Administrator <root@Roberts-MacBook-Pro.local>
+# 
+Nothing to deploy (up-to-date)
+status_exit=0
+
+--- plan/deployed count check ---
+PLAN_CHANGES=21 DEPLOYED_CHANGES=0
+count_eq=FAIL
+
+--- sqitch verify ---
+Verifying db:pg://openf1@127.0.0.1:5433/openf1
+  * 001_create_schemas ................. ok
+  * 002_create_tables .................. ok
+  * 003_indexes ........................ ok
+  * 004_constraints .................... ok
+  * 005_helper_tables .................. ok
+  * 006_semantic_lap_layer ............. ok
+  * 007_semantic_summary_contracts ..... ok
+  * 008_core_build_schema .............. ok
+  * 009_driver_session_summary_mat ..... ok
+  * 010_laps_enriched_mat .............. ok
+  * 011_stint_summary_mat .............. ok
+  * 012_strategy_summary_mat ........... ok
+  * 013_race_progression_summary_mat ... ok
+  * 014_grid_vs_finish_mat ............. ok
+  * 015_pit_cycle_summary_mat .......... ok
+  * 016_strategy_evidence_summary_mat .. ok
+  * 017_lap_phase_summary_mat .......... ok
+  * 018_lap_context_summary_mat ........ ok
+  * 019_telemetry_lap_bridge_mat ....... ok
+  * 020_perf_indexes ................... ok
+  * 021_saved_analysis ................. ok
+Verify successful
+verify_exit=0
+
+--- rollback round-trip: revert HEAD ---
+Reverting changes to 020_perf_indexes from db:pg://openf1@127.0.0.1:5433/openf1
+  - 021_saved_analysis .. ok
+revert_exit=0
+
+--- post-revert assertion (021 head objects must be 0) ---
+DO
+post_revert_exit=0
+
+--- re-deploy ---
+Deploying changes to db:pg://openf1@127.0.0.1:5433/openf1
+  + 021_saved_analysis .. ok
+redeploy_exit=0
+
+--- post-redeploy assertion (021 head objects must be 3) ---
+DO
+post_redeploy_exit=0
+
+--- re-verify ---
+Verifying db:pg://openf1@127.0.0.1:5433/openf1
+  * 001_create_schemas ................. ok
+  * 002_create_tables .................. ok
+  * 003_indexes ........................ ok
+  * 004_constraints .................... ok
+  * 005_helper_tables .................. ok
+  * 006_semantic_lap_layer ............. ok
+  * 007_semantic_summary_contracts ..... ok
+  * 008_core_build_schema .............. ok
+  * 009_driver_session_summary_mat ..... ok
+  * 010_laps_enriched_mat .............. ok
+  * 011_stint_summary_mat .............. ok
+  * 012_strategy_summary_mat ........... ok
+  * 013_race_progression_summary_mat ... ok
+  * 014_grid_vs_finish_mat ............. ok
+  * 015_pit_cycle_summary_mat .......... ok
+  * 016_strategy_evidence_summary_mat .. ok
+  * 017_lap_phase_summary_mat .......... ok
+  * 018_lap_context_summary_mat ........ ok
+  * 019_telemetry_lap_bridge_mat ....... ok
+  * 020_perf_indexes ................... ok
+  * 021_saved_analysis ................. ok
+Verify successful
+reverify_exit=0
+
+--- *_mat tables existence assertion ---
+DO
+mat_set_exit=0

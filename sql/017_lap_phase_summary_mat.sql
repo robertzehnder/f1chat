@@ -1,3 +1,9 @@
+-- Canonical location: sql/migrations/deploy/017_lap_phase_summary_mat.sql
+-- This file is retained as a thin pointer for legacy direct callers (e.g.,
+-- web/scripts/perf-explain-before-after.mjs and web/scripts/tests/saved-
+-- analyses.test.mjs). New schema changes MUST be added via
+-- `sqitch add <name>` under sql/migrations/. See sql/migrations/README.md.
+--
 BEGIN;
 
 -- Phase 3 scale-out: materialize core.lap_phase_summary into a real heap

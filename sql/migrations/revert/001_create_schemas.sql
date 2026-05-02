@@ -1,0 +1,9 @@
+-- Revert openf1:001_create_schemas from pg
+
+BEGIN;
+
+DROP SCHEMA IF EXISTS core CASCADE;
+DROP SCHEMA IF EXISTS raw CASCADE;
+DROP EXTENSION IF EXISTS pgcrypto;
+
+COMMIT;
