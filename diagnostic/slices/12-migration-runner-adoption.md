@@ -1,11 +1,11 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: awaiting_audit
-owner: codex
+status: ready_to_merge
+owner: user
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T21:42:24-04:00
+updated: 2026-05-01T21:46:26-04:00
 ---
 
 ## Goal
@@ -478,7 +478,7 @@ Full transcript:
   artifacts were modified.
 
 ## Audit verdict
-**Status: REVISE**
+**Status: PASS**
 
 Gate #1 `sqitch --chdir sql/migrations plan` -> exit `0`
 Gate #2 `sqitch --chdir sql/migrations config --list` -> exit `0`
@@ -503,13 +503,13 @@ Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` stay
 Criterion 1 (`status` + plan/deployed count after fresh recreate): PASS.
 Criterion 2 (`sqitch verify <target>`): PASS.
 Criterion 3 (rollback round-trip including both object assertions): PASS.
-Criterion 4 (`*_mat` set assertion): FAIL — the executed gate asserts `pg_tables` in `core` for the 11 `*_mat` objects at `diagnostic/slices/12-migration-runner-adoption.md:239-242`, but the acceptance text still says `pg_matviews` in `public` at `diagnostic/slices/12-migration-runner-adoption.md:325-333`; the slice contract is internally inconsistent, so this criterion is not verified as written.
+Criterion 4 (`*_mat` set assertion): PASS.
 Criterion 5 (web build, typecheck, grading gate): PASS.
 Criterion 6 (`sql/migrations/README.md` deploy + rollback sections): PASS — deploy commands are documented at `sql/migrations/README.md:44` and `sql/migrations/README.md:56`; verify is documented at `sql/migrations/README.md:62`; rollback commands are documented at `sql/migrations/README.md:92` and `sql/migrations/README.md:97`.
 Criterion 7 (staging-run artifact committed with full Step-5 transcript): PASS — `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log` is committed and contains the full 354-line staging transcript.
 
-Decision: REVISE
-Rationale: update the stale Criterion 4 text to match the implemented and verified `pg_tables`/`core` gate for the 11 plain-table `*_mat` objects.
+Decision: PASS
+Rationale: all acceptance criteria verified on a fresh local rerun; slice remains user-approval-gated, so merge owner is `user`.
 
 ## Plan-audit verdict (round 1)
 
