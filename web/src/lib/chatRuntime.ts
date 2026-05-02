@@ -279,6 +279,39 @@ function buildDriverClarificationPrompt(normalizedText: string): string {
   return "Please specify the driver (full name or driver number, for example: Max Verstappen or driver 1) before I run this query.";
 }
 
+// Phase 14-G: build a structured "Did you mean A or B?" clarification
+// from a list of candidate drivers / sessions / teams the resolver
+// matched ambiguously. Reuses the existing clarificationPrompt
+// surface (no contract change) — see
+// diagnostic/alias_resolver_plan_2026-05-01.md (rev4) Slice G.
+export type ClarificationCandidate = {
+  label: string;            // Human-readable ("Max Verstappen, driver 1, 2015-now")
+  qualifier?: string;        // Optional secondary detail in parentheses
+};
+
+export function buildAmbiguousClarificationPrompt(
+  mention: string,
+  candidates: ClarificationCandidate[],
+): string {
+  if (candidates.length === 0) {
+    return `I'm not sure who or what you mean by "${mention}". Could you give me a bit more detail (full name, driver number, or year)?`;
+  }
+  if (candidates.length === 1) {
+    return `Did you mean ${formatCandidate(candidates[0])}? If so, please confirm and re-ask.`;
+  }
+  const opts = candidates
+    .slice(0, 4)
+    .map((c, i) => `(${i + 1}) ${formatCandidate(c)}`)
+    .join(" ");
+  const tail = candidates.length > 4 ? ` (+${candidates.length - 4} more)` : "";
+  return `"${mention}" is ambiguous — did you mean ${opts}${tail}?`;
+}
+
+function formatCandidate(c: ClarificationCandidate): string {
+  if (c.qualifier) return `**${c.label}** (${c.qualifier})`;
+  return `**${c.label}**`;
+}
+
 function isMostCompleteCoveragePrompt(normalizedText: string): boolean {
   return (
     normalizedText.includes("most complete downstream data coverage") ||
