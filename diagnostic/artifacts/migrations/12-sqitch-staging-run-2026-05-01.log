@@ -1,0 +1,354 @@
+=== Step 5 staging run starting 2026-05-02T01:35:52Z ===
+DB_HOST=127.0.0.1 DB_PORT=5433 DB_NAME=openf1 DB_USER=openf1
+
+--- gate 1: sqitch --chdir sql/migrations plan ---
+# Project: openf1
+# File:    sqitch.plan
+
+Deploy 34519d492bd52b715dac15b773656bd2afc91fbc
+Name:      001_create_schemas
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:57 -0400
+
+    Port 001_create_schemas.sql into sqitch
+
+Deploy 35e517c79908cc896e668931d472ada1261c34d3
+Name:      002_create_tables
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:57 -0400
+
+    Port 002_create_tables.sql into sqitch
+
+Deploy 04d6c7b7afaec96bba4250288705c9a3376dc813
+Name:      003_indexes
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:57 -0400
+
+    Port 003_indexes.sql into sqitch
+
+Deploy 6d9148e751dfe979d114eeaf4696d7227c732c08
+Name:      004_constraints
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:57 -0400
+
+    Port 004_constraints.sql into sqitch
+
+Deploy 96b39687769414d4d197b4d8a4fcd5d610bee269
+Name:      005_helper_tables
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:58 -0400
+
+    Port 005_helper_tables.sql into sqitch
+
+Deploy c6916e247fe79bb9cc04de8497c729122be0fc33
+Name:      006_semantic_lap_layer
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:58 -0400
+
+    Port 006_semantic_lap_layer.sql into sqitch
+
+Deploy b42c3b631abe46b4199a204f563bcf7fdc28b517
+Name:      007_semantic_summary_contracts
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:58 -0400
+
+    Port 007_semantic_summary_contracts.sql into sqitch
+
+Deploy 6f71ebb688f1149994ff450a9d57d76bf05f34b6
+Name:      008_core_build_schema
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:58 -0400
+
+    Port 008_core_build_schema.sql into sqitch
+
+Deploy 119a0fc0237f09ba842be11aca8353f4858840d7
+Name:      009_driver_session_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:58 -0400
+
+    Port 009_driver_session_summary_mat.sql into sqitch
+
+Deploy 8fca1ab1abbf820b95e9072000a907e8198af011
+Name:      010_laps_enriched_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:58 -0400
+
+    Port 010_laps_enriched_mat.sql into sqitch
+
+Deploy cabd6fff805c2be54cb3127deca8792792b6cc6e
+Name:      011_stint_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:59 -0400
+
+    Port 011_stint_summary_mat.sql into sqitch
+
+Deploy 3decc90d1f545c83c61b0ea1e508b04b3c664d83
+Name:      012_strategy_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:59 -0400
+
+    Port 012_strategy_summary_mat.sql into sqitch
+
+Deploy cc2332cc85ef14922ad79d3be6c1eb74c684d12d
+Name:      013_race_progression_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:59 -0400
+
+    Port 013_race_progression_summary_mat.sql into sqitch
+
+Deploy f1b2ea6888f9b8531a064d3bfddb6584b961d6c3
+Name:      014_grid_vs_finish_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:59 -0400
+
+    Port 014_grid_vs_finish_mat.sql into sqitch
+
+Deploy 1c29fc690ec6314729e6eae7d51264a84ef1e93c
+Name:      015_pit_cycle_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:52:59 -0400
+
+    Port 015_pit_cycle_summary_mat.sql into sqitch
+
+Deploy 96ba88338cb439ef83d8249ea85659ba28e76eba
+Name:      016_strategy_evidence_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:53:00 -0400
+
+    Port 016_strategy_evidence_summary_mat.sql into sqitch
+
+Deploy 5bda0c2859fd6715a3645dfbb5e6063ddba92763
+Name:      017_lap_phase_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:53:00 -0400
+
+    Port 017_lap_phase_summary_mat.sql into sqitch
+
+Deploy e37ed03832f68696ff9262d168b7410127403af2
+Name:      018_lap_context_summary_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:53:00 -0400
+
+    Port 018_lap_context_summary_mat.sql into sqitch
+
+Deploy 74a3f51775eb15dbc4b91f63249b1be844fdb45b
+Name:      019_telemetry_lap_bridge_mat
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:53:00 -0400
+
+    Port 019_telemetry_lap_bridge_mat.sql into sqitch
+
+Deploy 2907303d63183979d74d5ceff52298b47c4b7556
+Name:      020_perf_indexes
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:53:00 -0400
+
+    Port 020_perf_indexes.sql into sqitch
+
+Deploy 44054fe2fd193fbfd004239ad153a04ddb56adf5
+Name:      021_saved_analysis
+Planner:   System Administrator <root@Roberts-MacBook-Pro.local>
+Date:      2026-05-01 20:53:00 -0400
+
+    Port 021_saved_analysis.sql into sqitch
+
+plan_exit=0
+
+--- gate 2: sqitch --chdir sql/migrations config --list ---
+core.engine=pg
+
+config_exit=0
+
+--- gate 3: DROP DATABASE ---
+DROP DATABASE
+drop_exit=0
+
+--- gate 4: CREATE DATABASE ---
+CREATE DATABASE
+create_exit=0
+
+--- gate 5: bash scripts/init_db.sh ---
+Deploying schema via sqitch -> openf1@127.0.0.1:5433/openf1
+Adding registry tables to db:pg://openf1@127.0.0.1:5433/openf1
+Deploying changes to db:pg://openf1@127.0.0.1:5433/openf1
+  + 001_create_schemas ................. ok
+  + 002_create_tables .................. ok
+  + 003_indexes ........................ ok
+  + 004_constraints .................... ok
+  + 005_helper_tables .................. psql:deploy/005_helper_tables.sql:117: NOTICE:  constraint "ck_weekend_session_expectation_rules_format" of relation "weekend_session_expectation_rules" does not exist, skipping
+psql:deploy/005_helper_tables.sql:124: NOTICE:  constraint "ck_weekend_session_expectation_rules_counts" of relation "weekend_session_expectation_rules" does not exist, skipping
+ok
+  + 006_semantic_lap_layer ............. ok
+  + 007_semantic_summary_contracts ..... ok
+  + 008_core_build_schema .............. ok
+  + 009_driver_session_summary_mat ..... ok
+  + 010_laps_enriched_mat .............. ok
+  + 011_stint_summary_mat .............. ok
+  + 012_strategy_summary_mat ........... ok
+  + 013_race_progression_summary_mat ... ok
+  + 014_grid_vs_finish_mat ............. ok
+  + 015_pit_cycle_summary_mat .......... ok
+  + 016_strategy_evidence_summary_mat .. ok
+  + 017_lap_phase_summary_mat .......... ok
+  + 018_lap_context_summary_mat ........ ok
+  + 019_telemetry_lap_bridge_mat ....... ok
+  + 020_perf_indexes ................... ok
+  + 021_saved_analysis ................. ok
+Database initialized.
+init_db_exit=0
+
+--- gate 6: sqitch status <target> ---
+# On database db:pg://openf1@127.0.0.1:5433/openf1
+# Project:  openf1
+# Change:   44054fe2fd193fbfd004239ad153a04ddb56adf5
+# Name:     021_saved_analysis
+# Deployed: 2026-05-01 21:35:53 -0400
+# By:       System Administrator <root@Roberts-MacBook-Pro.local>
+# 
+Nothing to deploy (up-to-date)
+status_exit=0
+
+--- gate 7: plan/deployed count check ---
+PLAN_CHANGES=21 DEPLOYED_CHANGES=21
+count_eq=PASS
+
+--- gate 8: sqitch verify <target> ---
+Verifying db:pg://openf1@127.0.0.1:5433/openf1
+  * 001_create_schemas ................. ok
+  * 002_create_tables .................. ok
+  * 003_indexes ........................ ok
+  * 004_constraints .................... ok
+  * 005_helper_tables .................. ok
+  * 006_semantic_lap_layer ............. ok
+  * 007_semantic_summary_contracts ..... ok
+  * 008_core_build_schema .............. ok
+  * 009_driver_session_summary_mat ..... ok
+  * 010_laps_enriched_mat .............. ok
+  * 011_stint_summary_mat .............. ok
+  * 012_strategy_summary_mat ........... ok
+  * 013_race_progression_summary_mat ... ok
+  * 014_grid_vs_finish_mat ............. ok
+  * 015_pit_cycle_summary_mat .......... ok
+  * 016_strategy_evidence_summary_mat .. ok
+  * 017_lap_phase_summary_mat .......... ok
+  * 018_lap_context_summary_mat ........ ok
+  * 019_telemetry_lap_bridge_mat ....... ok
+  * 020_perf_indexes ................... ok
+  * 021_saved_analysis ................. ok
+Verify successful
+verify_exit=0
+
+--- gate 9: sqitch revert --to @HEAD^ -y ---
+Reverting changes to 020_perf_indexes from db:pg://openf1@127.0.0.1:5433/openf1
+  - 021_saved_analysis .. ok
+revert_exit=0
+
+--- gate 10: post-revert head-object assertion ---
+DO
+post_revert_exit=0
+
+--- gate 11: sqitch deploy (re-deploy HEAD) ---
+Deploying changes to db:pg://openf1@127.0.0.1:5433/openf1
+  + 021_saved_analysis .. ok
+redeploy_exit=0
+
+--- gate 12: post-redeploy head-object assertion ---
+DO
+post_redeploy_exit=0
+
+--- gate 13: sqitch verify (re-verify) ---
+Verifying db:pg://openf1@127.0.0.1:5433/openf1
+  * 001_create_schemas ................. ok
+  * 002_create_tables .................. ok
+  * 003_indexes ........................ ok
+  * 004_constraints .................... ok
+  * 005_helper_tables .................. ok
+  * 006_semantic_lap_layer ............. ok
+  * 007_semantic_summary_contracts ..... ok
+  * 008_core_build_schema .............. ok
+  * 009_driver_session_summary_mat ..... ok
+  * 010_laps_enriched_mat .............. ok
+  * 011_stint_summary_mat .............. ok
+  * 012_strategy_summary_mat ........... ok
+  * 013_race_progression_summary_mat ... ok
+  * 014_grid_vs_finish_mat ............. ok
+  * 015_pit_cycle_summary_mat .......... ok
+  * 016_strategy_evidence_summary_mat .. ok
+  * 017_lap_phase_summary_mat .......... ok
+  * 018_lap_context_summary_mat ........ ok
+  * 019_telemetry_lap_bridge_mat ....... ok
+  * 020_perf_indexes ................... ok
+  * 021_saved_analysis ................. ok
+Verify successful
+reverify_exit=0
+
+--- gate 14: *_mat tables existence assertion ---
+DO
+mat_set_exit=0
+
+--- gate 15: cd web && npm run build ---
+
+> openf1-web@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.15
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 949ms
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/4) ...
+   Generating static pages (1/4) 
+   Generating static pages (2/4) 
+   Generating static pages (3/4) 
+ ✓ Generating static pages (4/4)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                     Size  First Load JS
+┌ ƒ /                                          165 B         106 kB
+├ ○ /_not-found                                995 B         103 kB
+├ ƒ /api/admin/perf-summary                    169 B         102 kB
+├ ƒ /api/chat                                  169 B         102 kB
+├ ƒ /api/query/preview                         169 B         102 kB
+├ ƒ /api/query/run                             169 B         102 kB
+├ ƒ /api/saved-analyses                        169 B         102 kB
+├ ƒ /api/schema                                169 B         102 kB
+├ ƒ /api/sessions                              169 B         102 kB
+├ ƒ /api/sessions/[sessionKey]                 169 B         102 kB
+├ ƒ /api/sessions/[sessionKey]/completeness    169 B         102 kB
+├ ƒ /api/sessions/[sessionKey]/drivers         169 B         102 kB
+├ ƒ /api/sessions/[sessionKey]/laps            169 B         102 kB
+├ ƒ /api/sessions/[sessionKey]/race-control    169 B         102 kB
+├ ƒ /api/sessions/[sessionKey]/telemetry       169 B         102 kB
+├ ƒ /api/sessions/[sessionKey]/weather         169 B         102 kB
+├ ƒ /catalog                                   169 B         102 kB
+├ ƒ /catalog/completeness                      169 B         102 kB
+├ ƒ /chat                                    8.13 kB         114 kB
+├ ƒ /replay/[sessionId]                        169 B         102 kB
+├ ƒ /saved-analyses                            169 B         102 kB
+├ ƒ /sessions                                  165 B         106 kB
+├ ƒ /sessions/[sessionKey]                     169 B         102 kB
+└ ƒ /telemetry                                 169 B         102 kB
++ First Load JS shared by all                 102 kB
+  ├ chunks/255-4f212684648fcab9.js             46 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js      54.2 kB
+  └ other shared chunks (total)              1.92 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+build_exit=0
+
+--- gate 16: cd web && npm run typecheck ---
+
+> openf1-web@0.1.0 typecheck
+> tsc --noEmit
+
+typecheck_exit=0
+
+--- gate 17: bash scripts/loop/test_grading_gate.sh ---
+[test_grading_gate] PASS (no new failures vs integration baseline) slice_fails=39 baseline_fails=39 baseline_failures_fixed=0
+0
+grading_exit=0

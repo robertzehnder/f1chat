@@ -1,0 +1,24 @@
+%syntax-version=1.0.0
+%project=openf1
+
+001_create_schemas 2026-05-02T00:52:57Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 001_create_schemas.sql into sqitch
+002_create_tables [001_create_schemas] 2026-05-02T00:52:57Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 002_create_tables.sql into sqitch
+003_indexes [002_create_tables] 2026-05-02T00:52:57Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 003_indexes.sql into sqitch
+004_constraints [003_indexes] 2026-05-02T00:52:57Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 004_constraints.sql into sqitch
+005_helper_tables [004_constraints] 2026-05-02T00:52:58Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 005_helper_tables.sql into sqitch
+006_semantic_lap_layer [005_helper_tables] 2026-05-02T00:52:58Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 006_semantic_lap_layer.sql into sqitch
+007_semantic_summary_contracts [006_semantic_lap_layer] 2026-05-02T00:52:58Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 007_semantic_summary_contracts.sql into sqitch
+008_core_build_schema [007_semantic_summary_contracts] 2026-05-02T00:52:58Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 008_core_build_schema.sql into sqitch
+009_driver_session_summary_mat [008_core_build_schema] 2026-05-02T00:52:58Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 009_driver_session_summary_mat.sql into sqitch
+010_laps_enriched_mat [009_driver_session_summary_mat] 2026-05-02T00:52:58Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 010_laps_enriched_mat.sql into sqitch
+011_stint_summary_mat [010_laps_enriched_mat] 2026-05-02T00:52:59Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 011_stint_summary_mat.sql into sqitch
+012_strategy_summary_mat [011_stint_summary_mat] 2026-05-02T00:52:59Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 012_strategy_summary_mat.sql into sqitch
+013_race_progression_summary_mat [012_strategy_summary_mat] 2026-05-02T00:52:59Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 013_race_progression_summary_mat.sql into sqitch
+014_grid_vs_finish_mat [013_race_progression_summary_mat] 2026-05-02T00:52:59Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 014_grid_vs_finish_mat.sql into sqitch
+015_pit_cycle_summary_mat [014_grid_vs_finish_mat] 2026-05-02T00:52:59Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 015_pit_cycle_summary_mat.sql into sqitch
+016_strategy_evidence_summary_mat [015_pit_cycle_summary_mat] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 016_strategy_evidence_summary_mat.sql into sqitch
+017_lap_phase_summary_mat [016_strategy_evidence_summary_mat] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 017_lap_phase_summary_mat.sql into sqitch
+018_lap_context_summary_mat [017_lap_phase_summary_mat] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 018_lap_context_summary_mat.sql into sqitch
+019_telemetry_lap_bridge_mat [018_lap_context_summary_mat] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 019_telemetry_lap_bridge_mat.sql into sqitch
+020_perf_indexes [019_telemetry_lap_bridge_mat] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 020_perf_indexes.sql into sqitch
+021_saved_analysis [020_perf_indexes] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 021_saved_analysis.sql into sqitch

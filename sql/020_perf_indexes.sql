@@ -1,3 +1,9 @@
+-- Canonical location: sql/migrations/deploy/020_perf_indexes.sql
+-- This file is retained as a thin pointer for legacy direct callers (e.g.,
+-- web/scripts/perf-explain-before-after.mjs and web/scripts/tests/saved-
+-- analyses.test.mjs). New schema changes MUST be added via
+-- `sqitch add <name>` under sql/migrations/. See sql/migrations/README.md.
+--
 -- Phase 4 performance indexes (roadmap §4 Phase 4).
 --
 -- CREATE INDEX CONCURRENTLY cannot run inside an explicit transaction block,

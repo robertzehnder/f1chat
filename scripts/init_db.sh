@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# Initialise (or upgrade) the openf1 schema via sqitch.
+#
+# All schema changes are managed under sql/migrations/ as sqitch deploy/
+# revert/verify scripts. This script just runs `sqitch deploy` against the
+# configured local DB and then loads helper lookups. See
+# sql/migrations/README.md for the full deploy / rollback runbook.
+
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,24 +23,10 @@ fi
 
 export PGPASSWORD="$DB_PASSWORD"
 
-for f in \
-  sql/001_create_schemas.sql \
-  sql/002_create_tables.sql \
-  sql/003_indexes.sql \
-  sql/004_constraints.sql \
-  sql/005_helper_tables.sql \
-  sql/006_semantic_lap_layer.sql \
-  sql/007_semantic_summary_contracts.sql
-do
-  echo "Applying $f"
-  psql \
-    -h "$DB_HOST" \
-    -p "$DB_PORT" \
-    -U "$DB_USER" \
-    -d "$DB_NAME" \
-    -v ON_ERROR_STOP=1 \
-    -f "$f"
-done
+TARGET="db:pg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
+echo "Deploying schema via sqitch -> ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+sqitch --chdir sql/migrations deploy "$TARGET"
 
 if [ -d "$ROOT_DIR/f1_codex_helpers" ]; then
   echo "Loading helper lookups from $ROOT_DIR/f1_codex_helpers"

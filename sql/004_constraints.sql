@@ -1,3 +1,9 @@
+-- Canonical location: sql/migrations/deploy/004_constraints.sql
+-- This file is retained as a thin pointer for legacy direct callers (e.g.,
+-- web/scripts/perf-explain-before-after.mjs and web/scripts/tests/saved-
+-- analyses.test.mjs). New schema changes MUST be added via
+-- `sqitch add <name>` under sql/migrations/. See sql/migrations/README.md.
+--
 BEGIN;
 
 -- Uniqueness for idempotent upserts (implemented as unique indexes for rerunnable migrations)
