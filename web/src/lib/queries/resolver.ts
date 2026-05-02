@@ -372,3 +372,159 @@ export async function getDriversFromIdentityLookup(args: {
     [aliases, args.sessionKey ?? null, limit]
   );
 }
+
+// ----------------------------------------------------------------------
+// Phase 14-F: pg_trgm fuzzy fallback
+//
+// When the exact-match `getDriversFromIdentityLookup` /
+// `getSessionsFromSearchLookup` return zero rows, callers can run
+// these fuzzy variants. They use the GIN trgm indexes added in
+// migration 024 (for the seed alias tables and raw.sessions intrinsic
+// columns) to deliver sub-30ms p50 lookups.
+//
+// Match-kind contract:
+//   sim >= 0.85 → 'fuzzy_confident'
+//   sim >= 0.70 → 'fuzzy_clarify'  (caller may want to disambiguate)
+//   sim <  0.70 → not returned
+// ----------------------------------------------------------------------
+
+const TRGM_THRESHOLD_DEFAULT = 0.7;
+
+export type FuzzyMatchKind = "fuzzy_confident" | "fuzzy_clarify";
+
+export type FuzzyDriverRow = DriverResolutionRow & {
+  similarity: number;
+  match_kind: FuzzyMatchKind;
+};
+
+export async function fuzzyDriverLookup(args: {
+  alias: string;
+  sessionKey?: number;
+  threshold?: number;
+  limit?: number;
+}): Promise<FuzzyDriverRow[]> {
+  const normalized = normalizeAliasText(args.alias);
+  if (normalized.length < 2) return [];
+  const threshold = Math.min(1, Math.max(0, args.threshold ?? TRGM_THRESHOLD_DEFAULT));
+  const limit = safeLimit(args.limit, 5, 25);
+  // Set the per-statement pg_trgm similarity threshold so the GIN
+  // index is used by the % operator. set_limit returns the new value.
+  return sql<FuzzyDriverRow>(
+    `
+    WITH _t AS (SELECT set_limit($2::float4) AS t),
+    candidates AS (
+      SELECT a.driver_number,
+             MAX(a.canonical_full_name) AS canonical_full_name,
+             MAX(a.first_name)          AS first_name,
+             MAX(a.last_name)           AS last_name,
+             MAX(a.name_acronym)        AS name_acronym,
+             MAX(a.broadcast_name)      AS broadcast_name,
+             MAX(similarity(a.normalized_alias, $1)) AS sim
+      FROM core.driver_alias_lookup a, _t
+      WHERE a.normalized_alias % $1
+      GROUP BY a.driver_number
+    ),
+    latest_session AS (
+      SELECT DISTINCT ON (sd.driver_number)
+        sd.session_key, sd.driver_number, sd.full_name, sd.broadcast_name, sd.team_name,
+        s.year AS season_year
+      FROM core.session_drivers sd
+      LEFT JOIN core.sessions s ON s.session_key = sd.session_key
+      WHERE ($3::bigint IS NULL OR sd.session_key = $3)
+      ORDER BY sd.driver_number, COALESCE(s.year, 0) DESC, sd.session_key DESC
+    )
+    SELECT
+      COALESCE(ls.session_key, $3::bigint) AS session_key,
+      c.driver_number,
+      COALESCE(ls.full_name, c.canonical_full_name) AS full_name,
+      c.first_name, c.last_name, c.name_acronym,
+      COALESCE(ls.broadcast_name, c.broadcast_name) AS broadcast_name,
+      ls.team_name,
+      c.sim AS similarity,
+      CASE WHEN c.sim >= 0.85 THEN 'fuzzy_confident' ELSE 'fuzzy_clarify' END AS match_kind
+    FROM candidates c
+    LEFT JOIN latest_session ls ON ls.driver_number = c.driver_number
+    WHERE c.sim >= $2
+    ORDER BY c.sim DESC, c.driver_number ASC
+    LIMIT $4
+    `,
+    [normalized, threshold, args.sessionKey ?? null, limit]
+  );
+}
+
+export type FuzzySessionRow = SessionResolutionRow & {
+  similarity: number;
+  matched_on: string;
+  match_kind: FuzzyMatchKind;
+};
+
+export async function fuzzySessionLookup(args: {
+  alias: string;
+  year?: number;
+  threshold?: number;
+  limit?: number;
+}): Promise<FuzzySessionRow[]> {
+  const normalized = normalizeAliasText(args.alias);
+  if (normalized.length < 2) return [];
+  const threshold = Math.min(1, Math.max(0, args.threshold ?? TRGM_THRESHOLD_DEFAULT));
+  const limit = safeLimit(args.limit, 10, 50);
+  // UNION-ALL across the four indexed intrinsic columns of raw.sessions
+  // plus the seed venue alias table (joined back to raw.sessions to
+  // emit a real session_key). Each branch hits a dedicated GIN trgm
+  // index from migration 024.
+  return sql<FuzzySessionRow>(
+    `
+    WITH _t AS (SELECT set_limit($2::float4) AS t),
+    cands AS (
+      SELECT 'country_name' AS matched_on, s.session_key,
+             similarity(public.f1_unaccent(lower(btrim(s.country_name))), $1) AS sim
+      FROM raw.sessions s, _t
+      WHERE public.f1_unaccent(lower(btrim(s.country_name))) % $1
+      UNION ALL
+      SELECT 'location' AS matched_on, s.session_key,
+             similarity(public.f1_unaccent(lower(btrim(s.location))), $1) AS sim
+      FROM raw.sessions s, _t
+      WHERE public.f1_unaccent(lower(btrim(s.location))) % $1
+      UNION ALL
+      SELECT 'circuit_short_name' AS matched_on, s.session_key,
+             similarity(public.f1_unaccent(lower(btrim(s.circuit_short_name))), $1) AS sim
+      FROM raw.sessions s, _t
+      WHERE public.f1_unaccent(lower(btrim(s.circuit_short_name))) % $1
+      UNION ALL
+      SELECT 'session_name' AS matched_on, s.session_key,
+             similarity(public.f1_unaccent(lower(btrim(s.session_name))), $1) AS sim
+      FROM raw.sessions s, _t
+      WHERE public.f1_unaccent(lower(btrim(s.session_name))) % $1
+      UNION ALL
+      SELECT 'venue_alias' AS matched_on, s.session_key,
+             similarity(svl.normalized_alias, $1) AS sim
+      FROM core.session_venue_alias_lookup svl, _t
+      JOIN raw.sessions s
+        ON (svl.country_name IS NULL OR public.f1_unaccent(lower(btrim(svl.country_name))) = public.f1_unaccent(lower(btrim(coalesce(s.country_name, '')))))
+       AND (svl.location IS NULL OR public.f1_unaccent(lower(btrim(svl.location))) = public.f1_unaccent(lower(btrim(coalesce(s.location, '')))))
+       AND (svl.circuit_short_name IS NULL OR public.f1_unaccent(lower(btrim(svl.circuit_short_name))) = public.f1_unaccent(lower(btrim(coalesce(s.circuit_short_name, '')))))
+      WHERE svl.normalized_alias % $1
+    ),
+    agg AS (
+      SELECT session_key,
+             MAX(sim) AS sim,
+             string_agg(DISTINCT matched_on, ',' ORDER BY matched_on) AS matched_on
+      FROM cands
+      WHERE sim >= $2
+      GROUP BY session_key
+    )
+    SELECT
+      a.session_key, s.meeting_key, s.session_name, s.session_type, s.year,
+      s.country_name, s.location, s.circuit_short_name, s.meeting_name, s.date_start,
+      a.sim AS similarity,
+      a.matched_on,
+      CASE WHEN a.sim >= 0.85 THEN 'fuzzy_confident' ELSE 'fuzzy_clarify' END AS match_kind
+    FROM agg a
+    JOIN core.sessions s ON s.session_key = a.session_key
+    WHERE ($3::int IS NULL OR s.year = $3)
+    ORDER BY a.sim DESC, s.date_start DESC NULLS LAST, s.session_key DESC
+    LIMIT $4
+    `,
+    [normalized, threshold, args.year ?? null, limit]
+  );
+}
