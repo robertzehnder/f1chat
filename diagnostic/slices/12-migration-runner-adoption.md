@@ -1,11 +1,11 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: revising
-owner: claude
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T21:40:42-04:00
+updated: 2026-05-01T21:42:24-04:00
 ---
 
 ## Goal
@@ -322,16 +322,21 @@ bash scripts/loop/test_grading_gate.sh
       assertion `DO` block). Both `DO` blocks `RAISE EXCEPTION` on
       mismatch, so a non-zero `psql` exit means the rollback gate
       failed.
-- [ ] The matview-set assertion `DO` block in Gate commands exits 0 —
-      i.e., `pg_matviews` for the `public` schema is exactly the
-      11-name set hard-coded in that block (`driver_session_summary_mat`,
-      `grid_vs_finish_mat`, `lap_context_summary_mat`,
-      `lap_phase_summary_mat`, `laps_enriched_mat`,
-      `pit_cycle_summary_mat`, `race_progression_summary_mat`,
-      `stint_summary_mat`, `strategy_evidence_summary_mat`,
-      `strategy_summary_mat`, `telemetry_lap_bridge_mat`) with no
-      missing, extra, or renamed matviews. The block `RAISE EXCEPTION`s
-      on any mismatch, so a non-zero `psql` exit means the gate failed.
+- [ ] The `*_mat` table-set assertion `DO` block in Gate commands exits
+      0 — i.e., `pg_tables` for the `core` schema (filtered to
+      `tablename LIKE '%_mat'`) is exactly the 11-name set hard-coded in
+      that block (`driver_session_summary_mat`, `grid_vs_finish_mat`,
+      `lap_context_summary_mat`, `lap_phase_summary_mat`,
+      `laps_enriched_mat`, `pit_cycle_summary_mat`,
+      `race_progression_summary_mat`, `stint_summary_mat`,
+      `strategy_evidence_summary_mat`, `strategy_summary_mat`,
+      `telemetry_lap_bridge_mat`) with no missing, extra, or renamed
+      `*_mat` tables. The 11 derived `*_mat` objects are PLAIN TABLES in
+      the `core` schema (verified 2026-05-01 against the live `openf1`
+      DB — `pg_matviews` returned 0 rows; converting them to actual
+      MATERIALIZED VIEWs is explicitly out of scope per "Out of scope"
+      below). The block `RAISE EXCEPTION`s on any mismatch, so a
+      non-zero `psql` exit means the gate failed.
 - [ ] `cd web && npm run build` and `cd web && npm run typecheck` exit
       0; `bash scripts/loop/test_grading_gate.sh` exits 0 (or only
       reports pre-baseline failures).
@@ -369,14 +374,30 @@ Production-touching adoption of a new tool. Mitigations:
 
 ## Slice-completion note
 
-**Status: ready for codex impl-audit (round 2).** Implementation
+**Status: ready for codex impl-audit (round 3).** Implementation
 landed in commits `1666336` (initial port + scripts/init_db.sh
-swap-over) and `145c8ff` (gate formula correction to
-`--format=raw`); the current revise-pass commit fixes the direct
-`psql` gate authentication and regenerates the staging-run artifact
-log. Branch: `slice/12-migration-runner-adoption`.
+swap-over), `145c8ff` (gate formula correction to `--format=raw`),
+and `c6855a0` (PGPASSWORD on direct psql gates + regenerated staging
+log); the current revise-pass commit fixes the stale Criterion 4
+acceptance text so it matches the implemented `pg_tables`/`core`
+gate. Branch: `slice/12-migration-runner-adoption`.
 
-### What changed in this revise-pass
+### What changed in this revise-pass (round 3)
+
+The audit at `204c435` (REVISE) reported that Criterion 4 prose still
+referenced `pg_matviews` for the `public` schema, while the executed
+gate (lines 249-292 of this file) asserts `pg_tables` in the `core`
+schema for the 11 plain-table `*_mat` objects. The slice contract was
+internally inconsistent. Fix: rewrite Criterion 4 to describe the
+implemented gate (`pg_tables` / `core` / `tablename LIKE '%_mat'`),
+restating the 2026-05-01 live-DB finding that `pg_matviews` returns
+0 rows and that converting the 11 tables to materialized views is
+out-of-scope. No executable surface (gate block, SQL files,
+`scripts/init_db.sh`, web sources, artifact log) was touched in this
+revise-pass — the gate matrix and staging-run transcript from round 2
+remain authoritative.
+
+### What changed in revise-pass round 2
 
 The audit at `5347e56` (REVISE) reported that the direct `psql -c`
 gate invocations failed with `fe_sendauth: no password supplied`
@@ -388,7 +409,7 @@ Sqitch invocations already embed the password in the
 `db:pg://USER:PASSWORD@HOST:PORT/DB` URI, so they were never affected.
 The artifact log
 `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log`
-is regenerated against a freshly DROP/CREATEd database with the
+was regenerated against a freshly DROP/CREATEd database with the
 authenticating gates; every gate exits 0 and `count_eq=PASS`
 (`PLAN_CHANGES=21 DEPLOYED_CHANGES=21`).
 
@@ -422,11 +443,16 @@ Full transcript:
 - Scope diff against `integration/perf-roadmap` stays within the
   declared "Changed files expected" plus the artifact log path
   (`diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log`).
-- The revise-pass changes are confined to the slice file's gate
-  block (`PGPASSWORD=…` prefix on five `psql` lines plus the auth
-  NOTE comment), the slice frontmatter, and the regenerated artifact
-  log. No code paths under `web/`, `sql/migrations/deploy|revert|verify/`,
-  or `scripts/init_db.sh` were touched in this pass.
+- This round-3 revise-pass touches ONLY the slice file
+  (`diagnostic/slices/12-migration-runner-adoption.md`): frontmatter
+  fields (`status`, `owner`, `updated`), Criterion 4 prose, the
+  slice-completion note, and the audit-trail history. Gate block,
+  SQL files, `scripts/init_db.sh`, `sql/migrations/README.md`, web
+  sources, and the staging-run artifact log are unchanged from
+  `c6855a0`.
+- Gate evidence is unchanged because the executable surface is
+  unchanged; the round-2 gate matrix and the committed
+  `12-sqitch-staging-run-2026-05-01.log` remain authoritative.
 
 ### Audit-trail history
 
@@ -442,10 +468,14 @@ Full transcript:
 - Unblock `145c8ff` swapped the `DEPLOYED_CHANGES` formula from
   `--format=oneline` to `--format=raw` so `grep -c '^deploy '`
   actually matches deploy-event lines under sqitch v1.6.1.
-- This revise-pass adds `PGPASSWORD` to the direct `psql` gate
-  invocations and regenerates the staging-run artifact, addressing
-  the `5347e56` audit's two findings (psql auth + the previously
-  committed log's `count_eq=FAIL` line).
+- Revise-pass round 2 (`c6855a0`) added `PGPASSWORD` to the direct
+  `psql` gate invocations and regenerated the staging-run artifact,
+  addressing the `5347e56` audit's two findings (psql auth + the
+  previously committed log's `count_eq=FAIL` line).
+- This revise-pass round 3 corrects only the stale Criterion 4 prose
+  (now describes the implemented `pg_tables`/`core` assertion) to
+  resolve the `204c435` audit's lone REVISE finding. No executable
+  artifacts were modified.
 
 ## Audit verdict
 **Status: REVISE**
