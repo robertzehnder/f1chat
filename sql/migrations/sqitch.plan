@@ -22,3 +22,5 @@
 019_telemetry_lap_bridge_mat [018_lap_context_summary_mat] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 019_telemetry_lap_bridge_mat.sql into sqitch
 020_perf_indexes [019_telemetry_lap_bridge_mat] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 020_perf_indexes.sql into sqitch
 021_saved_analysis [020_perf_indexes] 2026-05-02T00:53:00Z System Administrator <root@Roberts-MacBook-Pro.local> # Port 021_saved_analysis.sql into sqitch
+022_session_result_extend_columns [021_saved_analysis] 2026-05-02T04:27:48Z System Administrator <root@Roberts-MacBook-Pro.local> # Add number_of_laps, duration, gap_to_leader columns to raw.session_result for OpenF1 API parity (Phase 13)
+023_starting_grid_derivation [022_session_result_extend_columns] 2026-05-02T04:27:48Z System Administrator <root@Roberts-MacBook-Pro.local> # Derive raw.starting_grid from qualifying session_result keyed on race session_key (Phase 13)
