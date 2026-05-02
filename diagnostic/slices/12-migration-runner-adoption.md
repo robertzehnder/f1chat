@@ -1,11 +1,11 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: blocked
-owner: user
+status: awaiting_audit
+owner: codex
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T21:10:00-04:00
+updated: 2026-05-01T21:15:00-04:00
 ---
 
 ## Goal
@@ -163,9 +163,17 @@ bash scripts/init_db.sh
 # ..."), and the awk check asserts the deployed-change count equals the
 # plan-change count (excludes header/comment/pragma/blank lines from the
 # plan, mirroring sqitch's own parser).
+# NOTE (2026-05-01 plan correction): sqitch v1.6.1's --format=oneline
+# emits lines starting with the change SHA, not the literal token
+# 'deploy', so a `grep -c '^deploy '` against --format=oneline always
+# matches 0 (verified on the live worktree run). --format=raw is the
+# only built-in format whose deploy-event lines start with the literal
+# token `deploy ` (immediately followed by the SHA), so use --format=raw
+# here for the count formula. Reproduced numbers from the staging run:
+# PLAN_CHANGES=21; DEPLOYED_CHANGES (--format=raw + ^deploy ) = 21.
 sqitch --chdir sql/migrations status db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1}
 PLAN_CHANGES=$(awk '/^[^%#[:space:]]/ {print $1}' sql/migrations/sqitch.plan | wc -l | tr -d ' ')
-DEPLOYED_CHANGES=$(sqitch --chdir sql/migrations log --format=oneline db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1} | grep -c '^deploy ')
+DEPLOYED_CHANGES=$(sqitch --chdir sql/migrations log --format=raw db:pg://${DB_USER:-openf1}:${DB_PASSWORD:-openf1_local_dev}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-openf1} | grep -c '^deploy ')
 test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"
 
 # Verify every change reports OK.
@@ -354,13 +362,19 @@ Production-touching adoption of a new tool. Mitigations:
 
 ## Slice-completion note
 
-**Status: BLOCKED on a defect in the post-deploy plan/deployed count
-gate command.**
+**Status: ready for codex impl-audit.** Implementation landed in
+commit `1666336`. The prior block on the post-deploy `DEPLOYED_CHANGES`
+count formula has been resolved by the 2026-05-01 plan correction
+that swapped `--format=oneline` to `--format=raw` in the gate (see
+the gate block's NOTE comment). All slice files on this branch are
+unchanged from `1666336`; only the slice file's gate text and
+frontmatter are updated.
 
-### What works (against the local dockerised Postgres)
+### What works (against the local dockerised Postgres, per `1666336`)
 
 Implementation landed on branch `slice/12-migration-runner-adoption`
-in this worktree. Every gate except one passes:
+in commit `1666336`. Every functional gate passes; the
+plan/deployed count gate now passes too with the corrected formula:
 
 | Gate (in slice order) | Exit |
 |---|---|
@@ -370,7 +384,7 @@ in this worktree. Every gate except one passes:
 | `psql … CREATE DATABASE openf1` | 0 |
 | `bash scripts/init_db.sh` | 0 (deploys all 21 changes) |
 | `sqitch --chdir sql/migrations status <target>` | 0 (Nothing to deploy) |
-| `test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"` | **1 (FAIL — see below)** |
+| `test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"` | 0 (after `--format=raw` correction; PLAN_CHANGES=21 == DEPLOYED_CHANGES=21) |
 | `sqitch --chdir sql/migrations verify <target>` | 0 |
 | Rollback round-trip (revert HEAD → reapply HEAD) | all 0 |
 | Post-revert head-object assertion | 0 |
@@ -384,100 +398,15 @@ in this worktree. Every gate except one passes:
 Full transcript:
 `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log`.
 
-### Defect — gate's `DEPLOYED_CHANGES` formula is unsatisfiable
+### Audit-trail note (2026-05-01 plan correction)
 
-The gate block contains:
-
-```bash
-DEPLOYED_CHANGES=$(sqitch --chdir sql/migrations log \
-  --format=oneline <target> | grep -c '^deploy ')
-test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"
-```
-
-Sqitch v1.6.1's `log --format=oneline` emits lines whose first token is
-the change's SHA, **not** the literal string `deploy`. Concretely (from
-the live run, post-`init_db.sh`):
-
-```
-44054fe2fd193fbfd004239ad153a04ddb56adf5 deploy openf1:021_saved_analysis Port 021_saved_analysis.sql into sqitch
-2907303d63183979d74d5ceff52298b47c4b7556 deploy openf1:020_perf_indexes Port 020_perf_indexes.sql into sqitch
-…
-```
-
-So `grep -c '^deploy '` against `--format=oneline` always matches 0
-lines, and `test 21 -eq 0` always fails — independent of how many
-changes are actually deployed.
-
-Reproduced in this worktree:
-- `PLAN_CHANGES=21`
-- `DEPLOYED_CHANGES (--format=oneline + grep '^deploy ') = 0`
-- `DEPLOYED_CHANGES (--format=raw + grep '^deploy ') = 21` (correct)
-
-`--format=raw` is the only built-in format whose deploy-event lines
-start with the literal token `deploy ` (immediately followed by the
-SHA). `--format=oneline`, `--format=full`, `--format=short`, and
-`--format=long` all start their deploy-event lines with the SHA or a
-capitalised `Deploy` heading.
-
-### Why this is out-of-scope to fix
-
-The gate text is the planner's source of truth and is the criterion
-the auditor compares the diff against. Per loop-protocol step 5
-("Honor the user_approval_required flag … Do not invent workarounds
-that change the slice's intent"), and per the operating principle
-"Stay in scope. Only modify files listed under 'Changed files
-expected'" — the slice file's gate block is not in
-"Changed files expected" and the implementer must not silently rewrite
-it. Setting `status=blocked` and surfacing the defect for the planner
-is the in-scope action.
-
-### Suggested fix for the next plan-revise round
-
-Change the gate command to use `--format=raw`:
-
-```bash
-DEPLOYED_CHANGES=$(sqitch --chdir sql/migrations log \
-  --format=raw <target> | grep -c '^deploy ')
-test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"
-```
-
-Or, equivalently, count plan-mentioning deploy events from
-`--format=oneline` with a non-anchored regex that matches the deploy
-verb's actual position:
-
-```bash
-DEPLOYED_CHANGES=$(sqitch --chdir sql/migrations log \
-  --format=oneline <target> | grep -cE '^[0-9a-f]{40} deploy ')
-```
-
-Either fix preserves the round-2 audit's intent — "count of plan
-changes equals count of `deploy` events in `sqitch log`" — without
-expanding scope.
-
-### Branch state
-
-- Branch: `slice/12-migration-runner-adoption`
-- Commits on branch (this run): see `git log integration/perf-roadmap..HEAD`
-  after the implementation commit lands.
-- All scaffold + 21 deploy/revert/verify scripts + README + updated
-  `scripts/init_db.sh` + pointer-comment headers on bare-numbered SQL
-  files are present in the worktree.
-
-### Plan-correction note (2026-05-01 user-approved unblock)
-
-A prior impl attempt blocked because the gate's existence check
-asserted `pg_matviews WHERE schemaname='public'` and ran
-`REFRESH MATERIALIZED VIEW <name>` against the 11 `*_mat` objects.
-Verification against the live `openf1` DB on 2026-05-01 showed:
-- `pg_matviews` returns 0 rows
-- The 11 `*_mat` objects exist as PLAIN TABLES in the `core` schema
-
-The gate has been corrected (now `pg_tables WHERE schemaname='core'`,
-no REFRESH step). Step 2's verify-script guidance also corrected
-to use `pg_tables` for the `*_mat` objects. Converting them to
-real MATERIALIZED VIEWs is explicitly listed in `## Out of scope`
-and belongs in a follow-up slice. With those corrections the
-adoption slice is implementable as written.
+The prior `--format=oneline + grep '^deploy '` formula was
+unsatisfiable against sqitch v1.6.1 because oneline-format lines start
+with the change SHA, not the literal token `deploy`. The gate has been
+corrected to `--format=raw`, whose deploy-event lines do start with
+the literal token `deploy ` followed by the SHA. The implementation
+in `1666336` is otherwise unchanged from the prior attempt and now
+satisfies every gate.
 
 ## Audit verdict
 (filled by Codex)
