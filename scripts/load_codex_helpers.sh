@@ -83,22 +83,22 @@ TRUNCATE TABLE
 
 UPDATE core.session_venue_alias_lookup
 SET
-  normalized_alias = LOWER(BTRIM(alias_text)),
+  normalized_alias = public.f1_unaccent(LOWER(BTRIM(alias_text))),
   updated_at = NOW();
 
 UPDATE core.driver_alias_lookup
 SET
-  normalized_alias = LOWER(BTRIM(alias_text)),
+  normalized_alias = public.f1_unaccent(LOWER(BTRIM(alias_text))),
   updated_at = NOW();
 
 UPDATE core.session_type_alias_lookup
 SET
-  normalized_alias = LOWER(BTRIM(alias_text)),
+  normalized_alias = public.f1_unaccent(LOWER(BTRIM(alias_text))),
   updated_at = NOW();
 
 UPDATE core.team_alias_lookup
 SET
-  normalized_alias = LOWER(BTRIM(alias_text)),
+  normalized_alias = public.f1_unaccent(LOWER(BTRIM(alias_text))),
   updated_at = NOW();
 
 UPDATE core.weekend_session_expectation_rules

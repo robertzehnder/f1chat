@@ -208,7 +208,16 @@ const LOOKUP_ALIAS_STOPWORDS = new Set([
 ]);
 
 function normalize(text: string): string {
-  return text.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+  // NFKD + diacritic strip mirrors the SQL-side public.f1_unaccent
+  // normalization so query-side and seed-side values agree exactly
+  // (Phase 14 alias resolver work).
+  return text
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function unique<T>(items: T[]): T[] {

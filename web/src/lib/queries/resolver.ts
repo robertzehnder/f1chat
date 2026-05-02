@@ -25,6 +25,19 @@ export type DriverResolutionRow = {
   team_name: string | null;
 };
 
+// Strips combining diacritic marks via NFKD + \p{Diacritic} regex,
+// then lowercases + trims. Mirrors the SQL-side normalization in
+// public.f1_unaccent(lower(btrim(...))) so query-side and seed-side
+// values join exactly. Phase 14 alias resolver work; see
+// diagnostic/alias_resolver_plan_2026-05-01.md (rev4).
+export function normalizeAliasText(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
 function normalizeAliasList(values: string[] | undefined): string[] {
   if (!Array.isArray(values)) {
     return [];
@@ -32,7 +45,7 @@ function normalizeAliasList(values: string[] | undefined): string[] {
   return Array.from(
     new Set(
       values
-        .map((value) => String(value ?? "").toLowerCase().trim())
+        .map((value) => normalizeAliasText(value))
         .filter((value) => value.length >= 2)
     )
   );
