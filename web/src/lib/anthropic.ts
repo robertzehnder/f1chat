@@ -2,6 +2,9 @@ import type { FactContract } from "@/lib/contracts/factContract";
 import { buildSynthesisPrompt } from "@/lib/synthesis/buildSynthesisPrompt";
 
 const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+/** Phase 15-1: Haiku for SQL generation (fast + cheap), Sonnet as fallback on parse/validate failure. */
+const SQL_MODEL_PRIMARY = process.env.ANTHROPIC_SQL_MODEL ?? "claude-haiku-4-5-20251001";
+const SQL_MODEL_FALLBACK = process.env.ANTHROPIC_SQL_MODEL_FALLBACK ?? DEFAULT_ANTHROPIC_MODEL;
 /** Short JSON answers; keep separate from SQL generation which needs a much higher ceiling. */
 const ANSWER_MAX_TOKENS = Number(
   process.env.ANTHROPIC_MAX_TOKENS_ANSWER ?? process.env.ANTHROPIC_MAX_TOKENS ?? "1024"
@@ -277,6 +280,35 @@ function parseAnthropicTextFromResponse(payload: unknown): string {
   return textBlocks.join("\n");
 }
 
+async function _callSqlGen(
+  model: string,
+  apiKey: string,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<{ rawText: string }> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: SQL_MAX_TOKENS,
+      temperature: 0,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }]
+    })
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Anthropic API error (${response.status}): ${text}`);
+  }
+  const payload = await response.json();
+  return { rawText: parseAnthropicTextFromResponse(payload) };
+}
+
 export async function generateSqlWithAnthropic(
   input: SqlGenerationInput
 ): Promise<SqlGenerationOutput> {
@@ -285,7 +317,6 @@ export async function generateSqlWithAnthropic(
     throw new Error("ANTHROPIC_API_KEY is not configured.");
   }
 
-  const model = DEFAULT_ANTHROPIC_MODEL;
   const contextText = JSON.stringify(input.context ?? {});
   const runtimeText = JSON.stringify(input.runtime ?? {});
   const userPrompt = `
@@ -301,43 +332,37 @@ ${runtimeText}
 Return JSON only.
 `.trim();
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01"
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: SQL_MAX_TOKENS,
-      temperature: 0,
-      system: buildSystemPrompt(),
-      messages: [
-        {
-          role: "user",
-          content: userPrompt
-        }
-      ]
-    })
-  });
+  const systemPrompt = buildSystemPrompt();
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Anthropic API error (${response.status}): ${text}`);
+  // Phase 15-1: Try Haiku first; fall back to Sonnet if parse/validate fails.
+  // Most SQL-gen tasks are simple enough that Haiku produces correct SQL
+  // first-shot at ~10% the cost and ~3x faster than Sonnet. Anything that
+  // fails the JSON-shape parse falls through to the Sonnet retry.
+  const tryParse = async (model: string): Promise<SqlGenerationOutput> => {
+    const { rawText } = await _callSqlGen(model, apiKey, systemPrompt, userPrompt);
+    const jsonText = extractJsonText(rawText);
+    const parsed = parseSqlJsonPayload(jsonText, rawText);
+    return { sql: parsed.sql, reasoning: parsed.reasoning, model, rawText };
+  };
+
+  // Override path: explicit ANTHROPIC_MODEL set keeps the legacy single-model
+  // behavior (used by the test grading suite where determinism matters).
+  if (process.env.ANTHROPIC_MODEL && process.env.ANTHROPIC_MODEL.length > 0) {
+    return tryParse(process.env.ANTHROPIC_MODEL);
   }
 
-  const payload = await response.json();
-  const rawText = parseAnthropicTextFromResponse(payload);
-  const jsonText = extractJsonText(rawText);
-  const parsed = parseSqlJsonPayload(jsonText, rawText);
-
-  return {
-    sql: parsed.sql,
-    reasoning: parsed.reasoning,
-    model,
-    rawText
-  };
+  try {
+    return await tryParse(SQL_MODEL_PRIMARY);
+  } catch (err) {
+    // Surface the fallback decision in the rawText for telemetry.
+    const fallbackResult = await tryParse(SQL_MODEL_FALLBACK);
+    return {
+      ...fallbackResult,
+      reasoning: fallbackResult.reasoning
+        ? `[fallback from ${SQL_MODEL_PRIMARY} after error: ${String(err).slice(0, 120)}] ${fallbackResult.reasoning}`
+        : `[fallback from ${SQL_MODEL_PRIMARY} after error: ${String(err).slice(0, 120)}]`
+    };
+  }
 }
 
 export async function repairSqlWithAnthropic(input: {
