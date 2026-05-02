@@ -1,4 +1,4 @@
-# Phase 17 — LLM SQL-Gen Robustness Plan — 2026-05-02 (rev1. 2026-05-02 post-audit-1)
+# Phase 17 — LLM SQL-Gen Robustness Plan — 2026-05-02 (rev2. 2026-05-02 post-audit-2)
 
 Phase 17 closes the schema-knowledge / failure-loop / cold-pool gap that
 caused an observed **8-minute response** for the question "What were the
@@ -246,7 +246,9 @@ LLM I/O, the orchestration owns SQL execution policy.
    that takes a SQL string + the catalog (cached
    `information_schema` snapshot from slice F if present, else
    live query) and returns
-   `{ ok: true } | { ok: false, missing: [{table, column}] }`
+   `{ ok: true } | { ok: false, missing: [{table, column, sourceRef}] }`,
+   where `sourceRef` is the original alias-qualified form
+   (e.g. `ss.compound`) for telemetry/repair-prompt readability.
 2. **SQL parsing**: use `pgsql-ast-parser` (pinned exact-version
    in `package.json`; MIT license; ~2k weekly downloads as of
    2026-05-02). Wrap conservatively: on any parse exception, log
@@ -255,34 +257,105 @@ LLM I/O, the orchestration owns SQL execution policy.
    valid SQL). Regex-based parsing is explicitly rejected —
    aliases, CTEs, quoted identifiers, and nested selects defeat
    regex silently and we'd ship a checker that misses real bugs.
-3. **Wire into orchestration** (`web/src/app/api/chat/orchestration.ts`,
+3. **Build a table-alias map from FROM / JOIN clauses, then
+   resolve every column reference through it.** This is the
+   actual hard part of the validator and the failure mode the
+   2026-05-02 incident exhibited:
+   `FROM core.stint_summary ss ... SELECT ss.compound` — the
+   bare-table validator catches `compound` not existing on a
+   table called `ss` and either misses the real bug (if it
+   ignores unknown aliases) or false-positives (if it treats
+   `ss` as a real table name). Concrete requirements:
+   - Walk the FROM clause and every JOIN, collecting
+     `{ alias, schema, table }` tuples. Aliases include explicit
+     forms (`FROM core.stint_summary AS ss` and
+     `FROM core.stint_summary ss`) and the implicit form where
+     the alias equals the unqualified table name (`FROM core.stint_summary`
+     → alias `stint_summary`).
+   - For every column reference in the SELECT / WHERE / GROUP
+     BY / HAVING / ORDER BY clauses, resolve its prefix:
+     - `ss.compound` → look up `ss` in the alias map → resolve
+       to `core.stint_summary` → check `compound` against
+       `core.stint_summary`'s columns from `information_schema`
+     - `compound` (unqualified, single-table FROM) → resolve to
+       the single FROM-clause table
+     - `compound` (unqualified, multi-table FROM) → ambiguous;
+       skip this reference (let DB catch it; don't false-positive)
+     - `subq.compound` where `subq` is a CTE / subquery alias →
+       skip (the CTE's columns are derived, not from
+       `information_schema`)
+   - On any reference whose resolved `(table, column)` pair is
+     not in the catalog, emit it in `missing` with the original
+     alias-qualified `sourceRef` preserved.
+4. **Wire into orchestration** (`web/src/app/api/chat/orchestration.ts`,
    the block around line 822 where the first SQL exec happens):
    after `generateSqlWithAnthropic` returns SQL but before
    `executeSqlWithTrace`, call the validator. On miss, route to
    `repairSqlWithAnthropic` with the missing-column list spliced
-   into the repair prompt; the existing
-   `chat_query_first_attempt_failed` event fires for telemetry
-   parity. Do NOT call into the repair path twice — slice 17-D
-   caps repair attempts at 1.
-4. Telemetry: log `column_validation_failed` events with the
-   missing-column list to perfTrace so we can measure how often the
-   LLM hallucinates and which contracts trip it most.
+   into the repair prompt (e.g.
+   `"Your SQL referenced ss.compound, but core.stint_summary has no
+   column 'compound'. Available columns on core.stint_summary:
+   compound_name, lap_start, lap_end, stint_length_laps, ..."`);
+   the existing `chat_query_first_attempt_failed` event fires for
+   telemetry parity. Do NOT call into the repair path twice —
+   slice 17-D caps repair attempts at 1.
+5. Telemetry: log `column_validation_failed` events with the
+   missing-column list (including alias-qualified `sourceRef`) to
+   perfTrace so we can measure how often the LLM hallucinates and
+   which contracts trip it most.
 
 **Acceptance**:
+- **Incident-replay fixture** (mandatory): the exact SQL from the
+  2026-05-02 incident, normalized:
+  ```sql
+  SELECT ss.driver_number, ss.stint_number, ss.compound,
+         ss.stint_start_lap, ss.stint_end_lap, ss.stint_lap_count
+  FROM core.stint_summary ss
+  WHERE ss.session_key = 9662
+  ```
+  Validator must return
+  `{ ok: false, missing: [
+    { table: 'core.stint_summary', column: 'compound', sourceRef: 'ss.compound' },
+    { table: 'core.stint_summary', column: 'stint_start_lap', sourceRef: 'ss.stint_start_lap' },
+    { table: 'core.stint_summary', column: 'stint_end_lap', sourceRef: 'ss.stint_end_lap' },
+    { table: 'core.stint_summary', column: 'stint_lap_count', sourceRef: 'ss.stint_lap_count' }
+  ] }`. This is the exact failure class Phase 17 was opened to fix;
+  the test must pass byte-for-byte on this input.
+- **Alias-form coverage fixtures**:
+  - `FROM core.stint_summary AS ss SELECT ss.compound` → catches
+    `ss.compound` as missing, resolved to `core.stint_summary`
+  - `FROM core.stint_summary ss SELECT ss.compound` (no AS) →
+    same result
+  - `FROM core.stint_summary SELECT compound` (no alias) →
+    catches `compound` as missing on the implicit-aliased table
+  - `FROM core.stint_summary ss JOIN core.session_drivers sd
+    ON ss.session_key = sd.session_key SELECT ss.compound,
+    sd.full_name` → catches `ss.compound` only (sd.full_name is
+    real on `core.session_drivers`)
+- **Negative coverage**: a valid query with `ss.compound_name`,
+  `ss.lap_start`, `ss.stint_length_laps` returns `{ ok: true }`
+  (no false-positive on the correct columns).
+- **CTE / subquery alias skip**: a query with a CTE
+  (`WITH foo AS (SELECT ...) SELECT foo.x FROM foo`) does NOT
+  emit `foo.x` as missing — the validator skips refs whose
+  prefix resolves to a derived alias, not a real table.
+- The total-request-time on hallucinated-column failures drops
+  from the observed ~25-30 s (sqlgen + exec-fail + repair +
+  exec-fail) to ~15-20 s (sqlgen + validate + repair + exec-success).
 - Hand-crafted regression test: a question whose templated answer
   is "use `core.stint_summary` for stint lengths" should generate
   SQL referencing `compound_name`/`lap_start`/`lap_end`/`stint_length_laps`
   on the first try (because the repair prompt now includes the
-  actual columns)
-- A unit-test fixture asserts the validator catches `compound`,
-  `stint_start_lap`, `stint_end_lap` as missing on `core.stint_summary`
-- The total-request-time on hallucinated-column failures drops from
-  the observed ~25-30 s (sqlgen + exec-fail + repair + exec-fail)
-  to ~15-20 s (sqlgen + validate + repair + exec-success)
+  actual columns).
 
 **Out of scope**:
-- Validating non-column expressions (function names, aliases)
-- Validating SQL semantics (e.g. JOIN correctness)
+- Validating non-column expressions (function names, return-type
+  inference)
+- Validating SQL semantics (e.g. JOIN correctness, type
+  compatibility)
+- Validating CTE / subquery internal columns (only resolves the
+  outer-query references through their alias map; CTE-internal
+  refs are out of scope)
 - Re-executing the validated SQL against a sandboxed parser to
   catch other classes of error
 
@@ -587,4 +660,21 @@ The rev1 audit closed all three rev0 open questions:
   rejected — defeats itself silently on aliases / CTEs / quoted
   identifiers / nested selects.
 
-No open questions remain at rev1.
+## Revision 2 (2026-05-02 post-audit-2)
+
+A second audit caught one critical gap in slice 17-C:
+
+- **Validator must explicitly resolve table aliases.** The 2026-05-02
+  incident SQL was alias-qualified
+  (`FROM core.stint_summary ss ... SELECT ss.compound`), not bare
+  table-qualified. The rev1 plan said "validate every
+  `<table>.<column>` reference", which a reviser could implement as
+  "look up `ss` in `information_schema`, find no table called `ss`,
+  skip" — silently missing the exact failure class Phase 17 exists
+  to fix. Rev2 makes alias-map construction an explicit Step 3 with
+  concrete resolution rules (explicit `AS`, implicit alias, multi-
+  table FROM ambiguity, CTE/subquery skip), and adds an
+  **incident-replay fixture** to acceptance that asserts the exact
+  rows the validator must catch from the production incident SQL.
+
+No open questions remain at rev2.
