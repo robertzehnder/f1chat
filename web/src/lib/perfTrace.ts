@@ -65,7 +65,20 @@ export function startSpan(name: StageName): Span {
   };
 }
 
+// Phase 16-2: production sampling. OPENF1_PERFTRACE_SAMPLE_RATE
+// is a 0..1 fraction (default 0 = off). When > 0, each call to
+// flushTrace rolls a uniform random and writes only that fraction.
+// In dev with OPENF1_CHAT_DEBUG_TRACE=1 every record lands.
+function shouldSampleTrace(): boolean {
+  if (/^(1|true|yes|on)$/i.test(String(process.env.OPENF1_CHAT_DEBUG_TRACE ?? ""))) return true;
+  const rate = Number(process.env.OPENF1_PERFTRACE_SAMPLE_RATE ?? "0");
+  if (!Number.isFinite(rate) || rate <= 0) return false;
+  if (rate >= 1) return true;
+  return Math.random() < rate;
+}
+
 export async function flushTrace(requestId: string, spans: SpanRecord[]): Promise<void> {
+  if (!shouldSampleTrace()) return;
   const entry = {
     ts: new Date().toISOString(),
     requestId,

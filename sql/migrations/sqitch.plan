@@ -27,3 +27,4 @@
 024_alias_trgm_indexes [023_starting_grid_derivation] 2026-05-02T04:33:53Z System Administrator <root@Roberts-MacBook-Pro.local> # Phase 14: pg_trgm + unaccent extensions + GIN expression indexes for alias resolver
 025_alias_view_diacritic_alignment [024_alias_trgm_indexes] 2026-05-02T04:43:46Z System Administrator <root@Roberts-MacBook-Pro.local> # Phase 14-E: align core.session_search_lookup, core.driver_identity_lookup, core.team_identity_lookup, and seed-table partial-unique indexes to use public.f1_unaccent
 026_alias_seed_expand_phase14 [025_alias_view_diacritic_alignment] 2026-05-02T04:52:22Z System Administrator <root@Roberts-MacBook-Pro.local> # Phase 14-B/C/D: expand alias seed coverage for casual fan phrasing
+027_user_feedback [026_alias_seed_expand_phase14] 2026-05-02T04:59:53Z System Administrator <root@Roberts-MacBook-Pro.local> # Phase 16-3: core.user_feedback table for thumbs up/down on chat answers
