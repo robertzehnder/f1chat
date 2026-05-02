@@ -1,11 +1,11 @@
 ---
 slice_id: 12-migration-runner-adoption
 phase: 12
-status: awaiting_audit
-owner: codex
+status: revising
+owner: claude
 user_approval_required: yes
 created: 2026-04-26
-updated: 2026-05-01T21:32:13-04:00
+updated: 2026-05-01T21:40:42-04:00
 ---
 
 ## Goal
@@ -452,45 +452,34 @@ Full transcript:
 
 Gate #1 `sqitch --chdir sql/migrations plan` -> exit `0`
 Gate #2 `sqitch --chdir sql/migrations config --list` -> exit `0`
-Gate #3 `psql ... -d postgres -c "DROP DATABASE IF EXISTS openf1;"` -> exit `2`
-First error lines:
-`psql: error: connection to server at "127.0.0.1", port 5433 failed: fe_sendauth: no password supplied`
-Gate #4 `psql ... -d postgres -c "CREATE DATABASE openf1;"` -> exit `2`
-First error lines:
-`psql: error: connection to server at "127.0.0.1", port 5433 failed: fe_sendauth: no password supplied`
+Gate #3 `PGPASSWORD=… psql … DROP DATABASE IF EXISTS openf1` -> exit `0`
+Gate #4 `PGPASSWORD=… psql … CREATE DATABASE openf1` -> exit `0`
 Gate #5 `bash scripts/init_db.sh` -> exit `0`
 Gate #6 `sqitch --chdir sql/migrations status <target>` -> exit `0`
-Gate #7 `test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"` -> exit `1`
-Observed locally: `PLAN_CHANGES=21 DEPLOYED_CHANGES=23`
+Gate #7 `test "$PLAN_CHANGES" -eq "$DEPLOYED_CHANGES"` -> exit `0` (`PLAN_CHANGES=21`, `DEPLOYED_CHANGES=21`)
 Gate #8 `sqitch --chdir sql/migrations verify <target>` -> exit `0`
 Gate #9 `sqitch --chdir sql/migrations revert --to @HEAD^ -y <target>` -> exit `0`
-Gate #10 post-revert head-object assertion -> exit `2`
-First error lines:
-`psql: error: connection to server at "127.0.0.1", port 5433 failed: fe_sendauth: no password supplied`
+Gate #10 post-revert head-object assertion -> exit `0`
 Gate #11 `sqitch --chdir sql/migrations deploy <target>` -> exit `0`
-Gate #12 post-redeploy head-object assertion -> exit `2`
-First error lines:
-`psql: error: connection to server at "127.0.0.1", port 5433 failed: fe_sendauth: no password supplied`
+Gate #12 post-redeploy head-object assertion -> exit `0`
 Gate #13 `sqitch --chdir sql/migrations verify <target>` -> exit `0`
-Gate #14 `*_mat` table-set assertion -> exit `2`
-First error lines:
-`psql: error: connection to server at "127.0.0.1", port 5433 failed: fe_sendauth: no password supplied`
+Gate #14 `*_mat` table-set assertion -> exit `0`
 Gate #15 `cd web && npm run build` -> exit `0`
 Gate #16 `cd web && npm run typecheck` -> exit `0`
 Gate #17 `bash scripts/loop/test_grading_gate.sh` -> exit `0`
 
-Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` stayed within declared changed files plus the declared artifact path.
+Scope diff: PASS — `git diff --name-only integration/perf-roadmap...HEAD` stayed within declared changed files, the declared artifact path, and the implicit slice-file allow-list.
 
-Criterion 1 (`status` + plan/deployed count after fresh recreate): FAIL — Gate #3 and Gate #4 do not authenticate, so the DB is not freshly recreated, and Gate #7 exits `1`; the committed artifact also records `PLAN_CHANGES=21 DEPLOYED_CHANGES=0` and `count_eq=FAIL` at `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log:49`.
-Criterion 2 (`sqitch verify <target>`): FAIL — Gate #8 exits `0`, but not after the required successful fresh-DB recreate because Gate #3 and Gate #4 failed.
-Criterion 3 (rollback round-trip including both object assertions): FAIL — Gate #10 and Gate #12 both exit `2`, so the required post-revert and post-redeploy assertions did not run successfully.
-Criterion 4 (`*_mat` set assertion): FAIL — Gate #14 exits `2`, so the independent existence assertion did not run successfully.
-Criterion 5 (web build, typecheck, grading gate): PASS — Gates #15, #16, and #17 exit `0`.
-Criterion 6 (`sql/migrations/README.md` deploy + rollback sections): PASS — deploy commands are documented at `sql/migrations/README.md:44` and `sql/migrations/README.md:56`; rollback commands are documented at `sql/migrations/README.md:92`, `sql/migrations/README.md:97`, and `sql/migrations/README.md:149`.
-Criterion 7 (staging-run artifact committed with full Step-5 transcript): PASS — `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log` is committed; however it contradicts the slice-completion note by recording a failed count check at `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log:49`.
+Criterion 1 (`status` + plan/deployed count after fresh recreate): PASS.
+Criterion 2 (`sqitch verify <target>`): PASS.
+Criterion 3 (rollback round-trip including both object assertions): PASS.
+Criterion 4 (`*_mat` set assertion): FAIL — the executed gate asserts `pg_tables` in `core` for the 11 `*_mat` objects at `diagnostic/slices/12-migration-runner-adoption.md:239-242`, but the acceptance text still says `pg_matviews` in `public` at `diagnostic/slices/12-migration-runner-adoption.md:325-333`; the slice contract is internally inconsistent, so this criterion is not verified as written.
+Criterion 5 (web build, typecheck, grading gate): PASS.
+Criterion 6 (`sql/migrations/README.md` deploy + rollback sections): PASS — deploy commands are documented at `sql/migrations/README.md:44` and `sql/migrations/README.md:56`; verify is documented at `sql/migrations/README.md:62`; rollback commands are documented at `sql/migrations/README.md:92` and `sql/migrations/README.md:97`.
+Criterion 7 (staging-run artifact committed with full Step-5 transcript): PASS — `diagnostic/artifacts/migrations/12-sqitch-staging-run-2026-05-01.log` is committed and contains the full 354-line staging transcript.
 
 Decision: REVISE
-Rationale: make the direct `psql` gates authenticate non-interactively, rerun the fresh-DB staging flow so the count/rollback/mat-set gates are exercised against a truly recreated database, and replace the artifact log with the new passing transcript.
+Rationale: update the stale Criterion 4 text to match the implemented and verified `pg_tables`/`core` gate for the 11 plain-table `*_mat` objects.
 
 ## Plan-audit verdict (round 1)
 
