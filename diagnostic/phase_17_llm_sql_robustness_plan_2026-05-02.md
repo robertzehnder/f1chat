@@ -1,4 +1,4 @@
-# Phase 17 — LLM SQL-Gen Robustness Plan — 2026-05-02
+# Phase 17 — LLM SQL-Gen Robustness Plan — 2026-05-02 (rev1. 2026-05-02 post-audit-1)
 
 Phase 17 closes the schema-knowledge / failure-loop / cold-pool gap that
 caused an observed **8-minute response** for the question "What were the
@@ -12,6 +12,60 @@ all on top of a ~5-minute cold-pool resolver phase.
 This plan groups every related issue uncovered during that incident
 into a single phase so codex can audit the whole thing as one
 roadmap rather than as scattered fixes.
+
+## Revision 1 (2026-05-02 post-audit-1)
+
+A first audit caught four issues + made three open-question calls:
+
+1. **Slice 17-C wrong layer.** Validation was placed inside
+   `generateSqlWithAnthropic`, but that function only calls Anthropic
+   and parses JSON
+   (`web/src/lib/anthropic.ts:312`). Execution and
+   repair orchestration live in the route around
+   `executeSqlWithTrace` (`web/src/app/api/chat/orchestration.ts:822`).
+   Fix: move validation to the orchestration layer between
+   generation and `executeSqlWithTrace`. The Anthropic helper stays
+   focused on "generate SQL"; orchestration owns the validate →
+   execute → repair → fail-honest pipeline.
+2. **Slice 17-E `'timeout'` resolution status.** The current
+   `ResolutionStatus` union in
+   `web/src/lib/chatRuntime/resolution.ts:4` is exactly
+   `"high_confidence" | "medium_confidence" | "low_confidence"`. Adding
+   `'timeout'` is a type/contract change. The slice now spells out
+   the type widening + downstream consumer test refresh.
+3. **Cache-busting risk conflated SQL-gen and synthesis.** SQL-gen's
+   call (`web/src/lib/anthropic.ts:296`) sends
+   `system: systemPrompt` as a plain string with no `cache_control`;
+   the existing `cache_control` block lives only on synthesis
+   (`web/src/lib/anthropic.ts:103`). Slice F's prompt rebuild does
+   NOT bust an existing SQL-gen cache because there is none.
+   Removed from cross-cutting; left a forward-looking note that
+   slice F MAY also introduce SQL-gen prompt caching as a bonus.
+4. **`buildSystemPrompt()` lists 16 `core.*` contracts, not 14.**
+   Re-counted: lines 56-59 of `anthropic.ts` enumerate
+   `sessions, session_drivers, meetings, driver_dim,
+   lap_semantic_bridge, laps_enriched, driver_session_summary,
+   stint_summary, strategy_summary, grid_vs_finish,
+   race_progression_summary, lap_phase_summary, telemetry_lap_bridge,
+   lap_context_summary, replay_lap_frames, metric_registry`. Slice
+   17-A and the audit-trail open question updated accordingly.
+
+Open-question calls applied:
+
+- **17-A is kept as same-day bandage** but explicitly marked
+  "thrown-away mitigation, replaced by 17-F" with a hard "skip
+  and go straight to 17-F" alternative if 17-A's 30-minute
+  budget can't be hit before 17-F starts. The slice file's
+  intro now states this so a reviser doesn't accidentally do
+  hand-doc work that 17-F will discard.
+- **17-D drops to ONE repair attempt** (was two). Column
+  hallucinations are caught pre-exec by 17-C; non-column SQL
+  errors that survive past validation rarely converge on a
+  second LLM repair attempt. One attempt + honest failure is
+  the right shape.
+- **17-C uses `pgsql-ast-parser`** (pinned, conservative wrapper),
+  not regex. Regex defeats itself silently on aliases, CTEs,
+  quoted identifiers, and nested selects.
 
 ## Why this matters (the case study)
 
@@ -93,11 +147,17 @@ immediate user-visible improvement.
 
 ### Slice 17-system-prompt-column-docs
 
+**Thrown-away mitigation, replaced by 17-F.** Ship this only if it
+can land in its 30-minute budget before slice 17-F (introspection-
+based prompt) starts. If 17-F can land same-day, skip 17-A
+entirely — its hand-typed column docs are deliberately discarded
+when 17-F lands.
+
 Hand-document the actual columns of every contract listed in
-`buildSystemPrompt()` (`web/src/lib/anthropic.ts:51-72`). The 14
-`core.*` contracts in the prompt's table list need column lines
-matching the existing `raw.session_result`, `raw.laps`, `raw.drivers`,
-`core.sessions` pattern.
+`buildSystemPrompt()` (`web/src/lib/anthropic.ts:51-72`). The 16
+`core.*` contracts (lines 56-59) in the prompt's table list need
+column lines matching the existing `raw.session_result`,
+`raw.laps`, `raw.drivers`, `core.sessions` pattern.
 
 **Steps**:
 1. For each contract listed in the prompt, query
@@ -172,23 +232,41 @@ skip the exec and short-circuit to repair (with the actual column
 list passed in the repair prompt) rather than waiting for the DB to
 return the error.
 
+**Layering**: validation lives in the **orchestration layer** —
+between `generateSqlWithAnthropic` and `executeSqlWithTrace`
+(`web/src/app/api/chat/orchestration.ts:822`), NOT inside
+`generateSqlWithAnthropic` itself. The Anthropic helper at
+`web/src/lib/anthropic.ts:312` only generates and parses; the
+route owns the validate → execute → repair → fail-honest
+pipeline. This keeps responsibilities crisp: `anthropic.ts` does
+LLM I/O, the orchestration owns SQL execution policy.
+
 **Steps**:
 1. New module `web/src/lib/sqlValidation/columnExistenceCheck.ts`
    that takes a SQL string + the catalog (cached
    `information_schema` snapshot from slice F if present, else
-   live query) and returns `{ ok: true } | { ok: false, missing: [{table, column}] }`
-2. Use a lightweight SQL parser (e.g.
-   [`pgsql-ast-parser`](https://www.npmjs.com/package/pgsql-ast-parser),
-   2k weekly downloads, MIT license) to extract column references.
-   Conservative on parse failure — if the parser fails, default to
-   `ok: true` and let the DB catch the error (don't block valid
-   SQL on parser bugs)
-3. Wire into `generateSqlWithAnthropic` (`web/src/lib/anthropic.ts`):
-   after the LLM returns SQL but before exec, run validation. If
-   missing columns, immediately invoke repair with the missing-column
-   list spliced into the repair prompt
-4. Telemetry: log `column_validation_failed` events to perfTrace so
-   we can measure how often the LLM hallucinates
+   live query) and returns
+   `{ ok: true } | { ok: false, missing: [{table, column}] }`
+2. **SQL parsing**: use `pgsql-ast-parser` (pinned exact-version
+   in `package.json`; MIT license; ~2k weekly downloads as of
+   2026-05-02). Wrap conservatively: on any parse exception, log
+   `column_validation_parser_failed` and default to `ok: true` so
+   the DB still catches the error (parser bugs must NOT block
+   valid SQL). Regex-based parsing is explicitly rejected —
+   aliases, CTEs, quoted identifiers, and nested selects defeat
+   regex silently and we'd ship a checker that misses real bugs.
+3. **Wire into orchestration** (`web/src/app/api/chat/orchestration.ts`,
+   the block around line 822 where the first SQL exec happens):
+   after `generateSqlWithAnthropic` returns SQL but before
+   `executeSqlWithTrace`, call the validator. On miss, route to
+   `repairSqlWithAnthropic` with the missing-column list spliced
+   into the repair prompt; the existing
+   `chat_query_first_attempt_failed` event fires for telemetry
+   parity. Do NOT call into the repair path twice — slice 17-D
+   caps repair attempts at 1.
+4. Telemetry: log `column_validation_failed` events with the
+   missing-column list to perfTrace so we can measure how often the
+   LLM hallucinates and which contracts trip it most.
 
 **Acceptance**:
 - Hand-crafted regression test: a question whose templated answer
@@ -220,8 +298,12 @@ with a bounded loop that fails honestly on exhaustion.
 **Steps**:
 1. `web/src/app/api/chat/orchestration.ts` (the lines around 826,
    872, 877) — refactor to:
-   - max 2 repair attempts
-   - max 60 s wall-clock for the SQL-gen + exec + repair cycle
+   - **max 1 repair attempt** (revised from 2 in rev0; with 17-C
+     catching column hallucinations pre-exec, the only repair
+     scenarios left are non-column SQL errors, and a second LLM
+     attempt at those rarely converges)
+   - max 60 s wall-clock for the SQL-gen + validate + exec + repair
+     cycle
    - on exhaustion, return a structured "I couldn't construct a
      valid SQL query for this question. The query I tried referenced
      columns that don't exist on the targeted contract." error
@@ -261,14 +343,30 @@ in place this should drop to < 5 s, but unbounded resolution can
 still hang on a degraded Neon endpoint.
 
 **Steps**:
-1. Wrap the resolve_db span body with a `Promise.race` against
+1. **Type / contract widening**: the current `ResolutionStatus`
+   union in `web/src/lib/chatRuntime/resolution.ts:4` is
+   `"high_confidence" | "medium_confidence" | "low_confidence"`.
+   Two implementation choices, slice picks (a) for simplicity:
+   - **(a)** Widen the union to add `"timeout"` and update every
+     consumer that exhausts the union via `switch` or
+     `if/else if` chains. Audit-trail: add a one-line note
+     to `_state.md` Notes for auditors saying
+     `ResolutionStatus` is now a 4-member union.
+   - **(b)** Keep the union at 3 members and add a parallel
+     `resolution.timedOut: boolean` flag. Less type churn but
+     two fields to keep in sync.
+   The slice author picks (a) and updates the ~5 consumer sites
+   plus tests; the orchestration's `runtime_clarification` branch
+   already handles the "needs clarification" return shape.
+2. Wrap the `resolve_db` span body with a `Promise.race` against
    `setTimeout(reject, 30_000)` — 30 s hard cap
-2. On timeout: log `chat_resolve_timeout`, set
-   `resolution.status = 'timeout'`, return a clarification prompt
-   ("I couldn't resolve session/driver references within the time
-   budget. Please rephrase or include explicit session_key /
-   driver_number.")
-3. Add the timeout count to `_state.md`'s observability section
+3. On timeout: log `chat_resolve_timeout`, set
+   `resolution.status = 'timeout'` and
+   `resolution.needsClarification = true`, populate
+   `resolution.clarificationPrompt` with "I couldn't resolve
+   session/driver references within the time budget. Please
+   rephrase or include explicit session_key / driver_number."
+4. Add the timeout count to `_state.md`'s observability section
    (Phase 16-1 aggregator) so we can monitor
 
 **Acceptance**:
@@ -413,15 +511,23 @@ migration being deployed (so 17-F's introspection picks up
 `number_of_laps` / `duration` / `gap_to_leader`). It does NOT
 depend on Phase 13's data backfill — empty tables introspect fine.
 
-### Cache-busting risk
+### Cache-busting risk — N/A for SQL-gen today
 
-The system prompt is currently part of the Anthropic prompt-cache
-(see `web/src/lib/synthesis/buildSynthesisPrompt.ts`). Slice F's
-introspection-based prompt will produce slightly different bytes on
-each schema change → cache invalidation. Mitigation: keep the
-schema-docs section as a separate cacheable block from the
-rules/format block; only the schema-docs cache busts when the
-schema changes. Document this trade-off in the slice file.
+The rev0 plan claimed slice F would invalidate Anthropic
+prompt-cache on the SQL-gen path. **This is wrong**: SQL-gen sends
+`system: systemPrompt` as a plain string with no `cache_control`
+block (`web/src/lib/anthropic.ts:296`). The
+`cache_control: { type: "ephemeral" }` block exists only on the
+synthesis path (`web/src/lib/anthropic.ts:103-111`), which slice F
+does not touch. Slice F's prompt rebuild therefore does NOT bust
+any existing cache.
+
+**Forward note**: as a follow-up after slice F, SQL-gen MAY also
+adopt prompt-prefix caching (parallel to synthesis). If/when that
+happens, the schema-docs section should be split into a separate
+cache block from the rules/format block so schema migrations only
+bust the schema-docs cache, not the rules cache. That's an
+optimization slice for later, not a Phase 17 deliverable.
 
 ### Out of scope (separate efforts)
 
@@ -466,20 +572,19 @@ fallback) all close.
   16's prod sampling. Phase 17's benchmark gate is a PR-time
   guardrail, not a production-traffic monitor.
 
-## Audit-trail / open questions for the reviewer
+## Audit-trail / decisions log
 
-- Should slice 17-A be skipped entirely in favor of 17-F directly?
-  (Tradeoff: 17-A is 30 minutes, 17-F is a day. If we ship 17-F
-  first there's no point in 17-A. But 17-A can land TODAY and stop
-  the bleeding while 17-F is built.)
-- Should the bounded-repair slice (17-D) keep TWO repair attempts
-  or drop to ONE? The reasoning in the slice body says two; an
-  argument for one is that the second attempt rarely converges if
-  the first failed for column-name reasons (which 17-C catches
-  pre-execute anyway).
-- Is `pgsql-ast-parser` (slice 17-C) acceptable as a new dep, or
-  should the parsing be done with a hand-written regex pass?
-  Hand-written is more brittle but has zero dependency surface.
+The rev1 audit closed all three rev0 open questions:
 
-These three are flagged for codex's audit — pick whichever lens
-seems most defensible and the reviser will revise toward it.
+- **Skip 17-A vs ship it as bandage**: ship 17-A only if it lands
+  in its 30-minute budget before 17-F starts; explicitly marked
+  "thrown-away mitigation" in the slice intro.
+- **17-D repair attempts**: dropped from 2 to 1. With 17-C
+  catching column hallucinations pre-exec, the residual
+  non-column SQL errors rarely converge on a second attempt.
+- **17-C SQL parser**: `pgsql-ast-parser` (pinned exact-version,
+  conservative wrap on parse exceptions). Regex-based parsing
+  rejected — defeats itself silently on aliases / CTEs / quoted
+  identifiers / nested selects.
+
+No open questions remain at rev1.
