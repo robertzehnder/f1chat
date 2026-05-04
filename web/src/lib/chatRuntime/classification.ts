@@ -18,6 +18,10 @@ export function classifyQuestion(message: string): QuestionType {
     lower.includes("missing telemetry") ||
     lower.includes("completeness") ||
     lower.includes("coverage") ||
+    lower.includes("missing laps gap") ||
+    lower.includes("missing lap gap") ||
+    lower.includes("missing laps") ||
+    lower.includes("lap coverage") ||
     lower.includes("data health") ||
     ((lower.includes("session") || lower.includes("sessions")) &&
       (lower.includes("placeholder") ||

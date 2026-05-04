@@ -194,6 +194,26 @@ test("Phase 19 q2181: prompt routes placeholder/partially loaded session questio
   });
 });
 
+test("Phase 19 q2183: missing-laps-gap phrasing classifies as a data-health question", async () => {
+  await withClassifier(async (mod) => {
+    assert.equal(
+      mod.classifyQuestion("Which drivers have a missing-laps gap in the Hungarian GP 2025 race session?"),
+      "data_health_question"
+    );
+  });
+});
+
+test("Phase 19 q2183: prompt routes driver-level missing-laps-gap questions to session_completeness plus raw.laps with a non-empty fallback row", async () => {
+  await withModule(async (mod) => {
+    const prompt = await mod.buildSystemPrompt();
+    assert.match(prompt, /driver-level missing-laps-gap \/ lap-coverage questions/);
+    assert.match(prompt, /core\.session_completeness/);
+    assert.match(prompt, /raw\.laps/);
+    assert.match(prompt, /return exactly one summary row even when no drivers qualify/);
+    assert.match(prompt, /result is non-empty/);
+  });
+});
+
 test("Fix 4: prompt-size impact within ±100 tokens of pre-fix baseline", async () => {
   // Quick token estimate: words / 0.75 is the OpenAI-style rule of
   // thumb. We don't have an exact pre-fix snapshot, but we can assert

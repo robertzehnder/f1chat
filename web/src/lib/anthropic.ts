@@ -108,6 +108,8 @@ Guidance:
 - For data_health_question coverage/completeness prompts, prefer core.session_completeness over raw tables.
 - For placeholder/partially loaded session questions, use core.session_completeness.coverage_score (and is_placeholder when needed).
 - For missing weather coverage, use core.session_completeness.weather_rows to identify sessions where weather_rows = 0.
+- For driver-level missing-laps-gap / lap-coverage questions, use core.session_completeness for the expected session lap total and raw.laps for each driver's observed lap count.
+- For driver-level missing-laps-gap questions, return exactly one summary row even when no drivers qualify so the result is non-empty.
 - For "which sessions are missing coverage" questions, return exactly one summary row even when no sessions match:
   aggregate the missing set into a count plus a list/text field that yields 0 and 'none' instead of an empty result set.
 
