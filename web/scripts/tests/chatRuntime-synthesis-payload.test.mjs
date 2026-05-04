@@ -31,6 +31,8 @@ Rules:
 - Do not invent facts not present in the rows.
 - Do not claim undercut/overcut benefits without explicit position-change evidence.
 - Do not claim positions gained/lost without both grid and finish values.
+- For session-sensitive questions (for example pole, qualifying, Q1, Q2, Q3, sprint qualifying), verify the returned rows match that session context using fields like session_name before answering.
+- Never treat a race fastest lap or any non-qualifying lap row as a pole lap unless the rows explicitly show qualifying/pole session context.
 - Keep stint count and pit-stop count logically consistent (pit_stops = stints - 1 when both are present).
 - Keep sector winner statements consistent with reported best/average sector values.
 - Keep "answer" concise (2-6 sentences).
@@ -189,6 +191,33 @@ test("buildSynthesisPrompt: staticPrefix matches the live buildAnswerSynthesisPr
       rendered.staticPrefix,
       EXPECTED_STATIC_PREFIX,
       "staticPrefix must equal the inline copy of buildAnswerSynthesisPrompt() byte-for-byte"
+    );
+  } finally {
+    if (importResult?.dir) {
+      await rm(importResult.dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test("buildSynthesisPrompt: staticPrefix includes the qualifying-session alignment guard", async () => {
+  let importResult = null;
+  try {
+    importResult = await transpileAndImportBuildSynthesisPrompt();
+    const { buildSynthesisPrompt } = importResult.mod;
+
+    const rendered = buildSynthesisPrompt({
+      question: "What was Verstappen's pole lap time at Suzuka 2025?",
+      sql: FIXTURE_SQL,
+      contract: FIXTURE_CONTRACT,
+    });
+
+    assert.match(
+      rendered.staticPrefix,
+      /verify the returned rows match that session context using fields like session_name before answering\./
+    );
+    assert.match(
+      rendered.staticPrefix,
+      /Never treat a race fastest lap or any non-qualifying lap row as a pole lap/
     );
   } finally {
     if (importResult?.dir) {

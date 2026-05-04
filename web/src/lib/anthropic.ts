@@ -178,6 +178,15 @@ export function buildSynthesisPromptParts(
   return buildSynthesisPrompt(input);
 }
 
+function ensureSessionAlignmentGuard(staticPrefix: string): string {
+  if (staticPrefix.includes("fields like session_name")) {
+    return staticPrefix;
+  }
+  return `${staticPrefix}
+- For session-sensitive questions (for example pole, qualifying, Q1, Q2, Q3, sprint qualifying), verify the returned rows match that session context using fields like session_name before answering.
+- Never treat a race fastest lap or any non-qualifying lap row as a pole lap unless the rows explicitly show qualifying/pole session context.`;
+}
+
 export function buildSynthesisRequestParams(
   input: AnswerSynthesisInput
 ): {
@@ -186,7 +195,13 @@ export function buildSynthesisRequestParams(
 } {
   const { staticPrefix, dynamicSuffix } = buildSynthesisPromptParts(input);
   return {
-    system: [{ type: "text", text: staticPrefix, cache_control: { type: "ephemeral" } }],
+    system: [
+      {
+        type: "text",
+        text: ensureSessionAlignmentGuard(staticPrefix),
+        cache_control: { type: "ephemeral" }
+      }
+    ],
     messages: [{ role: "user", content: dynamicSuffix }]
   };
 }

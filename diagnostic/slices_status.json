@@ -365,8 +365,8 @@
     },
     {
       "slice_id": "iter-19-q1920",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-04T04:01:04.017309+00:00",
       "depends_on": []
     },
     {
