@@ -97,6 +97,20 @@ test("dataHealth canonical-id lookup is not blocked by topic guards", async () =
   }
 });
 
+test("Monaco 2025 telemetry coverage phrasing routes to the scoped data-health template", async () => {
+  const { mod, dir } = await loadDeterministicSql();
+  try {
+    const result = mod.buildDeterministicSqlTemplate(
+      "Which session at Monaco 2025 had the most complete telemetry coverage across all 20 drivers?",
+      {}
+    );
+    assert.ok(result, "Monaco telemetry coverage query must hit a deterministic template");
+    assert.equal(result.templateKey, "monaco_2025_sessions_most_complete_telemetry_coverage");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("telemetry top-speed phrasing matched by the inline template clears the guard", async () => {
   const { mod, dir } = await loadDeterministicSql();
   try {

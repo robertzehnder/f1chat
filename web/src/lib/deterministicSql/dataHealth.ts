@@ -8,6 +8,9 @@ type BuildDataHealthTemplateInput = {
 
 export function buildDataHealthTemplate(ctx: BuildDataHealthTemplateInput): DeterministicSqlTemplate | null {
   const { lower, abuDhabi2025, includesAny } = ctx;
+  const monaco2025 =
+    lower.includes("2025") &&
+    includesAny(lower, ["monaco", "monte carlo", "monte-carlo"]);
 
   if (
     includesAny(lower, ["canonical ids", "canonical id", "canonical"]) &&
@@ -38,6 +41,90 @@ export function buildDataHealthTemplate(ctx: BuildDataHealthTemplateInput): Dete
             OR circuit_short_name ILIKE '%yas%'
           )
         ORDER BY date_start DESC
+        LIMIT 10
+      `
+    };
+  }
+
+  if (
+    monaco2025 &&
+    includesAny(lower, ["coverage", "complete", "completeness"]) &&
+    includesAny(lower, ["telemetry", "car data", "car_data", "location"]) &&
+    includesAny(lower, ["all 20 drivers", "across all 20 drivers", "20 drivers", "all drivers"])
+  ) {
+    return {
+      templateKey: "monaco_2025_sessions_most_complete_telemetry_coverage",
+      sql: `
+        WITH monaco_sessions AS (
+          SELECT
+            s.session_key,
+            s.meeting_key,
+            s.year,
+            s.session_name,
+            s.session_type,
+            s.country_name,
+            s.location,
+            s.circuit_short_name,
+            s.date_start
+          FROM core.sessions s
+          WHERE s.year = 2025
+            AND (
+              s.country_name ILIKE '%monaco%'
+              OR s.location ILIKE '%monaco%'
+              OR s.location ILIKE '%monte carlo%'
+              OR s.circuit_short_name ILIKE '%monaco%'
+            )
+        ),
+        car_drivers AS (
+          SELECT DISTINCT
+            cd.session_key,
+            cd.driver_number
+          FROM raw.car_data cd
+          JOIN monaco_sessions ms
+            ON ms.session_key = cd.session_key
+        ),
+        location_drivers AS (
+          SELECT DISTINCT
+            loc.session_key,
+            loc.driver_number
+          FROM raw.location loc
+          JOIN monaco_sessions ms
+            ON ms.session_key = loc.session_key
+        ),
+        covered_drivers AS (
+          SELECT
+            cd.session_key,
+            cd.driver_number
+          FROM car_drivers cd
+          JOIN location_drivers ld
+            ON ld.session_key = cd.session_key
+           AND ld.driver_number = cd.driver_number
+        )
+        SELECT
+          ms.session_key,
+          ms.meeting_key,
+          ms.year,
+          ms.session_name,
+          ms.session_type,
+          ms.country_name,
+          ms.location,
+          ms.circuit_short_name,
+          ms.date_start,
+          COUNT(DISTINCT covered.driver_number) AS telemetry_complete_driver_count
+        FROM monaco_sessions ms
+        LEFT JOIN covered_drivers covered
+          ON covered.session_key = ms.session_key
+        GROUP BY
+          ms.session_key,
+          ms.meeting_key,
+          ms.year,
+          ms.session_name,
+          ms.session_type,
+          ms.country_name,
+          ms.location,
+          ms.circuit_short_name,
+          ms.date_start
+        ORDER BY telemetry_complete_driver_count DESC, ms.date_start DESC NULLS LAST
         LIMIT 10
       `
     };

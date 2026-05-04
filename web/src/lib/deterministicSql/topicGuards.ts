@@ -365,6 +365,7 @@ export const TEMPLATE_TOPICS: Readonly<Record<string, TemplateTopicEntry>> = {
 
   // dataHealth.ts (split)
   canonical_id_lookup_abu_dhabi_2025_race:       { owns: ["dataHealth"] },
+  monaco_2025_sessions_most_complete_telemetry_coverage: { owns: ["dataHealth"] },
   sessions_most_complete_downstream_coverage:    { owns: ["dataHealth"] },
 
   // deterministicSql.ts (legacy monolith — pre-split inline templates)
