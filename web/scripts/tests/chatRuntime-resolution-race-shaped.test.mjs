@@ -177,3 +177,52 @@ test("RACE_SHAPED_MARKERS and SESSION_TYPE_SENSITIVE_MARKERS exports are non-emp
     );
   });
 });
+
+// Phase 25.1 (codex audit pass 9): demonym -> country/circuit alias
+// expansion. Without this, "Hungarian Grand Prix" derives only the
+// `hungarian` token, which doesn't match the `hungary` /
+// `hungaroring` aliases in core.session_search_lookup. The chat
+// resolver then falls through to generic-token matches and tie-breaks
+// to the latest 2025 race (Abu Dhabi 9839).
+//
+// This test covers the helper indirectly via assertions on the
+// `RACE_SHAPED_MARKERS` plus a structural check: the helper module
+// must export a `VENUE_DEMONYM_ALIASES` table (or an equivalent
+// expansion mechanism) with entries for the demonyms that block
+// Phase 25.1's escalated questions. The behavioural test that
+// each demonym actually fires lives in the alias-derivation probe
+// script (web/scripts/phase25_probe_alias_derivation.mjs); this
+// unit test pins the contract that the table exists and covers the
+// known-broken demonyms.
+test("Phase 25.1 demonym alias expansion: hungarian/australian/italian/imola map to country+circuit aliases", async () => {
+  const src = await readFile(
+    path.resolve(webRoot, "src/lib/chatRuntime.ts"),
+    "utf8"
+  );
+  // Each demonym must appear as a `trigger` and the country alias
+  // must be in its expansion list. We check the source directly so
+  // the test stays robust to module-load idiosyncrasies.
+  const cases = [
+    { trigger: "hungarian", mustInclude: "hungary" },
+    { trigger: "australian", mustInclude: "australia" },
+    { trigger: "italian", mustInclude: "italy" },
+    { trigger: "british", mustInclude: "silverstone" },
+    { trigger: "belgian", mustInclude: "belgium" },
+    { trigger: "dutch", mustInclude: "zandvoort" },
+    { trigger: "japanese", mustInclude: "suzuka" },
+    { trigger: "imola", mustInclude: "emilia romagna" }
+  ];
+  const tableMatch = src.match(/VENUE_DEMONYM_ALIASES[^=]*=\s*\[([\s\S]*?)\];/);
+  assert.ok(tableMatch, "VENUE_DEMONYM_ALIASES table must exist in chatRuntime.ts");
+  const table = tableMatch[1];
+  for (const { trigger, mustInclude } of cases) {
+    const triggerRe = new RegExp(`trigger:\\s*"${trigger}"\\s*,\\s*aliases:\\s*\\[([^\\]]*)\\]`);
+    const entry = table.match(triggerRe);
+    assert.ok(entry, `expected VENUE_DEMONYM_ALIASES entry for trigger="${trigger}"`);
+    assert.match(
+      entry[1],
+      new RegExp(`"${mustInclude}"`),
+      `trigger="${trigger}" must include alias "${mustInclude}"`
+    );
+  }
+});

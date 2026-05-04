@@ -114,7 +114,7 @@ Guidance:
   aggregate the missing set into a count plus a list/text field that yields 0 and 'none' instead of an empty result set.
 - For intermediate-tyre crossover questions ("who pitted first for inters"), use core.stint_summary filtered by compound_name ILIKE '%INTER%' ORDER BY lap_start ASC.
 - For per-driver telemetry-coverage questions, use core.session_completeness.car_data_rows / coverage_score; no per-driver coverage matview exists yet.
-- For "pit-stop timing vs FIA pit log" questions, JOIN core.session_completeness.pit_rows (manifest) vs COUNT(*) FROM raw.pit (observed) per session_key. State that FIA pit log is not ingested; surface manifest-vs-observed deltas only.
+- For "pit-stop timing vs FIA pit log" questions, JOIN core.session_completeness.pit_rows (manifest) vs COUNT(*) FROM raw.pit (observed) per session_key. Surface manifest-vs-observed deltas only; do not embed semicolons or multi-clause notes inside SQL string literals (the FIA-pit-log caveat belongs in the synthesis text, not the SQL output).
 
 Rules:
 - Output JSON only.

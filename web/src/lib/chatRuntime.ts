@@ -636,6 +636,57 @@ function extractSessionNameHint(normalizedText: string): string | undefined {
   return undefined;
 }
 
+// Phase 25.1 (codex audit pass 9): demonym → country/circuit alias
+// expansion. The session_search_lookup table indexes country names
+// ("hungary", "australia", "italy") and circuit short names ("imola",
+// "monza", "hungaroring"), but F1 questions use demonym phrasing
+// ("Hungarian Grand Prix", "Australian GP", "Italian GP"). Without an
+// expansion table, `hungarian` from the question text never matches
+// the `hungary` alias in the DB, and the lookup falls through to
+// generic-token matches like `gp` / `grand prix` that hit every 2025
+// race session — so the scorer tie-breaks to the latest race
+// (Abu Dhabi 9839) instead of the actual venue.
+//
+// The 5d simulation in `phase25_probe_session_search_lookup.mjs`
+// reproduced the live wrong-resolution exactly when the alias list
+// excluded the country-name token: top results were the Dec/Nov
+// 2025 races, ordered by date_start.
+//
+// Each entry maps a demonym/synonym to the country / circuit-short-name
+// values that exist as `core.session_search_lookup.normalized_alias`
+// rows for that venue's 2025 race session.
+const VENUE_DEMONYM_ALIASES: ReadonlyArray<{ trigger: string; aliases: string[] }> = [
+  { trigger: "hungarian", aliases: ["hungary", "hungaroring", "budapest"] },
+  { trigger: "australian", aliases: ["australia", "melbourne"] },
+  { trigger: "italian", aliases: ["italy", "monza"] },
+  { trigger: "british", aliases: ["united kingdom", "silverstone"] },
+  { trigger: "belgian", aliases: ["belgium", "spa", "spa-francorchamps"] },
+  { trigger: "dutch", aliases: ["netherlands", "zandvoort"] },
+  { trigger: "spanish", aliases: ["spain", "barcelona"] },
+  { trigger: "french", aliases: ["france", "le castellet", "paul ricard"] },
+  { trigger: "japanese", aliases: ["japan", "suzuka"] },
+  { trigger: "chinese", aliases: ["china", "shanghai"] },
+  { trigger: "saudi", aliases: ["saudi arabia", "jeddah"] },
+  { trigger: "saudi arabian", aliases: ["saudi arabia", "jeddah"] },
+  { trigger: "bahraini", aliases: ["bahrain", "sakhir"] },
+  { trigger: "azerbaijani", aliases: ["azerbaijan", "baku"] },
+  { trigger: "monégasque", aliases: ["monaco"] },
+  { trigger: "monegasque", aliases: ["monaco"] },
+  { trigger: "canadian", aliases: ["canada", "montreal", "montréal"] },
+  { trigger: "austrian", aliases: ["austria", "spielberg", "red bull ring"] },
+  { trigger: "qatari", aliases: ["qatar", "lusail"] },
+  { trigger: "mexican", aliases: ["mexico", "mexico city"] },
+  { trigger: "brazilian", aliases: ["brazil", "são paulo", "sao paulo", "interlagos"] },
+  { trigger: "emirati", aliases: ["united arab emirates", "abu dhabi", "yas marina circuit"] },
+  { trigger: "miami", aliases: ["united states", "miami gardens"] },
+  { trigger: "las vegas", aliases: ["united states", "las vegas"] },
+  { trigger: "vegas", aliases: ["united states", "las vegas"] },
+  { trigger: "imola", aliases: ["italy", "imola", "emilia romagna"] },
+  { trigger: "emilia romagna", aliases: ["italy", "imola", "emilia romagna"] },
+  { trigger: "singapore", aliases: ["singapore", "marina bay"] },
+  { trigger: "monaco", aliases: ["monaco"] }
+];
+
 function extractVenueHints(normalizedText: string): string[] {
   const hints: string[] = [];
 
@@ -666,6 +717,15 @@ function extractVenueHints(normalizedText: string): string[] {
   }
   if (normalizedText.includes("united arab emirates")) {
     hints.push("united arab emirates", "yas");
+  }
+
+  // Phase 25.1 demonym expansion — see VENUE_DEMONYM_ALIASES comment.
+  for (const entry of VENUE_DEMONYM_ALIASES) {
+    if (normalizedText.includes(entry.trigger)) {
+      for (const alias of entry.aliases) {
+        hints.push(alias);
+      }
+    }
   }
 
   return unique(hints.map((hint) => hint.trim()).filter((hint) => hint.length >= 3));
