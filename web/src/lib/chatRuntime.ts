@@ -490,6 +490,8 @@ export const RACE_SHAPED_MARKERS: ReadonlyArray<string> = [
   "race start",
   "pit stop",
   "pit stops",
+  "first stop",
+  "first-stop",
   "pit cycle",
   "pit window",
   "two-stop",
@@ -704,6 +706,10 @@ function hasGrandPrixVenueAlias(lookupAliasCandidates: string[]): boolean {
   return lookupAliasCandidates.some((alias) =>
     /\b[a-z]+(?:\s+[a-z]+){0,2}\s+grand\s+prix\b/i.test(alias)
   );
+}
+
+function hasExplicitGrandPrixVenueYearAnchor(normalizedText: string): boolean {
+  return /\b20\d{2}\s+[a-z]+(?:\s+[a-z]+){0,2}\s+grand\s+prix\b/i.test(normalizedText);
 }
 
 function shouldAllowFutureOrPlaceholderSessions(normalizedText: string, extractedYear?: number): boolean {
@@ -1635,6 +1641,7 @@ export async function buildChatRuntime(input: {
   const hasStrongVenueYearAnchor =
     Boolean(extractedYear) &&
     (venueHints.length > 0 ||
+      hasExplicitGrandPrixVenueYearAnchor(normalizedMessage) ||
       hasGrandPrixVenueAlias(lookupAliasCandidates) ||
       includesAnyPhrase(normalizedMessage, [
         "abu dhabi 2025 qualifying session",

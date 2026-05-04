@@ -76,6 +76,7 @@ const POSITIVE_FIXTURES = [
   "What was the closing-stint hard-tyre pace at Hungary 2025?",
   "How many pit stops did Verstappen make at the Monaco 2025 race?",
   "How many pit stops did Lando Norris make in the 2025 Monaco Grand Prix?",
+  "What was Verstappen's first-stop lap number in the 2025 Canadian Grand Prix?",
   "What was the fastest lap of the 2025 Italian Grand Prix race?"
 ];
 
