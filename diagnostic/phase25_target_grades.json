@@ -1,0 +1,48 @@
+{
+  "comment": "Phase 25 (codex audit pass 3): per-question target-grade overrides used by the Phase 25 PR-time gate. The source question JSON's expected_grade_floor is the LONG-TERM contract; this manifest captures the Phase 25 acceptance reality where some questions cannot reach their authored A floor without a synthesis-rubric exception or a question-text rewrite. Each override carries a rationale + escape hatch (what would lift it BACK to its authored floor). The Phase 24 autonomous loop reads target_grade from this manifest first; falls back to source JSON's expected_grade_floor if the qid is not listed.",
+  "version": "2026-05-04",
+  "overrides": {
+    "1715": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "A",
+      "rationale": "Codex audit pass 3 promoted from B → A. q1715 is a clean single-table lookup against analytics.corner_analysis (entry_speed_kph + exit_speed_kph for 2 drivers at 1 corner). The earlier 'B-target cross-JOIN' label was incorrect — there is no JOIN required.",
+      "escape_to_authored_floor": "n/a — already aligned with authored A"
+    },
+    "1945": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "B",
+      "rationale": "Question asks 'cut short BY graining' — public data shows stint length + compound but cannot prove the cause was graining. Synthesis at B (cite stint length + compound + invite human interpretation) is the realistic ceiling.",
+      "escape_to_authored_floor": "Edit the source question to drop the 'by graining on the front-right' causation clause, OR add a rubric exception that awards A for honest 'cause-unknown but stint-length-known' answers."
+    },
+    "2008": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "C",
+      "rationale": "Question asks Ferrari's qualifying-trim vs race-trim straight-line variance attribution. Even the 21-straight-line-dominance matview gives speeds, not the *trim cause*. Ceiling is C without a setup-data ingest.",
+      "escape_to_authored_floor": "Ship a setup/trim-difference matview, OR rewrite the question to ask only the speeds and let the human attribute the cause."
+    },
+    "2184": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "B",
+      "rationale": "Source JSON expects core.session_completeness AND raw.pit; we can compute manifest-vs-observed deltas, but 'vs the official FIA pit log' is not a data source we ingest. Acceptance is stable B with manifest-vs-observed counts + a one-line FIA-data-not-ingested caveat. (Codex audit pass 5: removed the prior conditional 'A if caveat present' fallback — the PR-time gate reads a single phase25_target_grade value and cannot enforce conditional targets.)",
+      "escape_to_authored_floor": "Either rewrite the source question to drop the 'vs the official FIA pit log' clause, OR add a rubric exception that awards A on factual_correctness when the answer explicitly bounds an unsupported claim with a limitation note."
+    },
+    "2206": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "C",
+      "rationale": "Cross-category Leclerc Monza compound vs corner-pace causation — needs synthesis to attribute time loss to compound vs corner-line, which the per-row matview cannot resolve. C is honest.",
+      "escape_to_authored_floor": "Ship a Tier-4 driver-event-attribution model that decomposes lap time into compound / corner / fuel components; alternatively rewrite the question to ask only correlations, not causes."
+    },
+    "2207": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "C",
+      "rationale": "Mercedes Spa C3 cliff comparison — cliff-attribution to compound thermal vs setup vs traffic is unprovable from public data. C is honest.",
+      "escape_to_authored_floor": "Ship Phase 22 22-tyre-deg-bayesian, then re-classify."
+    },
+    "2182": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "B",
+      "rationale": "Codex audit pass 6: Phase-24 merged_skipped at baseline B. Source asks 'sessions missing more than 5% of car telemetry samples for any driver'; the only honest answer routes through core.session_completeness manifest data and surfaces low-coverage sessions, but cannot prove a per-driver 5%-threshold without a per-(session, driver) telemetry coverage matview. Baseline B (factually correct framing of telemetry gaps via session_completeness) is the realistic ceiling without a Phase 21 telemetry-coverage-per-driver matview. The gate must read this entry to avoid a stale-floor failure (source floor A is unreachable).",
+      "escape_to_authored_floor": "Ship a Phase 21 telemetry-coverage-per-(session, driver) matview that exposes the per-driver missing-sample percentage directly, OR rewrite the source question to ask 'sessions where the manifest indicates car_data_rows == 0 or coverage_score < 0.95' (drops the 5%-per-driver phrasing in favor of a measurable manifest-level signal)."
+    }
+  }
+}

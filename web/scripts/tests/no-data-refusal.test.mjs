@@ -83,7 +83,13 @@ const MUST_NOT_TRIP = [
   "Compare Norris and Piastri's pace in stint 2.",
   // Phrases like "fuel-saving" share a token with "fuel mass"/"fuel burn"
   // but are not in the keyword list — must not trip.
-  "Was Verstappen quick on the long fuel-saving stint?"
+  "Was Verstappen quick on the long fuel-saving stint?",
+  // Phase 25.1 q1945 risk-note: graining is an observational F1
+  // analyst term, not proprietary telemetry. Must NOT trip the
+  // proprietary-no-data refusal route.
+  "Was Piastri's first stint at Imola 2025 cut short by graining on the front-right?",
+  "Did Hamilton's mediums show graining at Spa 2025?",
+  "How much graining cliff did Norris hit before pitting at Hungary 2025?"
 ];
 
 test("MUST trip on proprietary phrasings", async () => {

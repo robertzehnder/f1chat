@@ -516,7 +516,13 @@ export const RACE_SHAPED_MARKERS: ReadonlyArray<string> = [
   "tire choice",
   "compound choice",
   "compound choices",
-  "narrow setup window"
+  "narrow setup window",
+  "started on",
+  "start on",
+  "run wet",
+  "run dry",
+  "ran wet",
+  "ran dry"
 ];
 
 export const SESSION_TYPE_SENSITIVE_MARKERS: ReadonlyArray<string> = [

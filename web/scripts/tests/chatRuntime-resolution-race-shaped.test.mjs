@@ -78,7 +78,14 @@ const POSITIVE_FIXTURES = [
   "How many pit stops did Lando Norris make in the 2025 Monaco Grand Prix?",
   "What was Verstappen's first-stop lap number in the 2025 Canadian Grand Prix?",
   "What was the fastest lap of the 2025 Italian Grand Prix race?",
-  "How long was Verstappen's medium stint at Silverstone 2025 before he switched to inters?"
+  "How long was Verstappen's medium stint at Silverstone 2025 before he switched to inters?",
+  // Phase 25.1 q1941: `start on` race-shaped marker
+  "What compound did Verstappen start on at the 2025 Singapore GP?",
+  "What compound did Norris start on at Monza 2025?",
+  "What compound did Hamilton run wet on at Spa 2025?",
+  // Phase 25.1 q2120: `run wet` / `run dry` race-shaped markers
+  "Was the 2025 Hungarian Grand Prix run wet or dry?",
+  "Did the 2025 Belgian Grand Prix run dry from start to finish?"
 ];
 
 const NEGATIVE_FIXTURES_SESSION_TYPE = [
@@ -87,7 +94,13 @@ const NEGATIVE_FIXTURES_SESSION_TYPE = [
   "Show me Verstappen's FP2 long-run pace at Spa 2025.",
   "How many sprint races has Norris won in 2025?",
   "What was Hamilton's quickest qualifying lap at Monza 2025?",
-  "What was Norris's qualifying result at the 2025 Monaco Grand Prix?"
+  "What was Norris's qualifying result at the 2025 Monaco Grand Prix?",
+  // Phase 25.1 deny-list dominance over the new `start on` marker:
+  // a `start on` phrase combined with a session-type-sensitive
+  // marker (pole/qualifying/sprint) MUST still clarify.
+  "What compound did Verstappen start on for his pole lap at Singapore 2025?",
+  "What compound did Norris start on for the sprint at Spa 2025?",
+  "What compound did Hamilton start on in qualifying at Monza 2025?"
 ];
 
 const NEGATIVE_FIXTURES_NO_VENUE_YEAR = [

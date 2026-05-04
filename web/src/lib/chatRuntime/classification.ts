@@ -31,10 +31,16 @@ export function classifyQuestion(message: string): QuestionType {
     lower.includes("missing laps") ||
     lower.includes("lap coverage") ||
     lower.includes("data health") ||
+    lower.includes("pit stop timing data") ||
+    lower.includes("pit-stop timing data") ||
+    lower.includes("pit timing data") ||
+    lower.includes("fia pit log") ||
+    lower.includes("official fia") ||
     ((lower.includes("session") || lower.includes("sessions")) &&
       (lower.includes("placeholder") ||
         lower.includes("partially loaded") ||
-        lower.includes("partial load")))
+        lower.includes("partial load") ||
+        lower.includes("incomplete")))
   ) {
     return "data_health_question";
   }
