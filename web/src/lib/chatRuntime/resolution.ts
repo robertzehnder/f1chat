@@ -1,7 +1,14 @@
 import type { DriverResolutionRow, SessionResolutionRow } from "@/lib/queries";
 import type { QuestionType } from "./classification";
 
-export type ResolutionStatus = "high_confidence" | "medium_confidence" | "low_confidence";
+// Phase 17-E: 4-member union (added "timeout" for cases where the resolver
+// SQL exceeds its deadline — a different shape from low_confidence).
+// Consumers that switch on ResolutionStatus must handle the timeout branch.
+export type ResolutionStatus =
+  | "high_confidence"
+  | "medium_confidence"
+  | "low_confidence"
+  | "timeout";
 
 const SESSION_REQUIRED_TYPES = new Set<QuestionType>([
   "metadata_lookup",

@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1750,
+    "category": "Proprietary no-data",
+    "complexity": "low",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "What was the brake temperature on Hamilton's car at Turn 8 in Monza 2025?"
+  },
+  {
+    "id": 1751,
+    "category": "Proprietary no-data",
+    "complexity": "low",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "How much fuel did Verstappen burn during stint 2 of the Abu Dhabi 2025 race?"
+  },
+  {
+    "id": 1752,
+    "category": "Proprietary no-data",
+    "complexity": "low",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "What was the slip angle through Eau Rouge for Norris in Spa 2025 qualifying?"
+  },
+  {
+    "id": 1753,
+    "category": "Proprietary no-data",
+    "complexity": "medium",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "What was the battery state of charge at the start of lap 30 in the Bahrain 2025 race?"
+  },
+  {
+    "id": 1754,
+    "category": "Proprietary no-data",
+    "complexity": "medium",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "What ERS deployment pattern did Hamilton use in Q3 at Silverstone 2025?"
+  },
+  {
+    "id": 1755,
+    "category": "Proprietary no-data",
+    "complexity": "medium",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "Show me the steering angle through Parabolica for Leclerc in Monza 2025."
+  },
+  {
+    "id": 1756,
+    "category": "Proprietary no-data",
+    "complexity": "medium",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "What was the front-wing damage state on the McLarens after lap 1 of Spa 2025?"
+  },
+  {
+    "id": 1757,
+    "category": "Proprietary no-data",
+    "complexity": "high",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "What was the engine RPM through the speed trap, and how does it correlate with brake temperature at Turn 1 of Monza 2025?"
+  },
+  {
+    "id": 1758,
+    "category": "Proprietary no-data",
+    "complexity": "high",
+    "expected_outcome": "insufficient_data",
+    "expected_path": "no_data_refusal",
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "question": "Compare the differential settings between Verstappen and Norris in the closing laps of the Abu Dhabi 2025 race."
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1900,
+    "category": "Session discovery and metadata",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.sessions"],
+    "expected_columns": [
+      "core.sessions.session_name",
+      "core.sessions.session_type"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Standard formula1.com weekend schedule lookup; matches Autosport / Motorsport.com 'Jeddah timetable' pieces.",
+    "question": "What sessions exist for the Saudi Arabian 2025 weekend?"
+  },
+  {
+    "id": 1901,
+    "category": "Session discovery and metadata",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.sessions"],
+    "expected_columns": ["core.sessions.session_type"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "PlanetF1 / formula1.com pre-season 'where are the sprints in 2025' explainer.",
+    "question": "List all sprint weekends on the 2025 calendar."
+  },
+  {
+    "id": 1902,
+    "category": "Session discovery and metadata",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.sessions", "core.session_completeness"],
+    "expected_columns": [
+      "core.sessions.session_name",
+      "core.session_completeness.coverage_score"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "The Race / FastF1-community posts noting Monaco FP signal dropouts in the tunnel.",
+    "question": "Which session at Monaco 2025 had the most complete telemetry coverage across all 20 drivers?"
+  },
+  {
+    "id": 1903,
+    "category": "Session discovery and metadata",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.sessions", "raw.weather"],
+    "expected_columns": [
+      "core.sessions.session_name",
+      "raw.weather.rainfall"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "RaceFans weekend-recap weather log + Sky F1 conditions summaries.",
+    "question": "For the Las Vegas 2025 weekend, which sessions ran in dry conditions and which were wet or mixed?"
+  },
+  {
+    "id": 1904,
+    "category": "Session discovery and metadata",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.sessions"],
+    "expected_columns": [
+      "core.sessions.session_name",
+      "core.sessions.session_type",
+      "core.sessions.date_start"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Standard motorsport.com 'schedule and how to watch' article structure.",
+    "question": "Show the session start times and durations for the Belgian GP 2025 weekend, including the sprint."
+  },
+  {
+    "id": 1905,
+    "category": "Session discovery and metadata",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.sessions", "analytics.race_control_incidents"],
+    "expected_columns": [
+      "core.sessions.session_name",
+      "analytics.race_control_incidents.incident_kind"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "Autosport end-of-season 'disrupted sessions' review + The Race coverage of Imola 2025 red-flag chaos.",
+    "question": "For the 2025 season, which weekends had a session cancelled or red-flagged for more than 30 minutes, and which session was it?"
+  },
+  {
+    "id": 1906,
+    "category": "Session discovery and metadata",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.sessions", "raw.weather"],
+    "expected_columns": [
+      "core.sessions.session_name",
+      "raw.weather.track_temperature"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": null,
+    "author_note": "Mark Hughes technical columns on 'representative running' and FP1-to-quali track evolution.",
+    "question": "Across all 2025 race weekends, which venue had the largest gap between FP1 and qualifying conditions (track temp delta) and what sessions were affected?"
+  }
+]

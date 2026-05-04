@@ -1,0 +1,115 @@
+[
+  {
+    "id": 2180,
+    "category": "Data health",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness"],
+    "expected_columns": ["core.session_completeness.weather_rows"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Codex MEDIUM finding: data_health rides on existing Phase 18-C session_completeness contract; no defer needed.",
+    "question": "Which 2025 sessions are missing weather coverage?"
+  },
+  {
+    "id": 2181,
+    "category": "Data health",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness"],
+    "expected_columns": ["core.session_completeness.coverage_score"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "OpenF1 / FastF1 community phrasing for placeholder / partial-load sessions.",
+    "question": "List 2025 sessions that look like placeholders or partially loaded."
+  },
+  {
+    "id": 2182,
+    "category": "Data health",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness"],
+    "expected_columns": [
+      "core.session_completeness.car_data_rows",
+      "core.session_completeness.coverage_score"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "RaceFans data-driven pieces + FastF1 author Oliver Brown notes on telemetry gaps.",
+    "question": "Which 2025 race sessions are missing more than 5% of car telemetry samples for any driver?"
+  },
+  {
+    "id": 2183,
+    "category": "Data health",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness", "raw.laps"],
+    "expected_columns": [
+      "core.session_completeness.lap_rows",
+      "raw.laps.driver_number"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "The Race / Sky F1 post-race notes on retirements and missing stint data.",
+    "question": "Which drivers have a missing-laps gap in the Hungarian GP 2025 race session?"
+  },
+  {
+    "id": 2184,
+    "category": "Data health",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness", "raw.pit"],
+    "expected_columns": ["core.session_completeness.pit_rows"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Autosport strategy columns (Edd Straw / Pat Symonds-style) cross-checking pit-loss vs FIA pit log.",
+    "question": "Show 2025 weekends where pit-stop timing data is incomplete vs the official FIA pit log."
+  },
+  {
+    "id": 2185,
+    "category": "Data health",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness"],
+    "expected_columns": ["core.session_completeness.coverage_score"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "FastF1 community write-ups + OpenF1 dashboards used by independent analysts.",
+    "question": "For each 2025 venue, give me a coverage map: which sessions have full telemetry, weather, and timing — and which are partial?"
+  },
+  {
+    "id": 2186,
+    "category": "Data health",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness"],
+    "expected_columns": [
+      "core.session_completeness.car_data_rows",
+      "core.session_completeness.weather_rows"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": null,
+    "author_note": "Data-quality audits The Race / RaceFans publish when reconciling driver-rating models.",
+    "question": "Across the 2025 season, which sessions have telemetry but no matching weather data (or vice versa), and is the gap concentrated at any specific venue or session type (FP1 vs race)?"
+  },
+  {
+    "id": 2187,
+    "category": "Data health",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.session_completeness"],
+    "expected_columns": ["core.session_completeness.coverage_score"],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": null,
+    "author_note": "PlanetF1 'what we lost when FOM changed feeds' + motorsport.com on F1TV/timing API changes.",
+    "question": "Compare data completeness for the 2025 season vs 2024 by venue: which weekends regressed in telemetry coverage, and which sessions specifically?"
+  }
+]

@@ -1,0 +1,121 @@
+[
+  {
+    "id": 2160,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": [
+      "analytics.driver_performance_score.qualifying_axis"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "Codex MEDIUM finding: all driver_score is HIGH (Tier-4 aggregator over 5 contracts). The Race 'Verdict' rating column.",
+    "question": "What is Norris's qualifying-axis score across the 2025 season so far?"
+  },
+  {
+    "id": 2161,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": ["analytics.driver_performance_score.tyre_management_axis"],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "Mark Hughes Motorsport.com analysis on Verstappen's 'extraordinary tyre nursing' as a distinct skill.",
+    "question": "Give me Verstappen's tyre-management axis rating for 2025."
+  },
+  {
+    "id": 2162,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": [
+      "analytics.driver_performance_score.qualifying_axis",
+      "analytics.driver_performance_score.race_pace_axis"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "The Race podcast / Scott Mitchell-Malm post-Imola/Monaco 2025 framing on title contenders' strengths.",
+    "question": "Where does Verstappen's edge over Norris come from in 2025 — qualifying axis or race-pace axis?"
+  },
+  {
+    "id": 2163,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": [
+      "analytics.driver_performance_score.qualifying_axis",
+      "analytics.driver_performance_score.race_pace_axis",
+      "analytics.driver_performance_score.restart_axis"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "RaceFans / PlanetF1 mid-season McLaren intra-team analysis ('Piastri's restart starts have been the differentiator').",
+    "question": "What is Piastri's strongest axis vs Norris in 2025 — and how big is the gap?"
+  },
+  {
+    "id": 2164,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": ["analytics.driver_performance_score.traffic_handling_axis"],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "Sky Sports F1 Ted Kravitz Notebook + Autosport Monaco 2025 review on Ferrari's blue-flag / backmarker management.",
+    "question": "Compare Hamilton and Leclerc on the traffic-handling axis at Monaco 2025."
+  },
+  {
+    "id": 2165,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": ["analytics.driver_performance_score.error_rate_axis"],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "The Race recurring 'errors per race' tally + Autosport mid-season report card.",
+    "question": "Rank the 2025 grid by error-rate axis through the European triple-header (Imola, Monaco, Spain)."
+  },
+  {
+    "id": 2166,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": [
+      "analytics.driver_performance_score.overtake_difficulty_axis",
+      "analytics.driver_performance_score.tyre_management_axis"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "Mark Hughes Motorsport.com Monza technical column contrasting low-deg/high-overtaking tracks vs tyre-limited circuits.",
+    "question": "For each driver who scored points at both Spa and Monza 2025, compare their overtake-difficulty axis at Spa vs their tyre-management axis at Monza, and flag any driver whose stronger axis flipped between the two weekends."
+  },
+  {
+    "id": 2167,
+    "category": "Driver performance score",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.driver_performance_score"],
+    "expected_columns": [
+      "analytics.driver_performance_score.restart_axis",
+      "analytics.driver_performance_score.race_pace_axis"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-driver-performance-7axis",
+    "author_note": "Scott Mitchell-Malm 'stat that matters' + RaceFans season-trend driver rankings.",
+    "question": "Across the 2025 season, which driver has the largest delta between their restart-axis score and their race-pace-axis score, and is that delta widening or narrowing in the second half of the year?"
+  }
+]

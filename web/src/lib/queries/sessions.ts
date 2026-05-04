@@ -7,55 +7,52 @@ const MAX_LIST_LIMIT = 250;
 
 const TELEMETRY_TABLES = new Set(["car_data", "location", "intervals", "position_history"]);
 
-const SESSION_TABLE_COUNT_SQL: Record<string, string> = {
-  "raw.sessions": "SELECT COUNT(*)::bigint AS row_count FROM raw.sessions WHERE session_key = $1",
-  "raw.drivers": "SELECT COUNT(*)::bigint AS row_count FROM raw.drivers WHERE session_key = $1",
-  "raw.laps": "SELECT COUNT(*)::bigint AS row_count FROM raw.laps WHERE session_key = $1",
-  "raw.car_data": "SELECT COUNT(*)::bigint AS row_count FROM raw.car_data WHERE session_key = $1",
-  "raw.location": "SELECT COUNT(*)::bigint AS row_count FROM raw.location WHERE session_key = $1",
-  "raw.intervals": "SELECT COUNT(*)::bigint AS row_count FROM raw.intervals WHERE session_key = $1",
-  "raw.position_history": "SELECT COUNT(*)::bigint AS row_count FROM raw.position_history WHERE session_key = $1",
-  "raw.weather": "SELECT COUNT(*)::bigint AS row_count FROM raw.weather WHERE session_key = $1",
-  "raw.race_control": "SELECT COUNT(*)::bigint AS row_count FROM raw.race_control WHERE session_key = $1",
-  "raw.pit": "SELECT COUNT(*)::bigint AS row_count FROM raw.pit WHERE session_key = $1",
-  "raw.stints": "SELECT COUNT(*)::bigint AS row_count FROM raw.stints WHERE session_key = $1",
-  "raw.team_radio": "SELECT COUNT(*)::bigint AS row_count FROM raw.team_radio WHERE session_key = $1",
-  "raw.session_result": "SELECT COUNT(*)::bigint AS row_count FROM raw.session_result WHERE session_key = $1",
-  "raw.starting_grid": "SELECT COUNT(*)::bigint AS row_count FROM raw.starting_grid WHERE session_key = $1",
-  "raw.overtakes": "SELECT COUNT(*)::bigint AS row_count FROM raw.overtakes WHERE session_key = $1",
-  "raw.championship_drivers":
-    "SELECT COUNT(*)::bigint AS row_count FROM raw.championship_drivers WHERE session_key = $1",
-  "raw.championship_teams":
-    "SELECT COUNT(*)::bigint AS row_count FROM raw.championship_teams WHERE session_key = $1",
-  "core.sessions": "SELECT COUNT(*)::bigint AS row_count FROM core.sessions WHERE session_key = $1",
-  "core.session_drivers": "SELECT COUNT(*)::bigint AS row_count FROM core.session_drivers WHERE session_key = $1",
-  "core.lap_semantic_bridge":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.lap_semantic_bridge WHERE session_key = $1",
-  "core.laps_enriched":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.laps_enriched WHERE session_key = $1",
-  "core.driver_session_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.driver_session_summary WHERE session_key = $1",
-  "core.stint_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.stint_summary WHERE session_key = $1",
-  "core.strategy_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.strategy_summary WHERE session_key = $1",
-  "core.pit_cycle_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.pit_cycle_summary WHERE session_key = $1",
-  "core.strategy_evidence_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.strategy_evidence_summary WHERE session_key = $1",
-  "core.grid_vs_finish":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.grid_vs_finish WHERE session_key = $1",
-  "core.race_progression_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.race_progression_summary WHERE session_key = $1",
-  "core.lap_phase_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.lap_phase_summary WHERE session_key = $1",
-  "core.telemetry_lap_bridge":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.telemetry_lap_bridge WHERE session_key = $1",
-  "core.lap_context_summary":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.lap_context_summary WHERE session_key = $1",
-  "core.replay_lap_frames":
-    "SELECT COUNT(*)::bigint AS row_count FROM core.replay_lap_frames WHERE session_key = $1"
-};
+// Phase 17 (post-deploy diagnostic 2026-05-02): the chatRuntime resolver
+// coverage-bonus path called this 30+ times concurrently, each running a
+// session-scoped COUNT(*). Caller only branches on `> 0`, so an EXISTS
+// probe is sufficient and is bounded by index seek, not a row count.
+function existsBySessionSql(table: string): string {
+  return `SELECT (CASE WHEN EXISTS (SELECT 1 FROM ${table} WHERE session_key = $1) THEN 1 ELSE 0 END)::bigint AS row_count`;
+}
+
+const SESSION_TABLE_COUNT_TABLES: ReadonlyArray<string> = [
+  "raw.sessions",
+  "raw.drivers",
+  "raw.laps",
+  "raw.car_data",
+  "raw.location",
+  "raw.intervals",
+  "raw.position_history",
+  "raw.weather",
+  "raw.race_control",
+  "raw.pit",
+  "raw.stints",
+  "raw.team_radio",
+  "raw.session_result",
+  "raw.starting_grid",
+  "raw.overtakes",
+  "raw.championship_drivers",
+  "raw.championship_teams",
+  "core.sessions",
+  "core.session_drivers",
+  "core.lap_semantic_bridge",
+  "core.laps_enriched",
+  "core.driver_session_summary",
+  "core.stint_summary",
+  "core.strategy_summary",
+  "core.pit_cycle_summary",
+  "core.strategy_evidence_summary",
+  "core.grid_vs_finish",
+  "core.race_progression_summary",
+  "core.lap_phase_summary",
+  "core.telemetry_lap_bridge",
+  "core.lap_context_summary",
+  "core.replay_lap_frames"
+];
+
+const SESSION_TABLE_COUNT_SQL: Record<string, string> = Object.fromEntries(
+  SESSION_TABLE_COUNT_TABLES.map((t) => [t, existsBySessionSql(t)])
+);
 
 function nullableLike(value?: string): string | null {
   if (!value || !value.trim()) {
@@ -475,6 +472,21 @@ export async function getCatalogCompleteness(
   );
 }
 
+// Phase 17 (post-deploy diagnostic 2026-05-02): per-session "is this table
+// populated for sessionKey?" is also a stable answer (data only grows once
+// ingested), so cache by `(sessionKey, tableName)`. Eliminates repeated
+// cold-cache fetches on the same probe.
+const sessionCountCache = new Map<string, Promise<number>>();
+
+function loadSessionCount(sessionKey: number, tableName: string): Promise<number> {
+  const text = SESSION_TABLE_COUNT_SQL[tableName];
+  if (!text) return Promise.resolve(-1);
+  return sql<{ row_count: number | string }>(text, [sessionKey]).then(
+    (rows) => parseCountValue(rows[0]?.row_count),
+    () => -1
+  );
+}
+
 export async function getSessionTableCounts(
   sessionKey: number,
   tableNames: string[]
@@ -484,13 +496,15 @@ export async function getSessionTableCounts(
 
   await Promise.all(
     unique.map(async (tableName) => {
-      const text = SESSION_TABLE_COUNT_SQL[tableName];
-      if (!text) {
-        counts[tableName] = -1;
-        return;
+      const key = `${sessionKey}|${tableName}`;
+      let cached = sessionCountCache.get(key);
+      if (!cached) {
+        cached = loadSessionCount(sessionKey, tableName);
+        sessionCountCache.set(key, cached);
       }
-      const rows = await sql<{ row_count: number | string }>(text, [sessionKey]);
-      counts[tableName] = parseCountValue(rows[0]?.row_count);
+      const value = await cached;
+      if (value < 0) sessionCountCache.delete(key);
+      counts[tableName] = value;
     })
   );
 

@@ -2,6 +2,8 @@ import { Pool, QueryResultRow } from "pg";
 
 type PoolGlobal = {
   __openf1Pool?: Pool;
+  __openf1PoolKeepalive?: NodeJS.Timeout;
+  __openf1PoolWarmed?: boolean;
 };
 
 const globalForPool = globalThis as unknown as PoolGlobal;
@@ -106,9 +108,16 @@ function sslForHost(host: string): { rejectUnauthorized: boolean } | undefined {
 
 function createPool(): Pool {
   const statementTimeout = Number(process.env.OPENF1_QUERY_TIMEOUT_MS ?? "15000");
+  // Phase 17-B: connections survive 5 min between requests (was 30 s) so the
+  // next chat request after a brief idle period doesn't pay a fresh-handshake
+  // cold-start tax. Paired with the keepalive heartbeat below.
+  // connectionTimeoutMillis: pg default is 0 (no timeout), which hangs
+  // indefinitely if the host is unreachable (e.g. stale local Docker config).
+  // 10s is enough for Neon cold-starts and turns hangs into surfaced errors.
   const base = {
     max: 10,
-    idleTimeoutMillis: 30_000,
+    idleTimeoutMillis: 300_000,
+    connectionTimeoutMillis: 10_000,
     statement_timeout: statementTimeout,
     application_name: "openf1_web_app"
   };
@@ -158,6 +167,48 @@ assertLocalDockerDb(process.env);
 export const pool = globalForPool.__openf1Pool ?? createPool();
 if (!globalForPool.__openf1Pool) {
   globalForPool.__openf1Pool = pool;
+}
+
+// Phase 17-B: keepalive heartbeat. Fires a trivial query every minute so the
+// idle-eviction timer doesn't reap the pool's connections between user
+// requests; that eviction was the root of the 5-min cold-pool cost observed
+// during the 2026-05-02 incident. Disabled in test env so test suites don't
+// leak timers.
+function keepaliveEnabled(): boolean {
+  const flag = process.env.OPENF1_DB_KEEPALIVE_ENABLED?.trim().toLowerCase();
+  if (flag === "false" || flag === "0") return false;
+  if (flag === "true" || flag === "1") return true;
+  return process.env.NODE_ENV !== "test";
+}
+
+if (keepaliveEnabled() && !globalForPool.__openf1PoolKeepalive) {
+  const interval = setInterval(() => {
+    pool.query("SELECT 1").catch(() => {
+      // Heartbeat failures are non-fatal; the next user query will surface
+      // any real connectivity issue with a meaningful error.
+    });
+  }, 60_000);
+  // Don't keep the process alive solely for the heartbeat (Next.js dev server,
+  // tests, scripts). Lambda/edge runtimes ignore unref so this is safe there.
+  if (typeof interval.unref === "function") {
+    interval.unref();
+  }
+  globalForPool.__openf1PoolKeepalive = interval;
+}
+
+/**
+ * Phase 17-B: warm the pool on first call per process so the first chat
+ * request doesn't pay a cold-start handshake. Idempotent and safe to call
+ * from anywhere in the request path.
+ */
+export async function warmPool(): Promise<void> {
+  if (globalForPool.__openf1PoolWarmed) return;
+  globalForPool.__openf1PoolWarmed = true;
+  try {
+    await pool.query("SELECT 1");
+  } catch {
+    globalForPool.__openf1PoolWarmed = false;
+  }
 }
 
 export async function sql<T extends QueryResultRow>(

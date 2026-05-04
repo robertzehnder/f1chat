@@ -90,7 +90,12 @@ type QueryPlan = {
   expected_row_count: RowVolume;
 };
 
-export type ChatRuntimeResult = {
+// Phase 19-A (rev4): `ChatRuntimeResult` is a discriminated union so the
+// proactive `no_data_refusal` arm cannot leak through `resolution.status`
+// or `completeness.available`. Every consumer must branch on `kind` —
+// removing the discriminant is a compile-time error.
+export type ChatRuntimeProceed = {
+  kind: "proceed";
   questionType: QuestionType;
   followUp: boolean;
   resolution: {
@@ -127,6 +132,29 @@ export type ChatRuntimeResult = {
   stageLogs: ChatRuntimeStageLog[];
   durationMs: number;
 };
+
+// Phase 19-A (rev3 + rev4): proactive INSUFFICIENT_DATA refusal arm.
+// Returned by `buildChatRuntime` when the deterministic pre-SQL
+// `PROPRIETARY_NO_DATA_TOPICS` keyword guard fires. The orchestration
+// layer short-circuits before any Anthropic call when `kind` is this
+// arm — `generateSqlWithAnthropic` / `executeSqlWithTrace` MUST NOT run.
+export type ChatRuntimeNoDataRefusal = {
+  kind: "no_data_refusal";
+  refusalReason: string;
+  matchedKeyword: string;
+  questionType: QuestionType;
+  durationMs: number;
+};
+
+export type ChatRuntimeResult = ChatRuntimeProceed | ChatRuntimeNoDataRefusal;
+
+// Phase 19-A (rev3): proactive `no_data_refusal` keyword guard lives in
+// its own module (`./chatRuntime/proprietaryNoData`) so unit tests can
+// import the detector without dragging in the full chatRuntime DB
+// dependency graph. Re-exported here for backward compatibility with
+// any existing callers.
+export { detectProprietaryNoDataMatch } from "./chatRuntime/proprietaryNoData";
+import { detectProprietaryNoDataMatch as _detectProprietaryNoDataMatch } from "./chatRuntime/proprietaryNoData";
 
 const SESSION_SCOPED_TABLES = new Set([
   "raw.sessions",
@@ -412,6 +440,138 @@ function selectComparisonDriverNumbers(driverCandidates: DriverCandidate[]): num
   }
 
   return selected.slice(0, 2);
+}
+
+// Phase 19 outcome-fix Fix 2 (codex audit pass 1-3): race-shaped intent
+// extractors. When a question names a venue + year AND contains a
+// race-shaped marker AND does NOT contain a session-type-sensitive
+// marker, the resolver picks the race session at high confidence
+// without clarifying. Quali/sprint/practice questions still clarify.
+//
+// Race-shaped markers: phrases analysts use when discussing the race
+// itself (closing laps, pit stop, finished, opening stint, etc.).
+// Session-type-sensitive markers: phrases that imply a non-race
+// session type (qualifying, pole, Q1/Q2/Q3, sprint, FP1/FP2/FP3,
+// practice, long run).
+//
+// Test fixtures in `chatRuntime-resolution-race-shaped.test.mjs`
+// cover positive race-shaped + negative session-type-sensitive +
+// the existing 50q rubric clarification ids 8/9/15/17.
+export const RACE_SHAPED_MARKERS: ReadonlyArray<string> = [
+  "the race",
+  "during the race",
+  "of the race",
+  "throughout the race",
+  "race pace",
+  "race trim",
+  "race-trim",
+  "race stint",
+  "closing laps",
+  "opening laps",
+  "first stint",
+  "final stint",
+  "second stint",
+  "third stint",
+  "closing stint",
+  "closing-stint",
+  "opening stint",
+  "opening-stint",
+  "longest stint",
+  "stint 1",
+  "stint 2",
+  "stint 3",
+  "stint length",
+  "stint lengths",
+  "stint pace",
+  "long stint",
+  "lap-1",
+  "lap 1 launch",
+  "race start",
+  "pit stop",
+  "pit stops",
+  "pit cycle",
+  "pit window",
+  "two-stop",
+  "one-stop",
+  "two-stopper",
+  "one-stopper",
+  "undercut",
+  "overcut",
+  "safety car",
+  "sc restart",
+  "vsc",
+  "drs train",
+  "fastest lap of",
+  "won by",
+  "finished",
+  "finishing",
+  "running order",
+  "tyre management",
+  "tire management",
+  "tyre choice",
+  "tire choice",
+  "compound choice",
+  "compound choices",
+  "narrow setup window"
+];
+
+export const SESSION_TYPE_SENSITIVE_MARKERS: ReadonlyArray<string> = [
+  "qualifying",
+  "qualifier",
+  "qualified",
+  "pole",
+  "pole lap",
+  "pole position",
+  "q1",
+  "q2",
+  "q3",
+  "sprint",
+  "sprint race",
+  "sprint quali",
+  "sprint shootout",
+  "fp1",
+  "fp2",
+  "fp3",
+  "practice",
+  "long run",
+  "long-run",
+  "long stint simulation"
+];
+
+function containsRaceShapedMarker(normalizedText: string): boolean {
+  const lower = normalizedText.toLowerCase();
+  for (const m of RACE_SHAPED_MARKERS) {
+    // Phrase-level match with word boundaries on each end. Allow
+    // arbitrary whitespace between phrase tokens.
+    const escaped = m.replace(/[\\.*+?^${}()|[\]]/g, "\\$&").replace(/\s+/g, "\\s+");
+    if (new RegExp(`(^|\\b)${escaped}(\\b|$)`, "i").test(lower)) return true;
+  }
+  return false;
+}
+
+function containsSessionTypeSensitiveMarker(normalizedText: string): boolean {
+  const lower = normalizedText.toLowerCase();
+  for (const m of SESSION_TYPE_SENSITIVE_MARKERS) {
+    const escaped = m.replace(/[\\.*+?^${}()|[\]]/g, "\\$&").replace(/\s+/g, "\\s+");
+    if (new RegExp(`(^|\\b)${escaped}(\\b|$)`, "i").test(lower)) return true;
+  }
+  return false;
+}
+
+/**
+ * Phase 19 outcome-fix Fix 2: returns true when the question is
+ * race-shaped AND has a venue+year anchor AND is NOT session-type-
+ * sensitive. Callers use this to bypass close-score clarification
+ * and prefer the race session among candidates. Exported for test
+ * fixtures.
+ */
+export function isRaceShapedVenueYearIntent(
+  normalizedText: string,
+  hasVenueYearAnchor: boolean
+): boolean {
+  if (!hasVenueYearAnchor) return false;
+  if (containsSessionTypeSensitiveMarker(normalizedText)) return false;
+  return containsRaceShapedMarker(normalizedText);
 }
 
 function parseYear(text: string): number | undefined {
@@ -813,6 +973,23 @@ export async function buildChatRuntime(input: {
     recordSpan?.(classifySpan.end());
   }
 
+  // Phase 19-A (rev3 + rev4): proactive `no_data_refusal` route. The
+  // PROPRIETARY_NO_DATA_TOPICS phrase match runs DURING the
+  // classification stage — BEFORE any Anthropic call, BEFORE the
+  // resolver. On match, return the typed refusal arm; the orchestration
+  // layer must short-circuit on `kind` and never invoke
+  // generateSqlWithAnthropic / executeSqlWithTrace.
+  const proprietaryHit = _detectProprietaryNoDataMatch(input.message);
+  if (proprietaryHit) {
+    return {
+      kind: "no_data_refusal",
+      refusalReason: proprietaryHit.refusalReason,
+      matchedKeyword: proprietaryHit.matchedKeyword,
+      questionType,
+      durationMs: Date.now() - startedAt
+    };
+  }
+
   const resolveDbSpan = startSpan("resolve_db");
   try {
   const shouldRequireSession = requiresResolvedSession(questionType, normalizedMessage);
@@ -925,6 +1102,7 @@ export async function buildChatRuntime(input: {
     });
 
     return {
+      kind: "proceed",
       questionType,
       followUp,
       resolution: {
@@ -1028,6 +1206,7 @@ export async function buildChatRuntime(input: {
     });
 
     return {
+      kind: "proceed",
       questionType,
       followUp,
       resolution: {
@@ -1142,6 +1321,7 @@ export async function buildChatRuntime(input: {
     });
 
     return {
+      kind: "proceed",
       questionType,
       followUp,
       resolution: {
@@ -1189,8 +1369,42 @@ export async function buildChatRuntime(input: {
   let selectedSession: SessionCandidate | undefined;
   const sessionCandidates: SessionCandidate[] = [];
 
+  // Phase 17 (post-deploy diagnostic 2026-05-02): wrap each resolver-side
+  // query with its own perfTrace span and log to stderr at start AND end.
+  // The pre-await log fires before the await so we can see which query is
+  // pending when the resolve_db deadline (30s) trips — recordSpan only fires
+  // on resolve, so a hung query would otherwise be invisible.
+  //
+  // Implemented via promise .then(success, error) chaining (no try/catch
+  // block so the structural assertion in `perf-trace-spans.test.mjs` about
+  // the resolve_db span's closing block keeps holding even with these
+  // inner per-query traces.
+  const traceQuery = <T>(name: string, fn: () => Promise<T>): Promise<T> => {
+    const span = startSpan(name);
+    const startedAtMs = Date.now();
+    console.error(JSON.stringify({ event: "resolve_step_started", name, ts: new Date().toISOString() }));
+    return fn().then(
+      (result) => {
+        console.error(
+          JSON.stringify({
+            event: "resolve_step_finished",
+            name,
+            elapsedMs: Date.now() - startedAtMs,
+            ts: new Date().toISOString()
+          })
+        );
+        recordSpan?.(span.end());
+        return result;
+      },
+      (err) => {
+        recordSpan?.(span.end());
+        throw err;
+      }
+    );
+  };
+
   if (explicitSessionKey) {
-    const session = await getSessionByKey(explicitSessionKey);
+    const session = await traceQuery("resolve.getSessionByKey", () => getSessionByKey(explicitSessionKey));
     if (session) {
       const row = session as SessionResolutionRow;
       selectedSession = {
@@ -1208,23 +1422,39 @@ export async function buildChatRuntime(input: {
   }
 
   if (!selectedSession) {
-    sessionRows = await getSessionsForResolutionCached({
-      year: extractedYear,
-      sessionName: sessionNameHint,
-      includeFutureSessions: includeFutureOrPlaceholderSessions,
-      includePlaceholderSessions: includeFutureOrPlaceholderSessions
-    });
+    // Phase 17 (post-deploy diagnostic 2026-05-02): the alias-based lookup
+    // (`getSessionsFromSearchLookup`) is fast — it goes through the GIN
+    // trigram indexes Phase 14 created. The fallback `getSessionsForResolution`
+    // does an unfiltered LEFT JOIN against `core.session_completeness` and
+    // is brutal on Neon's cold buffer cache (10-15s observed). Run aliases
+    // first; only pay the fallback when aliases returned nothing.
     const sessionLookupAliases = unique([...venueHints, ...lookupAliasCandidates]);
-    const lookupSessionRows = await getSessionsFromSearchLookupCached({
-      aliases: sessionLookupAliases,
-      year: extractedYear,
-      sessionName: sessionNameHint,
-      includeFutureSessions: includeFutureOrPlaceholderSessions,
-      includePlaceholderSessions: includeFutureOrPlaceholderSessions,
-      limit: 200
-    });
+    const lookupSessionRows = sessionLookupAliases.length > 0
+      ? await traceQuery("resolve.getSessionsFromSearchLookup", () =>
+          getSessionsFromSearchLookupCached({
+            aliases: sessionLookupAliases,
+            year: extractedYear,
+            sessionName: sessionNameHint,
+            includeFutureSessions: includeFutureOrPlaceholderSessions,
+            includePlaceholderSessions: includeFutureOrPlaceholderSessions,
+            limit: 200
+          })
+        )
+      : [];
     const lookupSessionKeys = new Set(lookupSessionRows.map((row) => row.session_key));
-    sessionRows = mergeSessionRows(sessionRows, lookupSessionRows);
+    if (lookupSessionRows.length > 0) {
+      // Alias-based lookup succeeded; skip the unfiltered scan entirely.
+      sessionRows = lookupSessionRows;
+    } else {
+      sessionRows = await traceQuery("resolve.getSessionsForResolution", () =>
+        getSessionsForResolutionCached({
+          year: extractedYear,
+          sessionName: sessionNameHint,
+          includeFutureSessions: includeFutureOrPlaceholderSessions,
+          includePlaceholderSessions: includeFutureOrPlaceholderSessions
+        })
+      );
+    }
     let scored = sessionRows
       .map((row) => {
         const { score, matchedOn } = scoreSessionCandidate({
@@ -1259,13 +1489,20 @@ export async function buildChatRuntime(input: {
     ) {
       const coverageTables = requiredTables.filter((tableName) => SESSION_SCOPED_TABLES.has(tableName));
       if (coverageTables.length > 0) {
-        const candidatesToCheck = scored.slice(0, 30);
+        // Phase 17 (post-deploy diagnostic 2026-05-02): was 30; on Neon this
+        // fans out to 30 × N table EXISTS probes via Promise.all and
+        // saturates the pool (max=10). Top 5 candidates is plenty — they're
+        // already scored by alias hits + recency + venue match.
+        const candidatesToCheck = scored.slice(0, 5);
         const coverageBonus = new Map<number, { bonus: number; allUsable: boolean }>();
 
         await Promise.all(
           candidatesToCheck.map(async (item) => {
             try {
-              const counts = await getSessionTableCounts(item.row.session_key, coverageTables);
+              const counts = await traceQuery(
+                `resolve.coverage.${item.row.session_key}`,
+                () => getSessionTableCounts(item.row.session_key, coverageTables)
+              );
               const usableCount = coverageTables.filter((tableName) => (counts[tableName] ?? 0) > 0).length;
               const missingCount = coverageTables.length - usableCount;
               const allUsable = usableCount === coverageTables.length;
@@ -1322,14 +1559,18 @@ export async function buildChatRuntime(input: {
     }
   }
 
-  let driverRows = await getDriversForResolutionCached({
-    sessionKey: selectedSession?.sessionKey
-  });
-  const lookupDriverRows = await getDriversFromIdentityLookupCached({
-    aliases: lookupAliasCandidates,
-    sessionKey: selectedSession?.sessionKey,
-    limit: 120
-  });
+  let driverRows = await traceQuery("resolve.getDriversForResolution", () =>
+    getDriversForResolutionCached({
+      sessionKey: selectedSession?.sessionKey
+    })
+  );
+  const lookupDriverRows = await traceQuery("resolve.getDriversFromIdentityLookup", () =>
+    getDriversFromIdentityLookupCached({
+      aliases: lookupAliasCandidates,
+      sessionKey: selectedSession?.sessionKey,
+      limit: 120
+    })
+  );
   driverRows = mergeDriverRows(driverRows, lookupDriverRows);
   const { scoredCandidates, ambiguousSurnames } = disambiguateDrivers(driverRows, normalizedMessage, selectedSession?.year ?? null);
   const forceDriverClarification = (asksSpecificDriverClarification || ambiguousSurnames.length > 0) && explicitDriverNumbers.length === 0;
@@ -1394,7 +1635,41 @@ export async function buildChatRuntime(input: {
         "yas marina 2025",
         "yas island 2025"
       ]));
-  const closeScoreNeedsClarification = closeScores && !runtimeFastPath && !hasStrongVenueYearAnchor;
+  // Phase 19 outcome-fix Fix 2: race-shaped intent with venue+year
+  // bypasses close-score clarification (tie-break to the race
+  // session). Session-type-sensitive markers (qualifying, sprint,
+  // FP, practice, pole) preserve clarification.
+  const hasRaceShapedIntentForVenueYear = isRaceShapedVenueYearIntent(
+    normalizedMessage,
+    Boolean(hasStrongVenueYearAnchor)
+  );
+  // When race-shaped intent fires AND a race candidate exists in the
+  // top candidate set, re-rank so the race candidate becomes
+  // `selectedSession`. Two close-scored candidates (race + quali) get
+  // the race tie-break; questions with explicit session-type markers
+  // are filtered out earlier by the deny-list inside
+  // `isRaceShapedVenueYearIntent`.
+  if (hasRaceShapedIntentForVenueYear && sessionCandidates.length > 1) {
+    const isRaceCandidate = (c: typeof sessionCandidates[number]): boolean => {
+      const name = (c.sessionName ?? "").toLowerCase();
+      // "Race" matches; "Sprint" / "Sprint Race" stay non-race so a
+      // generic race-shaped question (no "sprint" marker) prefers the
+      // grand-prix race over the sprint.
+      return name === "race" || name.endsWith(" race");
+    };
+    const currentIsRace = selectedSession ? isRaceCandidate(selectedSession) : false;
+    if (!currentIsRace) {
+      const raceCandidate = sessionCandidates.find(isRaceCandidate);
+      if (raceCandidate) {
+        selectedSession = raceCandidate;
+      }
+    }
+  }
+  const closeScoreNeedsClarification =
+    closeScores &&
+    !runtimeFastPath &&
+    !hasStrongVenueYearAnchor &&
+    !hasRaceShapedIntentForVenueYear;
   const needsDriverPair = questionType === "comparison_analysis" && selectedDriverNumbers.length < 2;
   const needsClarification =
     forceSessionClarification ||
@@ -1475,6 +1750,7 @@ export async function buildChatRuntime(input: {
       shouldPinSession: requiresSession
     });
     return {
+      kind: "proceed",
       questionType,
       followUp,
       resolution: {
@@ -1521,10 +1797,14 @@ export async function buildChatRuntime(input: {
     tableChecks = requiredTables.map((table) => ({ table, globalRows: -1, status: "usable" }));
     warnings = [];
   } else {
-    const globalCounts = await getGlobalTableCounts(requiredTables);
+    const globalCounts = await traceQuery("completeness.globalCounts", () =>
+      getGlobalTableCounts(requiredTables)
+    );
     const sessionCounts =
       selectedSession?.sessionKey !== undefined
-        ? await getSessionTableCounts(selectedSession.sessionKey, requiredTables)
+        ? await traceQuery("completeness.sessionCounts", () =>
+            getSessionTableCounts(selectedSession!.sessionKey, requiredTables)
+          )
         : {};
 
     tableChecks = requiredTables.map((table) => {
@@ -1607,6 +1887,7 @@ export async function buildChatRuntime(input: {
   });
 
   return {
+    kind: "proceed",
     questionType,
     followUp,
     resolution: {

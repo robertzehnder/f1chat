@@ -1,0 +1,111 @@
+[
+  {
+    "id": 2080,
+    "category": "Overtake and battle analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.overtake_events"],
+    "expected_columns": ["analytics.overtake_events.overtake_count"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-overtake-events",
+    "author_note": "F1Technical 'F1MATHS' overtake count study for the 2025 races.",
+    "question": "How many on-track overtakes did the 2025 Imola Grand Prix produce?"
+  },
+  {
+    "id": 2081,
+    "category": "Overtake and battle analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.overtake_events"],
+    "expected_columns": [
+      "analytics.overtake_events.overtake_lap",
+      "analytics.overtake_events.location_corner"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-overtake-events",
+    "author_note": "Autosport / Motorsport.com: Norris swept around outside of T1 using DRS with fresher rubber.",
+    "question": "Where on the Imola circuit did Norris overtake Piastri in the closing laps of the 2025 Emilia-Romagna GP?"
+  },
+  {
+    "id": 2082,
+    "category": "Overtake and battle analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.overtake_events", "analytics.battle_segments"],
+    "expected_columns": [
+      "analytics.overtake_events.overtake_count",
+      "analytics.battle_segments.battle_duration_laps"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-battle-segments",
+    "author_note": "Motorsport.com 'The data behind Verstappen's impressive overtake on Piastri at Imola' (entry-speed delta into T1).",
+    "question": "Compare Verstappen's and Piastri's entry-speed delta in the braking zone of Imola Turn 1 when Verstappen passed Piastri on lap 1 of the 2025 race."
+  },
+  {
+    "id": 2083,
+    "category": "Overtake and battle analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.drs_effectiveness"],
+    "expected_columns": [
+      "analytics.drs_effectiveness.drs_active",
+      "analytics.drs_effectiveness.gap_at_detection_s"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-drs-effectiveness",
+    "author_note": "SI / RaceFans Singapore GP report: Norris latched onto DRS to Red Bull in front.",
+    "question": "How many times did Norris use DRS within 1.0s of Verstappen during the closing 10 laps of the 2025 Singapore GP without completing a pass?"
+  },
+  {
+    "id": 2084,
+    "category": "Overtake and battle analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.overtake_events"],
+    "expected_columns": [
+      "analytics.overtake_events.overtake_lap",
+      "analytics.overtake_events.location_corner"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-overtake-events",
+    "author_note": "F1.com video 'Hamilton penalty after battle with Verstappen for P3' + Palmer column on Mexico T1/T3/T4 sequence on lap 6.",
+    "question": "Across the 2025 Mexico City GP first stint, how many position changes happened at Turn 1 specifically between Verstappen, Hamilton and Leclerc?"
+  },
+  {
+    "id": 2085,
+    "category": "Overtake and battle analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.drs_effectiveness", "analytics.overtake_events"],
+    "expected_columns": [
+      "analytics.drs_effectiveness.drs_zone_index",
+      "analytics.overtake_events.overtake_count"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-drs-effectiveness",
+    "author_note": "F1Technical Singapore fourth-DRS-zone piece + RaceFans 2025 Singapore strategy briefing.",
+    "question": "At Singapore 2025, compare the percentage of overtakes completed inside the new fourth DRS zone vs the original three zones, and isolate the share that occurred on the lap immediately after a pit-stop tyre-offset window."
+  },
+  {
+    "id": 2086,
+    "category": "Overtake and battle analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.drs_effectiveness", "analytics.battle_segments"],
+    "expected_columns": [
+      "analytics.drs_effectiveness.drs_active",
+      "analytics.battle_segments.battle_duration_laps"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-drs-effectiveness",
+    "author_note": "Autosport / GRANDPRIX247 Imola race report — Hughes-style tyre-vs-DRS attribution on Norris's late-race pass.",
+    "question": "Did Norris's late-race pass on Piastri at Imola 2025 rely more on tyre-age delta (laps fresher) or DRS, given the closing rate before vs after DRS activation?"
+  }
+]

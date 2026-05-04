@@ -1,0 +1,118 @@
+[
+  {
+    "id": 2060,
+    "category": "Pit strategy",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.strategy_summary"],
+    "expected_columns": ["core.strategy_summary.pit_stop_count"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Sky Sports / Bernie Collins explainer on Monaco 2025 mandatory two-stop rule.",
+    "question": "How many pit stops did Lando Norris make in the 2025 Monaco Grand Prix?"
+  },
+  {
+    "id": 2061,
+    "category": "Pit strategy",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.pit_cycle_summary"],
+    "expected_columns": ["core.pit_cycle_summary.first_stop_lap"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Motorsport.com Canadian GP strategy explained: Verstappen pitted lap 12 under Antonelli pressure.",
+    "question": "What was Verstappen's first-stop lap number in the 2025 Canadian Grand Prix?"
+  },
+  {
+    "id": 2062,
+    "category": "Pit strategy",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.undercut_overcut_history"],
+    "expected_columns": [
+      "analytics.undercut_overcut_history.undercut_success_count",
+      "analytics.undercut_overcut_history.overcut_success_count"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-undercut-overcut-history",
+    "author_note": "Motorsport.com Canadian GP: Russell pitted one lap later, emerged ahead, covering off the undercut threat.",
+    "question": "Did Russell's covering stop on the lap after Verstappen in Canada 2025 successfully execute the over-cut, given Verstappen's out-lap pace versus Russell's in-lap?"
+  },
+  {
+    "id": 2063,
+    "category": "Pit strategy",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.pit_loss_per_circuit"],
+    "expected_columns": ["analytics.pit_loss_per_circuit.pit_loss_s"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-pit-loss-per-circuit",
+    "author_note": "RaceFans live blog + F1.com Bahrain race report: multiple frontrunners double-stopped under SC.",
+    "question": "Compare Hamilton's and Leclerc's pit-stop deltas at Bahrain 2025 across the SC window on lap 31."
+  },
+  {
+    "id": 2064,
+    "category": "Pit strategy",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.pit_cycle_summary"],
+    "expected_columns": ["core.pit_cycle_summary.stationary_time_s"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Bernie Collins F1Oversteer: FIA watching Ferrari's pit-stop procedure after they topped the table in China.",
+    "question": "What was the average stationary time for Ferrari's pit crew at the 2025 Chinese GP versus the field median?"
+  },
+  {
+    "id": 2065,
+    "category": "Pit strategy",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.pit_loss_per_circuit"],
+    "expected_columns": ["analytics.pit_loss_per_circuit.pit_loss_s"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-pit-loss-per-circuit",
+    "author_note": "Sky Sports / Motorsport Week: Stella admitted Qatar SC non-stop was significantly penalising; Verstappen won by 8s.",
+    "question": "Did the McLarens' decision to stay out under the lap-7 SC at Qatar 2025 cost them track position by the lap-11 restart, and by how much versus Verstappen?"
+  },
+  {
+    "id": 2066,
+    "category": "Pit strategy",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": [
+      "analytics.pit_loss_per_circuit",
+      "analytics.stint_degradation_curve"
+    ],
+    "expected_columns": [
+      "analytics.pit_loss_per_circuit.pit_loss_s",
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-pit-loss-per-circuit",
+    "author_note": "Mark Hughes 'Everything that fed into McLaren's Qatar debacle' — equality policy + traffic miscalc + 25-lap hard cap.",
+    "question": "At Qatar 2025, compare the time loss for the McLarens (who stayed out under the lap-7 SC) versus Verstappen (who pitted under SC), measuring delta-to-leader at lap 11 restart and again at the chequered flag — was the swing entirely the SC pit-stop delta or did stint-management on hards add to it?"
+  },
+  {
+    "id": 2067,
+    "category": "Pit strategy",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.pit_loss_per_circuit", "analytics.race_control_incidents"],
+    "expected_columns": [
+      "analytics.pit_loss_per_circuit.pit_loss_s",
+      "analytics.race_control_incidents.incident_kind"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "Mark Hughes 'Top teams could've gamed Monaco system too' + RaceFans Monaco rule explainer.",
+    "question": "For Monaco 2025, identify drivers whose two mandatory stops were both 'free' (under VSC/SC or in a backed-up window) versus drivers who took two green-flag stops, and quantify the gap they conceded."
+  }
+]

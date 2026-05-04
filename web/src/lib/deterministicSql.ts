@@ -32,7 +32,55 @@ function includesAll(text: string, candidates: string[]): boolean {
   return candidates.every((candidate) => text.includes(candidate));
 }
 
+import { topicSignal, templateAllowsTopic } from "./deterministicSql/topicGuards";
+
+/**
+ * Phase 18-A: wraps every candidate template emit in a topic-guard check.
+ * Templates historically matched on positive trigger words alone; this
+ * caused false matches like a "lap pace + compare" template silently
+ * answering a tyre-stint question. The guard rejects any template whose
+ * declared topics don't match the question's topic signal.
+ *
+ * Logs to stderr on rejection so the PR-time benchmark can spot
+ * regressions in template-router precision.
+ */
+function guardedReturn(
+  message: string,
+  result: DeterministicSqlTemplate | null
+): DeterministicSqlTemplate | null {
+  if (!result) return null;
+  const sig = topicSignal(message);
+  if (templateAllowsTopic(result.templateKey, sig)) {
+    return result;
+  }
+  // Rejected: emit a signal so we can monitor false-positive rate.
+  // perfTrace's `template_router_topic_rejected` event is the cross-
+  // cutting hook (per Phase 18 plan); for now we use console.error
+  // tagged with a stable event name so log scrapers can find it.
+  if (process.env.NODE_ENV !== "test") {
+    console.error(
+      JSON.stringify({
+        event: "template_router_topic_rejected",
+        templateKey: result.templateKey,
+        signal: sig,
+        ts: new Date().toISOString()
+      })
+    );
+  }
+  return null;
+}
+
 export function buildDeterministicSqlTemplate(
+  message: string,
+  context: DeterministicContext = {}
+): DeterministicSqlTemplate | null {
+  // Phase 18-A: any matched template flows through `guardedReturn` so a
+  // false-match (e.g. lap-pace template firing on a tyre-stint question)
+  // is suppressed and the route falls through to LLM-gen.
+  return guardedReturn(message, _buildDeterministicSqlTemplateRaw(message, context));
+}
+
+function _buildDeterministicSqlTemplateRaw(
   message: string,
   context: DeterministicContext = {}
 ): DeterministicSqlTemplate | null {

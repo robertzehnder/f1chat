@@ -166,6 +166,25 @@ async function askQuestion(question) {
     id: question.id,
     category: question.category,
     question: question.question,
+    // Phase 19-A: forward the new question-schema fields verbatim from
+    // the source row. The grader allow-list at chat-health-check-
+    // baseline.mjs preserves each one into the graded JSON so the
+    // PR-time gate (Slice 19-D) can read them back. `complexity` /
+    // `expected_outcome` / `expected_path` / `expected_tables` /
+    // `expected_columns` / `expected_grade_floor` /
+    // `floor_active_after_slice` (rev4) / `column_match_waiver` and
+    // `author_note` (rev7) are all required for the activation
+    // lifecycle, the tri-state expected-columns matcher, and the
+    // skipped-with-waiver gate branch.
+    complexity: question.complexity ?? null,
+    expected_outcome: question.expected_outcome ?? null,
+    expected_path: question.expected_path ?? null,
+    expected_tables: question.expected_tables ?? null,
+    expected_columns: question.expected_columns ?? null,
+    expected_grade_floor: question.expected_grade_floor ?? null,
+    floor_active_after_slice: question.floor_active_after_slice ?? null,
+    column_match_waiver: question.column_match_waiver ?? null,
+    author_note: question.author_note ?? null,
     ok: response.ok,
     httpStatus: response.status,
     elapsedMs: finalAttempt.elapsedMs,
@@ -180,6 +199,11 @@ async function askQuestion(question) {
     generationSource: payload.generationSource ?? null,
     model: payload.model ?? null,
     requestId: payload.requestId ?? null,
+    // Phase 17 capture: cache_hit and sqlElapsedMs surface from the
+    // orchestration response so the post-Phase-17 healthcheck JSON
+    // can be compared against pre-Phase-17 baselines on the same axes.
+    cacheHit: payload.cache_hit ?? null,
+    sqlElapsedMs: payload.result?.elapsedMs ?? null,
     rowCount: payload.result?.rowCount ?? null,
     rowSummary: summarizeRows(payload.result?.rows ?? []),
     previewRows: Array.isArray(payload.result?.rows) ? payload.result.rows.slice(0, 3) : [],
@@ -188,7 +212,15 @@ async function askQuestion(question) {
     resolutionStatus: payload.runtime?.resolution?.status ?? null,
     sessionKey: payload.runtime?.resolution?.selectedSession?.sessionKey ?? null,
     sql: payload.sql ?? null,
-    errorBodyPreview: fallbackErrorText || null
+    errorBodyPreview: fallbackErrorText || null,
+    // Phase 19-A: forward the proprietary-no-data refusal keyword from
+    // the orchestration response so the grader branch
+    // `expected_outcome === "insufficient_data"` can distinguish
+    // proactive-refusal (A) from sql_generation_failed (B max).
+    matchedKeyword: payload.matchedKeyword ?? null,
+    // Phase 19-A: forward missingColumns so the grader can detect the
+    // sql_generation_failed-with-hallucinated-columns branch (B cap).
+    missingColumns: payload.missingColumns ?? null
   };
 }
 

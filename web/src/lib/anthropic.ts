@@ -48,7 +48,27 @@ type AnswerSynthesisOutput = {
   rawText: string;
 };
 
-function buildSystemPrompt() {
+// Phase 19 outcome-fix Fix 4: exported so the
+// `web/scripts/tests/raw-table-prompt-reminders.test.mjs` fixture can
+// assert the column lists + forbidden-pattern note are present in the
+// assembled prompt. The function name is otherwise internal-only.
+export async function buildSystemPrompt(): Promise<string> {
+  // Phase 17-F: column docs are pulled from `information_schema` at first
+  // call and cached for the process lifetime. On introspection failure we
+  // fall back to a minimal hand-typed reminder list so SQL-gen still runs.
+  // Dynamic import keeps the existing anthropic.ts unit-test harnesses
+  // (which stub `@/lib/synthesis/buildSynthesisPrompt` only) from needing
+  // to know about `@/lib/schemaCatalog` resolution.
+  let coreDocs = "";
+  try {
+    const { getSchemaDocs } = await import("@/lib/schemaCatalog");
+    coreDocs = await getSchemaDocs();
+  } catch {
+    coreDocs = "";
+  }
+  const coreSection = coreDocs.trim().length > 0
+    ? coreDocs
+    : `- core.sessions has: session_key, meeting_name, session_name, year, country_name, location, date_start.`;
   return `
 You are a PostgreSQL analytics assistant for an OpenF1 warehouse.
 Only generate read-only SQL using these schemas/tables:
@@ -61,14 +81,34 @@ raw.sessions, raw.drivers, raw.laps, raw.car_data, raw.location, raw.intervals, 
 raw.weather, raw.race_control, raw.pit, raw.stints, raw.team_radio, raw.session_result,
 raw.starting_grid, raw.overtakes, raw.championship_drivers, raw.championship_teams
 
-Important column reminders:
+Important column reminders (raw.* — hand-curated):
 - raw.session_result has: session_key, driver_number, position, points, status, classified (no "time" column).
 - raw.laps has: session_key, driver_number, lap_number, lap_duration, date_start.
 - raw.drivers has: session_key, driver_number, full_name, team_name.
-- core.sessions has: session_key, meeting_name, session_name, year, country_name, location, date_start.
+- raw.car_data has: session_key, driver_number, date, brake, throttle, n_gear, rpm, speed, drs, meeting_key
+  (this is the telemetry feed; n_gear and rpm live HERE, not in raw.location).
+- raw.location has: session_key, driver_number, date, x, y, z, meeting_key
+  (spatial coordinates ONLY; no telemetry fields like n_gear/brake/throttle).
+- raw.overtakes has: session_key, meeting_key, lap_number, overtaking_driver_number, overtaken_driver_number, position_change, date
+  (NO "driver_number" or "overtake_type" columns — use overtaking_driver_number / overtaken_driver_number).
+
+DO NOT join raw.car_data and raw.location by timestamp proximity (e.g.
+ABS(EXTRACT(EPOCH FROM (cd.date - loc.date))) < 0.15). That cross-join shape
+times out at the 15s budget. Use core.telemetry_lap_bridge for cross-telemetry
+analysis, OR aggregate raw.car_data and raw.location samples within their
+respective (session_key, driver_number, lap_number) bins separately.
+
+Important column reminders (core.* — introspected from information_schema):
+${coreSection}
+
+Guidance:
 - core.laps_enriched is the default lap analysis contract for pace/sector/clean-lap questions.
 - core.driver_session_summary, core.stint_summary, core.strategy_summary, core.grid_vs_finish,
   core.race_progression_summary are preferred summary contracts for analytics.
+- For data_health_question coverage/completeness prompts, prefer core.session_completeness over raw tables.
+- For missing weather coverage, use core.session_completeness.weather_rows to identify sessions where weather_rows = 0.
+- For "which sessions are missing coverage" questions, return exactly one summary row even when no sessions match:
+  aggregate the missing set into a count plus a list/text field that yields 0 and 'none' instead of an empty result set.
 
 Rules:
 - Output JSON only.
@@ -80,6 +120,7 @@ Rules:
 - If runtime context includes resolved IDs (such as session_key, driver_number), use those exact IDs in filters.
 - Do not rely on meeting_name alone for venue matching because it may be null/empty.
 - Prefer semantic/core contracts over raw tables for analytical questions; use raw.* only when a required semantic view is missing.
+- Only reference columns documented above; if a column you want is not listed, pick a different contract that has it.
 - Put only executable SQL in "sql". Never append trace lines, notes, or text like session_pin_* inside the JSON or the query string.
 `.trim();
 }
@@ -92,6 +133,40 @@ The SQL must be exactly one SELECT/CTE statement.
 Do not use non-existent columns.
 Do not use INSERT/UPDATE/DELETE/DDL.
 `.trim();
+}
+
+export type ColumnValidationMiss = {
+  table: string;
+  column: string;
+  sourceRef: string;
+};
+
+/**
+ * Phase 17-C: format a hint for the repair prompt that names exactly which
+ * columns were hallucinated and lists the actual columns of each affected
+ * table. Keeps the repair LLM from guessing again.
+ */
+export function formatColumnValidationHint(
+  missing: ColumnValidationMiss[],
+  catalog: Map<string, string[]>
+): string {
+  if (missing.length === 0) return "";
+  const lines: string[] = ["Pre-execution column validation flagged these references as missing:"];
+  for (const m of missing) {
+    lines.push(`- ${m.sourceRef} → ${m.table} has no column "${m.column}".`);
+  }
+  const seen = new Set<string>();
+  lines.push("");
+  lines.push("Available columns:");
+  for (const m of missing) {
+    if (seen.has(m.table)) continue;
+    seen.add(m.table);
+    const cols = catalog.get(m.table);
+    if (cols && cols.length > 0) {
+      lines.push(`- ${m.table}: ${cols.join(", ")}.`);
+    }
+  }
+  return lines.join("\n");
 }
 
 export function buildSynthesisPromptParts(
@@ -332,7 +407,7 @@ ${runtimeText}
 Return JSON only.
 `.trim();
 
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = await buildSystemPrompt();
 
   // Phase 15-1: Try Haiku first; fall back to Sonnet if parse/validate fails.
   // Most SQL-gen tasks are simple enough that Haiku produces correct SQL
@@ -369,6 +444,10 @@ export async function repairSqlWithAnthropic(input: {
   question: string;
   failingSql: string;
   dbError: string;
+  /** Phase 17-C: optional pre-baked hint listing missing columns + the table's
+   * real column list. Spliced verbatim into the user prompt before the dbError
+   * block so the LLM has the catalog handy without needing to guess. */
+  columnValidationHint?: string;
   context?: {
     sessionKey?: number;
     driverNumber?: number;
@@ -390,6 +469,9 @@ export async function repairSqlWithAnthropic(input: {
   const model = DEFAULT_ANTHROPIC_MODEL;
   const contextText = JSON.stringify(input.context ?? {});
   const runtimeText = JSON.stringify(input.runtime ?? {});
+  const validationBlock = input.columnValidationHint
+    ? `\n\nColumn validation hint:\n${input.columnValidationHint}`
+    : "";
   const userPrompt = `
 Question:
 ${input.question}
@@ -404,11 +486,12 @@ Failing SQL:
 ${input.failingSql}
 
 Database error:
-${input.dbError}
+${input.dbError}${validationBlock}
 
 Provide corrected SQL only in JSON format.
 `.trim();
 
+  const repairSystem = `${await buildSystemPrompt()}\n\n${buildRepairPrompt()}`;
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -420,7 +503,7 @@ Provide corrected SQL only in JSON format.
       model,
       max_tokens: SQL_MAX_TOKENS,
       temperature: 0,
-      system: `${buildSystemPrompt()}\n\n${buildRepairPrompt()}`,
+      system: repairSystem,
       messages: [
         {
           role: "user",

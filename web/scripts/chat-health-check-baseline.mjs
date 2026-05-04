@@ -904,6 +904,84 @@ export function gradeResultWithRubric(item, rubricRowInput) {
 
   let completenessHandled = false;
 
+  // Phase 19-A (rev2 + rev3): grader branch for `expected_outcome ===
+  // "insufficient_data"` — the proprietary-no-data class. Closes the
+  // gameable path codex flagged in rev2 (LLM hallucinates a column →
+  // 17-C catches it → grader awarded A on `missingColumns` populated).
+  // Grading rules:
+  //   - generationSource === "no_data_refusal"           → A   (proactive refusal — the desired path)
+  //   - generationSource === "sql_generation_failed"
+  //       with missingColumns populated                  → B   (honest failure, but wrong honest failure)
+  //   - generationSource === "runtime_clarification"     → C   (wrong refusal class)
+  //   - normal-shaped synthesized answer                 → C   (chat hallucinated where it should have refused)
+  if (item.expected_outcome === "insufficient_data") {
+    const generationSource = String(item.generationSource ?? "").toLowerCase();
+    const hasMissingColumns =
+      Array.isArray(item.missingColumns) && item.missingColumns.length > 0;
+
+    if (generationSource === "no_data_refusal") {
+      factualGrade = "A";
+      factualReason =
+        "Proactively refused with INSUFFICIENT_DATA on a proprietary-no-data question (no SQL attempted).";
+      completenessGrade = "A";
+      completenessReason =
+        "Refusal route fired before SQL generation; completeness is satisfied for the refusal class.";
+      baselineAnswerability = "answerable_and_answered";
+      completenessHandled = true;
+    } else if (generationSource === "sql_generation_failed" && hasMissingColumns) {
+      factualGrade = "B";
+      factualReason =
+        "Honest failure via sql_generation_failed with missing columns, but did not refuse proactively. Should have routed via no_data_refusal.";
+      completenessGrade = "B";
+      completenessReason =
+        "Caught by the column validator after the LLM hallucinated columns. Reaching this path means the proactive guard didn't fire.";
+      rootCauseLabels.push("missing_proactive_no_data_refusal");
+      completenessHandled = true;
+    } else if (generationSource === "runtime_clarification") {
+      factualGrade = "C";
+      factualReason =
+        "Asked for clarification on a proprietary-no-data question. The correct response is INSUFFICIENT_DATA refusal, not clarification.";
+      completenessGrade = "C";
+      completenessReason =
+        "Wrong refusal class — clarification was returned where INSUFFICIENT_DATA refusal was expected.";
+      rootCauseLabels.push("wrong_refusal_class");
+      completenessHandled = true;
+    } else {
+      // Normal-shaped synthesized answer (anthropic / anthropic_repaired /
+      // deterministic_template) on a question that should have refused.
+      factualGrade = "C";
+      factualReason =
+        "Returned a normal answer on a proprietary-no-data question. The correct response is an INSUFFICIENT_DATA refusal.";
+      completenessGrade = "C";
+      completenessReason =
+        "Chat hallucinated where it should have refused; the proprietary-no-data guard did not fire.";
+      rootCauseLabels.push("hallucinated_proprietary_data");
+      completenessHandled = true;
+    }
+
+    const clarity = gradeClarity(item, { expectedClarification, clarified });
+    const baselineGrade = combineGrades(factualGrade, completenessGrade, clarity.grade);
+    const baselineReason = `Factual correctness: ${factualReason} Completeness: ${completenessReason} Clarity: ${clarity.reason}`;
+
+    return {
+      baselineGrade,
+      baselineReason,
+      baselineAnswerability,
+      baselineQuality: baselineGrade === "A" ? "strong" : baselineGrade === "B" ? "partial" : "weak",
+      factual_correctness: { grade: factualGrade, reason: factualReason },
+      completeness: { grade: completenessGrade, reason: completenessReason },
+      clarity: { grade: clarity.grade, reason: clarity.reason },
+      root_cause_labels: uniqueLabels(rootCauseLabels),
+      baselineChecks: {
+        expectedClarification,
+        clarified,
+        hasRows,
+        factualChecks,
+        completenessChecks
+      }
+    };
+  }
+
   if (expectedClarification) {
     if (clarified) {
       factualGrade = "A";
@@ -1113,10 +1191,27 @@ export function gradeResultWithRubric(item, rubricRowInput) {
 // per-axis grade fields present on the input are dropped by construction (they
 // are not in this list), so re-grading a previously-graded artifact yields a
 // clean multi-axis row that carries only the new schema's grading output.
+//
+// Phase 19-A (rev4 + rev7): forward the new question-schema fields plus
+// the `cacheHit` / `sqlElapsedMs` / `matchedKeyword` runtime captures.
+// `complexity`, `expected_outcome`, `expected_path`, `expected_tables`,
+// `expected_columns`, `expected_grade_floor`, `floor_active_after_slice`
+// (rev4), `column_match_waiver`, `author_note` (rev7) MUST survive into
+// graded JSON because the PR-time gate (Slice 19-D) reads each of them.
+// The unit fixture asserts each field appears in a sample graded row.
 const PRESERVED_INPUT_FIELDS = [
   "id",
   "category",
   "question",
+  "complexity",
+  "expected_outcome",
+  "expected_path",
+  "expected_tables",
+  "expected_columns",
+  "expected_grade_floor",
+  "floor_active_after_slice",
+  "column_match_waiver",
+  "author_note",
   "ok",
   "httpStatus",
   "elapsedMs",
@@ -1138,13 +1233,162 @@ const PRESERVED_INPUT_FIELDS = [
   "resolutionStatus",
   "sessionKey",
   "sql",
-  "errorBodyPreview"
+  "errorBodyPreview",
+  "cacheHit",
+  "sqlElapsedMs",
+  "matchedKeyword",
+  "missingColumns"
 ];
 
-export function gradeHealthCheckResults(results, rubricById) {
+// Phase 19 outcome-fix Fix 6 (codex audit pass 5+6): classifier that
+// distinguishes "the SQL ran clean and the data legitimately doesn't
+// exist upstream" from "the filter predicate was wrong" on 0-row
+// outcomes. Reads from a per-run snapshot of
+// `core.session_completeness` captured by phase19_baseline_run.py;
+// the grader stays DB-free.
+//
+// Precedence rule for resolving session_key (codex audit pass 6):
+//   1. Parse `WHERE session_key = N` / `IN (...)` from the SQL.
+//      Use only when EXACTLY one session_key is found.
+//   2. Fall back to `item.sessionKey` from the runtime resolution.
+//   3. Otherwise return 'unknown' — multi-session set or no resolved
+//      key — and grade C (fail-safe; never picks an arbitrary
+//      session_key).
+//
+// Returns: 'proven_data_unavailable' | 'wrong_filter' | 'unknown'.
+function _extractSessionKeyLiterals(sql) {
+  if (typeof sql !== "string") return [];
+  const values = new Set();
+  const eqRe = /\bsession_key\s*=\s*(\d+)\b/gi;
+  for (const m of sql.matchAll(eqRe)) {
+    const v = Number(m[1]);
+    if (Number.isFinite(v)) values.add(Math.trunc(v));
+  }
+  const inRe = /\bsession_key\s+IN\s*\(([^)]+)\)/gi;
+  for (const m of sql.matchAll(inRe)) {
+    const inner = m[1] ?? "";
+    for (const numMatch of inner.matchAll(/\b(\d+)\b/g)) {
+      const v = Number(numMatch[1]);
+      if (Number.isFinite(v)) values.add(Math.trunc(v));
+    }
+  }
+  return Array.from(values).sort((a, b) => a - b);
+}
+
+function _extractTouchedTablesFromSql(sql) {
+  if (typeof sql !== "string") return [];
+  const tables = new Set();
+  // Match qualified table refs (schema.table) in FROM / JOIN clauses
+  // — conservative regex; misses some edge cases but doesn't false-
+  // positive on column refs.
+  const fromRe = /\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)/gi;
+  for (const m of sql.matchAll(fromRe)) {
+    tables.add(`${m[1].toLowerCase()}.${m[2].toLowerCase()}`);
+  }
+  return Array.from(tables);
+}
+
+export function classifyZeroRowOutcome(item, completenessSnapshot) {
+  // Defaults: must have at least cleanly-run SQL and 0 rows to even
+  // consider this branch.
+  if (!item || typeof item !== "object") return "unknown";
+  const sql = String(item.sql ?? "");
+  if (!sql || sql.trim().length === 0) return "unknown";
+  if (sql.includes("query not executed")) return "unknown";
+  const rowCount = Number(item.rowCount ?? 0);
+  if (rowCount > 0) return "unknown"; // not a 0-row case
+
+  // Snapshot must exist and be a plain object.
+  if (!completenessSnapshot || typeof completenessSnapshot !== "object") return "unknown";
+
+  // Resolve session_key per the precedence rule.
+  const literals = _extractSessionKeyLiterals(sql);
+  let sessionKey = null;
+  if (literals.length === 1) {
+    sessionKey = literals[0];
+  } else if (
+    literals.length === 0 &&
+    item.sessionKey !== undefined &&
+    item.sessionKey !== null
+  ) {
+    const fallback = Number(item.sessionKey);
+    if (Number.isFinite(fallback)) sessionKey = Math.trunc(fallback);
+  }
+  if (sessionKey === null) {
+    // Multi-session set, or no literal + no item.sessionKey. Fail-safe.
+    return "unknown";
+  }
+
+  const touchedTables = _extractTouchedTablesFromSql(sql);
+  if (touchedTables.length === 0) return "unknown";
+
+  const sessionRow = completenessSnapshot[String(sessionKey)];
+  if (!sessionRow || typeof sessionRow !== "object") return "unknown";
+
+  // If any touched (session_key, table) pair reports zero rows in the
+  // snapshot, the 0-row outcome is proven-data-unavailable.
+  let proven = false;
+  for (const t of touchedTables) {
+    const rows = sessionRow[t];
+    if (typeof rows === "number" && rows === 0) {
+      proven = true;
+      break;
+    }
+  }
+  if (proven) return "proven_data_unavailable";
+
+  // Predicate-narrow detection: if the SQL has a tight literal filter
+  // (lap_number BETWEEN ... AND ..., literal driver_number, time-range
+  // predicate), 0 rows is more likely a wrong-filter case. Use two
+  // regexes: one for word-keyword operators (BETWEEN/IN) where a
+  // trailing \b is correct, one for symbol operators (=, >=, etc.)
+  // where the next char is non-word and \b would fail.
+  const tightFilterWordOpRe =
+    /\b(lap_number|driver_number|time_in_lap_sec|date)\s+(BETWEEN|IN)\b/i;
+  const tightFilterSymbolOpRe =
+    /\b(lap_number|driver_number|time_in_lap_sec|date)\s*(=|>=|<=|>|<)\s*\d/i;
+  if (tightFilterWordOpRe.test(sql) || tightFilterSymbolOpRe.test(sql)) return "wrong_filter";
+
+  return "unknown";
+}
+
+export function gradeHealthCheckResults(results, rubricById, options = {}) {
+  // Phase 19 outcome-fix Fix 6: completenessSnapshot is optional.
+  // When supplied, the classifier promotes proven-data-unavailable
+  // 0-row cases from C to B. Fail-safe: missing snapshot → grader
+  // stays at the existing C grade.
+  const completenessSnapshot = options.completenessSnapshot ?? null;
+
   return results.map((item) => {
     const rubricRow = rubricById.get(Number(item.id)) ?? defaultRubricRow(Number(item.id));
     const baseline = gradeResultWithRubric(item, rubricRow);
+
+    // Apply the proven-data-unavailable promotion ONLY when the
+    // baseline grade is C (avoid masking better grades) AND the
+    // baselineAnswerability is "answerable_but_unanswered" (the
+    // canonical 0-row case).
+    let promoted = baseline;
+    if (
+      completenessSnapshot &&
+      baseline.baselineGrade === "C" &&
+      baseline.baselineAnswerability === "answerable_but_unanswered"
+    ) {
+      const verdict = classifyZeroRowOutcome(item, completenessSnapshot);
+      if (verdict === "proven_data_unavailable") {
+        promoted = {
+          ...baseline,
+          baselineGrade: "B",
+          baselineQuality: "partial",
+          baselineReason: `${baseline.baselineReason} | proven_data_unavailable: snapshot reports zero rows for the touched (session_key, table) pair.`,
+          completeness: {
+            grade: "B",
+            reason:
+              "Snapshot reports upstream data unavailable for the touched session+table; honest no-data outcome."
+          }
+        };
+      }
+    }
+
     const cleanedItem = {};
     for (const field of PRESERVED_INPUT_FIELDS) {
       if (field in item) {
@@ -1153,7 +1397,7 @@ export function gradeHealthCheckResults(results, rubricById) {
     }
     return {
       ...cleanedItem,
-      ...baseline
+      ...promoted
     };
   });
 }

@@ -1,0 +1,27 @@
+{
+  "comment": "Phase 19-D (rev6): per-category A-rate floors enforced by category_regression_gate.mjs. The gate fails non-zero if any category's measured A-rate (post-rubric `baselineGrade === 'A'` count / total) is below its declared floor. New analytics categories ship at floor: 0 until their lift slice is recorded `merged` in diagnostic/slices_status.json — at which point the lift slice's PR raises the floor as part of acceptance.",
+  "version": "2026-05-02",
+  "categories": {
+    "metadata": { "floor": 0.85, "comment": "Existing baseline (post-Phase-18: 100% A on the 50q subset for this category)." },
+    "pace": { "floor": 0.80, "comment": "Existing baseline; lift slice 21-fuel-corrected-pace can raise to 0.90." },
+    "stint": { "floor": 0.75, "comment": "Existing baseline; lift slices 21-stint-degradation-curve, 21-tyre-warmup-curves can raise." },
+    "dominance": { "floor": 0.0, "comment": "NEW category. Floor stays at 0 until 21-minisector-dominance / 21-sector-dominance / 21-track-dominance-gps lift slices ship." },
+    "corner": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-corner-analysis lift slice." },
+    "braking": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-braking-performance lift slice." },
+    "traction": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-traction-analysis lift slice." },
+    "straight_line": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-straight-line-dominance lift slice." },
+    "tyre": { "floor": 0.50, "comment": "Partial coverage; lift slice 21-tyre-warmup-curves can raise." },
+    "traffic": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-traffic-adjusted-pace lift slice." },
+    "pit": { "floor": 0.60, "comment": "Existing baseline; 21-pit-loss-per-circuit / 21-undercut-overcut-history can raise." },
+    "overtake": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-overtake-events / 21-battle-segments / 21-drs-effectiveness." },
+    "restart": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-restart-performance lift slice." },
+    "weather": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-weather-impact lift slice." },
+    "incident": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-race-control-incident-index lift slice." },
+    "driver_score": { "floor": 0.0, "comment": "NEW category. Floor activated by 21-driver-performance-7axis aggregator (tier 4 — ships LAST)." },
+    "data_health": { "floor": 0.85, "comment": "Existing dataHealth slice." },
+    "proprietary_no_data": { "floor": 0.90, "comment": "Phase 19-A no_data_refusal route ships immediately so floor is high from day one." },
+    "cross_category": { "floor": 0.0, "comment": "Cross-category questions span multiple matviews; floor lifts gradually as lift slices land." }
+  },
+  "default_floor": 0.0,
+  "default_floor_comment": "Categories not listed here default to 0.0 (off) so authors can add new categories without forcing the gate to fail until the lift slice ships."
+}

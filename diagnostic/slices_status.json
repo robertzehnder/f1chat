@@ -1,0 +1,427 @@
+{
+  "comment": "Phase 19-D (rev6 + rev7 + rev8): machine-readable slice merge registry. Pre-seeded with all 40 planned slice ids at status: pending so the FIRST Slice 19-B PR (which writes baseline-zero questions referencing future Phase 21/22/23 lift slices via floor_active_after_slice) does not trip the rev5 unknown-slice-id fail-fast. The autonomous loop's slice-completion hook flips pending \u2192 in_flight \u2192 merged as slices ship. The rev4 cleanup-or-fail rule fails the gate if a slice is merged AND any question still references it via floor_active_after_slice.",
+  "slices": [
+    {
+      "slice_id": "19-A",
+      "status": "merged",
+      "merged_at": "2026-05-02T00:00:00Z",
+      "depends_on": []
+    },
+    {
+      "slice_id": "19-B",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "19-A"
+      ]
+    },
+    {
+      "slice_id": "19-C",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "19-B"
+      ]
+    },
+    {
+      "slice_id": "19-D",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "19-C"
+      ]
+    },
+    {
+      "slice_id": "20-track-segments-auto",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "20-track-segments-corners",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "20-track-segments-auto"
+      ]
+    },
+    {
+      "slice_id": "20-intervals-parser",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-sector-dominance",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "20-track-segments-auto"
+      ]
+    },
+    {
+      "slice_id": "21-minisector-dominance",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "20-track-segments-auto"
+      ]
+    },
+    {
+      "slice_id": "21-stint-degradation-curve",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-tyre-warmup-curves",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-fuel-corrected-pace",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-pit-loss-per-circuit",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-weather-impact",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-race-control-incident-index",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-overtake-events",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-traffic-adjusted-pace",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "20-intervals-parser"
+      ]
+    },
+    {
+      "slice_id": "21-straight-line-dominance",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "20-track-segments-auto"
+      ]
+    },
+    {
+      "slice_id": "21-corner-analysis",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "20-track-segments-corners"
+      ]
+    },
+    {
+      "slice_id": "21-braking-performance",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-corner-analysis",
+        "20-track-segments-corners"
+      ]
+    },
+    {
+      "slice_id": "21-traction-analysis",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-corner-analysis",
+        "20-track-segments-corners"
+      ]
+    },
+    {
+      "slice_id": "21-track-dominance-gps",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-minisector-dominance",
+        "21-sector-dominance",
+        "21-corner-analysis"
+      ]
+    },
+    {
+      "slice_id": "21-battle-segments",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-overtake-events",
+        "20-intervals-parser"
+      ]
+    },
+    {
+      "slice_id": "21-drs-effectiveness",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-battle-segments"
+      ]
+    },
+    {
+      "slice_id": "21-undercut-overcut-history",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-pit-loss-per-circuit"
+      ]
+    },
+    {
+      "slice_id": "21-restart-performance",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-overtake-events",
+        "21-race-control-incident-index"
+      ]
+    },
+    {
+      "slice_id": "21-driver-performance-7axis",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-stint-degradation-curve",
+        "21-pit-loss-per-circuit",
+        "21-overtake-events",
+        "21-traffic-adjusted-pace",
+        "21-restart-performance"
+      ]
+    },
+    {
+      "slice_id": "22-A-runtime-model-tool-plumbing",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "22-tyre-deg-bayesian",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "22-A-runtime-model-tool-plumbing"
+      ]
+    },
+    {
+      "slice_id": "22-battle-forecast",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "22-A-runtime-model-tool-plumbing"
+      ]
+    },
+    {
+      "slice_id": "22-overtake-difficulty-index",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "22-A-runtime-model-tool-plumbing"
+      ]
+    },
+    {
+      "slice_id": "22-safety-car-probability",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "22-A-runtime-model-tool-plumbing"
+      ]
+    },
+    {
+      "slice_id": "22-alternative-strategy-sim",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "22-A-runtime-model-tool-plumbing"
+      ]
+    },
+    {
+      "slice_id": "22-points-as-they-run",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "22-A-runtime-model-tool-plumbing"
+      ]
+    },
+    {
+      "slice_id": "23-track-dominance-map",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-minisector-dominance",
+        "21-track-dominance-gps"
+      ]
+    },
+    {
+      "slice_id": "23-corner-analysis-page",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-corner-analysis",
+        "21-braking-performance",
+        "21-traction-analysis"
+      ]
+    },
+    {
+      "slice_id": "23-stint-degradation-chart",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-stint-degradation-curve",
+        "22-tyre-deg-bayesian"
+      ]
+    },
+    {
+      "slice_id": "23-driver-performance-card",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-driver-performance-7axis"
+      ]
+    },
+    {
+      "slice_id": "23-battle-replay",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "21-battle-segments",
+        "21-overtake-events"
+      ]
+    },
+    {
+      "slice_id": "23-strategy-simulator",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": [
+        "22-alternative-strategy-sim",
+        "22-A-runtime-model-tool-plumbing"
+      ]
+    },
+    {
+      "slice_id": "iter-19-q2180",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2181",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2182",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2183",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2184",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1901",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1902",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1906",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1920",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1922",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2060",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2061",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1940",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1941",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1944",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q1945",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2120",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "iter-19-q2121",
+      "status": "pending",
+      "merged_at": null,
+      "depends_on": []
+    }
+  ]
+}

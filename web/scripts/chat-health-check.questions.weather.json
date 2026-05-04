@@ -1,0 +1,105 @@
+[
+  {
+    "id": 2120,
+    "category": "Weather impact",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["raw.weather"],
+    "expected_columns": ["raw.weather.rainfall"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "F1Technical / Pirelli: rain just before Hungary qualifying; race never wet enough for inters.",
+    "question": "Was the 2025 Hungarian Grand Prix run wet or dry?"
+  },
+  {
+    "id": 2121,
+    "category": "Weather impact",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary"],
+    "expected_columns": [
+      "core.stint_summary.compound_name",
+      "core.stint_summary.lap_start"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "McLaren race report / Sky Sports: Norris dived in for inters exiting Turn 14 at Australia 2025.",
+    "question": "Who pitted first for intermediates at the 2025 Australian GP late-race rain shower?"
+  },
+  {
+    "id": 2122,
+    "category": "Weather impact",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.weather_impact"],
+    "expected_columns": ["analytics.weather_impact.wet_pace_delta_s"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-weather-impact",
+    "author_note": "F1.com Belgian GP report: Hamilton one of first to switch from inters; Russell P5 lonely; Verstappen P4 1.5s off podium.",
+    "question": "How much pace did Mercedes give up to Red Bull on lap-by-lap delta after the lap-29 inter-to-medium crossover at Spa 2025?"
+  },
+  {
+    "id": 2123,
+    "category": "Weather impact",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.weather_impact", "core.stint_summary"],
+    "expected_columns": [
+      "analytics.weather_impact.crossover_lap",
+      "core.stint_summary.compound_name"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-weather-impact",
+    "author_note": "McLaren race report: both McLarens slid; Norris pitted exiting T14, Piastri spun into the grass.",
+    "question": "What was the inter-to-slick crossover lap for the McLarens at Australia 2025, and did Piastri's spin happen on the same lap as his slick-tyre call?"
+  },
+  {
+    "id": 2124,
+    "category": "Weather impact",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.weather_impact"],
+    "expected_columns": ["analytics.weather_impact.wet_pace_delta_s"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-weather-impact",
+    "author_note": "RaceFans Verstappen interview: Silverstone restart spin due to set-up, not Piastri incident.",
+    "question": "On the lap-22 dry-line restart at Silverstone 2025, how much time did Verstappen lose to Piastri across that single lap relative to his pre-spin pace average?"
+  },
+  {
+    "id": 2125,
+    "category": "Weather impact",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.weather_impact", "analytics.fuel_corrected_pace"],
+    "expected_columns": [
+      "analytics.weather_impact.crossover_lap",
+      "analytics.fuel_corrected_pace.fuel_corrected_lap_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-weather-impact",
+    "author_note": "F1.com Belgian GP report: Piastri won wet-dry Spa, Hamilton early to slicks finished 6th, Verstappen 4th.",
+    "question": "At the 2025 Belgian GP, compare each top-team's first-stint inter-pace delta to leader and pinpoint who waited too long to switch to slicks — was Hamilton's early switch optimal vs Verstappen's later one?"
+  },
+  {
+    "id": 2126,
+    "category": "Weather impact",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.weather_impact"],
+    "expected_columns": [
+      "analytics.weather_impact.crossover_lap",
+      "analytics.weather_impact.wet_pace_delta_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-weather-impact",
+    "author_note": "F1.com / Mercedes / McLaren British GP reports: 5 drivers gambled on slicks at start; Hülkenberg's maiden podium.",
+    "question": "For the 2025 British GP, identify the inters-to-slicks (and slicks-to-inters) crossover-lap windows during each rain band and quantify the position swing for any driver who pitted off-window."
+  }
+]

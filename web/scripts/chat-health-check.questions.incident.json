@@ -1,0 +1,106 @@
+[
+  {
+    "id": 2140,
+    "category": "Race control incidents",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.race_control_incidents"],
+    "expected_columns": ["analytics.race_control_incidents.penalty_points"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "F1.com / Motorsport.com São Paulo 2025: Piastri 2 points + 10s; Hamilton 5s for Colapinto contact; Norris/Russell formation-lap punishment.",
+    "question": "How many penalty points were issued by stewards at the 2025 São Paulo Grand Prix?"
+  },
+  {
+    "id": 2141,
+    "category": "Race control incidents",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.race_control_incidents"],
+    "expected_columns": [
+      "analytics.race_control_incidents.driver_number",
+      "analytics.race_control_incidents.incident_kind"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "F1.com Saudi 2025: Verstappen 5s time penalty for the lap-1 T1/2 excursion.",
+    "question": "What penalty did Verstappen receive for the lap-1 Turn 1/2 excursion at the 2025 Saudi Arabian GP?"
+  },
+  {
+    "id": 2142,
+    "category": "Race control incidents",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.race_control_incidents"],
+    "expected_columns": [
+      "analytics.race_control_incidents.driver_number",
+      "analytics.race_control_incidents.penalty_points"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "Motorsport.com 'Why Piastri was penalised for F1 Brazil GP clash' — wholly responsible verdict.",
+    "question": "Did the lap-6 Piastri-Antonelli-Leclerc Turn 1 contact at São Paulo 2025 swing more points away from Piastri or away from Leclerc, after their finishing positions and any time penalties are applied?"
+  },
+  {
+    "id": 2143,
+    "category": "Race control incidents",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.race_control_incidents"],
+    "expected_columns": ["analytics.race_control_incidents.penalty_points"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "Sky Sports: Verstappen on 11 license points after Spain, one away from automatic ban.",
+    "question": "How many penalty points was Verstappen carrying entering the 2025 Austrian GP weekend, and what was his proximity to a one-race ban?"
+  },
+  {
+    "id": 2144,
+    "category": "Race control incidents",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.race_control_incidents"],
+    "expected_columns": [
+      "analytics.race_control_incidents.driver_number",
+      "analytics.race_control_incidents.incident_kind"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "F1.com Palmer column 'Why was Hamilton hit with a penalty in Mexico?' — leaving-the-track-and-gaining call.",
+    "question": "Compare the lap-6 Mexico City 2025 Turn 1-to-Turn 4 sequence: did the stewards apply consistent leaving-the-track-and-gaining standard to Verstappen and Hamilton?"
+  },
+  {
+    "id": 2145,
+    "category": "Race control incidents",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.race_control_incidents"],
+    "expected_columns": [
+      "analytics.race_control_incidents.driver_number",
+      "analytics.race_control_incidents.penalty_points",
+      "analytics.race_control_incidents.incident_kind"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "F1.com + GRANDPRIX247 + PlanetF1: Verstappen sprint 5s, Piastri race 10s + 2pts, Norris formation-lap punishment, Mercedes tyre-pressure fine.",
+    "question": "Across the 2025 São Paulo GP weekend (sprint + race), aggregate every steward decision affecting top-3 championship runners and compute net championship-points delta for Norris, Piastri and Verstappen."
+  },
+  {
+    "id": 2146,
+    "category": "Race control incidents",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.race_control_incidents"],
+    "expected_columns": ["analytics.race_control_incidents.incident_kind"],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-race-control-incident-index",
+    "author_note": "F1.com Palmer column + FIA 2025 Driving Standards Guidelines v4.1.",
+    "question": "For the 2025 season, identify each race in which a leaving-the-track-and-gaining-lasting-advantage call was made on the lead car within the first 10 laps, and compare the average penalty (5s vs 10s vs drive-through)."
+  }
+]

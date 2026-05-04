@@ -1,0 +1,156 @@
+[
+  {
+    "id": 1940,
+    "category": "Stint analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary"],
+    "expected_columns": ["core.stint_summary.stint_length_laps"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "RaceFans Hungary 2025 report: Norris ran a long opening stint as part of his one-stop switch.",
+    "question": "How long was Norris's first stint at the 2025 Hungarian Grand Prix?"
+  },
+  {
+    "id": 1941,
+    "category": "Stint analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary"],
+    "expected_columns": ["core.stint_summary.compound_name"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Motorcyclesports.net Singapore 2025: Red Bull's solo soft tyre gamble vs the field on mediums.",
+    "question": "What compound did Verstappen start on at the 2025 Singapore GP?"
+  },
+  {
+    "id": 1942,
+    "category": "Stint analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary"],
+    "expected_columns": [
+      "core.stint_summary.lap_end",
+      "core.stint_summary.stint_number"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Wikipedia/F1.com Spa 2025: Hamilton was first to pit for dry tyres at the end of lap 11.",
+    "question": "How many laps did Hamilton run before his first pit stop at Spa 2025?"
+  },
+  {
+    "id": 1943,
+    "category": "Stint analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary", "core.strategy_summary"],
+    "expected_columns": [
+      "core.stint_summary.compound_name",
+      "core.stint_summary.driver_number"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "F1.com Belgian GP strategy guide + Wikipedia race report: Hamilton medium-hard-hard pitting laps 11-15, Russell different opener.",
+    "question": "Did Mercedes split strategies between Russell and Hamilton at Spa 2025?"
+  },
+  {
+    "id": 1944,
+    "category": "Stint analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary"],
+    "expected_columns": [
+      "core.stint_summary.stint_length_laps",
+      "core.stint_summary.compound_name"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "The Race 'Everything we learned from F1's 2025 British GP' on Verstappen C2 medium long-run pace.",
+    "question": "How long was Verstappen's medium stint at Silverstone 2025 before he switched to inters?"
+  },
+  {
+    "id": 1945,
+    "category": "Stint analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary"],
+    "expected_columns": [
+      "core.stint_summary.stint_length_laps",
+      "core.stint_summary.compound_name"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": null,
+    "author_note": "Mark Hughes Imola: Piastri swapped exhausted-front-right mediums for hards after just 13 laps.",
+    "question": "Was Piastri's first stint at Imola 2025 cut short by graining on the front-right?"
+  },
+  {
+    "id": 1946,
+    "category": "Stint analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary", "analytics.tyre_warmup"],
+    "expected_columns": [
+      "core.stint_summary.stint_length_laps",
+      "analytics.tyre_warmup.warmup_laps_to_target"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-tyre-warmup-curves",
+    "author_note": "The Race 'McLaren didn't intend strategy switch' on Norris's stretched medium one-stop.",
+    "question": "What was the fresh-vs-used delta on the medium compound for Norris when McLaren switched him to a one-stop in Hungary 2025?"
+  },
+  {
+    "id": 1947,
+    "category": "Stint analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary", "analytics.stint_degradation_curve"],
+    "expected_columns": [
+      "core.stint_summary.stint_length_laps",
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-stint-degradation-curve",
+    "author_note": "Mark Hughes Suzuka race analysis: very low track deg meant key disadvantage to McLaren wasn't exposed.",
+    "question": "Across Suzuka 2025, did Verstappen's longest stint outlast either McLaren's longest stint, and did the deg curve flatten because of low track deg?"
+  },
+  {
+    "id": 1948,
+    "category": "Stint analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary", "analytics.stint_degradation_curve"],
+    "expected_columns": [
+      "core.stint_summary.stint_length_laps",
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-stint-degradation-curve",
+    "author_note": "Motorsport Week + RaceFans Hungary recap: Piastri's tyre offset wasn't enough to clear Norris despite late-race charge.",
+    "question": "How did the closing-stint hard-tyre pace differ between the one-stoppers (Norris, Leclerc) and two-stoppers (Piastri) in the final 15 laps at Hungary 2025?"
+  },
+  {
+    "id": 1949,
+    "category": "Stint analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["core.stint_summary", "analytics.stint_degradation_curve"],
+    "expected_columns": [
+      "core.stint_summary.stint_length_laps",
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-stint-degradation-curve",
+    "author_note": "Singapore strategy briefing + Verstappen post-race: 38-lap soft stint then mediums fell off.",
+    "question": "Did Red Bull's choice to start Verstappen on softs at Singapore 2025 force a longer-than-planned opening stint, and how did that ripple into his second-stint medium degradation?"
+  }
+]

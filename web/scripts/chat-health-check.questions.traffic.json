@@ -1,0 +1,124 @@
+[
+  {
+    "id": 2040,
+    "category": "Traffic-adjusted pace",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.traffic_adjusted_pace"],
+    "expected_columns": ["analytics.traffic_adjusted_pace.traffic_laps"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "F1.com/ESPN Monza 2025: Sainz lost time fighting Bearman before being tagged into a spin.",
+    "question": "How many laps did Sainz spend behind another car at Monza 2025 before his contact with Bearman?"
+  },
+  {
+    "id": 2041,
+    "category": "Traffic-adjusted pace",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.traffic_adjusted_pace"],
+    "expected_columns": ["analytics.traffic_adjusted_pace.clean_air_laps"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "Mexico GP 2025 recap: Norris won by 30+ seconds once he had clean air.",
+    "question": "How many laps did Norris spend in clean air during his winning Mexico GP 2025 stint?"
+  },
+  {
+    "id": 2042,
+    "category": "Traffic-adjusted pace",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.traffic_adjusted_pace"],
+    "expected_columns": [
+      "analytics.traffic_adjusted_pace.clean_air_pace_s",
+      "analytics.traffic_adjusted_pace.traffic_pace_s"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "Mark Hughes Imola 2025: Piastri's deg accelerated specifically in Red Bull's wake.",
+    "question": "How did Piastri's lap pace drop while running in Verstappen's dirty air at Imola 2025 vs his clean-air pace once he pitted?"
+  },
+  {
+    "id": 2043,
+    "category": "Traffic-adjusted pace",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.traffic_adjusted_pace"],
+    "expected_columns": ["analytics.traffic_adjusted_pace.clean_air_pace_s"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "Wikipedia Spa 2025 recap: Russell didn't have the pace to stick with Verstappen in clean traffic-free running.",
+    "question": "What was Verstappen's clean-air pace advantage over Russell once Russell came out behind him at Spa 2025 after the first stops?"
+  },
+  {
+    "id": 2044,
+    "category": "Traffic-adjusted pace",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.traffic_adjusted_pace"],
+    "expected_columns": ["analytics.traffic_adjusted_pace.traffic_laps"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "ESPN/The Race Hungary recap: Piastri bottled up behind Leclerc for the first two stints.",
+    "question": "How many laps did Piastri spend in traffic behind Leclerc during his second stint at Hungary 2025?"
+  },
+  {
+    "id": 2045,
+    "category": "Traffic-adjusted pace",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": [
+      "analytics.traffic_adjusted_pace",
+      "analytics.fuel_corrected_pace"
+    ],
+    "expected_columns": [
+      "analytics.traffic_adjusted_pace.traffic_pace_s",
+      "analytics.fuel_corrected_pace.fuel_corrected_lap_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "Verstappen Singapore quotes: mediums overheated due to traffic and fighting other cars.",
+    "question": "Compute Verstappen's traffic-corrected pace at Singapore 2025: how much lap time did he lose in his second stint when fighting other cars vs his predicted clean-air medium pace?"
+  },
+  {
+    "id": 2046,
+    "category": "Traffic-adjusted pace",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.traffic_adjusted_pace"],
+    "expected_columns": [
+      "analytics.traffic_adjusted_pace.clean_air_pace_s",
+      "analytics.traffic_adjusted_pace.traffic_pace_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "RaceFans/ESPN Hungary: Norris's victory hinged on McLaren's true performance advantage once unblocked.",
+    "question": "What was Norris's clean-air pace delta to the field once he cleared the train of cars and took the lead at Hungary 2025?"
+  },
+  {
+    "id": 2047,
+    "category": "Traffic-adjusted pace",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": [
+      "analytics.traffic_adjusted_pace",
+      "analytics.overtake_events"
+    ],
+    "expected_columns": [
+      "analytics.traffic_adjusted_pace.traffic_pace_s",
+      "analytics.overtake_events.overtake_count"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "author_note": "F1.com/Wikipedia Spa 2025: Hamilton gained six places via the early lap-11 medium switch.",
+    "question": "How did Hamilton's pace in traffic during his recovery from P18 at Spa 2025 compare to his clean-air pace once he had pitted into clearer track?"
+  }
+]

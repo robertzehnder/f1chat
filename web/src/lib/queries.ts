@@ -22,40 +22,52 @@ export {
   getSessionTableCounts
 } from "./queries/sessions";
 
-const GLOBAL_TABLE_COUNT_SQL: Record<string, string> = {
-  "raw.sessions": "SELECT COUNT(*)::bigint AS row_count FROM raw.sessions",
-  "raw.drivers": "SELECT COUNT(*)::bigint AS row_count FROM raw.drivers",
-  "raw.laps": "SELECT COUNT(*)::bigint AS row_count FROM raw.laps",
-  "raw.car_data": "SELECT COUNT(*)::bigint AS row_count FROM raw.car_data",
-  "raw.location": "SELECT COUNT(*)::bigint AS row_count FROM raw.location",
-  "raw.intervals": "SELECT COUNT(*)::bigint AS row_count FROM raw.intervals",
-  "raw.position_history": "SELECT COUNT(*)::bigint AS row_count FROM raw.position_history",
-  "raw.weather": "SELECT COUNT(*)::bigint AS row_count FROM raw.weather",
-  "raw.race_control": "SELECT COUNT(*)::bigint AS row_count FROM raw.race_control",
-  "raw.pit": "SELECT COUNT(*)::bigint AS row_count FROM raw.pit",
-  "raw.stints": "SELECT COUNT(*)::bigint AS row_count FROM raw.stints",
-  "raw.team_radio": "SELECT COUNT(*)::bigint AS row_count FROM raw.team_radio",
-  "raw.session_result": "SELECT COUNT(*)::bigint AS row_count FROM raw.session_result",
-  "raw.starting_grid": "SELECT COUNT(*)::bigint AS row_count FROM raw.starting_grid",
-  "raw.overtakes": "SELECT COUNT(*)::bigint AS row_count FROM raw.overtakes",
-  "raw.championship_drivers": "SELECT COUNT(*)::bigint AS row_count FROM raw.championship_drivers",
-  "raw.championship_teams": "SELECT COUNT(*)::bigint AS row_count FROM raw.championship_teams",
-  "core.sessions": "SELECT COUNT(*)::bigint AS row_count FROM core.sessions",
-  "core.session_drivers": "SELECT COUNT(*)::bigint AS row_count FROM core.session_drivers",
-  "core.lap_semantic_bridge": "SELECT COUNT(*)::bigint AS row_count FROM core.lap_semantic_bridge",
-  "core.laps_enriched": "SELECT COUNT(*)::bigint AS row_count FROM core.laps_enriched",
-  "core.driver_session_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.driver_session_summary",
-  "core.stint_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.stint_summary",
-  "core.strategy_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.strategy_summary",
-  "core.pit_cycle_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.pit_cycle_summary",
-  "core.strategy_evidence_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.strategy_evidence_summary",
-  "core.grid_vs_finish": "SELECT COUNT(*)::bigint AS row_count FROM core.grid_vs_finish",
-  "core.race_progression_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.race_progression_summary",
-  "core.lap_phase_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.lap_phase_summary",
-  "core.telemetry_lap_bridge": "SELECT COUNT(*)::bigint AS row_count FROM core.telemetry_lap_bridge",
-  "core.lap_context_summary": "SELECT COUNT(*)::bigint AS row_count FROM core.lap_context_summary",
-  "core.replay_lap_frames": "SELECT COUNT(*)::bigint AS row_count FROM core.replay_lap_frames"
-};
+// Phase 17 (post-deploy diagnostic 2026-05-02): the previous COUNT(*) form
+// triggered full scans on materialized views with millions of rows. The
+// caller in chatRuntime only branches on `globalRows === 0`, so an EXISTS
+// probe is sufficient — and is O(1) (Postgres stops at the first row).
+function existsProbeSql(table: string): string {
+  return `SELECT (CASE WHEN EXISTS (SELECT 1 FROM ${table}) THEN 1 ELSE 0 END)::bigint AS row_count`;
+}
+
+const GLOBAL_TABLE_COUNT_TABLES: ReadonlyArray<string> = [
+  "raw.sessions",
+  "raw.drivers",
+  "raw.laps",
+  "raw.car_data",
+  "raw.location",
+  "raw.intervals",
+  "raw.position_history",
+  "raw.weather",
+  "raw.race_control",
+  "raw.pit",
+  "raw.stints",
+  "raw.team_radio",
+  "raw.session_result",
+  "raw.starting_grid",
+  "raw.overtakes",
+  "raw.championship_drivers",
+  "raw.championship_teams",
+  "core.sessions",
+  "core.session_drivers",
+  "core.lap_semantic_bridge",
+  "core.laps_enriched",
+  "core.driver_session_summary",
+  "core.stint_summary",
+  "core.strategy_summary",
+  "core.pit_cycle_summary",
+  "core.strategy_evidence_summary",
+  "core.grid_vs_finish",
+  "core.race_progression_summary",
+  "core.lap_phase_summary",
+  "core.telemetry_lap_bridge",
+  "core.lap_context_summary",
+  "core.replay_lap_frames"
+];
+
+const GLOBAL_TABLE_COUNT_SQL: Record<string, string> = Object.fromEntries(
+  GLOBAL_TABLE_COUNT_TABLES.map((t) => [t, existsProbeSql(t)])
+);
 
 export async function getOverviewStats(): Promise<Record<string, unknown>> {
   // Full COUNT(*) on raw.laps / car_data / location can exceed statement_timeout on large DBs.
@@ -98,19 +110,38 @@ function parseCountValue(value: unknown): number {
   return 0;
 }
 
+// Phase 17 (post-deploy diagnostic 2026-05-02): "is this table populated?"
+// is a stable answer for the lifetime of a server process — once a table
+// has rows, we don't ingest data backwards. Cache per-table at module scope
+// so the 30-query Promise.all storm only fires once. Subsequent requests
+// see microsecond cache lookups instead of cold-page fetches.
+const globalCountCache = new Map<string, Promise<number>>();
+
+function loadGlobalCount(tableName: string): Promise<number> {
+  const text = GLOBAL_TABLE_COUNT_SQL[tableName];
+  if (!text) return Promise.resolve(-1);
+  return sql<{ row_count: number | string }>(text).then(
+    (rows) => parseCountValue(rows[0]?.row_count),
+    () => -1 // transient errors don't poison the cache permanently
+  );
+}
+
 export async function getGlobalTableCounts(tableNames: string[]): Promise<Record<string, number>> {
   const unique = Array.from(new Set(tableNames));
   const counts: Record<string, number> = {};
 
   await Promise.all(
     unique.map(async (tableName) => {
-      const text = GLOBAL_TABLE_COUNT_SQL[tableName];
-      if (!text) {
-        counts[tableName] = -1;
-        return;
+      let cached = globalCountCache.get(tableName);
+      if (!cached) {
+        cached = loadGlobalCount(tableName);
+        globalCountCache.set(tableName, cached);
       }
-      const rows = await sql<{ row_count: number | string }>(text);
-      counts[tableName] = parseCountValue(rows[0]?.row_count);
+      const value = await cached;
+      // Cache only positive answers; if a table came back as -1 (missing or
+      // transient), allow a re-probe on the next request.
+      if (value <= 0) globalCountCache.delete(tableName);
+      counts[tableName] = value;
     })
   );
 

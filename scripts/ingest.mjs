@@ -385,7 +385,40 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((err) => {
-  console.error(err.stack ?? err.message ?? String(err));
-  process.exit(1);
-});
+/**
+ * Phase 18-C: refresh the session_completeness storage matview at the end of
+ * a successful ingest run. CONCURRENTLY keeps readers unblocked. On error
+ * (e.g. matview never populated yet), fall back to non-concurrent refresh
+ * once. Does NOT fail the ingest run on refresh error — the matview is a
+ * perf optimization, not a data-correctness gate.
+ */
+async function refreshSessionCompletenessMatview() {
+  const started = Date.now();
+  try {
+    await psqlExec("REFRESH MATERIALIZED VIEW CONCURRENTLY core.session_completeness_data");
+    console.log(`[matview] REFRESH CONCURRENTLY core.session_completeness_data: ${Date.now() - started}ms`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[matview] CONCURRENTLY rejected (${msg.split("\n")[0]}); trying non-concurrent...`);
+    try {
+      await psqlExec("REFRESH MATERIALIZED VIEW core.session_completeness_data");
+      console.log(`[matview] REFRESH (non-concurrent) core.session_completeness_data: ${Date.now() - started}ms`);
+    } catch (err2) {
+      console.warn(`[matview] REFRESH failed (non-fatal): ${err2 instanceof Error ? err2.message : String(err2)}`);
+    }
+  }
+}
+
+main()
+  .then(async () => {
+    // Refresh the matview after every successful ingest so the resolver
+    // sees fresh is_future_session / is_placeholder flags. Skipped when
+    // OPENF1_INGEST_SKIP_MATVIEW_REFRESH=1 (test runs, dry-run, etc).
+    if (!/^(1|true|yes)$/i.test(String(process.env.OPENF1_INGEST_SKIP_MATVIEW_REFRESH ?? ""))) {
+      await refreshSessionCompletenessMatview();
+    }
+  })
+  .catch((err) => {
+    console.error(err.stack ?? err.message ?? String(err));
+    process.exit(1);
+  });

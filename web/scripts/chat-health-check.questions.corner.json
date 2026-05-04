@@ -1,0 +1,151 @@
+[
+  {
+    "id": 1710,
+    "category": "Corner analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": ["analytics.corner_analysis.apex_min_speed_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "Formula1.com onboard telemetry features highlighting named-corner apex speeds (Suzuka T8/Degner is canonical).",
+    "question": "What was Leclerc's apex speed through Turn 8 (Degner) at Suzuka 2025?"
+  },
+  {
+    "id": 1711,
+    "category": "Corner analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": ["analytics.corner_analysis.apex_min_speed_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "Sky F1 SkyPad's Copse minimum-speed callout, a Silverstone qualifying staple.",
+    "question": "What was Hamilton's minimum speed at Turn 9 (Copse) at Silverstone 2025?"
+  },
+  {
+    "id": 1712,
+    "category": "Corner analysis",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": ["analytics.corner_analysis.entry_speed_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "Autosport 'Rettifilo entry speeds' graphic post-Monza qualifying.",
+    "question": "Who carried the highest entry speed into Turn 1 (Rettifilo) at Monza 2025?"
+  },
+  {
+    "id": 1713,
+    "category": "Corner analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": [
+      "analytics.corner_analysis.entry_speed_kph",
+      "analytics.corner_analysis.apex_min_speed_kph",
+      "analytics.corner_analysis.exit_speed_kph"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "The Race recurring Eau Rouge breakdowns splitting the complex into entry / mid-corner / exit phases.",
+    "question": "Compare Hamilton vs Leclerc through Eau Rouge-Raidillon at Spa 2025 — entry, mid-corner, and exit speed."
+  },
+  {
+    "id": 1714,
+    "category": "Corner analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": ["analytics.corner_analysis.apex_min_speed_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "Motorsport.com Silverstone Copse-specific telemetry compares (Copse as the headline high-speed corner).",
+    "question": "How did Norris's apex speed at Turn 9 (Copse) compare to Verstappen's at Silverstone 2025 qualifying?"
+  },
+  {
+    "id": 1715,
+    "category": "Corner analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": [
+      "analytics.corner_analysis.entry_speed_kph",
+      "analytics.corner_analysis.exit_speed_kph"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "RaceFans Zandvoort qualifying corner-call pieces ('carrying speed through Tarzan').",
+    "question": "Compare Piastri and Russell on entry vs exit speed through Turn 1 (Tarzan) at Zandvoort 2025."
+  },
+  {
+    "id": 1716,
+    "category": "Corner analysis",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": ["analytics.corner_analysis.apex_min_speed_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "Auto Motor und Sport Bahrain analyses headlining T8 minimum speed.",
+    "question": "Through the Turn 8 long-radius left at Bahrain 2025, who had the higher minimum speed — Leclerc or Russell?"
+  },
+  {
+    "id": 1717,
+    "category": "Corner analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": [
+      "analytics.corner_analysis.entry_speed_kph",
+      "analytics.corner_analysis.apex_min_speed_kph",
+      "analytics.corner_analysis.exit_speed_kph"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "Edd Straw Suzuka qualifying analyses decomposing the esses into entry/apex/exit per corner.",
+    "question": "Across Turns 7, 8, 9 (Sector 2 high-speed esses) at Suzuka 2025, where did Verstappen lose time to Norris on entry vs apex vs exit, and was the loss consistent across the three?"
+  },
+  {
+    "id": 1718,
+    "category": "Corner analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis", "analytics.stint_degradation_curve"],
+    "expected_columns": [
+      "analytics.corner_analysis.apex_min_speed_kph",
+      "analytics.corner_analysis.exit_speed_kph",
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "The Race 'tyre-on-tyre' framing in Spa race-pace breakdowns, controlling for compound delta. Codex audit: cross-table HIGH question with columns from each expected_table.",
+    "question": "Compare Hamilton and Leclerc at Spa 2025 race trim across Eau Rouge, Pouhon, and Stavelot — entry, apex, and exit — was Hamilton's mid-corner advantage tyre-on-tyre or compound-driven?"
+  },
+  {
+    "id": 1719,
+    "category": "Corner analysis",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.corner_analysis"],
+    "expected_columns": [
+      "analytics.corner_analysis.entry_speed_kph",
+      "analytics.corner_analysis.apex_min_speed_kph",
+      "analytics.corner_analysis.exit_speed_kph"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-corner-analysis",
+    "author_note": "Mark Hughes / The Race Monaco qualifying autopsy style tracking Q-segment evolution across signature corners.",
+    "question": "At Monaco 2025, across Turn 1 (Ste Devote), Turn 6 (Casino), and Turn 10 (Hairpin), where did Leclerc gain on Verstappen — on entry, apex minimum, or exit — and was the gain Q3-only or sustained from Q1?"
+  }
+]

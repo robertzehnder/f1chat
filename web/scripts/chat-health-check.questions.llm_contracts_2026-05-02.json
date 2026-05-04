@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1701,
+    "category": "LLM-gen contract: stint_summary",
+    "question": "What were the stint lengths in the British Grand Prix 2024 race session?"
+  },
+  {
+    "id": 1702,
+    "category": "LLM-gen contract: strategy_summary",
+    "question": "What was the overall race strategy at Spa 2024?"
+  },
+  {
+    "id": 1703,
+    "category": "LLM-gen contract: grid_vs_finish",
+    "question": "How many positions did each driver gain or lose at Monza 2024?"
+  },
+  {
+    "id": 1704,
+    "category": "LLM-gen contract: race_progression_summary",
+    "question": "Which drivers improved their position the most over the Hungarian GP 2024 race?"
+  },
+  {
+    "id": 1705,
+    "category": "LLM-gen contract: lap_phase_summary",
+    "question": "How did lap pace differ between the early, middle, and late phases of the Belgian GP 2024 race?"
+  },
+  {
+    "id": 1706,
+    "category": "LLM-gen contract: laps_enriched",
+    "question": "Which drivers had the cleanest valid laps at Suzuka 2024?"
+  },
+  {
+    "id": 1707,
+    "category": "LLM-gen contract: telemetry_lap_bridge",
+    "question": "Which laps in Monaco 2024 race had the highest top speed?"
+  },
+  {
+    "id": 1708,
+    "category": "LLM-gen contract: lap_context_summary",
+    "question": "What was the average lap time under safety car conditions at the Italian GP 2024?"
+  },
+  {
+    "id": 1709,
+    "category": "LLM-gen contract: driver_session_summary",
+    "question": "Summarize each driver's session for the Mexico GP 2024 race."
+  },
+  {
+    "id": 1710,
+    "category": "LLM-gen contract: lap_semantic_bridge",
+    "question": "Which laps were tagged as out laps in the Brazil GP 2024 race?"
+  },
+  {
+    "id": 1711,
+    "category": "LLM-gen contract: replay_lap_frames",
+    "question": "Show frame-level replay data for lap 30 of the Spanish GP 2024 race."
+  },
+  {
+    "id": 1712,
+    "category": "LLM-gen contract: metric_registry",
+    "question": "Which metrics in the registry use core.stint_summary as their source relation?"
+  }
+]

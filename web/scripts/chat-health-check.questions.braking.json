@@ -1,0 +1,143 @@
+[
+  {
+    "id": 1960,
+    "category": "Braking performance",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance"],
+    "expected_columns": ["analytics.braking_performance.brake_zone_speed_drop_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "Mark Hughes Saudi GP Friday analysis on long-run braking minimum speeds at the high-speed back section.",
+    "question": "What was Verstappen's brake-zone speed drop into Turn 22 in Saudi Arabia 2025 long runs?"
+  },
+  {
+    "id": 1961,
+    "category": "Braking performance",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance"],
+    "expected_columns": ["analytics.braking_performance.brake_zone_speed_drop_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "Driver61 Silverstone guide: Copse approach is a brief 'kiss' at ~300 km/h.",
+    "question": "What was Norris's brake-zone speed drop into Turn 9 (Copse) at Silverstone 2025 qualifying?"
+  },
+  {
+    "id": 1962,
+    "category": "Braking performance",
+    "complexity": "low",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance"],
+    "expected_columns": ["analytics.braking_performance.brake_zone_speed_drop_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "Karun Chandhok Sky F1 analysis on Hamilton's first-year-at-Ferrari braking adaptation.",
+    "question": "How heavy was Hamilton's brake-zone deceleration at Turn 1 (Jeddah) in 2025?"
+  },
+  {
+    "id": 1963,
+    "category": "Braking performance",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance"],
+    "expected_columns": ["analytics.braking_performance.brake_zone_speed_drop_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "Mark Hughes Saudi GP long-runs analysis (Codex audit: dropped specific 10m / 18km/h figures to avoid graded mismatch with our data).",
+    "question": "Did Verstappen brake later than Norris into Turn 22 at Jeddah 2025?"
+  },
+  {
+    "id": 1964,
+    "category": "Braking performance",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance"],
+    "expected_columns": ["analytics.braking_performance.brake_zone_speed_drop_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "Karun Chandhok Sky F1 progression analysis on Hamilton's gap to Leclerc widening through early-season races.",
+    "question": "Compare Hamilton vs Leclerc brake-zone entry into Turn 1 Melbourne 2025 — where is Hamilton losing time?"
+  },
+  {
+    "id": 1965,
+    "category": "Braking performance",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance", "analytics.corner_analysis"],
+    "expected_columns": [
+      "analytics.braking_performance.brake_zone_speed_drop_kph",
+      "analytics.corner_analysis.entry_speed_kph"
+    ],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "Mark Hughes / The Race execution piece on Verstappen's Turn 1 inside-line technique (Imola).",
+    "question": "How does Verstappen's threshold-braking deceleration into Turn 1 at Imola 2025 compare to the field reference?"
+  },
+  {
+    "id": 1966,
+    "category": "Braking performance",
+    "complexity": "medium",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance"],
+    "expected_columns": ["analytics.braking_performance.brake_zone_speed_drop_kph"],
+    "expected_grade_floor": "A",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "PlanetF1 Imola Ferrari telemetry analysis (Leclerc's rear-limited entry at T3).",
+    "question": "Compare Leclerc and Piastri brake-zone exit minimum speed at Imola Turn 3 in 2025."
+  },
+  {
+    "id": 1967,
+    "category": "Braking performance",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance", "analytics.corner_analysis"],
+    "expected_columns": [
+      "analytics.braking_performance.brake_zone_speed_drop_kph",
+      "analytics.corner_analysis.entry_speed_kph",
+      "analytics.corner_analysis.apex_min_speed_kph"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "PlanetF1 Imola Ferrari upgrades analysis (Leclerc team radio: 'Turns 5, 9, 11 critical on entry'). Cross-table HIGH per codex audit.",
+    "question": "Across Turns 5, 9, and 11 at Imola 2025 — the corners Leclerc explicitly flagged as critical on entry — where did Leclerc lose most lap time to Piastri across brake application, mid-corner minimum, and trail-brake release?"
+  },
+  {
+    "id": 1968,
+    "category": "Braking performance",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance", "analytics.corner_analysis"],
+    "expected_columns": [
+      "analytics.braking_performance.brake_zone_speed_drop_kph",
+      "analytics.corner_analysis.apex_min_speed_kph",
+      "analytics.corner_analysis.exit_speed_kph"
+    ],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "RaceFans super-clipping Suzuka analysis on entry / through-the-corner friction loss (130R takes a 7 km/h hit).",
+    "question": "At Suzuka 2025, where Verstappen turned in at high speed at 130R, compare brake-application timing into the chicane between Verstappen and Piastri given Piastri arrived noticeably slower."
+  },
+  {
+    "id": 1969,
+    "category": "Braking performance",
+    "complexity": "high",
+    "expected_outcome": "answer",
+    "expected_path": "anthropic",
+    "expected_tables": ["analytics.braking_performance"],
+    "expected_columns": ["analytics.braking_performance.brake_zone_speed_drop_kph"],
+    "expected_grade_floor": "B",
+    "floor_active_after_slice": "21-braking-performance",
+    "author_note": "Formula1.com Palmer column on Norris's 'messy' Bahrain 2025 weekend.",
+    "question": "Across the three heaviest brake zones at Bahrain 2025, did Piastri's lap-1 brake-zone delta to Norris foreshadow Norris's misjudgement-laden weekend?"
+  }
+]
