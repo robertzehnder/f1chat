@@ -37,6 +37,14 @@ function isBroadSessionDiscoveryQuestion(normalizedText: string): boolean {
   );
 }
 
+function isSeasonCalendarMetadataQuestion(normalizedText: string): boolean {
+  return (
+    /\b20\d{2}\b/.test(normalizedText) &&
+    normalizedText.includes("calendar") &&
+    (normalizedText.includes("sprint weekend") || normalizedText.includes("sprint weekends"))
+  );
+}
+
 export function isWarehouseWideQuestion(normalizedText: string): boolean {
   return (
     normalizedText.includes("in the warehouse") ||
@@ -51,6 +59,9 @@ export function isWarehouseWideQuestion(normalizedText: string): boolean {
 
 export function requiresResolvedSession(questionType: QuestionType, normalizedText: string): boolean {
   if (isWarehouseWideQuestion(normalizedText)) {
+    return false;
+  }
+  if (isSeasonCalendarMetadataQuestion(normalizedText)) {
     return false;
   }
   if (questionType === "entity_lookup" || questionType === "data_health_question") {

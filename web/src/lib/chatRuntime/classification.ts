@@ -11,6 +11,14 @@ function normalize(text: string): string {
   return text.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function isSeasonCalendarMetadataQuestion(lower: string): boolean {
+  return (
+    /\b20\d{2}\b/.test(lower) &&
+    lower.includes("calendar") &&
+    (lower.includes("sprint weekend") || lower.includes("sprint weekends"))
+  );
+}
+
 export function classifyQuestion(message: string): QuestionType {
   const lower = normalize(message);
 
@@ -35,7 +43,8 @@ export function classifyQuestion(message: string): QuestionType {
     lower.includes("how many unique drivers") ||
     lower.includes("which driver numbers appear") ||
     lower.includes("driver numbers appear in the warehouse") ||
-    lower.includes("drivers are represented in the warehouse")
+    lower.includes("drivers are represented in the warehouse") ||
+    isSeasonCalendarMetadataQuestion(lower)
   ) {
     return "metadata_lookup";
   }
