@@ -17,6 +17,7 @@ Output (stdout JSON):
 Failure modes (mutually exclusive, evaluated in order):
   - proprietary_leak_missed
   - clarification_overfire
+  - venue_resolution_mismatch
   - column_hallucination
   - timeout_via_proximity_join
   - timeout_other
@@ -161,6 +162,67 @@ def classify(row: Dict[str, Any]) -> Dict[str, Any]:
             "This may be a correct clarification. Either the question text needs editing OR the resolver needs a new fast-path. Manual triage required.",
             ["web/scripts/chat-health-check.questions." + (row.get("category") or "?").lower().replace(" ", "_") + ".json"],
         )
+
+    # 5b. venue_resolution_mismatch: question text mentions a
+    # specific venue but the resolved session's country/location
+    # doesn't match. This is the demonym-mismatch class found
+    # during Phase 25.1: the alias-derivation step emits demonym
+    # tokens (hungarian/australian/italian) that don't match the
+    # country-name aliases (hungary/australia/italy) in
+    # core.session_search_lookup, so the lookup falls through to
+    # generic-token matches (gp/grand prix) and tie-breaks to the
+    # latest 2025 race (Abu Dhabi 9839 / Qatar 9850 / Vegas / Brazil).
+    #
+    # The fix is in chatRuntime.ts:extractVenueHints (the
+    # VENUE_DEMONYM_ALIASES table); the Phase 25.1 commit a9fa902
+    # shipped 24 demonym entries. New venues need similar entries.
+    #
+    # Recommend running the two probe scripts BEFORE generating a
+    # code hypothesis — they pinpoint the alias mismatch in <5 min:
+    #   web/scripts/phase25_probe_session_search_lookup.mjs
+    #   web/scripts/phase25_probe_alias_derivation.mjs
+    DEMONYM_TO_COUNTRY = {
+        "hungarian":  ["hungary", "hungaroring", "budapest"],
+        "australian": ["australia", "melbourne"],
+        "italian":    ["italy", "monza", "imola"],
+        "british":    ["united kingdom", "silverstone"],
+        "belgian":    ["belgium", "spa"],
+        "dutch":      ["netherlands", "zandvoort"],
+        "spanish":    ["spain", "barcelona"],
+        "japanese":   ["japan", "suzuka"],
+        "chinese":    ["china", "shanghai"],
+        "saudi":      ["saudi arabia", "jeddah"],
+        "bahraini":   ["bahrain", "sakhir"],
+        "azerbaijani":["azerbaijan", "baku"],
+        "monégasque": ["monaco"],
+        "monegasque": ["monaco"],
+        "canadian":   ["canada", "montreal"],
+        "austrian":   ["austria", "spielberg"],
+        "qatari":     ["qatar", "lusail"],
+        "mexican":    ["mexico", "mexico city"],
+        "brazilian":  ["brazil", "são paulo", "sao paulo", "interlagos"],
+        "emirati":    ["abu dhabi", "yas marina circuit"],
+    }
+    selected_label = (
+        (row.get("runtime") or {}).get("resolution", {}) or {}
+    ).get("selectedSession", {}).get("label", "") or ""
+    selected_label = selected_label.lower()
+    question_lower = (row.get("question") or "").lower()
+    if grade != "A" and selected_label and gen != "runtime_clarification":
+        for demonym, expected_aliases in DEMONYM_TO_COUNTRY.items():
+            if demonym in question_lower and not any(
+                alias in selected_label for alias in expected_aliases
+            ):
+                return out(
+                    "venue_resolution_mismatch",
+                    f"Question mentions '{demonym}' but resolver pinned '{selected_label}' (no alias match for {expected_aliases[:2]}).",
+                    "Run web/scripts/phase25_probe_session_search_lookup.mjs and phase25_probe_alias_derivation.mjs to confirm. Then add the demonym to VENUE_DEMONYM_ALIASES in chatRuntime.ts:extractVenueHints with the country-name + circuit_short_name alias list that matches core.session_search_lookup.",
+                    [
+                        "web/src/lib/chatRuntime.ts",
+                        "web/scripts/phase25_probe_session_search_lookup.mjs",
+                        "web/scripts/phase25_probe_alias_derivation.mjs",
+                    ],
+                )
 
     # 6. repaired_to_zero_rows: anthropic_repaired but 0 rows.
     if gen == "anthropic_repaired" and rowCount == 0 and grade != "A":
