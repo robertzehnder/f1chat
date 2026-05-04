@@ -115,7 +115,8 @@ Guidance:
 - For intermediate-tyre crossover questions ("who pitted first for inters"), use core.stint_summary filtered by compound_name ILIKE '%INTER%' ORDER BY lap_start ASC.
 - For per-driver telemetry-coverage questions, use core.session_completeness.car_data_rows / coverage_score; no per-driver coverage matview exists yet.
 - For "pit-stop timing vs FIA pit log" questions, JOIN core.session_completeness.pit_rows (manifest) vs COUNT(*) FROM raw.pit (observed) per session_key. Surface manifest-vs-observed deltas only; do not embed semicolons or multi-clause notes inside SQL string literals (the FIA-pit-log caveat belongs in the synthesis text, not the SQL output).
-- For tyre-degradation / deg-curve / compound-deg-comparison questions, use analytics.stint_degradation_curve.degradation_per_lap_s as a single SELECT — do NOT compose multi-CTE rolling-window queries against core.laps_enriched. Use fuel_corrected_degradation_per_lap_s when the question mentions fuel correction.
+- For tyre-degradation / deg-curve / compound-deg-comparison questions, use analytics.stint_degradation_curve.degradation_per_lap_s as a single SELECT — do NOT compose multi-CTE rolling-window queries against core.laps_enriched. Use fuel_corrected_degradation_per_lap_s when fuel-corrected.
+- For steward / penalty / incident questions, use analytics.race_control_incidents (driver_number, incident_kind, action_status, penalty_seconds, message_text). penalty_points is always NULL — note as data-not-ingested. JOIN core.race_progression_summary on (session_key, lap_number) when position context is needed.
 
 Rules:
 - Output JSON only.

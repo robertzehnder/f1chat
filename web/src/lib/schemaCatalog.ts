@@ -39,7 +39,9 @@ const CORE_CONTRACTS: ReadonlyArray<{ schema: string; table: string }> = [
   { schema: "f1", table: "track_segments" },
   { schema: "analytics", table: "sector_dominance" },
   // Phase 25.2 slice 21-stint-degradation-curve.
-  { schema: "analytics", table: "stint_degradation_curve" }
+  { schema: "analytics", table: "stint_degradation_curve" },
+  // Phase 25.2 slice 21-race-control-incident-index.
+  { schema: "analytics", table: "race_control_incidents" }
 ];
 
 type CatalogRow = {

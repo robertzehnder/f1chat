@@ -522,7 +522,16 @@ export const RACE_SHAPED_MARKERS: ReadonlyArray<string> = [
   "run wet",
   "run dry",
   "ran wet",
-  "ran dry"
+  "ran dry",
+  "the stewards",
+  "fia stewards",
+  "incident involving",
+  "drive-through",
+  "drive through penalty",
+  "5-second penalty",
+  "10-second penalty",
+  "5 second penalty",
+  "10 second penalty"
 ];
 
 export const SESSION_TYPE_SENSITIVE_MARKERS: ReadonlyArray<string> = [

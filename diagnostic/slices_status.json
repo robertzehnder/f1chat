@@ -99,8 +99,8 @@
     },
     {
       "slice_id": "21-race-control-incident-index",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-04T16:36:54Z",
       "depends_on": []
     },
     {

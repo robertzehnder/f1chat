@@ -221,9 +221,15 @@ test("Fix 4: prompt-size impact within ±100 tokens of pre-fix baseline", async 
   // 3.5KB). If a future edit blows past that, the test catches it.
   await withModule(async (mod) => {
     const prompt = await mod.buildSystemPrompt();
+    // Phase 25.2: budget bumped from 5500 -> 6000 chars to accommodate
+    // per-slice synthesis-routing bullets (stint_degradation_curve,
+    // race_control_incidents, intermediate-tyre routing, FIA-pit-log,
+    // telemetry-coverage caveat). Each new Phase 21 slice that needs a
+    // synthesis hint adds ~150-200 chars. Re-budget when it next blows
+    // past 6000.
     assert.ok(
-      prompt.length < 5500,
-      `prompt size ${prompt.length} chars exceeds 5500-char budget`
+      prompt.length < 6000,
+      `prompt size ${prompt.length} chars exceeds 6000-char budget`
     );
   });
 });

@@ -5,7 +5,9 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.sessions"],
+    "expected_tables": [
+      "core.sessions"
+    ],
     "expected_columns": [
       "core.sessions.session_name",
       "core.sessions.session_type"
@@ -21,8 +23,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.sessions"],
-    "expected_columns": ["core.sessions.session_type"],
+    "expected_tables": [
+      "core.sessions"
+    ],
+    "expected_columns": [
+      "core.sessions.session_type"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": null,
     "author_note": "PlanetF1 / formula1.com pre-season 'where are the sprints in 2025' explainer.",
@@ -34,7 +40,10 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.sessions", "core.session_completeness"],
+    "expected_tables": [
+      "core.sessions",
+      "core.session_completeness"
+    ],
     "expected_columns": [
       "core.sessions.session_name",
       "core.session_completeness.coverage_score"
@@ -50,7 +59,10 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.sessions", "raw.weather"],
+    "expected_tables": [
+      "core.sessions",
+      "raw.weather"
+    ],
     "expected_columns": [
       "core.sessions.session_name",
       "raw.weather.rainfall"
@@ -66,7 +78,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.sessions"],
+    "expected_tables": [
+      "core.sessions"
+    ],
     "expected_columns": [
       "core.sessions.session_name",
       "core.sessions.session_type",
@@ -83,13 +97,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.sessions", "analytics.race_control_incidents"],
+    "expected_tables": [
+      "core.sessions",
+      "analytics.race_control_incidents"
+    ],
     "expected_columns": [
       "core.sessions.session_name",
       "analytics.race_control_incidents.incident_kind"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-race-control-incident-index",
+    "floor_active_after_slice": null,
     "author_note": "Autosport end-of-season 'disrupted sessions' review + The Race coverage of Imola 2025 red-flag chaos.",
     "question": "For the 2025 season, which weekends had a session cancelled or red-flagged for more than 30 minutes, and which session was it?"
   },
@@ -99,7 +116,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.sessions", "raw.weather"],
+    "expected_tables": [
+      "core.sessions",
+      "raw.weather"
+    ],
     "expected_columns": [
       "core.sessions.session_name",
       "raw.weather.track_temperature"

@@ -5,10 +5,14 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.race_control_incidents"],
-    "expected_columns": ["analytics.race_control_incidents.incident_kind"],
+    "expected_tables": [
+      "analytics.race_control_incidents"
+    ],
+    "expected_columns": [
+      "analytics.race_control_incidents.incident_kind"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-race-control-incident-index",
+    "floor_active_after_slice": null,
     "author_note": "F1.com 'RACE START: Verstappen retains Saudi Arabian GP lead' coverage.",
     "question": "Who led the field on the lap-3 SC restart at the 2025 Saudi Arabian GP?"
   },
@@ -18,8 +22,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.restart_performance"],
-    "expected_columns": ["analytics.restart_performance.position_delta"],
+    "expected_tables": [
+      "analytics.restart_performance"
+    ],
+    "expected_columns": [
+      "analytics.restart_performance.position_delta"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-restart-performance",
     "author_note": "F1.com video 'Hamilton and Norris battle for P4 on the Safety Car restart' at Bahrain 2025.",
@@ -31,14 +39,17 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.restart_performance", "analytics.race_control_incidents"],
+    "expected_tables": [
+      "analytics.restart_performance",
+      "analytics.race_control_incidents"
+    ],
     "expected_columns": [
       "analytics.restart_performance.position_delta",
       "analytics.race_control_incidents.incident_kind"
     ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-restart-performance",
-    "author_note": "RaceFans + F1.com British GP report: Verstappen spun P2→P10; Piastri 10s penalty for slowing too much.",
+    "author_note": "RaceFans + F1.com British GP report: Verstappen spun P2\u2192P10; Piastri 10s penalty for slowing too much.",
     "question": "On the lap-22 SC restart at Silverstone 2025, what was Verstappen's position before and after his spin, and was Piastri's brake-test penalty applied to that same restart?"
   },
   {
@@ -47,8 +58,12 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.restart_performance"],
-    "expected_columns": ["analytics.restart_performance.position_delta"],
+    "expected_tables": [
+      "analytics.restart_performance"
+    ],
+    "expected_columns": [
+      "analytics.restart_performance.position_delta"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-restart-performance",
     "author_note": "Sky Sports + McLaren race report: Norris held off Verstappen across multiple SC bunchings.",
@@ -60,8 +75,12 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.restart_performance"],
-    "expected_columns": ["analytics.restart_performance.position_delta"],
+    "expected_tables": [
+      "analytics.restart_performance"
+    ],
+    "expected_columns": [
+      "analytics.restart_performance.position_delta"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-restart-performance",
     "author_note": "Frontstretch / news.gp Canadian GP race reports.",
@@ -73,7 +92,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.restart_performance", "analytics.race_control_incidents"],
+    "expected_tables": [
+      "analytics.restart_performance",
+      "analytics.race_control_incidents"
+    ],
     "expected_columns": [
       "analytics.restart_performance.position_delta",
       "analytics.race_control_incidents.incident_kind"
@@ -81,7 +103,7 @@
     "expected_grade_floor": "B",
     "floor_active_after_slice": "21-restart-performance",
     "author_note": "F1.com Australian GP report + Motor Authority on third SC bunching; Norris won by 0.895s.",
-    "question": "Across the three SC restarts of the 2025 Australian GP, quantify field-bunching at green-flag and 1 lap later — did the bunched restart erase Norris's lead, or did Verstappen lose ground in sector 2?"
+    "question": "Across the three SC restarts of the 2025 Australian GP, quantify field-bunching at green-flag and 1 lap later \u2014 did the bunched restart erase Norris's lead, or did Verstappen lose ground in sector 2?"
   },
   {
     "id": 2106,
@@ -89,7 +111,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.restart_performance", "analytics.race_control_incidents"],
+    "expected_tables": [
+      "analytics.restart_performance",
+      "analytics.race_control_incidents"
+    ],
     "expected_columns": [
       "analytics.restart_performance.position_delta",
       "analytics.race_control_incidents.incident_kind"
