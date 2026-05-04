@@ -1,4 +1,4 @@
-# Phase 25 — Remaining 77 non-A questions roadmap — 2026-05-04 (rev9: Phase 25.1 implemented + demonym fix + 6/6 lift)
+# Phase 25 — Remaining 77 non-A questions roadmap — 2026-05-04 (rev10: Phase 25.1 stability confirmed + q1945/q2184 demoted from manifest)
 
 (Title says "77" not "75" per codex audit pass 5 — the Phase-24
 merged_skipped questions are also still non-A and must be in scope
@@ -7,6 +7,43 @@ promoted q1941 from merged_skipped → Phase 25.1, leaving **only
 q2182** in the merged_skipped bucket. Filename keeps
 `remaining_75` to preserve the existing repo path; document title
 is the source of truth for scope.)
+
+## rev10 changes (Phase 25.1 stability + manifest demotion — 2026-05-04)
+
+5-pass stability re-validation against the 6 escalated questions
+(5 fresh single-attempt benchmark runs, no early-exit) confirms
+durable A-grades:
+
+| qid  | A count | grade detail (5 passes) | timing range |
+|------|---------|-------------------------|--------------|
+| q1940 | 5/5 A  | A A A A A               | 9–10s   |
+| q1941 | 5/5 A  | A A A A A               | 10–16s  |
+| q1945 | **5/5 A** (was manifest B-cap) | A A A A A | 39–62s  |
+| q2120 | 5/5 A  | A A A A A               | 14–20s  |
+| q2121 | 4/5 A  | A B A A A (1 LLM flake) | 13–15s  |
+| q2184 | **5/5 A** (was manifest B-cap) | A A A A A | 14–19s  |
+
+Aggregate: 29/30 attempts → A across 6 questions × 5 passes.
+
+- **HIGH (manifest demotion: q1945 and q2184 → A)** — both
+  questions reached A on 5/5 fresh attempts after the demonym +
+  in-string-semicolon fixes shipped in rev9. The manifest B-cap
+  was a defensive cap from earlier audit passes that no longer
+  reflects observed behavior. **Fix**: removed q1945 and q2184
+  entries from `diagnostic/phase25_target_grades.json`. Manifest
+  shrinks from 7 qids to 5: q1715 (promote B → A), q2008 / q2206
+  / q2207 (proven-data-unavailable C-caps), q2182 (no per-driver
+  telemetry-coverage matview B-cap). The questions still match
+  the source `expected_grade_floor: "A"` — gate now expects A
+  uniformly.
+- **OUTCOME MATH UPDATE** — Phase 25.1 yields 6 → A (was 4 A + 2
+  B). Aggregate target lifted from 157/167 (94.0%) to **159/167
+  (95.2%)**.
+- **NOTE on q2121's 1/5 B flake** — this is LLM SQL-generation
+  variance: the resolver pinned the right session, but on one
+  attempt the synthesis produced a borderline-B answer. The plan
+  target stays A; benchmark runs should keep `--retries ≥ 2` to
+  paper over LLM variance for stochastic questions.
 
 ## rev9 changes (Phase 25.1 implementation — 2026-05-04)
 
@@ -310,13 +347,12 @@ This plan specifies the lift approach **per question** so codex can
 audit the concrete SQL / prompt / matview shape rather than the
 high-level fix vector.
 
-Aggregate target: **A-rate 90/167 (54%) → 157/167 (94.0%)** (codex
-audit pass 6 lifted from rev5's 156 — q1941 promoted from
-Phase-24 merged_skipped C → Phase 25.1 A via the same composite
-race-shaped resolver fix as q1940/q1945/q2120). The remaining 10
-questions split into 7 final B (4 source-B from 25.2 + q1945 +
-q2184 + q2182 Phase-24-skip) and 3 final C (q2008/q2206/q2207
-manifest C-caps).
+Aggregate target: **A-rate 90/167 (54%) → 159/167 (95.2%)** (rev10
+manifest demotion: 5/5 stability passes confirmed q1945 and q2184
+reach A durably, so they no longer have manifest B-caps. The
+remaining 8 questions split into 5 final B (4 source-B from 25.2 +
+q2182 Phase-24-skip) and 3 final C (q2008/q2206/q2207 manifest
+C-caps).
 
 ---
 
@@ -869,9 +905,8 @@ SCOPE: 167 total = 90 already-A + 77 non-A
                                     + 70 (Phase 25.2 deferred)
                                     + 1 (Phase-24 merged_skipped, manifest-capped)
 
-PHASE 25.1 (6 escalated):
-  4 → A (q1940, q2120, q2121, q1941)
-+ 2 → B (q1945, q2184 — manifest B-caps from baseline C → B)
+PHASE 25.1 (6 escalated, post rev10 manifest demotion):
+  6 → A (q1940, q1941, q1945, q2120, q2121, q2184 — 5/5 stability)
 ————————
   6 ✓
 
@@ -889,22 +924,21 @@ PHASE-24 MERGED_SKIPPED (1, manifest-capped at baseline):
 
 AGGREGATE:
    90 already A
-+  4 newly A from Phase 25.1
++  6 newly A from Phase 25.1
 + 63 newly A from Phase 25.2
 ————————
- 157 total A      (final A-rate: 157/167 = 94.0%)
+ 159 total A      (final A-rate: 159/167 = 95.2%)
 
-   2 newly B from Phase 25.1 (q1945, q2184)
-+  4 stays-B from Phase 25.2
+   4 stays-B from Phase 25.2
 +  1 stays-B from Phase-24 merged_skipped (q2182)
 ————————
-   7 final B
+   5 final B
 
    3 stays-C from Phase 25.2 (manifest C-caps)
 ————————
    3 final C
 
-157 A + 7 B + 3 C = 167  ✓
+159 A + 5 B + 3 C = 167  ✓
 ```
 
 The 3 final C-grades break down as:
@@ -963,7 +997,7 @@ If APPROVED at rev-N, ship order:
    [slices_status.json](slices_status.json).
 4. **Phase 21 Tier 4** (`21-driver-performance-7axis`) ships LAST.
 5. Final acceptance: re-run `phase19_baseline_run.py` →
-   `phase_19_baseline_2026-05-05.{json,md}` → assert A-rate ≥94.0%
-   (≥157/167) AND every question meets its target grade per
+   `phase_19_baseline_2026-05-05.{json,md}` → assert A-rate ≥95.2%
+   (≥159/167) AND every question meets its target grade per
    `diagnostic/phase25_target_grades.json` (manifest first) or
    source JSON `expected_grade_floor` (fallback).

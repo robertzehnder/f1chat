@@ -8,23 +8,11 @@
       "rationale": "Codex audit pass 3 promoted from B → A. q1715 is a clean single-table lookup against analytics.corner_analysis (entry_speed_kph + exit_speed_kph for 2 drivers at 1 corner). The earlier 'B-target cross-JOIN' label was incorrect — there is no JOIN required.",
       "escape_to_authored_floor": "n/a — already aligned with authored A"
     },
-    "1945": {
-      "source_expected_grade_floor": "A",
-      "phase25_target_grade": "B",
-      "rationale": "Question asks 'cut short BY graining' — public data shows stint length + compound but cannot prove the cause was graining. Synthesis at B (cite stint length + compound + invite human interpretation) is the realistic ceiling.",
-      "escape_to_authored_floor": "Edit the source question to drop the 'by graining on the front-right' causation clause, OR add a rubric exception that awards A for honest 'cause-unknown but stint-length-known' answers."
-    },
     "2008": {
       "source_expected_grade_floor": "B",
       "phase25_target_grade": "C",
       "rationale": "Question asks Ferrari's qualifying-trim vs race-trim straight-line variance attribution. Even the 21-straight-line-dominance matview gives speeds, not the *trim cause*. Ceiling is C without a setup-data ingest.",
       "escape_to_authored_floor": "Ship a setup/trim-difference matview, OR rewrite the question to ask only the speeds and let the human attribute the cause."
-    },
-    "2184": {
-      "source_expected_grade_floor": "A",
-      "phase25_target_grade": "B",
-      "rationale": "Source JSON expects core.session_completeness AND raw.pit; we can compute manifest-vs-observed deltas, but 'vs the official FIA pit log' is not a data source we ingest. Acceptance is stable B with manifest-vs-observed counts + a one-line FIA-data-not-ingested caveat. (Codex audit pass 5: removed the prior conditional 'A if caveat present' fallback — the PR-time gate reads a single phase25_target_grade value and cannot enforce conditional targets.)",
-      "escape_to_authored_floor": "Either rewrite the source question to drop the 'vs the official FIA pit log' clause, OR add a rubric exception that awards A on factual_correctness when the answer explicitly bounds an unsupported claim with a limitation note."
     },
     "2206": {
       "source_expected_grade_floor": "B",
