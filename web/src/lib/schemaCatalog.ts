@@ -37,7 +37,9 @@ const CORE_CONTRACTS: ReadonlyArray<{ schema: string; table: string }> = [
   // storage matviews (`analytics.<name>_data`). The facade view is what
   // generated SQL targets; the storage matview is implementation.
   { schema: "f1", table: "track_segments" },
-  { schema: "analytics", table: "sector_dominance" }
+  { schema: "analytics", table: "sector_dominance" },
+  // Phase 25.2 slice 21-stint-degradation-curve.
+  { schema: "analytics", table: "stint_degradation_curve" }
 ];
 
 type CatalogRow = {
