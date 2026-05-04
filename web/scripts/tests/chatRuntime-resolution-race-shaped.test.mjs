@@ -77,7 +77,8 @@ const POSITIVE_FIXTURES = [
   "How many pit stops did Verstappen make at the Monaco 2025 race?",
   "How many pit stops did Lando Norris make in the 2025 Monaco Grand Prix?",
   "What was Verstappen's first-stop lap number in the 2025 Canadian Grand Prix?",
-  "What was the fastest lap of the 2025 Italian Grand Prix race?"
+  "What was the fastest lap of the 2025 Italian Grand Prix race?",
+  "How long was Verstappen's medium stint at Silverstone 2025 before he switched to inters?"
 ];
 
 const NEGATIVE_FIXTURES_SESSION_TYPE = [

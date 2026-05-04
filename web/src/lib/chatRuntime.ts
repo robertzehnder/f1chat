@@ -478,6 +478,7 @@ export const RACE_SHAPED_MARKERS: ReadonlyArray<string> = [
   "opening stint",
   "opening-stint",
   "longest stint",
+  "medium stint",
   "stint 1",
   "stint 2",
   "stint 3",
