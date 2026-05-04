@@ -69,8 +69,8 @@
     },
     {
       "slice_id": "21-stint-degradation-curve",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-04T16:27:44Z",
       "depends_on": []
     },
     {

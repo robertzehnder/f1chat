@@ -5,7 +5,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve", "analytics.traffic_adjusted_pace"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve",
+      "analytics.traffic_adjusted_pace"
+    ],
     "expected_columns": [
       "analytics.stint_degradation_curve.degradation_per_lap_s",
       "analytics.traffic_adjusted_pace.traffic_pace_s"
@@ -59,13 +62,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve", "analytics.fuel_corrected_pace"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve",
+      "analytics.fuel_corrected_pace"
+    ],
     "expected_columns": [
       "analytics.stint_degradation_curve.degradation_per_lap_s",
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Suzuka: Red Bull narrow setup window vs very low track deg neutralising the disadvantage.",
     "question": "At Suzuka 2025, did Red Bull's narrow setup window restrict Verstappen to a shorter optimal stint length, but the low track deg neutralise that disadvantage, allowing him to match McLaren's longer-stint pace in clean air?"
   },
@@ -75,7 +81,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.fuel_corrected_pace", "analytics.traffic_adjusted_pace"],
+    "expected_tables": [
+      "analytics.fuel_corrected_pace",
+      "analytics.traffic_adjusted_pace"
+    ],
     "expected_columns": [
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s",
       "analytics.traffic_adjusted_pace.traffic_pace_s"
@@ -91,7 +100,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.fuel_corrected_pace", "analytics.traffic_adjusted_pace"],
+    "expected_tables": [
+      "analytics.fuel_corrected_pace",
+      "analytics.traffic_adjusted_pace"
+    ],
     "expected_columns": [
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s",
       "analytics.traffic_adjusted_pace.clean_air_pace_s"
@@ -107,7 +119,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.corner_analysis", "analytics.stint_degradation_curve"],
+    "expected_tables": [
+      "analytics.corner_analysis",
+      "analytics.stint_degradation_curve"
+    ],
     "expected_columns": [
       "analytics.corner_analysis.apex_min_speed_kph",
       "analytics.stint_degradation_curve.degradation_per_lap_s"
@@ -115,7 +130,7 @@
     "expected_grade_floor": "B",
     "floor_active_after_slice": "21-corner-analysis",
     "author_note": "Edd Straw Italian GP rankings: Leclerc 'fourth was Ferrari's limit', straightforward two-compound stint sequence.",
-    "question": "Compare Leclerc's high-speed-corner sector pace at Monza 2025 across his medium and hard stints — did the compound choice cost him more time in Lesmo/Ascari than the deg savings gained?"
+    "question": "Compare Leclerc's high-speed-corner sector pace at Monza 2025 across his medium and hard stints \u2014 did the compound choice cost him more time in Lesmo/Ascari than the deg savings gained?"
   },
   {
     "id": 2207,
@@ -123,13 +138,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.weather_impact", "analytics.stint_degradation_curve"],
+    "expected_tables": [
+      "analytics.weather_impact",
+      "analytics.stint_degradation_curve"
+    ],
     "expected_columns": [
       "analytics.weather_impact.wet_pace_delta_s",
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "F1.com Spa strategy guide + Wikipedia Spa report on Russell vs Hamilton split.",
     "question": "Did Mercedes' Spa 2025 split between Russell (cleaner first stint) and Hamilton (early medium dive into traffic) produce divergent clean-air pace ceilings, and which driver hit the C3 cliff first?"
   },
@@ -139,7 +157,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.fuel_corrected_pace", "analytics.traffic_adjusted_pace"],
+    "expected_tables": [
+      "analytics.fuel_corrected_pace",
+      "analytics.traffic_adjusted_pace"
+    ],
     "expected_columns": [
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s",
       "analytics.traffic_adjusted_pace.clean_air_pace_s",
@@ -147,7 +168,7 @@
     ],
     "expected_grade_floor": "B",
     "floor_active_after_slice": "21-traffic-adjusted-pace",
-    "author_note": "Mark Hughes Saudi long-runs: ~0.7s race-stint gap vs ~0.3s qualifying gap to next best — clean-air-pace effect.",
+    "author_note": "Mark Hughes Saudi long-runs: ~0.7s race-stint gap vs ~0.3s qualifying gap to next best \u2014 clean-air-pace effect.",
     "question": "At Saudi 2025, was McLaren's race-stint advantage over the next best a function of clean-air pace alone, or did it persist in traffic situations during stint simulations?"
   }
 ]

@@ -5,10 +5,14 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve"],
-    "expected_columns": ["analytics.stint_degradation_curve.degradation_per_lap_s"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve"
+    ],
+    "expected_columns": [
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Saudi GP long-runs analysis on Norris's apparent low degradation in FP1 long stints.",
     "question": "What was Norris's apparent degradation across his FP1 long run in Jeddah 2025?"
   },
@@ -18,11 +22,15 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.tyre_warmup"],
-    "expected_columns": ["analytics.tyre_warmup.warmup_laps_to_target"],
+    "expected_tables": [
+      "analytics.tyre_warmup"
+    ],
+    "expected_columns": [
+      "analytics.tyre_warmup.warmup_laps_to_target"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-tyre-warmup-curves",
-    "author_note": "RaceFans: Hamilton's middle-stint mediums at Bahrain — fastest lap entering S2.",
+    "author_note": "RaceFans: Hamilton's middle-stint mediums at Bahrain \u2014 fastest lap entering S2.",
     "question": "How many laps did Hamilton take to get the medium up to temperature in Bahrain 2025 stint 2?"
   },
   {
@@ -31,8 +39,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.tyre_warmup"],
-    "expected_columns": ["analytics.tyre_warmup.warmup_laps_to_target"],
+    "expected_tables": [
+      "analytics.tyre_warmup"
+    ],
+    "expected_columns": [
+      "analytics.tyre_warmup.warmup_laps_to_target"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-tyre-warmup-curves",
     "author_note": "f1technical Monza graining piece: only one driver did 17 laps on the hard, leaving teams with limited reference data.",
@@ -44,8 +56,12 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.tyre_warmup"],
-    "expected_columns": ["analytics.tyre_warmup.warmup_laps_to_target"],
+    "expected_tables": [
+      "analytics.tyre_warmup"
+    ],
+    "expected_columns": [
+      "analytics.tyre_warmup.warmup_laps_to_target"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-tyre-warmup-curves",
     "author_note": "RaceFans 2025 British GP strategy briefing on warmup behaviour driving early-stint pace.",
@@ -57,12 +73,16 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve"],
-    "expected_columns": ["analytics.stint_degradation_curve.degradation_per_lap_s"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve"
+    ],
+    "expected_columns": [
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Saudi GP analysis: degradation rates aligned closely with rear-wing area.",
-    "question": "Compare medium-compound deg curves between McLaren and Red Bull in stint 2 at Jeddah 2025 — was the gap aero-driven?"
+    "question": "Compare medium-compound deg curves between McLaren and Red Bull in stint 2 at Jeddah 2025 \u2014 was the gap aero-driven?"
   },
   {
     "id": 2025,
@@ -70,7 +90,10 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve", "analytics.tyre_warmup"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve",
+      "analytics.tyre_warmup"
+    ],
     "expected_columns": [
       "analytics.stint_degradation_curve.degradation_per_lap_s",
       "analytics.tyre_warmup.warmup_laps_to_target"
@@ -86,10 +109,14 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve"],
-    "expected_columns": ["analytics.stint_degradation_curve.degradation_per_lap_s"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve"
+    ],
+    "expected_columns": [
+      "analytics.stint_degradation_curve.degradation_per_lap_s"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "Coffee Corner Motorsport Qatar 2025 tyre piece: hard becomes faster than medium from lap 24.",
     "question": "How did medium-vs-hard crossover lap differ between Verstappen and Piastri at Qatar 2025?"
   },
@@ -99,7 +126,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve", "analytics.tyre_warmup"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve",
+      "analytics.tyre_warmup"
+    ],
     "expected_columns": [
       "analytics.stint_degradation_curve.degradation_per_lap_s",
       "analytics.tyre_warmup.warmup_laps_to_target"
@@ -115,13 +145,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve", "analytics.fuel_corrected_pace"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve",
+      "analytics.fuel_corrected_pace"
+    ],
     "expected_columns": [
       "analytics.stint_degradation_curve.degradation_per_lap_s",
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "f1technical Monza graining analysis + first-3 vs last-3 lap deg comparison framing.",
     "question": "At Monza 2025, where front-axle graining on the C4 medium was the dominant deg mode, did McLaren's higher-graining stint-1 mediums show a sharper cliff than Ferrari's, after fuel-correcting first 3 vs last 3 laps of each stint?"
   },
@@ -131,7 +164,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.stint_degradation_curve", "analytics.tyre_warmup"],
+    "expected_tables": [
+      "analytics.stint_degradation_curve",
+      "analytics.tyre_warmup"
+    ],
     "expected_columns": [
       "analytics.stint_degradation_curve.degradation_per_lap_s",
       "analytics.tyre_warmup.warmup_laps_to_target"
@@ -139,6 +175,6 @@
     "expected_grade_floor": "B",
     "floor_active_after_slice": "21-tyre-warmup-curves",
     "author_note": "f1technical low-deg analysis + Autosport Strategy Corner piece on 2025 deg patterns.",
-    "question": "Across the first 3 laps (warmup) and final 3 laps (cliff) of every medium stint at Suzuka 2025 — where 2025 saw 'virtually no drop in lap time on hard and medium' — quantify whether McLaren and Red Bull are exploiting different ends of the stint."
+    "question": "Across the first 3 laps (warmup) and final 3 laps (cliff) of every medium stint at Suzuka 2025 \u2014 where 2025 saw 'virtually no drop in lap time on hard and medium' \u2014 quantify whether McLaren and Red Bull are exploiting different ends of the stint."
   }
 ]

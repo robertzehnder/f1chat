@@ -5,8 +5,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary"],
-    "expected_columns": ["core.stint_summary.stint_length_laps"],
+    "expected_tables": [
+      "core.stint_summary"
+    ],
+    "expected_columns": [
+      "core.stint_summary.stint_length_laps"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": null,
     "author_note": "RaceFans Hungary 2025 report: Norris ran a long opening stint as part of his one-stop switch.",
@@ -18,8 +22,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary"],
-    "expected_columns": ["core.stint_summary.compound_name"],
+    "expected_tables": [
+      "core.stint_summary"
+    ],
+    "expected_columns": [
+      "core.stint_summary.compound_name"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": null,
     "author_note": "Motorcyclesports.net Singapore 2025: Red Bull's solo soft tyre gamble vs the field on mediums.",
@@ -31,7 +39,9 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary"],
+    "expected_tables": [
+      "core.stint_summary"
+    ],
     "expected_columns": [
       "core.stint_summary.lap_end",
       "core.stint_summary.stint_number"
@@ -47,7 +57,10 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary", "core.strategy_summary"],
+    "expected_tables": [
+      "core.stint_summary",
+      "core.strategy_summary"
+    ],
     "expected_columns": [
       "core.stint_summary.compound_name",
       "core.stint_summary.driver_number"
@@ -63,7 +76,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary"],
+    "expected_tables": [
+      "core.stint_summary"
+    ],
     "expected_columns": [
       "core.stint_summary.stint_length_laps",
       "core.stint_summary.compound_name"
@@ -79,7 +94,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary"],
+    "expected_tables": [
+      "core.stint_summary"
+    ],
     "expected_columns": [
       "core.stint_summary.stint_length_laps",
       "core.stint_summary.compound_name"
@@ -95,7 +112,10 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary", "analytics.tyre_warmup"],
+    "expected_tables": [
+      "core.stint_summary",
+      "analytics.tyre_warmup"
+    ],
     "expected_columns": [
       "core.stint_summary.stint_length_laps",
       "analytics.tyre_warmup.warmup_laps_to_target"
@@ -111,13 +131,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary", "analytics.stint_degradation_curve"],
+    "expected_tables": [
+      "core.stint_summary",
+      "analytics.stint_degradation_curve"
+    ],
     "expected_columns": [
       "core.stint_summary.stint_length_laps",
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Suzuka race analysis: very low track deg meant key disadvantage to McLaren wasn't exposed.",
     "question": "Across Suzuka 2025, did Verstappen's longest stint outlast either McLaren's longest stint, and did the deg curve flatten because of low track deg?"
   },
@@ -127,13 +150,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary", "analytics.stint_degradation_curve"],
+    "expected_tables": [
+      "core.stint_summary",
+      "analytics.stint_degradation_curve"
+    ],
     "expected_columns": [
       "core.stint_summary.stint_length_laps",
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "Motorsport Week + RaceFans Hungary recap: Piastri's tyre offset wasn't enough to clear Norris despite late-race charge.",
     "question": "How did the closing-stint hard-tyre pace differ between the one-stoppers (Norris, Leclerc) and two-stoppers (Piastri) in the final 15 laps at Hungary 2025?"
   },
@@ -143,13 +169,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["core.stint_summary", "analytics.stint_degradation_curve"],
+    "expected_tables": [
+      "core.stint_summary",
+      "analytics.stint_degradation_curve"
+    ],
     "expected_columns": [
       "core.stint_summary.stint_length_laps",
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-stint-degradation-curve",
+    "floor_active_after_slice": null,
     "author_note": "Singapore strategy briefing + Verstappen post-race: 38-lap soft stint then mediums fell off.",
     "question": "Did Red Bull's choice to start Verstappen on softs at Singapore 2025 force a longer-than-planned opening stint, and how did that ripple into his second-stint medium degradation?"
   }

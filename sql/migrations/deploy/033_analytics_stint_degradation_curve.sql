@@ -36,7 +36,7 @@ WITH per_lap AS (
     le.lap_number,
     le.lap_duration,
     le.fuel_adj_lap_time
-  FROM core.laps_enriched_mat le
+  FROM core.laps_enriched le
   WHERE le.is_valid = TRUE
     AND le.stint_number IS NOT NULL
     AND le.lap_duration IS NOT NULL
