@@ -699,6 +699,12 @@ function buildLookupAliasCandidates(normalizedText: string): string[] {
   return Array.from(candidates).slice(0, 120);
 }
 
+function hasGrandPrixVenueAlias(lookupAliasCandidates: string[]): boolean {
+  return lookupAliasCandidates.some((alias) =>
+    /\b[a-z]+(?:\s+[a-z]+){0,2}\s+grand\s+prix\b/i.test(alias)
+  );
+}
+
 function shouldAllowFutureOrPlaceholderSessions(normalizedText: string, extractedYear?: number): boolean {
   if (
     includesAnyPhrase(normalizedText, [
@@ -1628,6 +1634,7 @@ export async function buildChatRuntime(input: {
   const hasStrongVenueYearAnchor =
     Boolean(extractedYear) &&
     (venueHints.length > 0 ||
+      hasGrandPrixVenueAlias(lookupAliasCandidates) ||
       includesAnyPhrase(normalizedMessage, [
         "abu dhabi 2025 qualifying session",
         "abu dhabi 2025 weekend",
