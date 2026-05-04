@@ -75,6 +75,7 @@ const POSITIVE_FIXTURES = [
   "Did Mercedes need more warmup laps on the hard at Silverstone 2025 vs McLaren in stint 1?",
   "What was the closing-stint hard-tyre pace at Hungary 2025?",
   "How many pit stops did Verstappen make at the Monaco 2025 race?",
+  "How many pit stops did Lando Norris make in the 2025 Monaco Grand Prix?",
   "What was the fastest lap of the 2025 Italian Grand Prix race?"
 ];
 
@@ -83,7 +84,8 @@ const NEGATIVE_FIXTURES_SESSION_TYPE = [
   "Compare Q3 sector dominance at Silverstone 2025 between Verstappen and Norris.",
   "Show me Verstappen's FP2 long-run pace at Spa 2025.",
   "How many sprint races has Norris won in 2025?",
-  "What was Hamilton's quickest qualifying lap at Monza 2025?"
+  "What was Hamilton's quickest qualifying lap at Monza 2025?",
+  "What was Norris's qualifying result at the 2025 Monaco Grand Prix?"
 ];
 
 const NEGATIVE_FIXTURES_NO_VENUE_YEAR = [

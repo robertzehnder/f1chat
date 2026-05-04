@@ -458,6 +458,7 @@ function selectComparisonDriverNumbers(driverCandidates: DriverCandidate[]): num
 // cover positive race-shaped + negative session-type-sensitive +
 // the existing 50q rubric clarification ids 8/9/15/17.
 export const RACE_SHAPED_MARKERS: ReadonlyArray<string> = [
+  "grand prix",
   "the race",
   "during the race",
   "of the race",
