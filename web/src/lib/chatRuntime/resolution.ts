@@ -45,6 +45,17 @@ function isSeasonCalendarMetadataQuestion(normalizedText: string): boolean {
   );
 }
 
+function isSeasonWideCrossSessionAggregateQuestion(normalizedText: string): boolean {
+  const mentionsSeasonScope =
+    /\b20\d{2}\b/.test(normalizedText) &&
+    (normalizedText.includes("across all") || normalizedText.includes("all ")) &&
+    (normalizedText.includes("race weekends") || normalizedText.includes("race weekend"));
+  const mentionsCrossSessionMarkers =
+    normalizedText.includes("fp1") &&
+    (normalizedText.includes("qualifying") || normalizedText.includes("qualy"));
+  return mentionsSeasonScope && mentionsCrossSessionMarkers;
+}
+
 export function isWarehouseWideQuestion(normalizedText: string): boolean {
   return (
     normalizedText.includes("in the warehouse") ||
@@ -62,6 +73,9 @@ export function requiresResolvedSession(questionType: QuestionType, normalizedTe
     return false;
   }
   if (isSeasonCalendarMetadataQuestion(normalizedText)) {
+    return false;
+  }
+  if (isSeasonWideCrossSessionAggregateQuestion(normalizedText)) {
     return false;
   }
   if (questionType === "entity_lookup" || questionType === "data_health_question") {

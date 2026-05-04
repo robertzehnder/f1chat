@@ -40,6 +40,9 @@ const FIXTURES = [
   "Which sprint weekends are on the 2025 calendar?"
 ];
 
+const CROSS_SESSION_AGGREGATE_FIXTURE =
+  "Across all 2025 race weekends, which venue had the largest gap between FP1 and qualifying conditions (track temp delta) and what sessions were affected?";
+
 test("Phase 19 q1901: 2025 sprint-weekend calendar questions classify as metadata lookup", async () => {
   await withChatRuntimeModules(async ({ classification }) => {
     for (const question of FIXTURES) {
@@ -59,5 +62,15 @@ test("Phase 19 q1901: 2025 sprint-weekend calendar questions bypass session clar
         `expected direct-answer path for: "${question}"`
       );
     }
+  });
+});
+
+test("Phase 19 q1906: 2025 cross-session aggregate questions bypass session clarification", async () => {
+  await withChatRuntimeModules(async ({ classification, resolution }) => {
+    const questionType = classification.classifyQuestion(CROSS_SESSION_AGGREGATE_FIXTURE);
+    assert.equal(
+      resolution.requiresResolvedSession(questionType, CROSS_SESSION_AGGREGATE_FIXTURE.toLowerCase()),
+      false
+    );
   });
 });
