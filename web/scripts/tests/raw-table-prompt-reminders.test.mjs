@@ -101,6 +101,32 @@ async function withModule(fn) {
   }
 }
 
+async function loadClassifier() {
+  const dir = await mkdtemp(path.join(__dirname, ".tmp-classification-"));
+  const src = await readFile(path.resolve(webRoot, "src/lib/chatRuntime/classification.ts"), "utf8");
+  const transpiled = ts.transpileModule(src, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true
+    }
+  });
+  await writeFile(path.join(dir, "classification.mjs"), transpiled.outputText, "utf8");
+  const mod = await import(path.join(dir, "classification.mjs"));
+  return { mod, dir };
+}
+
+async function withClassifier(fn) {
+  let dir;
+  try {
+    const loaded = await loadClassifier();
+    dir = loaded.dir;
+    await fn(loaded.mod);
+  } finally {
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
+}
+
 test("Fix 4: raw.car_data column list is in the assembled prompt", async () => {
   await withModule(async (mod) => {
     const prompt = await mod.buildSystemPrompt();
@@ -148,6 +174,23 @@ test("Phase 19 q2180: prompt routes missing weather coverage questions to sessio
     assert.match(prompt, /missing weather coverage, use core\.session_completeness\.weather_rows/);
     assert.match(prompt, /return exactly one summary row even when no sessions match/);
     assert.match(prompt, /yields 0 and 'none' instead of an empty result set/);
+  });
+});
+
+test("Phase 19 q2181: placeholder/partially loaded session phrasing classifies as a data-health question", async () => {
+  await withClassifier(async (mod) => {
+    assert.equal(
+      mod.classifyQuestion("List 2025 sessions that look like placeholders or partially loaded."),
+      "data_health_question"
+    );
+  });
+});
+
+test("Phase 19 q2181: prompt routes placeholder/partially loaded session questions to session_completeness coverage_score", async () => {
+  await withModule(async (mod) => {
+    const prompt = await mod.buildSystemPrompt();
+    assert.match(prompt, /placeholder\/partially loaded session questions/);
+    assert.match(prompt, /core\.session_completeness\.coverage_score/);
   });
 });
 

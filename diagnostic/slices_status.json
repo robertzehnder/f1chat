@@ -317,8 +317,8 @@
     },
     {
       "slice_id": "iter-19-q2180",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-04T03:05:06.996537+00:00",
       "depends_on": []
     },
     {

@@ -18,7 +18,11 @@ export function classifyQuestion(message: string): QuestionType {
     lower.includes("missing telemetry") ||
     lower.includes("completeness") ||
     lower.includes("coverage") ||
-    lower.includes("data health")
+    lower.includes("data health") ||
+    ((lower.includes("session") || lower.includes("sessions")) &&
+      (lower.includes("placeholder") ||
+        lower.includes("partially loaded") ||
+        lower.includes("partial load")))
   ) {
     return "data_health_question";
   }
