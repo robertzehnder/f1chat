@@ -12,7 +12,7 @@
       "analytics.straight_line_dominance.st_speed_kph"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Formula1.com standard speed-trap leaderboard graphic post-Monza qualifying.",
     "question": "What was Verstappen's top speed through the speed trap at Monza 2025 qualifying?"
   },
@@ -29,7 +29,7 @@
       "analytics.straight_line_dominance.i1_speed_kph"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Autosport Baku post-race speed-trap recap (Baku is the canonical top-speed venue).",
     "question": "Who recorded the highest i1 speed during the Baku 2025 race?"
   },
@@ -46,7 +46,7 @@
       "analytics.straight_line_dominance.st_speed_kph"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "PlanetF1 Vegas straight-line recap pieces averaging speed-trap across sessions.",
     "question": "What was Ferrari's average speed-trap reading across the Las Vegas 2025 weekend?"
   },
@@ -83,7 +83,7 @@
       "analytics.straight_line_dominance.session_key"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Motorsport.com qualifying-trim vs race-trim speed-trap comparisons after Baku.",
     "question": "Did Mercedes's straight-line speed advantage at Baku 2025 hold up between qualifying and the race?"
   },
@@ -101,7 +101,7 @@
       "analytics.straight_line_dominance.st_speed_kph"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Auto Motor und Sport Jeddah analysis distinguishing exit-driven i1 vs terminal trap.",
     "question": "Compare Norris and Verstappen on i1 vs speed-trap at Jeddah 2025 \u2014 was McLaren faster on partial straights or only at the trap?"
   },
@@ -119,7 +119,7 @@
       "analytics.straight_line_dominance.st_speed_kph"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Sky Sports F1 narrative on Sainz's Williams move tracked across the 2025 season.",
     "question": "How did Sainz's Williams straight-line speed at Monza 2025 compare to the Ferrari he left behind, on i1 and speed-trap?"
   },
@@ -158,7 +158,7 @@
       "analytics.straight_line_dominance.i2_speed_kph"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Motorsport.com Italian GP setup-trim analyses on Ferrari's low-downforce package.",
     "question": "Compare Ferrari's qualifying-trim vs race-trim straight-line speed at Monza 2025 across all three intermediates \u2014 did the trim change cost more on i1 or i2?"
   },
@@ -176,7 +176,7 @@
       "analytics.straight_line_dominance.session_key"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-straight-line-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Edd Straw / The Race season-arc analyses of Red Bull's power-vs-drag tradeoffs across European low-downforce triple.",
     "question": "Across Baku, Monza, and Spa 2025, was Red Bull's straight-line deficit to McLaren consistent, or venue-specific to low-downforce circuits?"
   }

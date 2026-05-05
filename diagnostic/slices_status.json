@@ -33,14 +33,14 @@
     },
     {
       "slice_id": "20-track-segments-auto",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T01:21:28Z",
       "depends_on": []
     },
     {
       "slice_id": "20-track-segments-corners",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T01:21:31Z",
       "depends_on": [
         "20-track-segments-auto"
       ]
@@ -119,8 +119,8 @@
     },
     {
       "slice_id": "21-straight-line-dominance",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T01:25:20Z",
       "depends_on": [
         "20-track-segments-auto"
       ]
@@ -197,8 +197,8 @@
     },
     {
       "slice_id": "21-driver-performance-7axis",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T01:30:22Z",
       "depends_on": [
         "21-stint-degradation-curve",
         "21-pit-loss-per-circuit",
@@ -421,6 +421,12 @@
       "slice_id": "iter-19-q2121",
       "status": "pending",
       "merged_at": null,
+      "depends_on": []
+    },
+    {
+      "slice_id": "21-telemetry-coverage-per-driver",
+      "status": "merged",
+      "merged_at": "2026-05-05T01:34:48Z",
       "depends_on": []
     }
   ]

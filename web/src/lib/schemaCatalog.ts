@@ -59,7 +59,13 @@ const CORE_CONTRACTS: ReadonlyArray<{ schema: string; table: string }> = [
   // Phase 25.2 slice 21-overtake-events.
   { schema: "analytics", table: "overtake_events" },
   // Phase 25.2 slice 21-undercut-overcut-history.
-  { schema: "analytics", table: "undercut_overcut_history" }
+  { schema: "analytics", table: "undercut_overcut_history" },
+  // Phase 25.2 slice 21-straight-line-dominance.
+  { schema: "analytics", table: "straight_line_dominance" },
+  // Phase 25.2 slice 21-driver-performance-7axis (Tier 4 aggregator).
+  { schema: "analytics", table: "driver_performance_score" },
+  // Phase 25 follow-up: per-driver telemetry coverage (q2182 lift).
+  { schema: "analytics", table: "telemetry_coverage_per_driver" }
 ];
 
 type CatalogRow = {
