@@ -5,13 +5,15 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.minisector_dominance"],
+    "expected_tables": [
+      "analytics.minisector_dominance"
+    ],
     "expected_columns": [
       "analytics.minisector_dominance.minisector_index",
       "analytics.minisector_dominance.dominant_count"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Inspired by The Race minisector qualifying breakdowns of home-race poles (Leclerc/Monaco style).",
     "question": "Who had the most mini-sector dominance at Monaco 2025 qualifying between Leclerc and Verstappen?"
   },
@@ -21,7 +23,9 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.sector_dominance"],
+    "expected_tables": [
+      "analytics.sector_dominance"
+    ],
     "expected_columns": [
       "analytics.sector_dominance.sector_index",
       "analytics.sector_dominance.dominant_count"
@@ -37,10 +41,14 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.minisector_dominance"],
-    "expected_columns": ["analytics.minisector_dominance.dominant_count"],
+    "expected_tables": [
+      "analytics.minisector_dominance"
+    ],
+    "expected_columns": [
+      "analytics.minisector_dominance.dominant_count"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "PlanetF1 Piastri-focused qualifying recap: counts purple mini-sectors on a pole lap.",
     "question": "How many mini-sectors did Piastri lead in his pole lap at Zandvoort 2025?"
   },
@@ -50,15 +58,18 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.minisector_dominance", "analytics.sector_dominance"],
+    "expected_tables": [
+      "analytics.minisector_dominance",
+      "analytics.sector_dominance"
+    ],
     "expected_columns": [
       "analytics.minisector_dominance.dominant_count",
       "analytics.sector_dominance.sector_index"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "The Race / Edd Straw Spa qualifying analyses framing S2 as the dominant sector.",
-    "question": "Compare Verstappen vs Russell mini-sector dominance at Spa 2025 qualifying — was Verstappen's advantage concentrated in S2 or distributed?"
+    "question": "Compare Verstappen vs Russell mini-sector dominance at Spa 2025 qualifying \u2014 was Verstappen's advantage concentrated in S2 or distributed?"
   },
   {
     "id": 1704,
@@ -66,7 +77,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.sector_dominance"],
+    "expected_tables": [
+      "analytics.sector_dominance"
+    ],
     "expected_columns": [
       "analytics.sector_dominance.sector_index",
       "analytics.sector_dominance.dominant_count"
@@ -74,7 +87,7 @@
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-sector-dominance",
     "author_note": "Motorsport.com Imola intra-team Ferrari telemetry comparison (Hamilton vs Leclerc).",
-    "question": "Where was Hamilton losing time to Leclerc on his fastest Q3 lap at Imola 2025 — full sector splits?"
+    "question": "Where was Hamilton losing time to Leclerc on his fastest Q3 lap at Imola 2025 \u2014 full sector splits?"
   },
   {
     "id": 1705,
@@ -82,7 +95,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.sector_dominance"],
+    "expected_tables": [
+      "analytics.sector_dominance"
+    ],
     "expected_columns": [
       "analytics.sector_dominance.sector_index",
       "analytics.sector_dominance.dominant_count"
@@ -98,12 +113,16 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.minisector_dominance"],
-    "expected_columns": ["analytics.minisector_dominance.dominant_count"],
+    "expected_tables": [
+      "analytics.minisector_dominance"
+    ],
+    "expected_columns": [
+      "analytics.minisector_dominance.dominant_count"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "Sky F1 SkyPad Maggotts-Becketts complex breakdowns at Silverstone.",
-    "question": "Which corners did Verstappen gain on Norris through Sector 2 at Silverstone 2025 — Maggotts, Becketts, or Chapel?"
+    "question": "Which corners did Verstappen gain on Norris through Sector 2 at Silverstone 2025 \u2014 Maggotts, Becketts, or Chapel?"
   },
   {
     "id": 1707,
@@ -111,12 +130,16 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.minisector_dominance"],
-    "expected_columns": ["analytics.minisector_dominance.dominant_count"],
+    "expected_tables": [
+      "analytics.minisector_dominance"
+    ],
+    "expected_columns": [
+      "analytics.minisector_dominance.dominant_count"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "RaceFans qualifying session-over-session pace comparison format (Vegas).",
-    "question": "Compare Russell's Q2 vs Q3 mini-sector dominance at Las Vegas 2025 — did he sustain his S1 advantage into Q3?"
+    "question": "Compare Russell's Q2 vs Q3 mini-sector dominance at Las Vegas 2025 \u2014 did he sustain his S1 advantage into Q3?"
   },
   {
     "id": 1708,
@@ -133,9 +156,9 @@
       "analytics.sector_dominance.dominant_count"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "The Race / Mark Hughes 'sustained pace vs one-lap luck' Monza qualifying autopsy framing. Codex audit fix: defers to latest dep among expected_tables (minisector_dominance ships after sector_dominance), not 21-track-dominance-gps which is unused here.",
-    "question": "Across full sectors and mini-sectors at Monza 2025 qualifying, was Leclerc's pole advantage over Piastri sustained or single-corner — and which mini-sector flipped between Q2 and Q3?"
+    "question": "Across full sectors and mini-sectors at Monza 2025 qualifying, was Leclerc's pole advantage over Piastri sustained or single-corner \u2014 and which mini-sector flipped between Q2 and Q3?"
   },
   {
     "id": 1709,
@@ -164,12 +187,16 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.minisector_dominance"],
-    "expected_columns": ["analytics.minisector_dominance.dominant_count"],
+    "expected_tables": [
+      "analytics.minisector_dominance"
+    ],
+    "expected_columns": [
+      "analytics.minisector_dominance.dominant_count"
+    ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "RacingNews365 / Qatar Q-segment evolution pieces tracking pace shift across Q1/Q2/Q3.",
-    "question": "Compare mini-sector dominance maps for Verstappen vs Piastri across Q1, Q2, and Q3 at Qatar 2025 — did Verstappen's high-speed advantage strengthen as fuel dropped?"
+    "question": "Compare mini-sector dominance maps for Verstappen vs Piastri across Q1, Q2, and Q3 at Qatar 2025 \u2014 did Verstappen's high-speed advantage strengthen as fuel dropped?"
   },
   {
     "id": 1711,
@@ -186,7 +213,7 @@
       "analytics.minisector_dominance.dominant_count"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-minisector-dominance",
+    "floor_active_after_slice": null,
     "author_note": "The Race 'qualifying pace vs race pace' carry-over analyses, common after Spa weekends. Codex audit fix: defers to latest dep among expected_tables, not 21-track-dominance-gps (unused).",
     "question": "Across Spa 2025 qualifying and the race opening stint, did Hamilton's Sector 2 dominance over Leclerc carry over from one-lap pace to race pace, or was it qualifying-only?"
   }

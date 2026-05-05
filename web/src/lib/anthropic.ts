@@ -358,6 +358,88 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
       "  recommended shape: SELECT session_key, driver_number, driver_name, missing_pct_vs_median FROM analytics.telemetry_coverage_per_driver WHERE missing_more_than_5pct = TRUE [AND session_key IN ...]",
       "  Use the missing_more_than_5pct / 10pct booleans directly when the question's threshold matches; otherwise compute from missing_pct_vs_median."
     ].join("\n")
+  },
+  {
+    // Phase 26.2b slice 21-minisector-dominance.
+    triggers: [
+      "mini-sector", "mini sector", "minisector", "mini-sectors",
+      "sector dominance", "lead the most sectors",
+      "lead in his pole lap", "led in his pole lap",
+      "dominant_count"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 26 slice 21-minisector-dominance):",
+      "  primary table: analytics.minisector_dominance",
+      "  per-(session, driver, minisector_index) dominance count.",
+      "  columns: minisector_index, dominant_count, valid_lap_count, avg_speed_kph",
+      "  recommended: SELECT driver_number, driver_name, SUM(dominant_count) AS total_minisectors_led FROM analytics.minisector_dominance WHERE session_key=:s GROUP BY driver_number, driver_name ORDER BY total_minisectors_led DESC",
+      "  for per-driver per-minisector breakdown: filter session_key + driver_number; rows are already pre-aggregated."
+    ].join("\n")
+  },
+  {
+    // Phase 26.2c slice 21-traction-analysis.
+    triggers: [
+      "exit speed out of",
+      "exit traction",
+      "traction-zone",
+      "traction zone",
+      "throttle application",
+      "exit throttle"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 26 slice 21-traction-analysis):",
+      "  primary table: analytics.traction_analysis",
+      "  per-(session, driver, corner) corner-exit traction metrics.",
+      "  columns: exit_speed_kph, avg_exit_throttle_pct, exit_throttle_application_pct, valid_lap_count",
+      "  exit_throttle_application_pct = % of exit-zone samples on throttle > 90.",
+      "  recommended: SELECT corner_label, AVG(exit_speed_kph), AVG(exit_throttle_application_pct) FROM analytics.traction_analysis WHERE session_key=:s AND driver_number IN (...) AND corner_label ILIKE :corner GROUP BY corner_label"
+    ].join("\n")
+  },
+  {
+    // Phase 26.2d slice 21-braking-performance.
+    triggers: [
+      "brake-zone speed drop",
+      "brake zone",
+      "threshold-braking",
+      "threshold braking",
+      "braking deceleration",
+      "brake pressure",
+      "lock up under braking"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 26 slice 21-braking-performance):",
+      "  primary table: analytics.braking_performance",
+      "  per-(session, driver, corner) brake-zone metrics.",
+      "  columns: approach_speed_kph, min_brake_zone_speed_kph, brake_zone_speed_drop_kph, peak_brake_pressure_pct, avg_brake_pressure_pct",
+      "  brake_zone_speed_drop_kph = approach_speed - min-brake-zone-speed.",
+      "  recommended: SELECT corner_label, AVG(brake_zone_speed_drop_kph), AVG(peak_brake_pressure_pct) FROM analytics.braking_performance WHERE session_key=:s AND driver_number IN (...) AND corner_label ILIKE :corner GROUP BY corner_label"
+    ].join("\n")
+  },
+  {
+    // Phase 26.2a slice 21-corner-analysis.
+    triggers: [
+      "apex speed", "apex-speed", "minimum speed at turn", "min speed at turn",
+      "entry speed", "exit speed", "mid-corner speed",
+      "through turn", "at turn ", "at corner ",
+      "eau rouge", "raidillon", "pouhon", "stavelot", "copse",
+      "tarzan", "rettifilo", "ste devote", "casino", "hairpin",
+      "degner", "spoon", "130r", "parabolica", "maggotts", "becketts",
+      "chapel"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 26 slice 21-corner-analysis):",
+      "  primary table: analytics.corner_analysis",
+      "  per-(session, driver, lap, corner_id) entry / apex / exit speeds.",
+      "  columns: corner_label, corner_number, entry_speed_kph, apex_min_speed_kph, exit_speed_kph, sample_count",
+      "  corner_label EXAMPLES (use these as-is; do NOT abbreviate / paraphrase):",
+      "    Monaco:      'Turn 1 (Sainte Devote)', 'Turn 4 (Massenet)', 'Turn 6 (Casino)', 'Turn 10 (Loews / Hairpin)', 'Turn 13 (Tabac)', 'Turn 18 (Rascasse)'",
+      "    Spa:         'Eau Rouge', 'Raidillon', 'Pouhon', 'Stavelot'",
+      "    Silverstone: 'Turn 1 (Abbey)', 'Turn 9 (Copse)', 'Turn 10 (Maggotts)', 'Turn 11 (Becketts)', 'Turn 12 (Chapel)', 'Turn 18 (Club)'",
+      "    Suzuka:      'Turn 1', 'Turn 2', 'Turn 7 (Esses)', 'Turn 8 (Degner 1)', 'Turn 9 (Degner 2)', '130R'",
+      "    Monza:       'Turn 1 (Rettifilo)', 'Turn 6 (Lesmo 1)', 'Turn 7 (Lesmo 2)', 'Turn 8 (Ascari)', 'Turn 11 (Parabolica)'",
+      "  to match a corner robustly, use ILIKE on the canonical name — e.g. corner_label ILIKE '%Devote%' matches Sainte Devote; corner_label ILIKE '%Hairpin%' matches Loews / Hairpin; corner_label ILIKE '%Casino%' matches Casino.",
+      "  recommended: SELECT corner_label, AVG(apex_min_speed_kph), AVG(entry_speed_kph), AVG(exit_speed_kph) FROM analytics.corner_analysis WHERE session_key=:s AND driver_number IN (...) AND corner_label ILIKE ANY(ARRAY['%Devote%','%Casino%','%Hairpin%']) GROUP BY corner_label, corner_number"
+    ].join("\n")
   }
 ];
 

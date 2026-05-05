@@ -61,8 +61,8 @@
     },
     {
       "slice_id": "21-minisector-dominance",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T14:23:50Z",
       "depends_on": [
         "20-track-segments-auto"
       ]
@@ -127,16 +127,16 @@
     },
     {
       "slice_id": "21-corner-analysis",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T13:58:48Z",
       "depends_on": [
         "20-track-segments-corners"
       ]
     },
     {
       "slice_id": "21-braking-performance",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T14:33:14Z",
       "depends_on": [
         "21-corner-analysis",
         "20-track-segments-corners"
@@ -144,8 +144,8 @@
     },
     {
       "slice_id": "21-traction-analysis",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T14:33:14Z",
       "depends_on": [
         "21-corner-analysis",
         "20-track-segments-corners"
@@ -427,6 +427,26 @@
       "slice_id": "21-telemetry-coverage-per-driver",
       "status": "merged",
       "merged_at": "2026-05-05T01:34:48Z",
+      "depends_on": []
+    },
+    {
+      "slice_id": "26.1-sample-lap-position",
+      "status": "merged",
+      "merged_at": "2026-05-05T13:51:13Z",
+      "depends_on": []
+    },
+    {
+      "slice_id": "26.2a-corner-analysis-alias-fix",
+      "status": "merged",
+      "merged_at": "2026-05-05T14:14:45Z",
+      "depends_on": [
+        "21-corner-analysis"
+      ]
+    },
+    {
+      "slice_id": "21-traction-and-braking",
+      "status": "merged",
+      "merged_at": "2026-05-05T14:33:04Z",
       "depends_on": []
     }
   ]

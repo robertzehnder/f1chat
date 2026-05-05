@@ -65,7 +65,15 @@ const CORE_CONTRACTS: ReadonlyArray<{ schema: string; table: string }> = [
   // Phase 25.2 slice 21-driver-performance-7axis (Tier 4 aggregator).
   { schema: "analytics", table: "driver_performance_score" },
   // Phase 25 follow-up: per-driver telemetry coverage (q2182 lift).
-  { schema: "analytics", table: "telemetry_coverage_per_driver" }
+  { schema: "analytics", table: "telemetry_coverage_per_driver" },
+  // Phase 26.2a slice 21-corner-analysis.
+  { schema: "analytics", table: "corner_analysis" },
+  // Phase 26.2b slice 21-minisector-dominance.
+  { schema: "analytics", table: "minisector_dominance" },
+  // Phase 26.2c slice 21-traction-analysis.
+  { schema: "analytics", table: "traction_analysis" },
+  // Phase 26.2d slice 21-braking-performance.
+  { schema: "analytics", table: "braking_performance" }
 ];
 
 type CatalogRow = {

@@ -5,10 +5,14 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.traction_analysis"],
-    "expected_columns": ["analytics.traction_analysis.exit_speed_kph"],
+    "expected_tables": [
+      "analytics.traction_analysis"
+    ],
+    "expected_columns": [
+      "analytics.traction_analysis.exit_speed_kph"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "RaceFans Suzuka super-clipping piece (Verstappen took T1/T2 at higher speed despite less downforce).",
     "question": "What was Verstappen's exit speed out of Turn 1 (Suzuka) qualifying 2025?"
   },
@@ -18,10 +22,14 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.traction_analysis"],
-    "expected_columns": ["analytics.traction_analysis.exit_throttle_application_pct"],
+    "expected_tables": [
+      "analytics.traction_analysis"
+    ],
+    "expected_columns": [
+      "analytics.traction_analysis.exit_throttle_application_pct"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "RaceFans Suzuka analysis on Piastri's acceleration dip out of Degner.",
     "question": "How early did Piastri get to full throttle out of Degner One at Suzuka 2025?"
   },
@@ -31,10 +39,14 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.traction_analysis"],
-    "expected_columns": ["analytics.traction_analysis.exit_throttle_application_pct"],
+    "expected_tables": [
+      "analytics.traction_analysis"
+    ],
+    "expected_columns": [
+      "analytics.traction_analysis.exit_throttle_application_pct"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "OverTake Hungaroring guide: T13 final corner is patience-on-power.",
     "question": "What was Norris's throttle-application percentage from apex to exit at Hungaroring Turn 13 in 2025?"
   },
@@ -44,12 +56,16 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.traction_analysis"],
-    "expected_columns": ["analytics.traction_analysis.exit_speed_kph"],
+    "expected_tables": [
+      "analytics.traction_analysis"
+    ],
+    "expected_columns": [
+      "analytics.traction_analysis.exit_speed_kph"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "RaceFans Suzuka super-clipping analysis on 130R coast pace.",
-    "question": "Compare Verstappen and Piastri exit speed through 130R at Suzuka 2025 — where did the difference open up before the chicane?"
+    "question": "Compare Verstappen and Piastri exit speed through 130R at Suzuka 2025 \u2014 where did the difference open up before the chicane?"
   },
   {
     "id": 1984,
@@ -57,13 +73,15 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.traction_analysis"],
+    "expected_tables": [
+      "analytics.traction_analysis"
+    ],
     "expected_columns": [
       "analytics.traction_analysis.exit_throttle_application_pct",
       "analytics.traction_analysis.exit_speed_kph"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "PlanetF1 Imola Ferrari upgrades analysis (T3 exit as Leclerc's loss point).",
     "question": "Did Leclerc's rear-end instability at Imola Turn 3 in 2025 cost him more on traction-out than on entry vs Piastri?"
   },
@@ -73,12 +91,16 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.traction_analysis"],
-    "expected_columns": ["analytics.traction_analysis.exit_throttle_application_pct"],
+    "expected_tables": [
+      "analytics.traction_analysis"
+    ],
+    "expected_columns": [
+      "analytics.traction_analysis.exit_throttle_application_pct"
+    ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-traction-analysis",
-    "author_note": "Formula1.com British GP coverage of Copse going flat — exit-traction phase decides the lap at Silverstone's Turn 18.",
-    "question": "Compare Russell and Hamilton throttle-on point at the final corner at Silverstone 2025 — given Copse went flat, where does the exit-traction phase actually decide the lap?"
+    "floor_active_after_slice": null,
+    "author_note": "Formula1.com British GP coverage of Copse going flat \u2014 exit-traction phase decides the lap at Silverstone's Turn 18.",
+    "question": "Compare Russell and Hamilton throttle-on point at the final corner at Silverstone 2025 \u2014 given Copse went flat, where does the exit-traction phase actually decide the lap?"
   },
   {
     "id": 1986,
@@ -86,13 +108,15 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.traction_analysis"],
+    "expected_tables": [
+      "analytics.traction_analysis"
+    ],
     "expected_columns": [
       "analytics.traction_analysis.exit_throttle_application_pct",
       "analytics.traction_analysis.exit_speed_kph"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "OverTake Hungaroring guide: T1 and T13 are tyre-sensitive on exit.",
     "question": "At Hungaroring 2025, who had cleaner traction out of Turn 1 and Turn 13 between Norris and Piastri once tyres degraded?"
   },
@@ -111,7 +135,7 @@
       "analytics.straight_line_dominance.st_speed_kph"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "RaceFans super-clipping Suzuka piece on Verstappen recovering cornering deficit through straight-line speed.",
     "question": "Across Suzuka's three heaviest traction zones (Spoon exit, 130R-out, chicane exit) at the 2025 Japanese GP, did Verstappen's lower-downforce setup recover all the cornering deficit through superior straight-line top speed vs Piastri's higher-downforce McLaren?"
   },
@@ -130,7 +154,7 @@
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "PlanetF1 Imola Ferrari weakness analysis (T3, T9 'rear-limited, unstable rear end' corners). Cross-table HIGH.",
     "question": "Across Turn 3 and Turn 9 exits at Imola 2025, quantify Leclerc's full-throttle-application delay vs Piastri across his stint to gauge whether tyre wear amplified the deficit."
   },
@@ -149,7 +173,7 @@
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traction-analysis",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Saudi long-runs piece linking degradation to wing area; cross-table fuel-corrected analysis.",
     "question": "Comparing fuel-corrected race-pace stints in Saudi 2025, did McLaren's long-run advantage over the next-best team come primarily from traction-zone exit speed, or from low-speed corner minimum speed?"
   }

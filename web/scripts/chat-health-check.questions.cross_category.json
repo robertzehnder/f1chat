@@ -128,7 +128,7 @@
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-corner-analysis",
+    "floor_active_after_slice": null,
     "author_note": "Edd Straw Italian GP rankings: Leclerc 'fourth was Ferrari's limit', straightforward two-compound stint sequence.",
     "question": "Compare Leclerc's high-speed-corner sector pace at Monza 2025 across his medium and hard stints \u2014 did the compound choice cost him more time in Lesmo/Ascari than the deg savings gained?"
   },
