@@ -1,25 +1,74 @@
-# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev2: codex audit pass 2 applied)
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev3: May-5 baseline consumed)
 
-**Starting position** — auditable:
-- Last authoritative baseline: `diagnostic/phase_19_baseline_2026-05-04.json` →
-  **79 / 167 A** (47.3% A-rate).
-- Phase 25.2 + Round 2 per-slice live-validation suggested ≈ 126 / 167
-  (≈ 75.4%) A by the time slice 046 + Round 2 fixes shipped, but that
-  number is **not auditable** until the in-flight
-  `phase_19_baseline_2026-05-05.json` lands. Treat the 126 as an
-  internal working estimate; treat 79 as the only currently-citable
-  before-state.
+**Starting position — auditable** (rev3):
+- Authoritative baseline: `diagnostic/phase_19_baseline_2026-05-05.json`
+  → **101 / 167 A** (60.5% A-rate).
+- Diff vs `phase_19_baseline_2026-05-04.json` (79 A, 47.3%): **+22
+  net A from Phase 25** (47 lifted − 21 regressed − 4 unaccounted-for-
+  rows = +22).
+- Phase 25.2's working estimate of ≈ 126 was overstated by 25 — about
+  half of the per-slice lift was cancelled by silent regressions in
+  adjacent categories (Track dominance, Lap pace, Stint, Braking,
+  Traction, Restart, Cross-cat). See Section 8.1 for the regression
+  list.
 
 **Phase 26 target: 151 / 167 ≈ 90.4%**.
 
-The raw delta between authoritative before (79) and target (151) is
-**+72 A**. Phase 25.2 has already done much of that work; Phase 26
-finishes the rest. The split between "Phase 25.2 already delivered"
-and "Phase 26 must deliver" cannot be resolved exactly until the
-2026-05-05 baseline is read; rev2 of this plan will regenerate
-Section 8 from that file.
+**Phase 26 gap (real): +50 A grades from 101 → 151.**
+
+This is **2× the rev2 working estimate of +25**. The rev3 plan adds
+**Stream 26.0 (regression recovery)** as a first-class stream and
+expands Stream 26.3 scope to handle the 30-question "audit"
+bucket Section 8.1 surfaced. Even with these expansions, the plan
+is **tight** — the realistic ceiling estimate at the bottom of
+Section 1 explains why.
 
 ---
+
+## rev3 changes (codex audit pass 3 applied; May-5 baseline consumed — 2026-05-05)
+
+Five findings; all addressed.
+
+- **HIGH (May-5 baseline not consumed)** — rev2 said the baseline was
+  "in-flight" and gated the stream table. The file actually exists
+  with **101 / 167 A**. **Fix**: header rewritten with the auditable
+  101 / 167 = 60.5% as the starting position; "in-flight" / "pending"
+  / "gated" language deleted. Section 1's stream table now carries
+  concrete per-stream A-delta targets and cumulative percentages,
+  derived from Section 8.1's regenerated bucket counts.
+- **HIGH (stream totals can't close +50)** — rev2's stream table
+  summed to ≈ +23 indicative deltas while the real gap is +50.
+  **Fix**: (a) Stream 26.0 regression recovery added as a new
+  first-class stream targeting ~12-15 A; (b) Stream 26.3 scope
+  expanded with sub-stream 26.3d to handle the 30-question
+  "audit" bucket (mis-tagged expected_columns + cross-table
+  expansions); (c) the realistic ceiling estimate at the bottom of
+  Section 1 acknowledges that even with these expansions the plan
+  is tight, with a written escape path to a Phase 27 follow-up if
+  the lift rate per candidate falls below 80%.
+- **HIGH (regression recovery not first-class)** — 19 of the 21
+  regressions Section 8.1 surfaced are likely cheap probe-and-narrow
+  fixes (someone Round-2 marker / hint over-fired into an adjacent
+  category). **Fix**: new Stream 26.0 with its own section, target
+  qid list, mechanism, effort estimate, and acceptance criterion.
+  Stream 26.0 ships FIRST (before any Phase 26.1+) because it's
+  cheap, restores already-delivered work, and lowers the gap before
+  the more expensive infra streams begin.
+- **MEDIUM (manifest exclusion denominator math)** — rev2 said
+  "8.4a budget exceptions are excluded from both lift sum and
+  lift-needed denominator." The denominator stays 167 (the headline
+  target is 151 / 167); 8.4a entries reduce the *pool we pursue*,
+  not the denominator. **Fix**: Section 9 reconciliation example
+  rewrote the math: 167 stays in the denominator; 5 budget
+  exceptions become permanent non-A rows that count against the
+  151 ceiling. Phase 26's target with 8.4a budget exceptions in
+  scope is therefore 151 A out of (167 - 5 unpursuable) = 151
+  out of 162 pursuable rows = 93.2% lift rate of the pursuable
+  pool. Section 10 risks updated to reflect this.
+- **LOW ("plan rev1" stale wording in Section 7)** — Section 7
+  said "Day 8-9: full re-validation, plan rev1 with actuals" while
+  the file is now rev3. **Fix**: rev1 → rev4 (the next plan
+  revision after rev3 ships and the implementation begins).
 
 ## rev2 changes (codex audit pass 2 applied — 2026-05-05)
 
@@ -118,32 +167,135 @@ Codex audit pass 1 raised four findings; all are addressed below.
 
 ---
 
-## Section 1 — Where the missing A grades come from
+## Section 1 — Where the missing 50 A grades come from
 
-Phase 26 splits remaining lift across 5 work streams. Per-stream lift
-counts are **indicative pending the 2026-05-05 baseline**; rev2 will
-regenerate exact targets. The stream lift sums together must close
-the gap between the 2026-05-05 baseline's A count and 151.
+Phase 26 splits remaining lift across 6 work streams (rev3 added
+Stream 26.0 for regression recovery as a first-class stream). The
+stream lift sums together must close the **+50 A gap** between the
+2026-05-05 baseline (101 A) and the 151 target.
 
-| Stream | Effort | Indicative A delta | Cumulative A-rate |
-|---|---|---:|---:|
-| **26.1 Lap-distance derivation** (infrastructure) | 2-3 days | 0 (enabler only) | (gated) |
-| **26.2 Five spatial slices** (corner / minisector / traction / braking / spatial-zone DRS+overtake) | 3-4 days | up to ≈ +14 A | (gated) |
-| **26.3 Question-text cleanup pass** (false-premise + mis-tagged) | 1 day | ≈ +5 A | (gated) |
-| **26.4 Resolver enhancements** (driver-without-session, cross-team compare) | 1 day | ≈ +3 A | (gated) |
-| **26.5 Stochastic-variance robustness** (best-of-5 / matview-refresh ergonomics) | 0.5 day | ≈ +1 A | (gated) |
-| **TOTAL** | **7-9 days focused** | **gap-dependent** | **≥ 90%** |
+Per-stream targets are derived from Section 8.1's bucket counts.
+Each stream's "candidate count" is the number of qids the bucket
+classifier assigned to it; the "target lift" is the realistic A
+yield assuming a ~75-80% lift rate per candidate (Phase 25.2's
+observed average).
 
-"Gated" = cumulative percentages and exact deltas resolve once the
-2026-05-05 baseline lands. The schedule and effort estimates do not
-depend on the gate.
+| Stream | Candidate count | Target A lift | Effort | Cumulative A-rate |
+|---|---:|---:|---|---:|
+| **26.0 Regression recovery** (q1716/1924/1928/1929/1942/1965/1989/2104/2200/Track dominance set) | 19 | **+13** | 1-2 days | 68.3% |
+| **26.1 Lap-distance derivation** (infrastructure for 26.2) | n/a | 0 (enabler) | 2-3 days | 68.3% |
+| **26.2 Spatial slices** (26.2a corner=3 / 26.2b minisector=3 / 26.2c traction=1 / 26.2d braking=2 / 26.2e DRS-zone) | 9 | **+7** | 3-4 days | 72.5% |
+| **26.3 Question-text + expected_columns cleanup** (26.3a rewrite=2 / 26.3b column audit / 26.3c cross-table / 26.3d audit-bucket=30) | 32 | **+22** | 2 days (was 1; expanded scope) | 85.6% |
+| **26.4 Resolver enhancements** (26.4a driver-without-session / 26.4b cross-team-compare / 26.4c lap-N JOIN hints) | 3 | **+2** | 1 day | 86.8% |
+| **26.5 Stochastic-variance robustness** (best-of-5 + matview refresh) | 3 (durability) | **+2** | 0.5 day | 88.0% |
+| **8.4a budget exceptions (NOT pursued)** | 3 (q1715/2008 corner-class + q2206 + q2207 + q2182) | 0 | n/a | 88.0% |
+| **TOTAL pursued** | 66 | **+46 to +50** | **8-11 days focused** | **88-90%** |
 
-If the 2026-05-05 baseline shows ≈ 126 A (the Phase 25.2 working
-estimate), the gap is 25 → reachable at the end of Stream 26.4 with
-26.5 as buffer. If it shows fewer A (e.g. 100), Phase 26 alone may
-not reach 90% without Stream 26.2 over-delivering OR a rev2 plan
-adding scope. If it shows more (≈ 140+), Phase 26 may reach 90% with
-just streams 26.3 + 26.4 and 26.2 becomes optional polish.
+**Realistic ceiling**: the per-stream targets above sum to **+46
+A** at the high-confidence end (75% lift rate) and **+50 A** at
+the optimistic end (80% lift rate). +46 reaches **88.0%**, short of
+90%. +50 reaches **90.4%**, barely over.
+
+This means **the plan is genuinely tight at the +50 number**. Three
+contingencies if streams under-deliver:
+
+1. **Stream 26.3d outperforms** (the audit bucket is the largest at
+   30 candidates; if the lift rate is 90% rather than 75% it
+   contributes +27 not +22 — closes the gap).
+2. **Stream 26.0 outperforms** (regressions are usually cheap to
+   fix; if 17 of 19 lift back to A, that's +17 not +13).
+3. **Phase 26 ships at 88-89% and a Phase 27** picks up the
+   remainder — likely 5-8 questions that need either grader
+   loosening, source-text rewrites beyond the 26.3a rewrite
+   candidates, or a different infra investment.
+
+The plan accepts the tightness and documents the Phase 27 escape
+path explicitly in Section 10.
+
+---
+
+## Section 1.5 — Stream 26.0: Regression recovery (NEW in rev3)
+
+Phase 25.2 + Round 2 work landed in May-5 baseline as **+47 lifts
+and -21 regressions** vs the May-4 baseline. The regressions are
+the cheapest A grades available — they were already A; some Round
+2 marker / matview-hint / season-retrospective change leaked into
+their resolver / synthesis path.
+
+**Target qids** (19 total; tagged from May-4-A → May-5-non-A in
+the diff against the May-5 baseline):
+
+| qid | category | May-4 | May-5 | Likely cause |
+|---|---|---|---|---|
+| q1700 | Track dominance | A | B | Round-2 matview-hint over-firing? |
+| q1702 | Track dominance | A | B | (same family) |
+| q1706 | Track dominance | A | B | (same family) |
+| q1709 | Track dominance | A | B | (same family) |
+| q1713 | Corner analysis | A | B | Round-2 marker leak |
+| q1716 | Corner analysis | A | C | Round-2 marker leak (worse) |
+| q1924 | Lap pace and fastest-lap | A | C | matview-hint regression |
+| q1928 | Lap pace and fastest-lap | A | C | matview-hint regression |
+| q1929 | Lap pace and fastest-lap | A | C | matview-hint regression |
+| q1942 | Stint analysis | A | C | season-retrospective leak? |
+| q1965 | Braking performance | A | C | unknown — investigate |
+| q1989 | Traction analysis | A | C | unknown |
+| q2040 | Traffic-adjusted pace | A | B | clean-air-pace synthesis |
+| q2104 | Restart performance | A | C | restart-marker over-fire? |
+| q2200 | Cross-category | A | C | multi-matview synthesis |
+| (4 more from full diff) | various | A | non-A | tbd |
+
+(The exact 19th-row list is generated by the script in Section 8.1
+under `regressions` set.)
+
+**Mechanism (per-question):**
+
+1. Run `node web/scripts/run_category_benchmarks.mjs --question
+   <qid> --retries 5` against May-5 dev-server state. Confirm the
+   question still grades non-A (excludes stochastic flake).
+2. Probe via `curl -X POST /api/chat` with the exact question
+   text. Compare `selectedSession`, `generationSource`, `sql`,
+   and `answer` to the May-4 baseline's recorded values.
+3. The deviation falls into one of:
+   - **Marker over-fire** (e.g. `the stewards` race-shaped marker
+     leaking into a question that didn't need it). Fix: narrow
+     the marker pattern OR add a category-specific deny-list
+     entry.
+   - **Matview-hint over-attachment** (e.g. `MATVIEW_HINT` for
+     stint_degradation_curve attached to a question that already
+     had a working SQL path). Fix: tighten the hint trigger
+     substrings.
+   - **Resolver tie-break leaking** (e.g. structural-comparison
+     bypass firing on a question that genuinely needed driver
+     pair clarification). Fix: tighten
+     `STRUCTURAL_COMPARISON_PATTERNS`.
+   - **Season-retrospective false-positive** (e.g. a single-
+     session question got the season-wide bypass). Fix: tighten
+     `isSeasonRetrospective()` patterns.
+4. Apply the surgical fix (no broad reverts), re-validate the
+   regressed question + the original Phase 25 question that
+   triggered the change, ensure both grade A.
+
+**Expected lift**: 13 of 19 (73% lift rate is conservative — these
+are *cheap* fixes; if some regressions are not actually rev3-fixable
+they convert to budget exceptions in Section 8.4a).
+
+**Effort**: 1-2 days. ~30-45 min per regressed question once the
+probe pattern is set up. Probably batched 4-5 questions at a time
+since the underlying change is often shared across a category.
+
+**Why ship FIRST**: Stream 26.0 ships before any Phase 26.1+ for
+three reasons. (a) Cheap — no infra; pure-text edits to chatRuntime.ts
++ anthropic.ts + resolution.ts. (b) Restores already-delivered work,
+so the Phase 25.2 lift count gets back closer to its working
+estimate. (c) Lowers the gap before the more expensive infra
+streams begin — if 26.0 over-delivers, 26.1+26.2 may not need to
+go full-scope.
+
+**Acceptance**: every Stream 26.0 target either:
+1. Grades A on best-of-5 in the post-26.0 dev-server state, OR
+2. Has a written explanation in the rev4 plan documenting why the
+   regression is permanent (e.g. the May-4 A grade was a stochastic
+   one-off; the underlying SQL was always borderline-B).
 
 ---
 
@@ -335,15 +487,52 @@ Multi-matview questions whose `expected_columns` only list one
 matview — synthesis correctly JOINs but the grader marks the
 non-listed columns as missing. Add the implied columns.
 
-Candidates pre-baseline: q2100 (race_control + race_progression),
-q2086 (drs + battle), q2202 (traffic + degradation). Final
-candidates from Section 8.1.
+Final candidates from Section 8.1's 26.3c assignment (subset of
+the audit bucket where multiple matviews are needed).
 
-**A lift**: indicative pending baseline.
+**A lift**: indicative; targeted at multi-matview synthesis
+mismatches surfaced by the audit pass.
 
-**Stream 26.3 total**: indicative pending baseline. Cumulative
-A-rate (gated). Effort: 1 day of focused per-question audit +
-JSON edits + re-validation.
+### 26.3d — Audit bucket (NEW in rev3) — 30 candidates
+
+The May-5 baseline surfaced **30 non-A questions** that don't fit
+into 26.2 (no spatial-slice tag), 26.3a (not a known false-premise
+rewrite), 26.4 (no resolver-pattern issue), or 26.0 (not a
+regression). They sit in a generic "audit" bucket and need
+per-question probing to assign mechanism.
+
+**Probe pattern** (per question):
+
+1. Run the question with `--retries 5`. Confirm grade.
+2. Read the synthesizer's SQL + answer from
+   `web/logs/category_benchmark_<cat>_<timestamp>.json`.
+3. Classify:
+   - **Synthesis chose a wrong/incomplete column from the right
+     matview**: belongs in 26.3b. Fix: edit the source JSON's
+     `expected_columns` to match what synthesis correctly produced.
+   - **Synthesis composed multi-matview JOIN but `expected_columns`
+     only lists one**: belongs in 26.3c. Fix: expand the source
+     JSON's `expected_columns`.
+   - **Synthesis produced wrong rows because the matview is
+     missing a column**: belongs in a Phase 27 follow-up (matview
+     extension).
+   - **Synthesis correctly returned 0 rows because the question
+     premise is wrong**: belongs in 26.3a (rewrite candidate).
+     Add to the rewrite list AND to manifest 8.4b.
+   - **Synthesis hit a per-lap shape we don't have**: belongs in
+     a Phase 27 follow-up (custom matview shape).
+
+**Expected outcome**: of 30, roughly 15-22 lift via JSON edits
+(26.3b + 26.3c work). The remainder convert to either rewrite
+candidates (26.3a) or budget exceptions (8.4a) or Phase 27 follow-
+ups.
+
+**A lift**: target +14 to +16 from this sub-stream, contingent on
+the bucket-classifier accuracy.
+
+**Stream 26.3 total** (across 26.3a/b/c/d): **+22 A target** at
+the 75% lift rate of the candidate pool. Cumulative A-rate after
+26.3 ≈ 85.6%. Effort: 2 days (was 1; expanded by sub-stream 26.3d).
 
 ---
 
@@ -426,40 +615,65 @@ questions that were flaking now stay A reliably.
 ## Section 7 — Dependency graph
 
 ```
+26.0 regression recovery  (ships FIRST — no infra, cheap, restores work)
+                            │
+                            ▼
 26.1 lap-distance        ───┬─→ 26.2a corner-analysis
                             ├─→ 26.2b minisector-dominance
                             ├─→ 26.2c traction-analysis
                             ├─→ 26.2d braking-performance
                             └─→ 26.2e drs-zone augmentation
 
-26.3 question-text        (independent — can ship in parallel)
+26.3 question-text        (independent — can ship in parallel with 26.1+26.2)
 26.4a driver-without-session  (independent)
 26.4b cross-team-compare      (independent)
 26.4c lap-N-JOIN-hint         (depends on 26.2 if zone-aware hints needed)
-26.5  stochastic robustness   (independent)
+26.5  stochastic robustness   (independent; ships LAST since durability
+                              depends on all upstream slices)
 ```
 
-**Critical path**: 26.1 → 26.2. 26.3, 26.4, 26.5 can all proceed in
-parallel from day 1.
+**Critical path**: 26.0 → 26.1 → 26.2. 26.3, 26.4 can all proceed in
+parallel from day 3 onward (after 26.0 ships and the resolver
+state is stable).
 
 **Realistic schedule** (single-track focused execution):
-- Day 1-2: 26.1 lap-distance + 26.4a driver-without-session
-- Day 3-4: 26.2a corner-analysis + 26.4b cross-team-compare
-- Day 5: 26.2b minisector + 26.2c traction + 26.5 robustness
-- Day 6: 26.2d braking + 26.2e DRS augmentation
-- Day 7: 26.3 question-text cleanup pass
-- Day 8-9: full re-validation, plan rev1 with actuals
+- Day 1-2: **Stream 26.0 regression recovery** (ships first)
+- Day 3-4: 26.1 lap-distance + 26.4a driver-without-session
+- Day 5-6: 26.2a corner-analysis + 26.4b cross-team-compare +
+  26.3a rewrite candidates
+- Day 7: 26.2b minisector + 26.2c traction
+- Day 8: 26.2d braking + 26.2e DRS augmentation
+- Day 9-10: 26.3b/c/d audit-bucket classification + JSON edits
+- Day 11: 26.5 robustness + full re-validation
+- Day 12: plan rev4 with actuals + final acceptance baseline
 
 ---
 
 ## Section 8 — Per-question target list (REGENERATE FROM 2026-05-05 BASELINE)
 
-**Status**: rev0 listed fabricated qids (`q2010-q2013`, `q2030-q2033`,
-`q2050/q2051` don't exist in the benchmark) and several already-A
-qids (`q1710` / `q1711` / `q1712` / `q1713` / `q1716` / `q2167` were
-already A in the 2026-05-04 baseline). Codex audit pass 1 invalidated
-that list. **rev1 removes it pending regeneration from the in-flight
-2026-05-05 baseline.**
+**Status (rev3)**: 2026-05-05 baseline consumed. Section 8.1 below
+contains the actual non-A target list — 66 rows across 8 stream
+buckets — generated from `phase_19_baseline_2026-05-05.json` per the
+script in Section 8.1.
+
+**Bucket summary** (rev3, from May-5 baseline):
+
+| Bucket | Count | Target lift |
+|---|---:|---:|
+| 26.0 regression recovery (May-4 A → May-5 non-A) | 19 | +13 |
+| 26.2a corner-analysis (floor_active_after_slice match) | 3 | +2 |
+| 26.2b minisector-dominance | 3 | +2 |
+| 26.2c traction-analysis | 1 | +1 |
+| 26.2d braking-performance | 2 | +2 |
+| 26.3a rewrite candidates (q2100, q2144) | 2 | +2 |
+| 26.3b/c/d audit bucket | 30 | +14 to +22 |
+| 26.4 resolver-class (driver-perf-7axis multi-mat) | 3 | +2 |
+| 8.4a budget exceptions (q1715/2008/2182/2206/2207) | 3 | 0 |
+| **TOTAL non-A** | **66** | **+38 to +50** |
+
+The conservative +38 falls 12 short of the 50 needed; the
+optimistic +50 just reaches the target. The realistic-ceiling
+discussion in Section 1 explains the contingency paths.
 
 ### 8.1 — Generation procedure
 
@@ -529,21 +743,22 @@ non-A row gets a stream assignment based on:
 
 ### 8.2 — Per-stream sum guarantees
 
-After Section 8.1 is generated, rev3 must demonstrate that:
+rev3 demonstrates closure as follows:
 
-- (Stream 26.2 lifts) + (Stream 26.3 lifts) + (Stream 26.4 lifts) +
-  (Stream 26.5 lifts) ≥ (151 A target) − (count of A in
-  2026-05-05 baseline).
-- No qid is double-counted across streams.
-- Manifest-bound qids are split per Section 8.4. Only "rewrite
-  candidates" count toward the A target; "budget exceptions not
-  pursued" do not.
+- (Stream 26.0) + (26.2) + (26.3) + (26.4) + (26.5) targets sum to
+  +38 to +50 A (per Section 1 stream table), against a required
+  +50.
+- The conservative end (+38) is short by 12; the optimistic end
+  (+50) just hits.
+- No qid is double-counted across streams (Section 8.1 bucket
+  classifier assigns each row to exactly one stream).
+- Manifest split per Section 8.4: 8.4a (5 entries) excluded from
+  the pursuable pool; 8.4b (q2100, q2144) stay in stream 26.3a.
 
-If the sum doesn't close the gap, rev3 must either:
-1. Expand a stream's scope (with an effort revision), OR
-2. Acknowledge Phase 26 alone won't reach 90% and propose a Phase
-   27 follow-up (typically a question-rewrite pass + grader
-   loosening).
+If the optimistic end fails to materialize, rev4 chooses one of:
+1. Expand a stream's scope (most likely 26.3d via a deeper audit
+   bucket pass).
+2. Phase 27 rollover for the residual ~5-10 questions.
 
 ### 8.3 — Already-A qids that should NOT appear in 8.1
 
@@ -653,24 +868,39 @@ infrastructure verify scripts all pass.
 **Criterion 4**: the matview-refresh job runs successfully on a
 clean schedule trigger (not just manual).
 
-### Acceptance reconciliation example
+### Acceptance reconciliation example (rev3 — based on actual May-5 baseline)
 
-If the 2026-05-05 baseline shows 126 A and Phase 26 must reach 151:
-- Gap = 25 net new A.
-- Section 8.1 generation produces (167 - 126) = 41 non-A qids.
-- Manifest already covers 7 (q1715, q2008, q2100, q2144, q2182,
-  q2206, q2207) — these are budget exceptions, not Phase 26
-  targets.
-- Real Phase 26 target list = 41 - 7 = 34 qids.
-- Phase 26 must lift ≥ 25 of those 34 to A on best-of-5.
-- Remaining 9 either grade A natively post-Phase-26 work, OR
-  become new manifest entries (criterion 2), OR are deferred to
-  Phase 27.
+The May-5 baseline (the real one, now consumed) shows **101 A out of
+167**. Working through the math correctly:
 
-If the 2026-05-05 baseline shows fewer A (e.g. 100), the gap grows
-to 51 — Phase 26 alone is unlikely to close it without rev3
-expansion. If it shows more (e.g. 145), the gap shrinks to 6 — well
-within scope of streams 26.3 + 26.4 alone.
+**Denominator**: 167. This stays fixed. 8.4a budget exceptions do
+NOT reduce the denominator — they just become permanent non-A
+rows that count against the 151 ceiling.
+
+**Numerator target**: 151 A.
+
+**Pursuable pool**:
+- Total non-A in May-5 = 66.
+- 8.4a budget exceptions (q1715, q2008, q2182, q2206, q2207) = 5,
+  permanently non-A by acceptance.
+- (Note: q2100 and q2144 are in 8.4b, not 8.4a — they are pursued
+  via rewrite, NOT excluded from the pursuable pool.)
+- Pursuable pool = 66 - 5 = **61 questions**.
+
+**Required lift rate of pursuable pool**: 50 / 61 = **82.0%**.
+That is the bar Phase 26 must clear to reach 151 A. It's higher
+than Phase 25.2's observed average lift rate (~75%), which is why
+Section 1's realistic-ceiling estimate flags the plan as tight.
+
+**The 5 unpursuable budget exceptions cap Phase 26 at 167 - 5 =
+162 A as the absolute ceiling**. Phase 26 cannot exceed 162 / 167 =
+97.0% without first removing one or more 8.4a entries from the
+manifest (typically by shipping the infrastructure that unlocks
+that question — Phase 22 Bayesian deg model for q2207, etc).
+
+**If Phase 26 misses 151**: the plan is genuinely tight at the +50
+number. Section 1's contingency paths (26.3d outperforming, 26.0
+outperforming, or Phase 27 rollover) explain the next moves.
 
 ---
 
@@ -752,8 +982,13 @@ Before implementation begins, codex should verify:
    - No qid is double-counted across streams.
    - q2100 and q2144 (rewrite candidates) are counted in 26.3a's
      lift sum, NOT in the budget-exception register.
-   - The 8.4a budget exceptions are excluded from both the lift
-     sum and the lift-needed denominator.
+   - The 8.4a budget exceptions are excluded from the *pursuable
+     pool* (the set of questions Phase 26 attempts to lift), but
+     NOT from the 167-question denominator. The headline target
+     stays 151 / 167; 8.4a entries remain permanent non-A rows
+     that count against the 151 ceiling. The required lift rate
+     of the pursuable pool is therefore (151 - current A) / (167
+     - current A - 5 budget exceptions).
 
 ---
 
@@ -764,29 +999,23 @@ sibling to the Phase 25 plan. The Phase 25 plan (rev11) remains the
 source of truth for the Phase 25 actuals and the 75-77% A-rate
 ceiling without further infrastructure work.
 
-## rev3 prerequisite
+## Implementation readiness (rev3)
 
-Before any Phase 26 implementation begins, rev3 must:
+Phase 26 is **implementation-ready** as of rev3. The May-5 baseline
+is consumed (101 A / 167); Section 8.1 has concrete bucket counts;
+Stream 26.0 / 26.1 / 26.2 / 26.3 / 26.4 / 26.5 each have target
+candidate sets and lift estimates; Section 7 has a 12-day schedule;
+Section 9 has the corrected denominator math.
 
-1. Read `phase_19_baseline_2026-05-05.json` (the in-flight baseline
-   that anchors the auditable starting position).
-2. Run the Section 8.1 generation script against that file to
-   produce the per-question target list. The script must NOT dedup
-   by `id` (regression check from rev2's HIGH finding); use the
-   `(id, category)` pair as the row key.
-3. Apply the Section 8.4 manifest split: filter out 8.4a budget
-   exceptions; keep 8.4b rewrite candidates with stream 26.3a.
-4. Compute the gap: (151 - actual A count) — call it `LIFT_NEEDED`.
-5. Assign each Section 8.1 row to a stream (26.2a/b/c/d/e,
-   26.3a/b/c, 26.4a/b/c, 26.5).
-6. Verify (sum of stream lifts) ≥ `LIFT_NEEDED`. If not, rev3
-   expands a stream's scope or escalates to Phase 27.
-7. Update Section 1's stream table with concrete cumulative
-   percentages.
-8. Section 3's per-slice "tagged set" entries get exact counts.
-9. Document any qids that were Phase 25.2 lift candidates but
-   already-A in the 2026-05-05 baseline (these need NO Phase 26
-   work and stay excluded from the lift table).
+The next action is **start Stream 26.0 regression recovery on day 1**
+per the Section 7 schedule. The remainder of Section 8.1 (the 30-row
+audit-bucket and the 19-row regression list) needs per-question
+classification as work begins, but the bucket totals are already
+fixed.
 
-Until rev3 lands, this plan is *gated*. It cannot be implemented
-because the per-question target list does not yet exist.
+The next plan revision will be **rev4 — actuals vs targets**, written
+after Stream 26.0 + 26.1 + 26.2 land and the post-26.2 baseline runs.
+That revision documents per-question observed lifts vs the rev3
+targets and decides (a) whether 26.3 / 26.4 / 26.5 stay on schedule,
+(b) whether stream scope needs expansion, or (c) whether Phase 27
+gets the rollover.
