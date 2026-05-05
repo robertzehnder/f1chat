@@ -699,7 +699,12 @@ const VENUE_DEMONYM_ALIASES: ReadonlyArray<{ trigger: string; aliases: string[] 
 function extractVenueHints(normalizedText: string): string[] {
   const hints: string[] = [];
 
-  const contextualMatches = Array.from(normalizedText.matchAll(/\b(?:in|at|for)\s+([a-z][a-z\s-]{2,40})/g));
+  // Phase 25.2 tightening: prefer "in/at/for/across/throughout/during"
+  // contexts. q1947's "Across Suzuka 2025" wasn't matched by the
+  // earlier (in|at|for)-only set, so its venueHints came back empty
+  // and hasStrongVenueYearAnchor evaluated to false — close-score
+  // clarification fired and pinned the wrong session-type tier.
+  const contextualMatches = Array.from(normalizedText.matchAll(/\b(?:in|at|for|across|throughout|during|over)\s+([a-z][a-z\s-]{2,40})/g));
   for (const match of contextualMatches) {
     const rawPhrase = match[1]?.trim();
     if (!rawPhrase) {

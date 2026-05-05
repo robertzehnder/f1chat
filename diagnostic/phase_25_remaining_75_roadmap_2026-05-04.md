@@ -1,4 +1,4 @@
-# Phase 25 — Remaining 77 non-A questions roadmap — 2026-05-04 (rev10: Phase 25.1 stability confirmed + q1945/q2184 demoted from manifest)
+# Phase 25 — Remaining 77 non-A questions roadmap — 2026-05-04 (rev11: actuals after Phase 25.2 + loop tightening Round 2)
 
 (Title says "77" not "75" per codex audit pass 5 — the Phase-24
 merged_skipped questions are also still non-A and must be in scope
@@ -7,6 +7,109 @@ promoted q1941 from merged_skipped → Phase 25.1, leaving **only
 q2182** in the merged_skipped bucket. Filename keeps
 `remaining_75` to preserve the existing repo path; document title
 is the source of truth for scope.)
+
+## rev11 changes (Phase 25.2 deploy + loop tightening Round 2 — 2026-05-05)
+
+Phase 25.2 substantially shipped. 14 analytics matviews deployed
+to Neon under feature branch `phase25.1/escalated-six` plus the
+two Phase 20-A/B prerequisites. Per-slice live re-validation
+results (each `--retries 3` against `phase25_deploy_slice.py`):
+
+| slice | migration | target qids hit A | notes |
+|---|---|---|---|
+| 21-stint-degradation-curve   | 033 | 3/3 | q2020 q2024 q2026 |
+| 21-race-control-incident-index | 034 | 3/6 + 1 B (post loop fix Round 1) | q2140 q2145 q2146 → A; q2143 B; q2100/q2144 manifest C-cap (false premise) |
+| 21-fuel-corrected-pace       | 035 | 3/3 + 3 multi-matview | q1925 q1926 q1929; q2203 q1949 q2028 lifted (q1949/q2028 → B target) |
+| 21-weather-impact            | 036 | 4/4 | q2122 q2123 q2124 q2126 |
+| 21-pit-loss-per-circuit      | 037 | 2/2 | q2063 q2065 |
+| 21-tyre-warmup-curves        | 038 | 2/3 | q2021 q2022 → A; q2023 cross-team comparison stuck |
+| 21-traffic-adjusted-pace     | 039 | 2/3 + 11 deferreds cleared | q2041 q2043 → A; q2040 → B |
+| 21-restart-performance       | 040 | 1/3 (then 2/3 post Round 2) | q2104 q2103 → A; q2101 stuck (likely false premise) |
+| 21-drs-effectiveness         | 041 | 0/2 | session-level only; per-lap drs_active not feasible without spatial slice |
+| 21-overtake-events           | 042 | 1/1 | q2080 → A |
+| 21-undercut-overcut-history  | 043 | 1/1 | q2062 → A |
+| 21-straight-line-dominance   | 044 | 3/3 | q2000 q2001 q2002 |
+| 21-driver-performance-7axis  | 045 | 2/3 | q2160 q2167 → A; q2161 single-driver season-wide bare-driver-resolution issue |
+| 21-telemetry-coverage-per-driver | 046 | 0/1 | q2182 — synthesis path not picking up the new matview |
+
+**Loop tightening — three rounds shipped:**
+
+- **Round 1** (commit during slice 034): structural-comparison
+  bypass (`needsDriverPair` skip on `compare the lap / compare
+  the steward` etc), runtime `buildMatviewHint()` (per-question
+  hint appended to USER message — high compliance vs
+  system-prompt bullets), `isSeasonRetrospective()` (season-wide
+  questions bypass session pin).
+- **Round 2** (this commit): `MATVIEW_HINTS` table expanded
+  from 4 → 14 entries, covering all 14 deployed slices. Hint
+  block at the user-message position has dramatically higher
+  LLM compliance than system-prompt bullets — provides
+  primary-table / column-list / recommended-shape per question
+  pattern.
+- **Round 2 venue-hints fix**: extended
+  `extractVenueHints` regex from `(in|at|for)` to
+  `(in|at|for|across|throughout|during|over)`. Lifted q1947 to A
+  (was clarification fast-path firing on "Across Suzuka 2025").
+- **Round 2 season-retrospective extension**: bare "for 2025" /
+  "in 2025" + season-grain word (axis / rating / score / record)
+  now bypasses session pin. q2161 still C because driver
+  resolution requires session_drivers — needs a Phase 26 fix
+  (driver_dim canonical lookup without session pin).
+
+**False-premise manifest entries (rev11 addition):**
+
+- q2100 (Saudi 2025 lap-3 SC restart) — no SC restart on lap 3.
+- q2144 (Mexico City 2025 lap-6 forcing-off) — no lap-6
+  forcing-off in race-control feed.
+
+Both committed C-cap with `escape_to_authored_floor` pointing at
+question rewrite. Manifest now has 7 entries: q1715, q2008, q2100
+(NEW), q2144 (NEW), q2182, q2206, q2207.
+
+**Deferred slices (5 of 17):** corner-analysis, minisector-
+dominance, traction-analysis, braking-performance, plus the
+spatial-zone augmentation of drs/overtake. All need per-sample
+lap-distance derivation from raw.location, which is a Phase 22
+candidate. ~20 questions wait on this.
+
+**Outcome math actuals** (live-validated, before final
+phase19_baseline_2026-05-05.json runs to authoritative):
+
+  90 baseline-A
++  6 Phase 25.1 escalated → A (durable 5/5)
++  3 slice 033
++  3 slice 034 (post Round 1)
++  3 slice 035 + 1 q2203 multi-matview
++  4 slice 036
++  2 slice 037
++  2 slice 038
++  2 slice 039
++  2 slice 040 (post Round 2: q2103 lift)
++  0 slice 041 (per-lap not feasible)
++  1 slice 042
++  1 slice 043
++  3 slice 044
++  2 slice 045
++  0 slice 046 (synthesis-hint compliance pending Round 3)
++  1 q1947 (Round 2 venue-hints fix)
+————————
+≈ 126 / 167 ≈ 75.4% A-rate (Round 2 actuals)
+
+**Gap to plan target** (159/167 = 95.2%): 33 questions short.
+Breakdown:
+  - 5 spatial slices not shipped → ~20 questions stuck.
+  - Mis-tagged `expected_columns` in source JSONs → ~5
+    questions need question-text adjustments rather than matview
+    work.
+  - Per-lap DRS / per-lap restart-position synthesis-shape
+    issues → ~5 questions.
+  - q2161 single-driver season-wide bare-resolution → 1.
+  - Stochastic LLM variance on borderline-A answers → ~2.
+
+Per-question authoritative deltas land in
+`phase_19_baseline_2026-05-05.json` once the background runner
+finishes. The phase19_baseline_run.py script writes both JSON
+and .md siblings.
 
 ## rev10 changes (Phase 25.1 stability + manifest demotion — 2026-05-04)
 

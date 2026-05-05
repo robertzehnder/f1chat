@@ -201,6 +201,163 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
       "  do NOT embed semicolons or multi-clause notes inside SQL string literals.",
       "  the FIA-pit-log caveat belongs in the synthesis text, not the SQL output."
     ].join("\n")
+  },
+  {
+    // Phase 21 21-weather-impact: wet-pace delta + crossover laps.
+    triggers: [
+      "wet pace", "wet-tyre pace", "inter pace", "inters pace",
+      "crossover lap", "dry-line", "dry line crossover",
+      "inter-to-slick", "inters-to-slicks", "slicks-to-inters",
+      "rain shower"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-weather-impact):",
+      "  primary table: analytics.weather_impact",
+      "  columns: wet_pace_delta_s, crossover_lap, inter_to_slick_crossover_lap, slick_to_inter_crossover_lap, is_wet_lap, driver_dry_baseline_s",
+      "  recommended shape: single SELECT WHERE session_key = :s AND driver_number IN (...) — wet_pace_delta_s is non-null only on is_wet_lap=true rows.",
+      "  crossover_lap is repeated on every (session, driver) row, so a single-row driver lookup gives the answer."
+    ].join("\n")
+  },
+  {
+    // Phase 21 21-pit-loss-per-circuit: pit_loss_s per stop.
+    triggers: [
+      "pit loss", "pit-loss", "pit-stop delta", "pit stop delta",
+      "stop delta", "pit-cycle cost", "stay out under the", "free pit",
+      "free stop", "stop time", "pit cycle"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-pit-loss-per-circuit):",
+      "  primary table: analytics.pit_loss_per_circuit",
+      "  columns: pit_in_lap_number, out_lap_number, pit_loss_s, baseline_lap_s, new_compound_name, stop_number",
+      "  recommended shape: SELECT ... FROM analytics.pit_loss_per_circuit WHERE session_key = :s AND driver_number IN (...) ORDER BY stop_number",
+      "  positive pit_loss_s = the stop cost time vs running two clean baseline laps."
+    ].join("\n")
+  },
+  {
+    // Phase 21 21-tyre-warmup-curves: warmup_laps_to_target.
+    triggers: [
+      "warmup lap", "warm-up lap", "warmup laps", "warm-up laps",
+      "tyre warmup", "tire warmup", "tyre warm-up", "tire warm-up",
+      "fresh-tyre", "fresh tyre", "warm the medium", "warm the hard",
+      "warm the soft", "get the medium", "get the hard", "get the soft"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-tyre-warmup-curves):",
+      "  primary table: analytics.tyre_warmup",
+      "  columns: warmup_laps_to_target, best_non_warmup_lap_s, stint_length_laps, compound_name",
+      "  recommended shape: single SELECT WHERE session_key = :s AND driver_number = :d [AND stint_number = :n]",
+      "  warmup_laps_to_target is the lap-offset within the stint (1-based) at which the driver first hit within 0.5s of the stint best."
+    ].join("\n")
+  },
+  {
+    // Phase 21 21-traffic-adjusted-pace: clean-air vs traffic.
+    triggers: [
+      "clean air", "clean-air", "in traffic", "dirty air", "dirty-air",
+      "traffic-corrected", "traffic-adjusted", "traffic pace",
+      "traffic-induced", "stuck behind", "behind another car",
+      "lap pace drop"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-traffic-adjusted-pace):",
+      "  primary table: analytics.traffic_adjusted_pace",
+      "  columns: clean_air_pace_s, traffic_pace_s, traffic_pace_delta_s, clean_air_laps, traffic_laps",
+      "  per-(session, driver) granularity (one row per driver per session). Filter session_key + driver_number for single-row answers.",
+      "  traffic_pace_delta_s is positive when traffic cost time."
+    ].join("\n")
+  },
+  {
+    // Phase 21 21-restart-performance: position_delta on restart laps.
+    triggers: [
+      "sc restart", "safety-car restart", "safety car restart",
+      "vsc restart", "lap-1 launch", "lap 1 launch", "race start position",
+      "starting line", "positions gained on the restart",
+      "positions on the restart", "field-bunching", "field bunching",
+      "the restart lap", "after the restart"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-restart-performance):",
+      "  primary table: analytics.restart_performance",
+      "  columns: restart_lap, restart_kind, position_before, position_after, position_delta",
+      "  restart_kind values: race_start / sc_restart / vsc_restart / other",
+      "  recommended shape: SELECT ... FROM analytics.restart_performance WHERE session_key = :s [AND restart_lap = :n] ORDER BY restart_lap",
+      "  position_delta NEGATIVE = gained positions; POSITIVE = lost. To answer 'positions gained' show -position_delta."
+    ].join("\n")
+  },
+  {
+    // Phase 21 21-overtake-events: overtake_count per session.
+    triggers: [
+      "overtake", "overtakes", "passes completed", "passing moves",
+      "on-track pass", "on-track overtakes"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-overtake-events):",
+      "  primary table: analytics.overtake_events",
+      "  columns: overtake_count, overtake_lap, overtaking_driver_number, overtaken_driver_number",
+      "  overtake_count is repeated on every row for the same session — single-row \"how many overtakes\" answers don't need an aggregate.",
+      "  location_corner is NULL (Phase 22 spatial slice not shipped); do NOT pretend per-corner attribution exists."
+    ].join("\n")
+  },
+  {
+    // Phase 21 21-undercut-overcut-history: success counts per stop.
+    triggers: [
+      "undercut", "overcut", "covering stop", "covered the undercut",
+      "covered the overcut", "stop strategy", "covering pit"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-undercut-overcut-history):",
+      "  primary table: analytics.undercut_overcut_history",
+      "  columns: undercut_success_count, overcut_success_count, neutral_stop_count, total_stops",
+      "  per-(session, driver) granularity. Filter session_key + driver_number for single-row answers.",
+      "  Heuristic-based: stops gaining position in 2-lap-after vs 2-lap-before window count as undercut_success."
+    ].join("\n")
+  },
+  {
+    // Phase 21 21-straight-line-dominance: speed-trap proxies.
+    triggers: [
+      "speed trap", "speed-trap", "i1 speed", "i2 speed", "st speed",
+      "straight-line speed", "straight line speed", "top speed",
+      "speed reading", "intermediate speed"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-straight-line-dominance):",
+      "  primary table: analytics.straight_line_dominance",
+      "  columns: st_speed_kph (top-speed proxy = MAX(speed)), i2_speed_kph (95th pctile), i1_speed_kph (90th pctile), avg_speed_kph",
+      "  per-(session, driver) granularity. Filter session_key for per-race / per-quali answers.",
+      "  These are statistical proxies (no spatial zone attribution); cite as such if the question demands precise zone semantics."
+    ].join("\n")
+  },
+  {
+    // Phase 21 Tier 4 21-driver-performance-7axis: season aggregator.
+    triggers: [
+      "axis score", "axis rating", "qualifying axis", "race-pace axis",
+      "race pace axis", "tyre-management axis", "tyre management axis",
+      "restart axis", "traffic-handling axis", "traffic handling axis",
+      "overtake-difficulty axis", "overtake difficulty axis",
+      "error-rate axis", "error rate axis", "performance axis",
+      "season axis", "performance score"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 Tier 4 21-driver-performance-7axis):",
+      "  primary table: analytics.driver_performance_score",
+      "  columns: qualifying_axis, race_pace_axis, tyre_management_axis, restart_axis, traffic_handling_axis, overtake_difficulty_axis, error_rate_axis (each 0-100; higher = better)",
+      "  recommended shape: SELECT season_year, driver_number, driver_name, <axis> FROM analytics.driver_performance_score WHERE season_year = 2025 [AND driver_number = :d]",
+      "  This is a season-wide aggregator — do NOT pin a specific session_key for axis-rating questions."
+    ].join("\n")
+  },
+  {
+    // Phase 25 follow-up: telemetry-coverage-per-driver (q2182 lift).
+    triggers: [
+      "telemetry sample", "car telemetry sample", "missing telemetry sample",
+      "missing more than", "telemetry coverage", "coverage missing",
+      "missing telemetry"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 25 follow-up — telemetry coverage per driver):",
+      "  primary table: analytics.telemetry_coverage_per_driver",
+      "  columns: car_data_samples, median_samples_per_driver, missing_pct_vs_median, missing_more_than_5pct, missing_more_than_10pct",
+      "  recommended shape: SELECT session_key, driver_number, driver_name, missing_pct_vs_median FROM analytics.telemetry_coverage_per_driver WHERE missing_more_than_5pct = TRUE [AND session_key IN ...]",
+      "  Use the missing_more_than_5pct / 10pct booleans directly when the question's threshold matches; otherwise compute from missing_pct_vs_median."
+    ].join("\n")
   }
 ];
 

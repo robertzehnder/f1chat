@@ -101,7 +101,62 @@ function isSeasonRetrospective(normalizedText: string): boolean {
     normalizedText.includes("across all 2025") ||
     normalizedText.includes("season-wide") ||
     normalizedText.includes("season wide");
-  return enumerative;
+  if (enumerative) return true;
+  // Phase 25.2 Round 2: season-aggregate axis-rating questions like
+  // "Verstappen's tyre-management axis rating for 2025" or
+  // "Norris's qualifying-axis score across the 2025 season so far"
+  // are season-wide aggregates against analytics.driver_performance_score.
+  // They do NOT name a specific session and should not pin one.
+  const axisAggregator =
+    /\baxis\s+(score|rating|score across|rating across)\b/.test(normalizedText) &&
+    /\b20\d{2}\b/.test(normalizedText);
+  if (axisAggregator) return true;
+  // Bare "for 2025" / "in 2025" / "during 2025" (no specific
+  // venue mentioned) on a question that asks for a per-driver
+  // aggregate. Conservative: requires absence of the most-common
+  // single-race venue tokens AND presence of a season-grain word
+  // (axis / rating / score / record / count / total / overall /
+  // form / progress / trend).
+  const hasVenue = (
+    normalizedText.includes("monza") || normalizedText.includes("spa") ||
+    normalizedText.includes("silverstone") || normalizedText.includes("suzuka") ||
+    normalizedText.includes("monaco") || normalizedText.includes("abu dhabi") ||
+    normalizedText.includes("yas marina") || normalizedText.includes("bahrain") ||
+    normalizedText.includes("baku") || normalizedText.includes("imola") ||
+    normalizedText.includes("hungaroring") || normalizedText.includes("hungarian") ||
+    normalizedText.includes("zandvoort") || normalizedText.includes("austria") ||
+    normalizedText.includes("austrian") || normalizedText.includes("spielberg") ||
+    normalizedText.includes("saudi") || normalizedText.includes("jeddah") ||
+    normalizedText.includes("australia") || normalizedText.includes("australian") ||
+    normalizedText.includes("melbourne") || normalizedText.includes("vegas") ||
+    normalizedText.includes("qatar") || normalizedText.includes("singapore") ||
+    normalizedText.includes("mexico") || normalizedText.includes("brazil") ||
+    normalizedText.includes("brazilian") || normalizedText.includes("sao paulo") ||
+    normalizedText.includes("são paulo") || normalizedText.includes("interlagos") ||
+    normalizedText.includes("miami") || normalizedText.includes("shanghai") ||
+    normalizedText.includes("china") || normalizedText.includes("chinese") ||
+    normalizedText.includes("japan") || normalizedText.includes("japanese") ||
+    normalizedText.includes("italy") || normalizedText.includes("italian") ||
+    normalizedText.includes("british") || normalizedText.includes("united kingdom") ||
+    normalizedText.includes("netherlands") || normalizedText.includes("dutch") ||
+    normalizedText.includes("belgian") || normalizedText.includes("spain") ||
+    normalizedText.includes("spanish") || normalizedText.includes("canadian") ||
+    normalizedText.includes("canada")
+  );
+  const hasSeasonGrainWord = (
+    normalizedText.includes(" rating") || normalizedText.includes(" score") ||
+    normalizedText.includes(" axis") || normalizedText.includes(" record") ||
+    normalizedText.includes(" total") || normalizedText.includes(" overall") ||
+    normalizedText.includes(" trend")
+  );
+  const hasYearAnchor = /\b20\d{2}\b/.test(normalizedText);
+  const hasSeasonScopeShort =
+    normalizedText.includes(" for 2025") ||
+    normalizedText.includes(" in 2025") ||
+    normalizedText.includes(" during 2025") ||
+    normalizedText.includes(" 2025 season");
+  if (!hasVenue && hasYearAnchor && hasSeasonGrainWord && hasSeasonScopeShort) return true;
+  return false;
 }
 
 export function requiresResolvedSession(questionType: QuestionType, normalizedText: string): boolean {

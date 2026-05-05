@@ -26,6 +26,18 @@
       "rationale": "Mercedes Spa C3 cliff comparison — cliff-attribution to compound thermal vs setup vs traffic is unprovable from public data. C is honest.",
       "escape_to_authored_floor": "Ship Phase 22 22-tyre-deg-bayesian, then re-classify."
     },
+    "2100": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 25.2 follow-up (post slice 040 deploy + 5-pass live re-validation): question asks 'who led the field on the lap-3 SC restart at the 2025 Saudi Arabian GP'. Live data from analytics.race_control_incidents and core.race_progression_summary shows no SC restart on lap 3 in that session — the question's premise is false. The matview returns 0 rows for the implied filter (race_control event = SC restart on lap 3), and the synthesizer correctly reports 'no rows matched'. Cap is C (factually correct refusal); A would require either rewriting the question to remove the false-premise lap reference, or relaxing the grader to award A for honest no-data answers.",
+      "escape_to_authored_floor": "Rewrite the source question to drop the 'lap-3' specificity OR adjust the grader to award A for SQL that correctly filters and returns 0 rows when the event genuinely did not occur."
+    },
+    "2144": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 25.2 follow-up (post slice 034 deploy + loop-tightening Round 1): question asks 'compare the lap-6 Mexico City 2025 Turn 1-to-Turn 4 sequence: did the stewards apply consistent penalties for forcing-off?'. After the loop fix, the resolver correctly pins Mexico City Race (session 9877) and the synthesizer correctly queries analytics.race_control_incidents — but no lap-6 forcing-off incidents at Turns 1-4 actually exist in the race-control feed. The closest hits are lap-1 incidents at adjacent turns. The question's premise is false. Cap is C; A would require a question rewrite.",
+      "escape_to_authored_floor": "Rewrite the source question to drop the 'lap-6' specificity OR replace with an event that actually occurred (e.g. 'lap-1 Turn 2 incident')."
+    },
     "2182": {
       "source_expected_grade_floor": "A",
       "phase25_target_grade": "B",
