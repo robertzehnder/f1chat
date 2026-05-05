@@ -1,4 +1,4 @@
-# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev7: ceiling source named; remaining rev labels swept)
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev8: 26.0 lift-rate bands; final rev label sweep)
 
 **Starting position — auditable**:
 - Authoritative baseline: `diagnostic/phase_19_baseline_2026-05-05.json`
@@ -22,6 +22,41 @@ expands Stream 26.3 scope to handle the 30-question "audit"
 bucket Section 8.1 surfaced. Even with these expansions, the plan
 is **tight** — the realistic ceiling estimate at the bottom of
 Section 1 explains why.
+
+---
+
+## rev8 changes (codex audit pass 8 applied — 2026-05-05)
+
+Two findings; both addressed.
+
+- **MEDIUM (26.0 over-performance arithmetic misleading)** —
+  rev7's table footnote said "19 × ~75% lift = 14.25, so +14
+  is reachable when the cheap probe-and-narrow fixes hit a
+  higher rate." That rounded down to 14 (= 75%) but the nominal
+  +13 row is already 68%, not 75%; the explanation as written
+  conflated the bands.
+  **Fix**: ceiling table footnote now states the exact lift-rate
+  bands per row:
+    Conservative 26.0 lift = 12/19 = **63%** (cautious — only the
+    most obvious regressions reverse).
+    Nominal      26.0 lift = 13/19 = **68%** (reflects Phase 25.2's
+    observed average).
+    Optimistic   26.0 lift = 14/19 = **74%** (cheap fixes hitting
+    the higher rate of well-defined regression-recovery work).
+  No row claims ≥75%; the optimistic 74% is the realistic upper
+  band. The conservative/nominal/optimistic +30 / +42 / +43 totals
+  are unchanged.
+- **LOW (rev5/rev6/rev7 labels still in live sections)** —
+  rev7's sweep missed: abort threshold ("rev5 said"), audit ask
+  ("rev5 contract"), implementation-readiness ("as of rev6"),
+  next revision ("rev7 — actuals" should be rev8/rev9).
+  **Fix**: swept all four. Abort-threshold rev5 reference deleted
+  (rev6/rev7/rev8 made the same point — keep the math, drop the
+  history). Audit-ask "rev5 contract" replaced with "the current
+  contract." Implementation-readiness "as of rev6" updated to
+  "as of rev8." Next-revision "rev7" updated to "rev9" (since
+  rev8 is the current revision; the post-implementation actuals
+  revision is rev9).
 
 ---
 
@@ -479,7 +514,7 @@ go full-scope.
 
 **Acceptance**: every Stream 26.0 target either:
 1. Grades A on best-of-5 in the post-26.0 dev-server state, OR
-2. Has a written explanation in the next plan revision (rev7)
+2. Has a written explanation in the next plan revision (rev9)
    documenting why the regression is permanent (e.g. the May-4 A
    grade was a stochastic one-off; the underlying SQL was always
    borderline-B).
@@ -846,7 +881,7 @@ state is stable).
 - Day 8: 26.2d braking + 26.2e DRS augmentation
 - Day 9-10: 26.3b/c/d audit-bucket classification + JSON edits
 - Day 11: 26.5 robustness + full re-validation
-- Day 12: plan rev7 (next rev) with actuals + final acceptance baseline
+- Day 12: next plan revision with actuals + final acceptance baseline
 
 ---
 
@@ -957,10 +992,11 @@ PY
 **Reproducibility check (audit pass 5)**: running the script
 above against the committed May-5 baseline + manifest produces
 the 66-row table embedded in Section 8.1 verbatim. Re-running it
-after any rev6+ change to manifest or baseline regenerates the
-table; rev6+ should embed the regenerated output.
+after any future change to the manifest or baseline regenerates
+the table; the post-change revision should embed the regenerated
+output.
 
-The output of this script (rev6 contract: extended with stream
+The output of this script (current contract: extended with stream
 classification, regression-set membership, and per-row
 `phase26_target`) becomes Section 8.1's table. Stream assignment
 rules:
@@ -1183,7 +1219,7 @@ markdown table), where each row's `id` field is an int from
 `phase_19_baseline_2026-05-05.json`:
 
 ```python
-budget_exception_qids = {2182, 2206, 2207}  # rev6: ints, matches raw `r['id']` field
+budget_exception_qids = {2182, 2206, 2207}  # ints, matches raw `r['id']` field
 rewrite_candidate_qids = {2100, 2144}
 
 # Input: `non_a` is the raw list from the Section 8.1 generator
@@ -1253,7 +1289,7 @@ Sub-counters (all measured in the post-26 baseline):
 
 If the budget-exception register grows unexpectedly during
 implementation, Criterion 1 may not be reachable — surface this
-and rev5 the plan with expanded scope BEFORE final acceptance.
+and revise the plan with expanded scope BEFORE final acceptance.
 
 **Criterion 3**: the 5 spatial-slice deploys + the lap-distance
 infrastructure verify scripts all pass.
@@ -1318,7 +1354,7 @@ outperforming, or Phase 27 rollover) explain the next moves.
   consider a stricter hint format (e.g. JSON-shaped "RECOMMENDED
   QUERY" preamble).
 
-**Abort threshold (rev5 — measured against May-5 baseline)**: if
+**Abort threshold (measured against May-5 baseline)**: if
 Phase 26.1 (lap-distance) doesn't pass its acceptance gate within
 3 days of focused work, descope 26.2 and shift to maximize
 cleanup / synthesis fixes only.
@@ -1328,25 +1364,30 @@ cleanup / synthesis fixes only.
 
 | Stream | Conservative | Optimistic | Over-performance (named source) |
 |---|---:|---:|---:|
-| 26.0 regression recovery (19 candidates) | +12 | +13 | +14 (19 × ~75% lift = 14.25; cheap probe-and-narrow fixes hit higher rate) |
+| 26.0 regression recovery (19 candidates) | +12 (= 12/19 = 63%) | +13 (= 13/19 = 68%) | +14 (= 14/19 = 74%) |
 | 26.3a rewrite | +1 | +2 | +2 |
 | 26.3d audit bucket (30 candidates) | +14 | +22 | +22 |
 | 26.4 resolver | +2 | +3 | +3 |
 | 26.5 robustness | +1 | +2 | +2 |
 | **Sum** | **+30** | **+42** | **+43** |
 
-The over-performance column is anchored to Stream 26.0
-(regression recovery's lift rate variance is the most plausible
-source — 19 cheap fixes against an underlying ~75% rate). If
-26.0 lands at +13 instead of +14, the realistic ceiling drops to
-the +42 column (143/167 = 85.6%).
+The over-performance column is anchored to Stream 26.0:
+regression recovery's lift-rate variance is the most plausible
+source. The 19 cheap probe-and-narrow fixes have a realistic
+band of **63-74%** (conservative-to-optimistic). The nominal +13
+row reflects Phase 25.2's observed ~68% lift rate; the optimistic
++14 row assumes 74% — still below 75%, but the upper band of a
+well-defined regression-recovery workload. If 26.0 lands at +13
+instead of +14, the realistic ceiling drops to the +42 column
+(143/167 = 85.6%).
 
 Starting from 101 A in May-5:
 
 - **Conservative no-lap-distance** (+30): 101 + 30 = **131 / 167 = 78.4%**.
-  (Implementer note: rev6's "+31 → 132/167 = 79.0%" included
-  the +1 unnamed contingency — rev7 drops the unnamed
-  contingency to keep the conservative row purely auditable.)
+  (Implementer note: the conservative row sums stream maxima
+  only — earlier revisions carried an unnamed +1 contingency
+  here; the current contract drops it so the conservative row
+  is purely auditable from stream sums.)
 - **Mid no-lap-distance** (+42; 26.0 nominal + others nominal):
   101 + 42 = **143 / 167 = 85.6%**.
 - **Optimistic no-lap-distance** (+43; 26.0 over-performs):
@@ -1404,8 +1445,8 @@ Before implementation begins, codex should verify:
    - The `expected_tables` references a matview that exists OR a
      Phase 26 slice that ships it.
    - The `phase26_target` column equals A for every pursuable row
-     (rev5 contract: Phase 26 always targets A for pursuable rows
-     regardless of source `expected_grade_floor`). For 8.4a rows,
+     (Phase 26 always targets A for pursuable rows regardless
+     of source `expected_grade_floor`). For 8.4a rows,
      `phase26_target` matches the manifest entry's
      `phase25_target_grade`. Note that `expected_grade_floor` is
      informational only — the original Phase 25 contract floor —
@@ -1450,7 +1491,7 @@ ceiling without further infrastructure work.
 
 ## Implementation readiness
 
-Phase 26 is **implementation-ready** as of rev6. The May-5 baseline
+Phase 26 is **implementation-ready** as of rev8. The May-5 baseline
 is consumed (101 A / 167); Section 8.1 has the full 66-row
 inventory with per-row stream and `phase26_target` columns;
 Section 8.5's `pursuable_targets` derivation produces the 63-row
@@ -1465,9 +1506,9 @@ and the 19-row regression list (Stream 26.0) need per-question
 classification as work begins, but the bucket totals and stream
 assignments are fixed in Section 8.1.
 
-The next plan revision will be **rev7 — actuals vs targets**, written
+The next plan revision will be **rev9 — actuals vs targets**, written
 after Streams 26.0 + 26.1 + 26.2 land and the post-26.2 baseline
 runs. That revision documents per-question observed lifts vs the
-rev6 targets and decides (a) whether 26.3 / 26.4 / 26.5 stay on
+rev8 targets and decides (a) whether 26.3 / 26.4 / 26.5 stay on
 schedule, (b) whether stream scope needs expansion, or (c) whether
 Phase 27 gets the rollover.
