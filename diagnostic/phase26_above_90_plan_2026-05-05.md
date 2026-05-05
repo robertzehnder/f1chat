@@ -1,4 +1,4 @@
-# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev1: codex audit applied)
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev2: codex audit pass 2 applied)
 
 **Starting position** — auditable:
 - Last authoritative baseline: `diagnostic/phase_19_baseline_2026-05-04.json` →
@@ -18,6 +18,59 @@ finishes the rest. The split between "Phase 25.2 already delivered"
 and "Phase 26 must deliver" cannot be resolved exactly until the
 2026-05-05 baseline is read; rev2 of this plan will regenerate
 Section 8 from that file.
+
+---
+
+## rev2 changes (codex audit pass 2 applied — 2026-05-05)
+
+Codex audit pass 2 raised four findings; all are addressed below.
+
+- **HIGH (Section 8.1 generation script silently drops duplicate-id
+  rows)** — the rev1 script built `{r['id']: r}` as its dedup map.
+  The benchmark contains duplicate qids across categories (e.g.
+  q1711 appears in both `Corner analysis` and `Track dominance`,
+  with the latter still C in the 2026-05-04 baseline). The dict-by-id
+  collapse would silently lose the C-grade copy and undercount
+  non-A questions. **Fix**: rewrote Section 8.1 generation script
+  to (a) NOT dedup, (b) iterate the `results` list as a list, and
+  (c) emit one row per `(id, category)` pair so the same qid in
+  different categories surfaces independently. The output table's
+  primary key is `(qid, category)` not `qid`.
+- **HIGH (manifest exclusion conflicts with 26.3a rewrite targets)**
+  — rev1's Section 8.3 said "manifest-bound qids are excluded from
+  Section 8.1's lift table." But q2100 and q2144 are also explicit
+  26.3a rewrite candidates — the plan's own intent is to *remove*
+  their manifest cap by rewriting the source question, then watch
+  them lift to A. Excluding them upfront would erase that lift
+  path. **Fix**: manifest entries split into two sub-registers:
+  - **Budget exceptions (not pursued in Phase 26)**: q1715, q2008,
+    q2182, q2206, q2207. These stay manifest-capped; their target
+    grade is the manifest entry, not A. Excluded from Section 8.1.
+  - **Rewrite candidates (pursued in Phase 26)**: q2100, q2144.
+    Stay in Section 8.1 with stream 26.3a. Their manifest C-cap
+    is dropped as part of 26.3a's deliverable; if rewrite produces
+    A, manifest entry is removed. If rewrite is rejected by review,
+    they convert to budget exceptions.
+  Section 9 acceptance criterion 2 is updated so rewrite-candidate
+  qids count toward the ≥ 151 A target; budget-exception qids do
+  not.
+- **MEDIUM (live stream totals still escape the rev2 gate)** —
+  Sections 26.3, 26.4, 26.5, and the abort threshold still cited
+  concrete numbers ("+5 to +7", "90-91%", "~83%"). rev1 gated
+  Section 1's stream table but missed these. **Fix**: every
+  per-stream lift count and cumulative percentage outside the
+  audit-history blocks is now marked "indicative pending baseline"
+  or replaced with a relative descriptor ("targets the largest
+  remaining bucket of mis-tagged questions"). The "Abort threshold"
+  at the end of Section 10 keeps the qualitative claim ("realistic
+  ceiling without lap-distance") but drops the specific 83%.
+- **LOW (codex audit ask references the stale May 4 baseline)** —
+  Section 11 told codex to walk through Section 8 against the
+  2026-05-04 baseline, but rev1's whole premise is that rev2
+  generates targets from the 2026-05-05 baseline. **Fix**: Section
+  11 rewritten to audit against `phase_19_baseline_2026-05-05.json`
+  (the freshly-generated Section 8.1 table) and explicitly
+  acknowledges the May 4 baseline as historical only.
 
 ---
 
@@ -252,9 +305,11 @@ specificity, then drop the manifest C-cap.
 - **q2101** (TBD — probe to confirm false-premise; if confirmed
   rewrite, otherwise downstream synthesis fix).
 
-**Expected A lift**: +3.
+**A lift**: indicative pending baseline. Up to 3 questions if all
+three rewrites are accepted at review and grade A on best-of-5;
+fewer if any convert to budget exceptions.
 
-### 26.3b — `expected_columns` corrections (5-7 questions)
+### 26.3b — `expected_columns` corrections
 
 Several questions need 2-3 columns to grade A but only list 1 in
 their source JSON. The grader checks every listed column is in the
@@ -266,26 +321,29 @@ check what columns IT picked, compare to `expected_columns`. If
 synthesis is correct but expected_columns is too narrow, expand
 the list.
 
-Candidates: q2086, q2123 (already A but check), q2143, q2167, q2200,
-q2202.
+Candidates pre-baseline: q2086, q2143, q2200, q2202. Final
+candidates come from Section 8.1 and depend on which qids are
+non-A in the 2026-05-05 baseline.
 
-**Expected A lift**: +2 to +4.
+**A lift**: indicative pending baseline. Targets the largest
+remaining bucket of mis-tagged questions in the post-Phase-25.2
+state.
 
-### 26.3c — Cross-table `expected_columns` additions (3-5 questions)
+### 26.3c — Cross-table `expected_columns` additions
 
 Multi-matview questions whose `expected_columns` only list one
 matview — synthesis correctly JOINs but the grader marks the
 non-listed columns as missing. Add the implied columns.
 
-Candidates: q2100 (race_control + race_progression), q2086 (drs +
-battle), q2202 (traffic + degradation).
+Candidates pre-baseline: q2100 (race_control + race_progression),
+q2086 (drs + battle), q2202 (traffic + degradation). Final
+candidates from Section 8.1.
 
-**Expected A lift**: +2 to +3.
+**A lift**: indicative pending baseline.
 
-**Stream 26.3 total**: +5 to +7 A grades. Cumulative ≈ 88-89%.
-
-**Effort**: 1 day of focused per-question audit + JSON edits +
-re-validation.
+**Stream 26.3 total**: indicative pending baseline. Cumulative
+A-rate (gated). Effort: 1 day of focused per-question audit +
+JSON edits + re-validation.
 
 ---
 
@@ -306,8 +364,8 @@ Files:
 - `web/src/lib/chatRuntime.ts` — when no session but a year is
   resolved, allow the cross-season driver lookup.
 
-**Expected A lift**: +1 (q2161). Possibly +2 if other season-wide
-single-driver questions exist.
+**A lift**: indicative pending baseline. Targets q2161 plus any
+other season-wide single-driver questions surfaced in Section 8.1.
 
 ### 26.4b — Cross-team comparison structural support (q2023 + others)
 
@@ -317,8 +375,8 @@ list so "compare McLaren vs Mercedes / Ferrari vs Red Bull /
 Mercedes pair / Ferrari drivers" patterns also bypass the driver-
 pair clarification.
 
-**Expected A lift**: +2 to +3 (q2023 plus 1-2 sibling cross-team
-warmup / strategy questions).
+**A lift**: indicative pending baseline. Targets q2023 plus any
+sibling cross-team comparison questions in Section 8.1.
 
 ### 26.4c — Per-lap matview-hint expansion (DRS / restart per-lap)
 
@@ -329,12 +387,10 @@ include this JOIN pattern explicitly enough. Expand the existing
 hints with explicit "if you need lap-N position context, JOIN ..."
 guidance.
 
-**Expected A lift**: +1 to +2 (q2086, q2101).
+**A lift**: indicative pending baseline.
 
-**Stream 26.4 total**: +3 to +5 A grades. Cumulative ≈ 90-91% — this
-is where we cross the 90% line.
-
-**Effort**: 1 day.
+**Stream 26.4 total**: indicative pending baseline. Cumulative
+A-rate (gated). Effort: 1 day.
 
 ---
 
@@ -360,8 +416,8 @@ ingests new data, these matviews stale. Add a daily refresh hook in
 runs `REFRESH MATERIALIZED VIEW analytics.* CONCURRENTLY` for all
 Phase 21 / Phase 26 matviews.
 
-**Expected A lift**: +1 to +2 (durability — borderline-A questions
-that were flaking now stay A reliably).
+**A lift**: indicative pending baseline. Durability — borderline-A
+questions that were flaking now stay A reliably.
 
 **Effort**: 0.5 day.
 
@@ -407,30 +463,51 @@ that list. **rev1 removes it pending regeneration from the in-flight
 
 ### 8.1 — Generation procedure
 
+The benchmark file contains duplicate qids across categories (e.g.
+q1711 appears in `Corner analysis` AND `Track dominance`, sometimes
+with different grades). The script below preserves duplicate rows
+keyed by `(id, category)` so a qid that's A in one category and C
+in another shows up once for the C category in the lift table.
+
 When `phase_19_baseline_2026-05-05.json` lands:
 
 ```bash
 python3 - <<'PY'
 import json
-before = {r['id']: r for r in json.load(open('diagnostic/phase_19_baseline_2026-05-04.json'))['results']}
-after  = {r['id']: r for r in json.load(open('diagnostic/phase_19_baseline_2026-05-05.json'))['results']}
-GRADE_RANK = {'A': 4, 'B': 3, 'C': 2, 'D': 1, 'F': 0}
-non_a_after = [r for r in after.values() if r.get('baselineGrade') != 'A']
-print(f"After-state non-A: {len(non_a_after)} questions; {len(after) - len(non_a_after)} A.")
+results = json.load(open('diagnostic/phase_19_baseline_2026-05-05.json'))['results']
+# Iterate the list verbatim — DO NOT dedup by id. Multiple categories
+# can carry the same qid with different grades; we want each
+# (id, category) pair to surface independently.
+non_a = [r for r in results if r.get('baselineGrade') != 'A']
+total = len(results)
+a_count = total - len(non_a)
+print(f"After-state: {a_count} A / {total} total = {a_count/total*100:.1f}% A-rate")
+print(f"Non-A count: {len(non_a)} (one row per (qid, category) pair)")
 print()
-print("| qid | category | grade-now | target | floor_active_after_slice | expected_tables |")
-print("|-----|----------|-----------|--------|--------------------------|------------------|")
-for r in sorted(non_a_after, key=lambda x: x['id']):
+# Sort by (qid, category) for stable output.
+non_a.sort(key=lambda r: (r['id'], r.get('category', '?')))
+print("| qid | category | grade-now | target | floor_active_after_slice | expected_tables | manifest? |")
+print("|-----|----------|-----------|--------|--------------------------|------------------|-----------|")
+manifest = json.load(open('diagnostic/phase25_target_grades.json'))['overrides']
+for r in non_a:
     qid = r['id']
+    qid_str = str(qid)
     grade = r.get('baselineGrade')
     target = r.get('expected_grade_floor')
     slice_id = r.get('floor_active_after_slice') or '-'
     tables = ' / '.join(r.get('expected_tables') or [])
-    print(f"| q{qid} | {r.get('category','?')} | {grade} | {target} | {slice_id} | {tables} |")
+    in_manifest = manifest.get(qid_str)
+    if in_manifest:
+        manifest_tag = f"yes ({in_manifest['phase25_target_grade']})"
+    else:
+        manifest_tag = '-'
+    print(f"| q{qid} | {r.get('category','?')} | {grade} | {target} | {slice_id} | {tables} | {manifest_tag} |")
 PY
 ```
 
-The output of this script becomes Section 8.1's table verbatim. Each
+The output of this script becomes Section 8.1's table verbatim. The
+`manifest?` column flags which qids are already in the
+phase25_target_grades.json manifest (per Section 8.4's split). Each
 non-A row gets a stream assignment based on:
 
 - `floor_active_after_slice` references a Phase 26 spatial slice
@@ -452,17 +529,17 @@ non-A row gets a stream assignment based on:
 
 ### 8.2 — Per-stream sum guarantees
 
-After Section 8.1 is generated, rev2 must demonstrate that:
+After Section 8.1 is generated, rev3 must demonstrate that:
 
 - (Stream 26.2 lifts) + (Stream 26.3 lifts) + (Stream 26.4 lifts) +
   (Stream 26.5 lifts) ≥ (151 A target) − (count of A in
   2026-05-05 baseline).
 - No qid is double-counted across streams.
-- Manifest-bound qids (q1715, q2008, q2100, q2144, q2182, q2206,
-  q2207) are excluded from Section 8.1's lift table — they're
-  tracked separately in Section 9's "budget-exception" register.
+- Manifest-bound qids are split per Section 8.4. Only "rewrite
+  candidates" count toward the A target; "budget exceptions not
+  pursued" do not.
 
-If the sum doesn't close the gap, rev2 must either:
+If the sum doesn't close the gap, rev3 must either:
 1. Expand a stream's scope (with an effort revision), OR
 2. Acknowledge Phase 26 alone won't reach 90% and propose a Phase
    27 follow-up (typically a question-rewrite pass + grader
@@ -470,14 +547,76 @@ If the sum doesn't close the gap, rev2 must either:
 
 ### 8.3 — Already-A qids that should NOT appear in 8.1
 
-Per codex audit, these were in rev0 erroneously and must stay
-excluded from any Phase 26 lift count:
-- q1710, q1711, q1712, q1713, q1716, q2167 (already A in
-  2026-05-04 baseline).
-- q2010-q2013, q2030-q2033, q2050, q2051 (not in benchmark at all).
+Per codex audit pass 1, these were in rev0's per-question table
+erroneously and must stay excluded from any Phase 26 lift count:
+- q1710, q1712, q1713, q1716, q2167 (already A in 2026-05-04
+  baseline; verify against 2026-05-05 baseline before relying on
+  this exclusion).
+- q1711 — already A in `Corner analysis` category but still C in
+  `Track dominance` category. Section 8.1 will surface the
+  Track-dominance C row (per the (qid, category) keying fixed in
+  rev2); the Corner-analysis A row is correctly excluded.
+- q2010-q2013, q2030-q2033, q2050, q2051 (not in benchmark at
+  all).
 
-The Section 8.1 generation script naturally excludes them by reading
-the `baselineGrade != 'A'` filter.
+The Section 8.1 generation script naturally excludes A-graded rows
+by reading the `baselineGrade != 'A'` filter.
+
+### 8.4 — Manifest-entry split (rev2)
+
+Codex audit pass 2 flagged that rev1 lumped all manifest entries
+into "budget exceptions excluded from Section 8.1." But the
+manifest contains TWO different kinds of entries:
+
+**8.4a — Budget exceptions (NOT pursued in Phase 26)**
+
+Excluded from Section 8.1's lift table. Their target grade is
+the manifest entry, not A.
+
+| qid  | manifest grade | reason | excluded? |
+|------|----------------|--------|-----------|
+| q1715 | A (promotion)  | not actually a non-A target — already a Phase 25 expected-A | yes |
+| q2008 | C              | Ferrari quali-trim vs race-trim attribution; needs setup data not ingested | yes |
+| q2182 | B              | per-driver telemetry coverage; matview shipped (slice 046) but the lift didn't take — Phase 27 candidate | yes |
+| q2206 | C              | Leclerc Monza compound vs corner-pace causation; needs Tier-4 driver-event-attribution model | yes |
+| q2207 | C              | Mercedes Spa C3 cliff cause-attribution; needs Phase 22 Bayesian deg model | yes |
+
+**8.4b — Rewrite candidates (PURSUED in Phase 26 stream 26.3a)**
+
+Stay in Section 8.1's lift table. The plan's intent is to remove
+their manifest C-cap by rewriting the source question text, then
+watch the lift to A on best-of-5.
+
+| qid  | manifest grade | rewrite |
+|------|----------------|---------|
+| q2100 | C | "Who led the field on the lap-3 SC restart at the 2025 Saudi Arabian GP?" → "Who led the field on the first SC restart of the 2025 Saudi Arabian GP?" |
+| q2144 | C | "Compare the lap-6 Mexico City 2025 Turn 1-to-Turn 4 sequence ..." → "Compare the lap-1 Mexico City 2025 Turn 2 incident across drivers ..." |
+
+If the rewrite is rejected at review (e.g. the question's authored
+intent must include the false specificity), the entries convert
+back to budget exceptions. Otherwise their manifest entries are
+deleted as part of 26.3a's deliverable, and the questions count
+toward the ≥ 151 A target only if they actually grade A on
+best-of-5 against the post-26 baseline.
+
+### 8.5 — Section 8.1 generator: manifest-aware filtering
+
+When generating Section 8.1's table, post-process to:
+1. Exclude rows whose qid is in 8.4a (budget exceptions not
+   pursued).
+2. Keep rows whose qid is in 8.4b (rewrite candidates) with the
+   `manifest?` column showing the current manifest grade and a note
+   that the rewrite path is the lift mechanism.
+3. Keep all other non-A rows.
+
+The post-processing pseudocode:
+
+```python
+budget_exception_qids = {1715, 2008, 2182, 2206, 2207}
+rewrite_candidate_qids = {2100, 2144}
+final_targets = [r for r in non_a if r['id'] not in budget_exception_qids]
+# rewrite_candidate_qids stay in final_targets but are tagged with stream 26.3a.
+```
 
 ---
 
@@ -557,33 +696,64 @@ within scope of streams 26.3 + 26.4 alone.
 **Abort threshold**: if Phase 26.1 (lap-distance) doesn't pass its
 acceptance gate within 3 days of focused work, descope 26.2 and
 shift to maximize cleanup / synthesis fixes only. Realistic ceiling
-without lap-distance: ~83% (+8 from current via streams 26.3 / 26.4
-/ 26.5 only — short of the 90% target but a meaningful improvement).
+without lap-distance is **gated** until rev3 measures it against
+the 2026-05-05 baseline — qualitatively, this is "short of the
+90% target but a meaningful improvement," with the exact A-rate
+ceiling depending on how many spatial-dependent questions the
+2026-05-05 baseline shows still non-A.
 
 ---
 
 ## Section 11 — Codex audit ask
 
+The 2026-05-04 baseline is **historical only** for this plan — it
+anchored Phase 25's "before" state and the rev1 starting-position
+discussion, but every Phase 26 audit question below is against the
+freshly-generated Section 8.1 table built from
+`phase_19_baseline_2026-05-05.json`. Do NOT re-audit the 2026-05-04
+file for Phase 26 target accuracy.
+
 Before implementation begins, codex should verify:
 
-1. **Per-question target-list accuracy** (Section 8). For each qid,
-   confirm:
-   - The `expected_tables` listed in `phase_19_baseline_2026-05-04.json`
-     match the matview the plan claims will lift it.
-   - The `expected_grade_floor` matches the target grade.
-   - The lift mechanism (which stream) is plausible.
-2. **Lap-distance feasibility**: walk a single Race session's
+1. **Section 8.1 generation correctness**: re-run the generator
+   script in Section 8.1 against `phase_19_baseline_2026-05-05.json`
+   and confirm:
+   - The script does NOT dedup by `id` (regression check; rev1's
+     bug). Multiple `(id, category)` pairs with the same id surface
+     independently when their grades differ.
+   - The `manifest?` column correctly tags entries from
+     `diagnostic/phase25_target_grades.json`.
+   - Section 8.4a budget exceptions are filtered out of the final
+     target list.
+   - Section 8.4b rewrite candidates (q2100, q2144) stay in the
+     final target list with stream tag 26.3a.
+2. **Per-question stream assignment**: for each row in the
+   regenerated Section 8.1 table, confirm:
+   - The stream assignment matches the `expected_tables` /
+     `floor_active_after_slice` / question-text classification
+     rules listed in Section 8.1.
+   - The `expected_tables` references a matview that exists OR a
+     Phase 26 slice that ships it.
+   - The `expected_grade_floor` matches the assigned target grade.
+3. **Lap-distance feasibility**: walk a single Race session's
    raw.location density (samples per lap, sample gap distribution).
    Flag if any 2025 Race session has < 200 samples per lap on
    median.
-3. **f1.track_segments coverage**: how many corners are seeded for
+4. **f1.track_segments coverage**: how many corners are seeded for
    2025 venues? If < 50% of corners-tagged-in-questions, prepare a
    seed expansion as part of 26.2a.
-4. **Stream 26.4a scope**: does `core.driver_dim` exist on Neon? If
+5. **Stream 26.4a scope**: does `core.driver_dim` exist on Neon? If
    not, propose constructing it (one migration) before the resolver
    change.
-5. **Outcome math**: walk through the per-question sums in Section 8
-   and confirm 25 lifts is achievable. Flag any double-counting.
+6. **Outcome math closure**: walk through the per-stream lift
+   counts after Section 8.1 is generated. Confirm:
+   - (sum of stream lifts) ≥ (151 - count of A in 2026-05-05
+     baseline).
+   - No qid is double-counted across streams.
+   - q2100 and q2144 (rewrite candidates) are counted in 26.3a's
+     lift sum, NOT in the budget-exception register.
+   - The 8.4a budget exceptions are excluded from both the lift
+     sum and the lift-needed denominator.
 
 ---
 
@@ -594,25 +764,29 @@ sibling to the Phase 25 plan. The Phase 25 plan (rev11) remains the
 source of truth for the Phase 25 actuals and the 75-77% A-rate
 ceiling without further infrastructure work.
 
-## rev2 prerequisite
+## rev3 prerequisite
 
-Before any Phase 26 implementation begins, rev2 must:
+Before any Phase 26 implementation begins, rev3 must:
 
 1. Read `phase_19_baseline_2026-05-05.json` (the in-flight baseline
    that anchors the auditable starting position).
 2. Run the Section 8.1 generation script against that file to
-   produce the per-question target list.
-3. Compute the gap: (151 - actual A count) — call it `LIFT_NEEDED`.
-4. Assign each non-A non-manifest qid to a stream (26.2a/b/c/d/e,
+   produce the per-question target list. The script must NOT dedup
+   by `id` (regression check from rev2's HIGH finding); use the
+   `(id, category)` pair as the row key.
+3. Apply the Section 8.4 manifest split: filter out 8.4a budget
+   exceptions; keep 8.4b rewrite candidates with stream 26.3a.
+4. Compute the gap: (151 - actual A count) — call it `LIFT_NEEDED`.
+5. Assign each Section 8.1 row to a stream (26.2a/b/c/d/e,
    26.3a/b/c, 26.4a/b/c, 26.5).
-5. Verify (sum of stream lifts) ≥ `LIFT_NEEDED`. If not, rev2
+6. Verify (sum of stream lifts) ≥ `LIFT_NEEDED`. If not, rev3
    expands a stream's scope or escalates to Phase 27.
-6. Update Section 1's stream table with concrete cumulative
+7. Update Section 1's stream table with concrete cumulative
    percentages.
-7. Section 3's per-slice "tagged set" entries get exact counts.
-8. Document any qids that were already-A in 2026-05-05 baseline
-   but had been Section 8 candidates in earlier audit cycles
-   (excluded from lift math).
+8. Section 3's per-slice "tagged set" entries get exact counts.
+9. Document any qids that were Phase 25.2 lift candidates but
+   already-A in the 2026-05-05 baseline (these need NO Phase 26
+   work and stay excluded from the lift table).
 
-Until rev2 lands, this plan is *gated*. It cannot be implemented
+Until rev3 lands, this plan is *gated*. It cannot be implemented
 because the per-question target list does not yet exist.
