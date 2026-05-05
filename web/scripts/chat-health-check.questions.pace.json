@@ -136,7 +136,7 @@
       "analytics.traffic_adjusted_pace.traffic_pace_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Imola: Piastri 'in Red Bull's dirty air overused his tyres' forcing early stop.",
     "question": "How did Verstappen's clean-air pace on the medium compound at Imola 2025 compare with Piastri's medium pace once he was stuck in dirty air behind Russell?"
   },

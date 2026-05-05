@@ -111,8 +111,8 @@
     },
     {
       "slice_id": "21-traffic-adjusted-pace",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T00:48:18Z",
       "depends_on": [
         "20-intervals-parser"
       ]

@@ -14,7 +14,7 @@
       "analytics.traffic_adjusted_pace.traffic_pace_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Imola: split-tyre + dirty-air overuse triggered Piastri's lap-13 stop.",
     "question": "At Imola 2025, did the front-right graining that forced Piastri into an early stop also coincide with a pace cliff in his clean-air sectors, vs Verstappen's much flatter medium-tyre deg curve in clean air?"
   },
@@ -52,7 +52,7 @@
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "floor_active_after_slice": null,
     "author_note": "The Race 'McLaren didn't intend strategy switch': one-stop benefit was free air for Norris.",
     "question": "How did Norris's one-stop strategy at Hungary 2025 interact with traffic: did his stretched first stint sacrifice tyre life that he later recouped via clean-air pace once Piastri got bottled behind Leclerc?"
   },
@@ -90,7 +90,7 @@
       "analytics.traffic_adjusted_pace.traffic_pace_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "floor_active_after_slice": null,
     "author_note": "Verstappen Singapore radio + RaceFans briefing.",
     "question": "Did Verstappen's soft-tyre opening stint at Singapore 2025 force him into clean-air pace management early, then compound into traffic-induced second-stint medium overheating that erased the strategy's notional clean-air gain?"
   },
@@ -109,7 +109,7 @@
       "analytics.traffic_adjusted_pace.clean_air_pace_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "floor_active_after_slice": null,
     "author_note": "Motorsport.com 'Long-run shock in Australia'.",
     "question": "At Australia 2025, did Russell's long-run pace advantage in clean air translate into actual race-stint pace once he was clear of traffic, vs Hamilton 0.6s/lap behind in similar conditions?"
   },
@@ -167,7 +167,7 @@
       "analytics.traffic_adjusted_pace.traffic_pace_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-traffic-adjusted-pace",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Saudi long-runs: ~0.7s race-stint gap vs ~0.3s qualifying gap to next best \u2014 clean-air-pace effect.",
     "question": "At Saudi 2025, was McLaren's race-stint advantage over the next best a function of clean-air pace alone, or did it persist in traffic situations during stint simulations?"
   }
