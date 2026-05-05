@@ -1,4 +1,4 @@
-# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev6: audit-ask + ceiling math + rev label cleanup)
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev7: ceiling source named; remaining rev labels swept)
 
 **Starting position — auditable**:
 - Authoritative baseline: `diagnostic/phase_19_baseline_2026-05-05.json`
@@ -22,6 +22,37 @@ expands Stream 26.3 scope to handle the 30-question "audit"
 bucket Section 8.1 surfaced. Even with these expansions, the plan
 is **tight** — the realistic ceiling estimate at the bottom of
 Section 1 explains why.
+
+---
+
+## rev7 changes (codex audit pass 7 applied — 2026-05-05)
+
+Two findings; both addressed.
+
+- **MEDIUM (optimistic-ceiling +1 contingency unnamed)** — rev6's
+  abort-threshold table closed the optimistic row at +43 by
+  adding a generic "+1 contingency over-performance allowance"
+  not tied to any specific stream. Section 1's actual stream
+  maxima without 26.2 sum to +42, not +43.
+  **Fix**: replaced the generic +1 with a named source:
+  Stream 26.0 over-performs from +13 to +14 (19 regression
+  candidates × ~75% lift rate = 14.25, so +14 is reachable when
+  the cheap probe-and-narrow fixes hit a higher rate than the
+  conservative +12 / nominal +13 estimate). Optimistic ceiling
+  remains +43 → 144/167 = 86.2%, but is now traceable to a
+  specific stream's variance band. The auditable conservative
+  ceiling stays +31 → 132/167 = 79.0%; mid-point ("+42 conservative
+  no over-performance") = 143/167 = 85.6% added as a third
+  reference row.
+- **LOW (rev4/rev5 labels still in live sections)** — rev6's
+  sweep missed several spots: 26.3a generator label (rev5),
+  table contract (rev5), manifest split (rev4), budget identity
+  (rev4), acceptance example (rev3), abort threshold (rev5).
+  **Fix**: swept and updated all six to current revision OR
+  removed the explicit rev label where the content is stable
+  across revisions. Audit-history changelog blocks and
+  section-creation provenance markers ("NEW in rev3") stay as
+  they are — those are intentional history, not stale labels.
 
 ---
 
@@ -601,7 +632,7 @@ Some questions in the 50q + cross-cat + tyre + restart benchmarks
 have `expected_columns` references that don't match what synthesis
 actually needs to answer. Others have false premises.
 
-### 26.3a — Manifest-confirmed false-premise rewrites (2 questions; rev5)
+### 26.3a — Manifest-confirmed false-premise rewrites (2 questions)
 
 For each, edit the source question JSON to remove the unverifiable
 specificity, then drop the manifest C-cap.
@@ -614,7 +645,7 @@ specificity, then drop the manifest C-cap.
   stewards apply consistent penalties for forcing-off?" — matches
   data.
 
-**Note (rev5)**: q2101 was probed during Phase 25.2 follow-up and
+**Note**: q2101 was probed during Phase 25.2 follow-up and
 found NOT to be false-premise. It ships under stream 26.3d (audit
 bucket) — implementers should NOT reopen it as a 26.3a rewrite
 candidate.
@@ -853,8 +884,8 @@ with different grades). The script below preserves duplicate rows
 keyed by `(id, category)` so a qid that's A in one category and C
 in another shows up once for the C category in the lift table.
 
-The generator script (rev5: encodes the full bucket classifier
-and emits exactly the column set used in the embedded Section 8.1
+The generator script (encodes the full bucket classifier and
+emits exactly the column set used in the embedded Section 8.1
 table; output is byte-equivalent to the embedded table when run
 against May-5 baseline + manifest):
 
@@ -947,9 +978,9 @@ rules:
   `expected_columns` / cross-table multi-matview / per-question
   classification).
 
-### 8.1 — Per-question target table (66 rows; rev5)
+### 8.1 — Per-question target table (66 rows)
 
-**Contract (rev5)**: this table is the canonical full non-A
+**Contract**: this table is the canonical full non-A
 inventory from the May-5 baseline — 66 rows, including the 3
 8.4a budget exceptions. The `pursuable_targets` set (Section 8.5)
 is **derived** from this table by removing 8.4a rows; Section 8.1
@@ -1088,7 +1119,7 @@ The Section 8.1 generation script naturally excludes A-graded
 rows by `baselineGrade != 'A'` filter; the regressed-A qids stay
 in because their May-5 grade is no longer A.
 
-### 8.4 — Manifest-entry split (rev4: corrected against May-5 baseline)
+### 8.4 — Manifest-entry split (corrected against May-5 baseline)
 
 The manifest has 7 entries: q1715, q2008, q2100, q2144, q2182,
 q2206, q2207. Of those, only the qids that are **non-A in the
@@ -1135,9 +1166,9 @@ deleted as part of 26.3a's deliverable, and the questions count
 toward the ≥ 151 A target only if they actually grade A on
 best-of-5 against the post-26 baseline.
 
-### 8.5 — `pursuable_targets` derivation (rev5)
+### 8.5 — `pursuable_targets` derivation
 
-**Contract clarification (rev5)**: Section 8.1's table is the
+**Contract clarification**: Section 8.1's table is the
 canonical full non-A inventory (66 rows), and **includes** the 3
 8.4a budget-exception rows. Section 8.5 derives a separate
 `pursuable_targets` set by removing 8.4a rows; this derived set
@@ -1202,9 +1233,7 @@ Section 8.1 target that does NOT grade A on best-of-5 must either:
    *budget exception*), OR
 2. Be flagged as a Phase 27 follow-up.
 
-**Budget identity** (rev4 — corrects the rev3 dimensional mismatch
-which compared "actual A count over 167" against "Section 8.1
-non-A pool size"). The acceptance equation is over the full
+**Budget identity**: the acceptance equation is over the full
 167-question set:
 
   starting_A_in_May5 (= 101)
@@ -1215,7 +1244,8 @@ non-A pool size"). The acceptance equation is over the full
 Sub-counters (all measured in the post-26 baseline):
 - `new_A_from_Phase26` ≥ 50 → Criterion 1 passes.
 - `remaining_BC_in_post-26_baseline` includes:
-  - 8.4a budget exceptions held at manifest grade (3 in rev4).
+  - 8.4a budget exceptions held at manifest grade (3 entries:
+    q2182, q2206, q2207).
   - 8.4b rewrite candidates that didn't lift after rewrite
     (≤ 2 if any rewrite is rejected at review).
   - Any Section 8.1 target that didn't lift AND wasn't logged
@@ -1231,7 +1261,7 @@ infrastructure verify scripts all pass.
 **Criterion 4**: the matview-refresh job runs successfully on a
 clean schedule trigger (not just manual).
 
-### Acceptance reconciliation example (rev3 — based on actual May-5 baseline)
+### Acceptance reconciliation example (based on actual May-5 baseline)
 
 The May-5 baseline (the real one, now consumed) shows **101 A out of
 167**. Working through the math correctly:
@@ -1242,7 +1272,7 @@ rows that count against the 151 ceiling.
 
 **Numerator target**: 151 A.
 
-**Pursuable pool** (rev4 — corrected):
+**Pursuable pool**:
 - Total non-A in May-5 = 66.
 - 8.4a budget exceptions in May-5 non-A pool = **3** (q2182,
   q2206, q2207). q1715 and q2008 are A in May-5 and not part of
@@ -1293,28 +1323,34 @@ Phase 26.1 (lap-distance) doesn't pass its acceptance gate within
 3 days of focused work, descope 26.2 and shift to maximize
 cleanup / synthesis fixes only.
 
-**Concrete ceiling without lap-distance (rev6)**: dropping Stream
+**Concrete ceiling without lap-distance**: dropping Stream
 26.2's +7 target from Section 1's stream sums leaves:
 
-| Stream | Conservative | Optimistic |
-|---|---:|---:|
-| 26.0 regression recovery | +12 | +13 |
-| 26.3a rewrite | +1 | +2 |
-| 26.3d audit bucket | +14 | +22 |
-| 26.4 resolver | +2 | +3 |
-| 26.5 robustness | +1 | +2 |
-| **Sum** | **+30** | **+42** |
-| Plus Section 1 contingency over-performance allowance | +1 | +1 |
-| **Effective max** | **+31** | **+43** |
+| Stream | Conservative | Optimistic | Over-performance (named source) |
+|---|---:|---:|---:|
+| 26.0 regression recovery (19 candidates) | +12 | +13 | +14 (19 × ~75% lift = 14.25; cheap probe-and-narrow fixes hit higher rate) |
+| 26.3a rewrite | +1 | +2 | +2 |
+| 26.3d audit bucket (30 candidates) | +14 | +22 | +22 |
+| 26.4 resolver | +2 | +3 | +3 |
+| 26.5 robustness | +1 | +2 | +2 |
+| **Sum** | **+30** | **+42** | **+43** |
 
-(The contingency line carries Section 1's "26.0 outperforms" /
-"26.3d outperforms" path; see Section 1 contingencies for
-details.)
+The over-performance column is anchored to Stream 26.0
+(regression recovery's lift rate variance is the most plausible
+source — 19 cheap fixes against an underlying ~75% rate). If
+26.0 lands at +13 instead of +14, the realistic ceiling drops to
+the +42 column (143/167 = 85.6%).
 
 Starting from 101 A in May-5:
 
-- **Conservative no-lap-distance**: 101 + 31 = **132 / 167 = 79.0%**.
-- **Optimistic no-lap-distance**: 101 + 43 = **144 / 167 = 86.2%**.
+- **Conservative no-lap-distance** (+30): 101 + 30 = **131 / 167 = 78.4%**.
+  (Implementer note: rev6's "+31 → 132/167 = 79.0%" included
+  the +1 unnamed contingency — rev7 drops the unnamed
+  contingency to keep the conservative row purely auditable.)
+- **Mid no-lap-distance** (+42; 26.0 nominal + others nominal):
+  101 + 42 = **143 / 167 = 85.6%**.
+- **Optimistic no-lap-distance** (+43; 26.0 over-performs):
+  101 + 43 = **144 / 167 = 86.2%**.
 
 That is the realistic Phase-26 ceiling without lap-distance
 infrastructure. The optimistic end is short of the 151 / 167
@@ -1341,15 +1377,15 @@ file for Phase 26 target accuracy.
 
 Before implementation begins, codex should verify:
 
-1. **Section 8.1 generation correctness (rev6)**: re-run the
+1. **Section 8.1 generation correctness**: re-run the
    generator script in Section 8.1 against `phase_19_baseline_2026-05-05.json`
    + manifest, and confirm:
    - The script does NOT dedup by `id` (regression check from
      rev1's bug). Multiple `(id, category)` pairs with the same id
      surface independently when their grades differ.
    - The output emits `stream | qid | category | grade | floor |
-     phase26_target | first_table` (rev5 column set; the prior
-     `manifest?` column is gone).
+     phase26_target | first_table`. The `manifest?` column from
+     earlier revisions is gone.
    - The `phase26_target` column shows A for every pursuable row
      and the manifest grade for 8.4a rows (q2182=B, q2206=C,
      q2207=C).
@@ -1384,7 +1420,7 @@ Before implementation begins, codex should verify:
 5. **Stream 26.4a scope**: does `core.driver_dim` exist on Neon? If
    not, propose constructing it (one migration) before the resolver
    change.
-6. **Outcome math closure (rev6)**: walk through the per-stream
+6. **Outcome math closure**: walk through the per-stream
    lift counts after Section 8.1 is generated. Confirm:
    - (sum of stream lifts) ≥ (151 - count of A in 2026-05-05
      baseline). With May-5 numbers: required lift = 50.
