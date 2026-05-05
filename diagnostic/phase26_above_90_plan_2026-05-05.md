@@ -1,40 +1,96 @@
-# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev0)
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev1: codex audit applied)
 
-**Starting position** (Phase 25.2 + Round 2 actuals, awaiting authoritative baseline):
-- Confirmed live A: ≈ 126 / 167 ≈ **75.4%**
-- Plan rev10 projection: 159 / 167 ≈ 95.2%
-- Realized gap: **33 questions** (some unliftable without infra; some structurally stuck)
+**Starting position** — auditable:
+- Last authoritative baseline: `diagnostic/phase_19_baseline_2026-05-04.json` →
+  **79 / 167 A** (47.3% A-rate).
+- Phase 25.2 + Round 2 per-slice live-validation suggested ≈ 126 / 167
+  (≈ 75.4%) A by the time slice 046 + Round 2 fixes shipped, but that
+  number is **not auditable** until the in-flight
+  `phase_19_baseline_2026-05-05.json` lands. Treat the 126 as an
+  internal working estimate; treat 79 as the only currently-citable
+  before-state.
 
-**Phase 26 target: 151 / 167 ≈ 90.4%** — requires **+25 A grades** from the current state.
+**Phase 26 target: 151 / 167 ≈ 90.4%**.
+
+The raw delta between authoritative before (79) and target (151) is
+**+72 A**. Phase 25.2 has already done much of that work; Phase 26
+finishes the rest. The split between "Phase 25.2 already delivered"
+and "Phase 26 must deliver" cannot be resolved exactly until the
+2026-05-05 baseline is read; rev2 of this plan will regenerate
+Section 8 from that file.
 
 ---
 
-## rev0 changes (2026-05-05)
+## rev1 changes (codex audit applied — 2026-05-05)
 
-Initial plan after Phase 25.2 + loop tightening Round 2 shipped. Built
-from the per-question failure characterization in
-`phase_25_remaining_75_roadmap_2026-05-04.md` rev11 + per-slice
-live-validation actuals.
+Codex audit pass 1 raised four findings; all are addressed below.
+
+- **HIGH (starting A-rate not grounded in an available baseline)** —
+  rev0 cited "≈ 126 / 167 ≈ 75.4%" without naming a file. The only
+  authoritative before-file present locally is the 2026-05-04 baseline
+  showing 79 / 167 A. **Fix**: header rewrites the starting position
+  as "79 / 167 from the 2026-05-04 baseline" + flags the 126 as a
+  Phase 25.2 working estimate that the 2026-05-05 baseline will
+  confirm. All cumulative-percentage rows in Section 1's stream table
+  are gated on the 2026-05-05 baseline. The total-lift number is
+  re-stated as "raw +72 to reach 151" without claiming Phase 26 alone
+  delivers all of it.
+- **HIGH (Section 8 qids fabricated or already-A)** — rev0 listed
+  q2010-q2013, q2030-q2033, q2050/q2051 (none exist in the baseline)
+  and q1710 / q1711 / q1712 / q1713 / q1716 / q2167 (already A in
+  the 2026-05-04 baseline). **Fix**: Section 8 replaced with a
+  *generation procedure* (rev1) that the 2026-05-05 baseline run
+  executes to produce an authoritative target list. Until rev2
+  regenerates it, the numerical lift estimates per stream are marked
+  "indicative, pending baseline." The placeholder fixed lift counts
+  in the stream-table column are wrapped in `≈` and explicitly tied
+  to "depends on remaining-non-A set after the 2026-05-05 baseline."
+- **MEDIUM (spatial-slice lift overcounting)** — rev0's "21-corner-
+  analysis lifts 9 of 11" was relative to a fabricated qid set.
+  **Fix**: per-slice lift estimates in Section 3 are restated as
+  "lift up to N of M questions in the slice's tagged set, but the
+  actual lift count is whatever subset is *non-A* in the 2026-05-05
+  baseline AND has the spatial dependency." The acceptance check
+  measures lift against *the 2026-05-05 baseline*, not against
+  fabricated counts.
+- **MEDIUM (manifest-downgrade-as-acceptance double-counts A
+  target)** — rev0's Section 9 allowed a Section 8 target to "pass"
+  with either an A grade OR a manifest B/C entry. That conflates two
+  different outcomes. **Fix**: acceptance criteria 1 and 2 in
+  Section 9 are now mutually exclusive — criterion 1 (A on best-of-5)
+  is the only path to count toward the ≥ 151 A target; criterion 2
+  (manifest B/C) is logged as a *budget exception* with its own
+  separate count. The headline acceptance is "151 A grades on
+  best-of-5 against the post-Phase-26 baseline" with no double-counting.
 
 ---
 
-## Section 1 — Where the 25 questions come from
+## Section 1 — Where the missing A grades come from
 
-The +25 A grades break down across 5 work streams. Each has its own
-section below with a per-question target list, effort estimate, and
-acceptance criteria.
+Phase 26 splits remaining lift across 5 work streams. Per-stream lift
+counts are **indicative pending the 2026-05-05 baseline**; rev2 will
+regenerate exact targets. The stream lift sums together must close
+the gap between the 2026-05-05 baseline's A count and 151.
 
-| Stream | Effort | Expected A delta | Cumulative A-rate |
+| Stream | Effort | Indicative A delta | Cumulative A-rate |
 |---|---|---:|---:|
-| **26.1 Lap-distance derivation** (infrastructure) | 2-3 days | 0 (enabler only) | 75.4% |
-| **26.2 Five spatial slices** (corner / minisector / traction / braking / spatial-zone DRS+overtake) | 3-4 days | +14 to +16 A | ≈ 84-85% |
-| **26.3 Question-text cleanup pass** (false-premise + mis-tagged) | 1 day | +5 to +7 A | ≈ 88-89% |
-| **26.4 Resolver enhancements** (driver-without-session, cross-team compare) | 1 day | +3 to +5 A | ≈ 90-91% |
-| **26.5 Stochastic-variance robustness** (best-of-5 / matview-refresh ergonomics) | 0.5 day | +1 to +2 A | ≈ 91-92% |
-| **TOTAL** | **7-9 days focused** | **+24 to +30 A** | **≥ 90%** |
+| **26.1 Lap-distance derivation** (infrastructure) | 2-3 days | 0 (enabler only) | (gated) |
+| **26.2 Five spatial slices** (corner / minisector / traction / braking / spatial-zone DRS+overtake) | 3-4 days | up to ≈ +14 A | (gated) |
+| **26.3 Question-text cleanup pass** (false-premise + mis-tagged) | 1 day | ≈ +5 A | (gated) |
+| **26.4 Resolver enhancements** (driver-without-session, cross-team compare) | 1 day | ≈ +3 A | (gated) |
+| **26.5 Stochastic-variance robustness** (best-of-5 / matview-refresh ergonomics) | 0.5 day | ≈ +1 A | (gated) |
+| **TOTAL** | **7-9 days focused** | **gap-dependent** | **≥ 90%** |
 
-The plan reaches 90% at the end of Stream 26.4. Stream 26.5 is buffer
-in case any of the upstream streams under-deliver.
+"Gated" = cumulative percentages and exact deltas resolve once the
+2026-05-05 baseline lands. The schedule and effort estimates do not
+depend on the gate.
+
+If the 2026-05-05 baseline shows ≈ 126 A (the Phase 25.2 working
+estimate), the gap is 25 → reachable at the end of Stream 26.4 with
+26.5 as buffer. If it shows fewer A (e.g. 100), Phase 26 alone may
+not reach 90% without Stream 26.2 over-delivering OR a rev2 plan
+adding scope. If it shows more (≈ 140+), Phase 26 may reach 90% with
+just streams 26.3 + 26.4 and 26.2 becomes optional polish.
 
 ---
 
@@ -100,7 +156,11 @@ floor_active_after_slice cleanup + per-question live re-validation.
 
 ### 26.2a — `21-corner-analysis` (slice 049)
 
-- 11 questions tagged: q1710-q1719, q2206 (per Phase 19 baseline).
+- Tagged set: questions in the corner category whose
+  `floor_active_after_slice = '21-corner-analysis'` and current
+  grade ≠ A in the 2026-05-05 baseline. (rev0 said "11 questions
+  q1710-q1719+q2206"; codex audit confirmed several of those are
+  already A. Exact tagged-and-non-A set comes from Section 8.1.)
 - Schema: per-(session, driver_number, corner_id) with
   entry_speed_kph, apex_min_speed_kph, exit_speed_kph,
   entry_brake_pressure_avg, corner_label.
@@ -110,37 +170,45 @@ floor_active_after_slice cleanup + per-question live re-validation.
   [start_normalized, end_normalized]. Entry = max(speed) just before
   start_normalized; apex_min = min(speed) inside; exit = max(speed) just
   after end_normalized.
-- Expected A lift: 9 of 11 (q2206 is manifest C-cap; one question may
-  partial-lift to B due to multi-matview cross-cat).
+- Lift: every tagged-and-non-A corner-analysis question is a
+  candidate. Manifest-bound questions (q2206 has a manifest C-cap)
+  do NOT count toward 26.2a's lift; they're "budget-exception"
+  rows in Section 9.
 
 ### 26.2b — `21-minisector-dominance` (slice 050)
 
-- ~3 questions tagged.
+- Tagged set: questions whose `floor_active_after_slice =
+  '21-minisector-dominance'` and current grade ≠ A in 2026-05-05
+  baseline. (rev0 cited "3 tagged"; verify against Section 8.1.)
 - Schema: per-(session, driver_number, minisector_index) with
   best_minisector_time_s, dominance_count.
 - Source: raw.car_data per-lap minisector splits, computed by binning
   samples into f1.track_segments minisector zones (750 entries
   deployed).
-- Expected A lift: 3 of 3.
+- Lift: every tagged-and-non-A minisector question.
 
 ### 26.2c — `21-traction-analysis` (slice 051)
 
-- 4 questions tagged.
+- Tagged set: questions whose `floor_active_after_slice =
+  '21-traction-analysis'` and current grade ≠ A in 2026-05-05
+  baseline. (rev0 cited "4 tagged"; verify against Section 8.1.)
 - Schema: per-(session, driver_number, corner_id) with
   exit_throttle_application_pct (% of corner-exit samples on full
   throttle), exit_speed_kph, exit_traction_loss_count.
 - Source: raw.car_data.throttle × normalized_lap_distance × corner
   zones from track_segments.
-- Expected A lift: 3 of 4.
+- Lift: every tagged-and-non-A traction-analysis question.
 
 ### 26.2d — `21-braking-performance` (slice 052)
 
-- 2 questions tagged.
+- Tagged set: questions whose `floor_active_after_slice =
+  '21-braking-performance'` and current grade ≠ A in 2026-05-05
+  baseline. (rev0 cited "2 tagged"; verify against Section 8.1.)
 - Schema: per-(session, driver_number, corner_id) with
   brake_zone_speed_drop_kph (max speed - min speed in entry zone),
   brake_application_lap_distance, peak_brake_pressure_pct.
 - Source: raw.car_data.speed and raw.car_data.brake × normalized_lap_distance.
-- Expected A lift: 2 of 2.
+- Lift: every tagged-and-non-A braking question.
 
 ### 26.2e — Spatial-zone augmentation of `21-drs-effectiveness` (revisit
 slice 041 with track-zone joins)
@@ -150,11 +218,13 @@ slice 041 with track-zone joins)
   raw.car_data.date + normalized_lap_distance to f1.track_segments
   (zones tagged segment_kind='drs_zone' — needs to be added to
   track_segments seed if missing).
-- Lifts q2085 (DRS-zone-percentage analysis) which is currently
-  permanently C.
-- Expected A lift: +1 (q2085).
+- Lift target: q2085 (DRS-zone-percentage analysis) — verify it is
+  still non-A in the 2026-05-05 baseline before scoping.
 
-**Stream 26.2 total**: +14 to +16 A grades. Cumulative A-rate ≈ 84-85%.
+**Stream 26.2 total**: indicative lift count comes from Section 8.1
+once the 2026-05-05 baseline lands. rev0's "+14 to +16 A" was
+relative to a fabricated qid set and is not auditable; rev2 will
+restate the count from the real non-A set.
 
 **Effort**: 3-4 days for all 5 slices, mostly in parallel since they
 share the lap-distance infrastructure from 26.1.
@@ -326,37 +396,88 @@ parallel from day 1.
 
 ---
 
-## Section 8 — Per-question target list (all 25 expected lifts)
+## Section 8 — Per-question target list (REGENERATE FROM 2026-05-05 BASELINE)
 
-| qid | current | target | stream | mechanism |
-|-----|---------|--------|--------|-----------|
-| q1710 | C | A | 26.2a | corner_analysis.apex_min_speed_kph |
-| q1711 | C | A | 26.2a | corner_analysis.apex_min_speed_kph |
-| q1712 | C | A | 26.2a | corner_analysis.entry_speed_kph |
-| q1713 | C | A | 26.2a | corner_analysis 3-axis |
-| q1714 | C | A | 26.2a | corner_analysis comparison |
-| q1716 | C | A | 26.2a | corner_analysis.apex_min_speed_kph |
-| q1717 | C | A | 26.2a | corner_analysis 3-axis |
-| q1719 | C | A | 26.2a | corner_analysis 3-axis |
-| q1718 | C | B→A | 26.2a + 26.2c | corner+stint multi-matview |
-| q2010-q2013 | C | A (~3) | 26.2b | minisector-dominance |
-| q2030-q2033 | C | A (~3) | 26.2c | traction-analysis |
-| q2050, q2051 | C | A (2) | 26.2d | braking-performance |
-| q2085 | C | A | 26.2e | drs_zone_index |
-| q2100 | C | A | 26.3a | rewrite + matview JOIN hint |
-| q2144 | C | A | 26.3a | rewrite |
-| q2101 | C | A | 26.3a or 26.4c | rewrite OR synthesis JOIN |
-| q2161 | C | A | 26.4a | bare-driver season-wide |
-| q2023 | C | A | 26.4b | cross-team comparison |
-| q2086 | C | A | 26.4c | DRS lap-N JOIN hint |
-| q2143 | C | B → A* | 26.3b | expected_columns expansion (no penalty_points) |
-| q2167 | C | A | 26.3b | expected_columns audit |
+**Status**: rev0 listed fabricated qids (`q2010-q2013`, `q2030-q2033`,
+`q2050/q2051` don't exist in the benchmark) and several already-A
+qids (`q1710` / `q1711` / `q1712` / `q1713` / `q1716` / `q2167` were
+already A in the 2026-05-04 baseline). Codex audit pass 1 invalidated
+that list. **rev1 removes it pending regeneration from the in-flight
+2026-05-05 baseline.**
 
-*q2143 may stay B — penalty_points is genuinely missing from OpenF1.
-Realistic best is B with the expected_columns expansion.
+### 8.1 — Generation procedure
 
-**Aggregate**: +25 to +30 A grades, conservatively. The plan reaches
-90% even at the low end.
+When `phase_19_baseline_2026-05-05.json` lands:
+
+```bash
+python3 - <<'PY'
+import json
+before = {r['id']: r for r in json.load(open('diagnostic/phase_19_baseline_2026-05-04.json'))['results']}
+after  = {r['id']: r for r in json.load(open('diagnostic/phase_19_baseline_2026-05-05.json'))['results']}
+GRADE_RANK = {'A': 4, 'B': 3, 'C': 2, 'D': 1, 'F': 0}
+non_a_after = [r for r in after.values() if r.get('baselineGrade') != 'A']
+print(f"After-state non-A: {len(non_a_after)} questions; {len(after) - len(non_a_after)} A.")
+print()
+print("| qid | category | grade-now | target | floor_active_after_slice | expected_tables |")
+print("|-----|----------|-----------|--------|--------------------------|------------------|")
+for r in sorted(non_a_after, key=lambda x: x['id']):
+    qid = r['id']
+    grade = r.get('baselineGrade')
+    target = r.get('expected_grade_floor')
+    slice_id = r.get('floor_active_after_slice') or '-'
+    tables = ' / '.join(r.get('expected_tables') or [])
+    print(f"| q{qid} | {r.get('category','?')} | {grade} | {target} | {slice_id} | {tables} |")
+PY
+```
+
+The output of this script becomes Section 8.1's table verbatim. Each
+non-A row gets a stream assignment based on:
+
+- `floor_active_after_slice` references a Phase 26 spatial slice
+  (corner / minisector / traction / braking) → **26.2** with the
+  matching slice letter.
+- Question is in the manifest already → **manifest review** (NOT a
+  Phase 26 lift — see Section 9 for the budget-exception pathway).
+- `expected_tables` references multiple matviews → **26.3c** (cross-
+  table expected_columns) OR **26.4c** (lap-N JOIN hint), depending
+  on whether the synthesis path is structural (column shape) or
+  prompt (LLM picking the wrong shape).
+- Question text contains a single driver name AND season-wide phrasing
+  → **26.4a** (bare-driver season-wide).
+- Question text contains "compare X and Y" where X / Y are team names
+  → **26.4b** (cross-team comparison).
+- Question text references a specific event by lap → probe whether
+  the event exists in the data; if not → **26.3a** (false-premise
+  rewrite OR manifest C-cap).
+
+### 8.2 — Per-stream sum guarantees
+
+After Section 8.1 is generated, rev2 must demonstrate that:
+
+- (Stream 26.2 lifts) + (Stream 26.3 lifts) + (Stream 26.4 lifts) +
+  (Stream 26.5 lifts) ≥ (151 A target) − (count of A in
+  2026-05-05 baseline).
+- No qid is double-counted across streams.
+- Manifest-bound qids (q1715, q2008, q2100, q2144, q2182, q2206,
+  q2207) are excluded from Section 8.1's lift table — they're
+  tracked separately in Section 9's "budget-exception" register.
+
+If the sum doesn't close the gap, rev2 must either:
+1. Expand a stream's scope (with an effort revision), OR
+2. Acknowledge Phase 26 alone won't reach 90% and propose a Phase
+   27 follow-up (typically a question-rewrite pass + grader
+   loosening).
+
+### 8.3 — Already-A qids that should NOT appear in 8.1
+
+Per codex audit, these were in rev0 erroneously and must stay
+excluded from any Phase 26 lift count:
+- q1710, q1711, q1712, q1713, q1716, q2167 (already A in
+  2026-05-04 baseline).
+- q2010-q2013, q2030-q2033, q2050, q2051 (not in benchmark at all).
+
+The Section 8.1 generation script naturally excludes them by reading
+the `baselineGrade != 'A'` filter.
 
 ---
 
@@ -365,17 +486,52 @@ Realistic best is B with the expected_columns expansion.
 Phase 26 ships as a single feature branch (or one-per-stream — your
 preference). Final acceptance:
 
-1. Re-run `python3 scripts/phase19_baseline_run.py` against the post-
-   26.5 state. The output `phase_19_baseline_2026-05-...json` must
-   show **≥ 151 A grades / 167 questions (≥ 90.4%)**.
-2. Each per-question target in Section 8 either grades A on best-of-5
-   OR has a manifest entry in `phase25_target_grades.json` with
+**Criterion 1 (mandatory, gates pass/fail)**: re-run
+`python3 scripts/phase19_baseline_run.py` against the post-26.5
+state. The output `phase_19_baseline_2026-05-...json` must show
+**≥ 151 A grades / 167 questions (≥ 90.4%) on best-of-5 retries**.
+This is the only metric that determines pass / fail. Manifest
+B/C entries do NOT count toward the 151 (criterion 2 below tracks
+them separately).
+
+**Criterion 2 (budget-exception register, informational)**: any
+Section 8.1 target that does NOT grade A on best-of-5 must either:
+1. Have a manifest entry in `phase25_target_grades.json` with
    `phase25_target_grade: "B"` or `"C"` and a written
-   `escape_to_authored_floor` justification.
-3. The 5 spatial-slice deploys + the lap-distance infrastructure
-   verify scripts all pass.
-4. The matview-refresh job runs successfully on a clean schedule
-   trigger (not just manual).
+   `escape_to_authored_floor` justification (counted as a
+   *budget exception*), OR
+2. Be flagged as a Phase 27 follow-up.
+
+The total budget-exception count + the actual A count must equal
+the Section 8.1 target list size. If the budget exception
+register grows unexpectedly during implementation, criterion 1
+may not be reachable — surface this and rev3 the plan with
+expanded scope BEFORE final acceptance.
+
+**Criterion 3**: the 5 spatial-slice deploys + the lap-distance
+infrastructure verify scripts all pass.
+
+**Criterion 4**: the matview-refresh job runs successfully on a
+clean schedule trigger (not just manual).
+
+### Acceptance reconciliation example
+
+If the 2026-05-05 baseline shows 126 A and Phase 26 must reach 151:
+- Gap = 25 net new A.
+- Section 8.1 generation produces (167 - 126) = 41 non-A qids.
+- Manifest already covers 7 (q1715, q2008, q2100, q2144, q2182,
+  q2206, q2207) — these are budget exceptions, not Phase 26
+  targets.
+- Real Phase 26 target list = 41 - 7 = 34 qids.
+- Phase 26 must lift ≥ 25 of those 34 to A on best-of-5.
+- Remaining 9 either grade A natively post-Phase-26 work, OR
+  become new manifest entries (criterion 2), OR are deferred to
+  Phase 27.
+
+If the 2026-05-05 baseline shows fewer A (e.g. 100), the gap grows
+to 51 — Phase 26 alone is unlikely to close it without rev3
+expansion. If it shows more (e.g. 145), the gap shrinks to 6 — well
+within scope of streams 26.3 + 26.4 alone.
 
 ---
 
@@ -437,3 +593,26 @@ This file lives at `diagnostic/phase26_above_90_plan_2026-05-05.md`,
 sibling to the Phase 25 plan. The Phase 25 plan (rev11) remains the
 source of truth for the Phase 25 actuals and the 75-77% A-rate
 ceiling without further infrastructure work.
+
+## rev2 prerequisite
+
+Before any Phase 26 implementation begins, rev2 must:
+
+1. Read `phase_19_baseline_2026-05-05.json` (the in-flight baseline
+   that anchors the auditable starting position).
+2. Run the Section 8.1 generation script against that file to
+   produce the per-question target list.
+3. Compute the gap: (151 - actual A count) — call it `LIFT_NEEDED`.
+4. Assign each non-A non-manifest qid to a stream (26.2a/b/c/d/e,
+   26.3a/b/c, 26.4a/b/c, 26.5).
+5. Verify (sum of stream lifts) ≥ `LIFT_NEEDED`. If not, rev2
+   expands a stream's scope or escalates to Phase 27.
+6. Update Section 1's stream table with concrete cumulative
+   percentages.
+7. Section 3's per-slice "tagged set" entries get exact counts.
+8. Document any qids that were already-A in 2026-05-05 baseline
+   but had been Section 8 candidates in earlier audit cycles
+   (excluded from lift math).
+
+Until rev2 lands, this plan is *gated*. It cannot be implemented
+because the per-question target list does not yet exist.
