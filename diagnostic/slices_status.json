@@ -105,8 +105,8 @@
     },
     {
       "slice_id": "21-overtake-events",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T01:18:52Z",
       "depends_on": []
     },
     {
@@ -172,24 +172,24 @@
     },
     {
       "slice_id": "21-drs-effectiveness",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T01:12:13Z",
       "depends_on": [
         "21-battle-segments"
       ]
     },
     {
       "slice_id": "21-undercut-overcut-history",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T01:19:59Z",
       "depends_on": [
         "21-pit-loss-per-circuit"
       ]
     },
     {
       "slice_id": "21-restart-performance",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T00:52:49Z",
       "depends_on": [
         "21-overtake-events",
         "21-race-control-incident-index"

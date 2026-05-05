@@ -5,8 +5,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
-    "expected_columns": ["analytics.straight_line_dominance.st_speed_kph"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
+    "expected_columns": [
+      "analytics.straight_line_dominance.st_speed_kph"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-straight-line-dominance",
     "author_note": "Formula1.com standard speed-trap leaderboard graphic post-Monza qualifying.",
@@ -18,8 +22,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
-    "expected_columns": ["analytics.straight_line_dominance.i1_speed_kph"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
+    "expected_columns": [
+      "analytics.straight_line_dominance.i1_speed_kph"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-straight-line-dominance",
     "author_note": "Autosport Baku post-race speed-trap recap (Baku is the canonical top-speed venue).",
@@ -31,8 +39,12 @@
     "complexity": "low",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
-    "expected_columns": ["analytics.straight_line_dominance.st_speed_kph"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
+    "expected_columns": [
+      "analytics.straight_line_dominance.st_speed_kph"
+    ],
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-straight-line-dominance",
     "author_note": "PlanetF1 Vegas straight-line recap pieces averaging speed-trap across sessions.",
@@ -44,15 +56,18 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance", "analytics.drs_effectiveness"],
+    "expected_tables": [
+      "analytics.straight_line_dominance",
+      "analytics.drs_effectiveness"
+    ],
     "expected_columns": [
       "analytics.straight_line_dominance.i2_speed_kph",
       "analytics.drs_effectiveness.drs_active"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-drs-effectiveness",
+    "floor_active_after_slice": null,
     "author_note": "The Race / Gary Anderson Spa columns distinguishing DRS-aided vs DRS-free Kemmel readings.",
-    "question": "Compare McLaren's vs Ferrari's i2 speeds at Spa 2025 — DRS-aided through the Kemmel straight."
+    "question": "Compare McLaren's vs Ferrari's i2 speeds at Spa 2025 \u2014 DRS-aided through the Kemmel straight."
   },
   {
     "id": 2004,
@@ -60,7 +75,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
     "expected_columns": [
       "analytics.straight_line_dominance.st_speed_kph",
       "analytics.straight_line_dominance.session_key"
@@ -76,7 +93,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
     "expected_columns": [
       "analytics.straight_line_dominance.i1_speed_kph",
       "analytics.straight_line_dominance.st_speed_kph"
@@ -84,7 +103,7 @@
     "expected_grade_floor": "A",
     "floor_active_after_slice": "21-straight-line-dominance",
     "author_note": "Auto Motor und Sport Jeddah analysis distinguishing exit-driven i1 vs terminal trap.",
-    "question": "Compare Norris and Verstappen on i1 vs speed-trap at Jeddah 2025 — was McLaren faster on partial straights or only at the trap?"
+    "question": "Compare Norris and Verstappen on i1 vs speed-trap at Jeddah 2025 \u2014 was McLaren faster on partial straights or only at the trap?"
   },
   {
     "id": 2006,
@@ -92,7 +111,9 @@
     "complexity": "medium",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
     "expected_columns": [
       "analytics.straight_line_dominance.i1_speed_kph",
       "analytics.straight_line_dominance.st_speed_kph"
@@ -108,7 +129,10 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance", "analytics.drs_effectiveness"],
+    "expected_tables": [
+      "analytics.straight_line_dominance",
+      "analytics.drs_effectiveness"
+    ],
     "expected_columns": [
       "analytics.straight_line_dominance.i1_speed_kph",
       "analytics.straight_line_dominance.i2_speed_kph",
@@ -116,9 +140,9 @@
       "analytics.drs_effectiveness.drs_active"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-drs-effectiveness",
+    "floor_active_after_slice": null,
     "author_note": "The Race / Mark Hughes Vegas long-form analyses decomposing straight-line speed into acceleration phases.",
-    "question": "Across i1, i2, and speed-trap at Las Vegas 2025, where did Mercedes's straight-line advantage over Red Bull come from — early acceleration (i1), mid-straight (i2), or terminal (trap)? And did it hold DRS-free in the race?"
+    "question": "Across i1, i2, and speed-trap at Las Vegas 2025, where did Mercedes's straight-line advantage over Red Bull come from \u2014 early acceleration (i1), mid-straight (i2), or terminal (trap)? And did it hold DRS-free in the race?"
   },
   {
     "id": 2008,
@@ -126,7 +150,9 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
     "expected_columns": [
       "analytics.straight_line_dominance.i1_speed_kph",
       "analytics.straight_line_dominance.i2_speed_kph"
@@ -134,7 +160,7 @@
     "expected_grade_floor": "B",
     "floor_active_after_slice": "21-straight-line-dominance",
     "author_note": "Motorsport.com Italian GP setup-trim analyses on Ferrari's low-downforce package.",
-    "question": "Compare Ferrari's qualifying-trim vs race-trim straight-line speed at Monza 2025 across all three intermediates — did the trim change cost more on i1 or i2?"
+    "question": "Compare Ferrari's qualifying-trim vs race-trim straight-line speed at Monza 2025 across all three intermediates \u2014 did the trim change cost more on i1 or i2?"
   },
   {
     "id": 2009,
@@ -142,7 +168,9 @@
     "complexity": "high",
     "expected_outcome": "answer",
     "expected_path": "anthropic",
-    "expected_tables": ["analytics.straight_line_dominance"],
+    "expected_tables": [
+      "analytics.straight_line_dominance"
+    ],
     "expected_columns": [
       "analytics.straight_line_dominance.st_speed_kph",
       "analytics.straight_line_dominance.session_key"

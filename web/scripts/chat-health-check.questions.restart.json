@@ -29,7 +29,7 @@
       "analytics.restart_performance.position_delta"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-restart-performance",
+    "floor_active_after_slice": null,
     "author_note": "F1.com video 'Hamilton and Norris battle for P4 on the Safety Car restart' at Bahrain 2025.",
     "question": "How many positions did Hamilton gain on the lap-35 SC restart at Bahrain 2025?"
   },
@@ -48,7 +48,7 @@
       "analytics.race_control_incidents.incident_kind"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-restart-performance",
+    "floor_active_after_slice": null,
     "author_note": "RaceFans + F1.com British GP report: Verstappen spun P2\u2192P10; Piastri 10s penalty for slowing too much.",
     "question": "On the lap-22 SC restart at Silverstone 2025, what was Verstappen's position before and after his spin, and was Piastri's brake-test penalty applied to that same restart?"
   },
@@ -65,7 +65,7 @@
       "analytics.restart_performance.position_delta"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-restart-performance",
+    "floor_active_after_slice": null,
     "author_note": "Sky Sports + McLaren race report: Norris held off Verstappen across multiple SC bunchings.",
     "question": "On the lap-1 launch at Australia 2025, did Norris or Verstappen gain more positions before the first SC, and on what compound?"
   },
@@ -82,7 +82,7 @@
       "analytics.restart_performance.position_delta"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-restart-performance",
+    "floor_active_after_slice": null,
     "author_note": "Frontstretch / news.gp Canadian GP race reports.",
     "question": "Compare Russell's and Antonelli's lap-1-vs-lap-2 position gain at Canada 2025."
   },
@@ -101,7 +101,7 @@
       "analytics.race_control_incidents.incident_kind"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-restart-performance",
+    "floor_active_after_slice": null,
     "author_note": "F1.com Australian GP report + Motor Authority on third SC bunching; Norris won by 0.895s.",
     "question": "Across the three SC restarts of the 2025 Australian GP, quantify field-bunching at green-flag and 1 lap later \u2014 did the bunched restart erase Norris's lead, or did Verstappen lose ground in sector 2?"
   },
@@ -120,7 +120,7 @@
       "analytics.race_control_incidents.incident_kind"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-restart-performance",
+    "floor_active_after_slice": null,
     "author_note": "F1.com video + Wikipedia 2025 Saudi GP: Tsunoda/Gasly T4 contact triggered SC; Verstappen penalised separately.",
     "question": "For the 2025 Saudi Arabian GP lap-1 incident, compare the SC delta cost (lap-1 caution lap time vs green race-pace projection) for the top-5 drivers and isolate Verstappen's cost from his 5s Turn 1/2 cut penalty."
   }

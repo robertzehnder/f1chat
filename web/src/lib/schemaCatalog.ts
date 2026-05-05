@@ -51,7 +51,15 @@ const CORE_CONTRACTS: ReadonlyArray<{ schema: string; table: string }> = [
   // Phase 25.2 slice 21-tyre-warmup-curves (facade name = analytics.tyre_warmup).
   { schema: "analytics", table: "tyre_warmup" },
   // Phase 25.2 slice 21-traffic-adjusted-pace.
-  { schema: "analytics", table: "traffic_adjusted_pace" }
+  { schema: "analytics", table: "traffic_adjusted_pace" },
+  // Phase 25.2 slice 21-restart-performance.
+  { schema: "analytics", table: "restart_performance" },
+  // Phase 25.2 slice 21-drs-effectiveness.
+  { schema: "analytics", table: "drs_effectiveness" },
+  // Phase 25.2 slice 21-overtake-events.
+  { schema: "analytics", table: "overtake_events" },
+  // Phase 25.2 slice 21-undercut-overcut-history.
+  { schema: "analytics", table: "undercut_overcut_history" }
 ];
 
 type CatalogRow = {

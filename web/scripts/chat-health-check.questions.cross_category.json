@@ -33,7 +33,7 @@
       "analytics.undercut_overcut_history.undercut_success_count"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-undercut-overcut-history",
+    "floor_active_after_slice": null,
     "author_note": "Wikipedia/F1.com Spa: Hamilton's early medium-switch produced six-place gain in a single lap window.",
     "question": "Did Hamilton's lap-11 early stop at Spa 2025 (compound + traffic exit) shift him into clean-air pace that beat the field's average undercut value at Spa?"
   },

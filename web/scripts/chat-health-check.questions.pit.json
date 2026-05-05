@@ -47,7 +47,7 @@
       "analytics.undercut_overcut_history.overcut_success_count"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-undercut-overcut-history",
+    "floor_active_after_slice": null,
     "author_note": "Motorsport.com Canadian GP: Russell pitted one lap later, emerged ahead, covering off the undercut threat.",
     "question": "Did Russell's covering stop on the lap after Verstappen in Canada 2025 successfully execute the over-cut, given Verstappen's out-lap pace versus Russell's in-lap?"
   },
