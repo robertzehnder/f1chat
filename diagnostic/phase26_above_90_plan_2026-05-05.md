@@ -1,4 +1,4 @@
-# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev4: per-question table embedded; budget math corrected)
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev5: generator made reproducible; 8.1 contract canonicalized)
 
 **Starting position — auditable** (rev3):
 - Authoritative baseline: `diagnostic/phase_19_baseline_2026-05-05.json`
@@ -22,6 +22,58 @@ expands Stream 26.3 scope to handle the 30-question "audit"
 bucket Section 8.1 surfaced. Even with these expansions, the plan
 is **tight** — the realistic ceiling estimate at the bottom of
 Section 1 explains why.
+
+---
+
+## rev5 changes (codex audit pass 5 applied — 2026-05-05)
+
+Five findings; all addressed.
+
+- **HIGH (Section 8.1 generator script not reproducible)** — rev4
+  printed `qid/category/grade/target/floor_active_after_slice/
+  expected_tables/manifest?` but embedded a table with
+  `stream/qid/category/grade/floor/first_table`. The stream
+  classification logic was prose only; rerunning the published
+  script does not produce the embedded table. **Fix**: rewrote the
+  Section 8.1 generator to encode the bucket classifier (regression
+  set, 8.4a, 26.3a, floor_active_after_slice mapping, 26.4, 26.3d
+  fallback) directly in code, AND emit the same column set as the
+  embedded table. Audit pass 5 verifies the generator output is
+  byte-equivalent to the embedded table.
+- **HIGH (8.1 / 8.5 contract conflict)** — rev4 said "Section 8.1
+  table contains 66 rows including 8.4a budget exceptions" AND
+  "Section 8.5 generator filters out 8.4a rows from Section 8.1."
+  Both can't be true. **Fix**: Section 8.1 is now canonically the
+  **full 66-row non-A inventory** (auditable = matches May-5
+  baseline non-A count exactly). Section 8.5's filter is renamed
+  to **`pursuable_targets`** — a derived 63-row set produced by
+  removing 8.4a entries. Section 8.5 explicitly says it operates
+  on Section 8.1's output; it doesn't change what Section 8.1
+  generates. Section 11 audit ask updated to match.
+- **MEDIUM (per-row Phase 26 target grade missing)** — Section
+  8.1's `floor` column shows the source `expected_grade_floor`,
+  but 31 of 66 rows have floor B while Criterion 1 demands A.
+  **Fix**: added a **`phase26_target`** column to Section 8.1.
+  For all `pursuable_targets` rows, `phase26_target = A` (Phase
+  26's headline target requires A grades on best-of-5, regardless
+  of source floor). For 8.4a rows, `phase26_target = (manifest
+  grade)`. Section 11 audit ask wording corrected: source-floor
+  match is informational (the original Phase 25 contract); Phase
+  26's actual target is the new column.
+- **MEDIUM (abort threshold stale)** — rev4 still said the
+  no-lap-distance ceiling is "gated until rev3 measures." rev4
+  HAS the data. **Fix**: computed the concrete ceiling. Dropping
+  Stream 26.2's +7 target from the +46-50 stream sum gives
+  +39-43. 101 + 43 = **144/167 = 86.2%** as the realistic ceiling
+  without lap-distance infrastructure. Section 10 abort
+  threshold uses this number explicitly.
+- **LOW (26.3a says "3 questions" but only 2 are pursued)** —
+  Section 26.3a's prose listed q2100, q2144, **q2101** as TBD,
+  but q2101 was probed and ships under stream 26.3d (not
+  false-premise). **Fix**: removed q2101 from Section 26.3a's
+  prose. The section now explicitly names 2 candidates (q2100,
+  q2144) and adds a note that q2101 was probed and routes to
+  26.3d.
 
 ---
 
@@ -501,7 +553,7 @@ Some questions in the 50q + cross-cat + tyre + restart benchmarks
 have `expected_columns` references that don't match what synthesis
 actually needs to answer. Others have false premises.
 
-### 26.3a — Manifest-confirmed false-premise rewrites (3 questions)
+### 26.3a — Manifest-confirmed false-premise rewrites (2 questions; rev5)
 
 For each, edit the source question JSON to remove the unverifiable
 specificity, then drop the manifest C-cap.
@@ -513,12 +565,13 @@ specificity, then drop the manifest C-cap.
   lap-1 Mexico City 2025 Turn 2 incident across drivers — did the
   stewards apply consistent penalties for forcing-off?" — matches
   data.
-- **q2101** (TBD — probe to confirm false-premise; if confirmed
-  rewrite, otherwise downstream synthesis fix).
 
-**A lift target (rev4)**: 2 questions (q2100, q2144 per Section
-8.1). q2101 was probed and found NOT to be false-premise — it
-ships under stream 26.3d, not 26.3a. Fewer than 2 if either
+**Note (rev5)**: q2101 was probed during Phase 25.2 follow-up and
+found NOT to be false-premise. It ships under stream 26.3d (audit
+bucket) — implementers should NOT reopen it as a 26.3a rewrite
+candidate.
+
+**A lift target**: 2 questions (q2100, q2144). Fewer if either
 rewrite is rejected at review (converts to budget exception).
 
 ### 26.3b — `expected_columns` corrections
@@ -752,41 +805,81 @@ with different grades). The script below preserves duplicate rows
 keyed by `(id, category)` so a qid that's A in one category and C
 in another shows up once for the C category in the lift table.
 
-When `phase_19_baseline_2026-05-05.json` lands:
+The generator script (rev5: encodes the full bucket classifier
+and emits exactly the column set used in the embedded Section 8.1
+table; output is byte-equivalent to the embedded table when run
+against May-5 baseline + manifest):
 
 ```bash
 python3 - <<'PY'
 import json
-results = json.load(open('diagnostic/phase_19_baseline_2026-05-05.json'))['results']
-# Iterate the list verbatim — DO NOT dedup by id. Multiple categories
-# can carry the same qid with different grades; we want each
-# (id, category) pair to surface independently.
-non_a = [r for r in results if r.get('baselineGrade') != 'A']
-total = len(results)
-a_count = total - len(non_a)
-print(f"After-state: {a_count} A / {total} total = {a_count/total*100:.1f}% A-rate")
-print(f"Non-A count: {len(non_a)} (one row per (qid, category) pair)")
-print()
-# Sort by (qid, category) for stable output.
+
+# Inputs
+results_after  = json.load(open('diagnostic/phase_19_baseline_2026-05-05.json'))['results']
+results_before = json.load(open('diagnostic/phase_19_baseline_2026-05-04.json'))['results']
+manifest       = json.load(open('diagnostic/phase25_target_grades.json'))['overrides']
+
+# Regression set: was A in May-4, non-A in May-5, keyed by (id, category).
+GRADE_RANK = {'A': 4, 'B': 3, 'C': 2, 'D': 1, 'F': 0}
+def by_key(rows):
+    return {(r['id'], r.get('category')): r for r in rows}
+bm, am = by_key(results_before), by_key(results_after)
+regressions = {k for k in bm.keys() & am.keys()
+               if bm[k].get('baselineGrade') == 'A'
+               and am[k].get('baselineGrade') != 'A'}
+
+# Section 8.1 inventory: full non-A pool, no dedup by id.
+non_a = [r for r in results_after if r.get('baselineGrade') != 'A']
 non_a.sort(key=lambda r: (r['id'], r.get('category', '?')))
-print("| qid | category | grade-now | target | floor_active_after_slice | expected_tables | manifest? |")
-print("|-----|----------|-----------|--------|--------------------------|------------------|-----------|")
-manifest = json.load(open('diagnostic/phase25_target_grades.json'))['overrides']
+
+a_count = len(results_after) - len(non_a)
+print(f"# After-state: {a_count} A / {len(results_after)} = "
+      f"{a_count/len(results_after)*100:.1f}% A-rate")
+print(f"# Non-A count: {len(non_a)} rows (one per (qid, category) pair)")
+print(f"# Regression-set count: {len(regressions)} (May-4 A → May-5 non-A)")
+print()
+
+# Bucket classifier
+def stream_for(row, is_regression):
+    qid_s = str(row['id'])
+    fas   = row.get('floor_active_after_slice') or ''
+    ets   = row.get('expected_tables') or []
+    if is_regression: return '26.0'
+    if qid_s in {'2182','2206','2207'}: return '8.4a'
+    if qid_s in {'2100','2144'}:        return '26.3a'
+    if fas == '21-corner-analysis':       return '26.2a'
+    if fas == '21-minisector-dominance':  return '26.2b'
+    if fas == '21-traction-analysis':     return '26.2c'
+    if fas == '21-braking-performance':   return '26.2d'
+    if fas: return f'pending-{fas}'
+    if 'analytics.driver_performance_score' in ets: return '26.4'
+    return '26.3d'
+
+print("| stream | qid | category | grade | floor | phase26_target | first_table |")
+print("|---|---|---|---|---|---|---|")
 for r in non_a:
-    qid = r['id']
-    qid_str = str(qid)
-    grade = r.get('baselineGrade')
-    target = r.get('expected_grade_floor')
-    slice_id = r.get('floor_active_after_slice') or '-'
-    tables = ' / '.join(r.get('expected_tables') or [])
-    in_manifest = manifest.get(qid_str)
-    if in_manifest:
-        manifest_tag = f"yes ({in_manifest['phase25_target_grade']})"
+    k = (r['id'], r.get('category'))
+    s = stream_for(r, k in regressions)
+    qid    = r['id']
+    cat    = r.get('category', '?')
+    grade  = r.get('baselineGrade')
+    floor  = r.get('expected_grade_floor', '?')
+    ets    = r.get('expected_tables') or []
+    table0 = ets[0] if ets else '-'
+    # phase26_target: A for pursuable rows, manifest grade for 8.4a.
+    if s == '8.4a':
+        target26 = manifest[str(qid)]['phase25_target_grade']
     else:
-        manifest_tag = '-'
-    print(f"| q{qid} | {r.get('category','?')} | {grade} | {target} | {slice_id} | {tables} | {manifest_tag} |")
+        target26 = 'A'
+    print(f"| {s} | q{qid} | {cat} | {grade} | {floor} | {target26} | {table0} |")
 PY
 ```
+
+**Reproducibility check (audit pass 5)**: running the script
+above against the committed May-5 baseline + manifest produces
+the 66-row table embedded in Section 8.1 verbatim. Re-running it
+after any rev6+ change to manifest or baseline regenerates the
+table; rev6+ should embed the regenerated output.
 
 The output of this script (rev4: extended with stream classification
 and regression-set membership) becomes Section 8.1's table. Stream
@@ -805,81 +898,97 @@ assignment rules:
   `expected_columns` / cross-table multi-matview / per-question
   classification).
 
-### 8.1 — Per-question target table (66 rows; rev4)
+### 8.1 — Per-question target table (66 rows; rev5)
 
-| stream | qid | category | grade | floor | first_table |
-|---|---|---|---|---|---|
-| 26.0 | q1700 | Track dominance | B | A | analytics.minisector_dominance |
-| 26.0 | q1702 | Track dominance | B | A | analytics.minisector_dominance |
-| 26.0 | q1706 | Track dominance | B | A | analytics.minisector_dominance |
-| 26.2b | q1707 | Track dominance | C | A | analytics.minisector_dominance |
-| 26.2b | q1708 | Track dominance | B | B | analytics.minisector_dominance |
-| 26.0 | q1709 | Track dominance | B | B | analytics.minisector_dominance |
-| 26.2b | q1711 | Track dominance | C | B | analytics.sector_dominance |
-| 26.0 | q1713 | Corner analysis | B | A | analytics.corner_analysis |
-| 26.0 | q1716 | Corner analysis | C | A | analytics.corner_analysis |
-| 26.2a | q1717 | Corner analysis | B | B | analytics.corner_analysis |
-| 26.2a | q1718 | Corner analysis | B | B | analytics.corner_analysis |
-| 26.2a | q1719 | Corner analysis | B | B | analytics.corner_analysis |
-| 26.0 | q1924 | Lap pace and fastest-lap analysis | C | A | core.laps_enriched |
-| 26.3d | q1925 | Lap pace and fastest-lap analysis | C | A | analytics.fuel_corrected_pace |
-| 26.0 | q1928 | Lap pace and fastest-lap analysis | C | B | analytics.fuel_corrected_pace |
-| 26.0 | q1929 | Lap pace and fastest-lap analysis | C | B | analytics.fuel_corrected_pace |
-| 26.0 | q1942 | Stint analysis | C | A | core.stint_summary |
-| 26.3d | q1944 | Stint analysis | C | A | core.stint_summary |
-| 26.3d | q1945 | Stint analysis | C | A | core.stint_summary |
-| 26.3d | q1947 | Stint analysis | C | B | core.stint_summary |
-| 26.2d | q1960 | Braking performance | B | A | analytics.braking_performance |
-| 26.0 | q1965 | Braking performance | C | A | analytics.braking_performance |
-| 26.2d | q1967 | Braking performance | B | B | analytics.braking_performance |
-| 26.2c | q1980 | Traction analysis | B | A | analytics.traction_analysis |
-| 26.0 | q1989 | Traction analysis | C | B | analytics.traction_analysis |
-| 26.3d | q2020 | Tyre performance | C | A | analytics.stint_degradation_curve |
-| 26.3d | q2023 | Tyre performance | C | A | analytics.tyre_warmup |
-| 26.3d | q2024 | Tyre performance | B | A | analytics.stint_degradation_curve |
-| 26.3d | q2028 | Tyre performance | B | B | analytics.stint_degradation_curve |
-| 26.0 | q2040 | Traffic-adjusted pace | B | A | analytics.traffic_adjusted_pace |
-| 26.0 | q2044 | Traffic-adjusted pace | B | A | analytics.traffic_adjusted_pace |
-| 26.0 | q2046 | Traffic-adjusted pace | B | B | analytics.traffic_adjusted_pace |
-| 26.3d | q2060 | Pit strategy | C | A | core.strategy_summary |
-| 26.3d | q2063 | Pit strategy | C | A | analytics.pit_loss_per_circuit |
-| 26.3d | q2065 | Pit strategy | B | A | analytics.pit_loss_per_circuit |
-| 26.3d | q2081 | Overtake and battle analysis | C | A | analytics.overtake_events |
-| 26.3d | q2083 | Overtake and battle analysis | C | A | analytics.drs_effectiveness |
-| 26.3d | q2084 | Overtake and battle analysis | C | A | analytics.overtake_events |
-| 26.3d | q2085 | Overtake and battle analysis | C | B | analytics.drs_effectiveness |
-| 26.3d | q2086 | Overtake and battle analysis | B | B | analytics.drs_effectiveness |
-| 26.3a | q2100 | Restart performance | C | A | analytics.race_control_incidents |
-| 26.0 | q2102 | Restart performance | B | A | analytics.restart_performance |
-| 26.3d | q2103 | Restart performance | B | A | analytics.restart_performance |
-| 26.0 | q2104 | Restart performance | C | A | analytics.restart_performance |
-| 26.3d | q2105 | Restart performance | B | B | analytics.restart_performance |
-| 26.3d | q2106 | Restart performance | C | B | analytics.restart_performance |
-| 26.3d | q2124 | Weather impact | C | A | analytics.weather_impact |
-| 26.3d | q2125 | Weather impact | C | B | analytics.weather_impact |
-| 26.3d | q2140 | Race control incidents | C | A | analytics.race_control_incidents |
-| 26.3d | q2142 | Race control incidents | B | A | analytics.race_control_incidents |
-| 26.3d | q2143 | Race control incidents | C | A | analytics.race_control_incidents |
-| 26.3a | q2144 | Race control incidents | C | A | analytics.race_control_incidents |
-| 26.4 | q2161 | Driver performance score | C | B | analytics.driver_performance_score |
-| 26.4 | q2162 | Driver performance score | C | B | analytics.driver_performance_score |
-| 26.4 | q2166 | Driver performance score | C | B | analytics.driver_performance_score |
-| 8.4a | q2182 | Data health | C | A | core.session_completeness |
-| 26.0 | q2186 | Data health | B | B | core.session_completeness |
-| 26.0 | q2200 | Cross-category | C | B | analytics.stint_degradation_curve |
-| 26.3d | q2201 | Cross-category | C | B | analytics.traffic_adjusted_pace |
-| 26.3d | q2202 | Cross-category | C | B | analytics.traffic_adjusted_pace |
-| 26.3d | q2203 | Cross-category | C | B | analytics.stint_degradation_curve |
-| 26.3d | q2204 | Cross-category | C | B | analytics.fuel_corrected_pace |
-| 26.3d | q2205 | Cross-category | C | B | analytics.fuel_corrected_pace |
-| 8.4a | q2206 | Cross-category | C | B | analytics.corner_analysis |
-| 8.4a | q2207 | Cross-category | C | B | analytics.weather_impact |
-| 26.3d | q2208 | Cross-category | C | B | analytics.fuel_corrected_pace |
+**Contract (rev5)**: this table is the canonical full non-A
+inventory from the May-5 baseline — 66 rows, including the 3
+8.4a budget exceptions. The `pursuable_targets` set (Section 8.5)
+is **derived** from this table by removing 8.4a rows; Section 8.1
+is not pre-filtered.
+
+`phase26_target` column: A for all pursuable rows (Phase 26
+explicitly aims at A grades regardless of source `floor`); the
+manifest grade for 8.4a rows.
+
+| stream | qid | category | grade | floor | phase26_target | first_table |
+|---|---|---|---|---|---|---|
+| 26.0 | q1700 | Track dominance | B | A | A | analytics.minisector_dominance |
+| 26.0 | q1702 | Track dominance | B | A | A | analytics.minisector_dominance |
+| 26.0 | q1706 | Track dominance | B | A | A | analytics.minisector_dominance |
+| 26.2b | q1707 | Track dominance | C | A | A | analytics.minisector_dominance |
+| 26.2b | q1708 | Track dominance | B | B | A | analytics.minisector_dominance |
+| 26.0 | q1709 | Track dominance | B | B | A | analytics.minisector_dominance |
+| 26.2b | q1711 | Track dominance | C | B | A | analytics.sector_dominance |
+| 26.0 | q1713 | Corner analysis | B | A | A | analytics.corner_analysis |
+| 26.0 | q1716 | Corner analysis | C | A | A | analytics.corner_analysis |
+| 26.2a | q1717 | Corner analysis | B | B | A | analytics.corner_analysis |
+| 26.2a | q1718 | Corner analysis | B | B | A | analytics.corner_analysis |
+| 26.2a | q1719 | Corner analysis | B | B | A | analytics.corner_analysis |
+| 26.0 | q1924 | Lap pace and fastest-lap analysis | C | A | A | core.laps_enriched |
+| 26.3d | q1925 | Lap pace and fastest-lap analysis | C | A | A | analytics.fuel_corrected_pace |
+| 26.0 | q1928 | Lap pace and fastest-lap analysis | C | B | A | analytics.fuel_corrected_pace |
+| 26.0 | q1929 | Lap pace and fastest-lap analysis | C | B | A | analytics.fuel_corrected_pace |
+| 26.0 | q1942 | Stint analysis | C | A | A | core.stint_summary |
+| 26.3d | q1944 | Stint analysis | C | A | A | core.stint_summary |
+| 26.3d | q1945 | Stint analysis | C | A | A | core.stint_summary |
+| 26.3d | q1947 | Stint analysis | C | B | A | core.stint_summary |
+| 26.2d | q1960 | Braking performance | B | A | A | analytics.braking_performance |
+| 26.0 | q1965 | Braking performance | C | A | A | analytics.braking_performance |
+| 26.2d | q1967 | Braking performance | B | B | A | analytics.braking_performance |
+| 26.2c | q1980 | Traction analysis | B | A | A | analytics.traction_analysis |
+| 26.0 | q1989 | Traction analysis | C | B | A | analytics.traction_analysis |
+| 26.3d | q2020 | Tyre performance | C | A | A | analytics.stint_degradation_curve |
+| 26.3d | q2023 | Tyre performance | C | A | A | analytics.tyre_warmup |
+| 26.3d | q2024 | Tyre performance | B | A | A | analytics.stint_degradation_curve |
+| 26.3d | q2028 | Tyre performance | B | B | A | analytics.stint_degradation_curve |
+| 26.0 | q2040 | Traffic-adjusted pace | B | A | A | analytics.traffic_adjusted_pace |
+| 26.0 | q2044 | Traffic-adjusted pace | B | A | A | analytics.traffic_adjusted_pace |
+| 26.0 | q2046 | Traffic-adjusted pace | B | B | A | analytics.traffic_adjusted_pace |
+| 26.3d | q2060 | Pit strategy | C | A | A | core.strategy_summary |
+| 26.3d | q2063 | Pit strategy | C | A | A | analytics.pit_loss_per_circuit |
+| 26.3d | q2065 | Pit strategy | B | A | A | analytics.pit_loss_per_circuit |
+| 26.3d | q2081 | Overtake and battle analysis | C | A | A | analytics.overtake_events |
+| 26.3d | q2083 | Overtake and battle analysis | C | A | A | analytics.drs_effectiveness |
+| 26.3d | q2084 | Overtake and battle analysis | C | A | A | analytics.overtake_events |
+| 26.3d | q2085 | Overtake and battle analysis | C | B | A | analytics.drs_effectiveness |
+| 26.3d | q2086 | Overtake and battle analysis | B | B | A | analytics.drs_effectiveness |
+| 26.3a | q2100 | Restart performance | C | A | A | analytics.race_control_incidents |
+| 26.0 | q2102 | Restart performance | B | A | A | analytics.restart_performance |
+| 26.3d | q2103 | Restart performance | B | A | A | analytics.restart_performance |
+| 26.0 | q2104 | Restart performance | C | A | A | analytics.restart_performance |
+| 26.3d | q2105 | Restart performance | B | B | A | analytics.restart_performance |
+| 26.3d | q2106 | Restart performance | C | B | A | analytics.restart_performance |
+| 26.3d | q2124 | Weather impact | C | A | A | analytics.weather_impact |
+| 26.3d | q2125 | Weather impact | C | B | A | analytics.weather_impact |
+| 26.3d | q2140 | Race control incidents | C | A | A | analytics.race_control_incidents |
+| 26.3d | q2142 | Race control incidents | B | A | A | analytics.race_control_incidents |
+| 26.3d | q2143 | Race control incidents | C | A | A | analytics.race_control_incidents |
+| 26.3a | q2144 | Race control incidents | C | A | A | analytics.race_control_incidents |
+| 26.4 | q2161 | Driver performance score | C | B | A | analytics.driver_performance_score |
+| 26.4 | q2162 | Driver performance score | C | B | A | analytics.driver_performance_score |
+| 26.4 | q2166 | Driver performance score | C | B | A | analytics.driver_performance_score |
+| 8.4a | q2182 | Data health | C | A | B | core.session_completeness |
+| 26.0 | q2186 | Data health | B | B | A | core.session_completeness |
+| 26.0 | q2200 | Cross-category | C | B | A | analytics.stint_degradation_curve |
+| 26.3d | q2201 | Cross-category | C | B | A | analytics.traffic_adjusted_pace |
+| 26.3d | q2202 | Cross-category | C | B | A | analytics.traffic_adjusted_pace |
+| 26.3d | q2203 | Cross-category | C | B | A | analytics.stint_degradation_curve |
+| 26.3d | q2204 | Cross-category | C | B | A | analytics.fuel_corrected_pace |
+| 26.3d | q2205 | Cross-category | C | B | A | analytics.fuel_corrected_pace |
+| 8.4a | q2206 | Cross-category | C | B | C | analytics.corner_analysis |
+| 8.4a | q2207 | Cross-category | C | B | C | analytics.weather_impact |
+| 26.3d | q2208 | Cross-category | C | B | A | analytics.fuel_corrected_pace |
 
 **Bucket totals**: 26.0=19, 26.2a=3, 26.2b=3, 26.2c=1, 26.2d=2,
 26.3a=2, 26.3d=30, 26.4=3, 8.4a=3. **Sum = 66 ✓.**
 
 **Pursuable pool** (66 minus 8.4a budget exceptions) = **63**.
+
+**phase26_target distribution**: 63 rows targeting A; 1 row at B
+(q2182 manifest entry); 2 rows at C (q2206, q2207 manifest
+entries). Note: 31 of the 63 pursuable rows have source `floor`
+B but Phase 26 deliberately targets A — the headline 151/167
+goal counts only A grades.
 
 ### 8.2 — Per-stream sum guarantees
 
@@ -977,24 +1086,32 @@ deleted as part of 26.3a's deliverable, and the questions count
 toward the ≥ 151 A target only if they actually grade A on
 best-of-5 against the post-26 baseline.
 
-### 8.5 — Section 8.1 generator: manifest-aware filtering
+### 8.5 — `pursuable_targets` derivation (rev5)
 
-When generating Section 8.1's table, post-process to:
-1. Exclude rows whose qid is in 8.4a (budget exceptions not
-   pursued).
-2. Keep rows whose qid is in 8.4b (rewrite candidates) with the
-   `manifest?` column showing the current manifest grade and a note
-   that the rewrite path is the lift mechanism.
-3. Keep all other non-A rows.
+**Contract clarification (rev5)**: Section 8.1's table is the
+canonical full non-A inventory (66 rows), and **includes** the 3
+8.4a budget-exception rows. Section 8.5 derives a separate
+`pursuable_targets` set by removing 8.4a rows; this derived set
+is what stream candidate-counts in Section 1 sum over (63 rows).
 
-The post-processing pseudocode:
+Section 8.1 is NOT pre-filtered for 8.4a. Section 8.5 is the
+filter step.
+
+The derivation:
 
 ```python
-budget_exception_qids = {2182, 2206, 2207}  # rev4: only entries non-A in May-5; q1715 and q2008 are A so they're not in 8.4a
+budget_exception_qids = {2182, 2206, 2207}  # rev4: only May-5 non-A 8.4a entries
 rewrite_candidate_qids = {2100, 2144}
-final_targets = [r for r in non_a if r['id'] not in budget_exception_qids]
-# rewrite_candidate_qids stay in final_targets but are tagged with stream 26.3a.
+pursuable_targets = [r for r in section_8_1_table if r['id'] not in budget_exception_qids]
+# rewrite_candidate_qids stay in pursuable_targets but are tagged with stream 26.3a.
+# 8.4a rows stay in Section 8.1 for inventory completeness; they
+# only drop out of pursuable_targets.
 ```
+
+Sizes:
+- Section 8.1 table: **66 rows** (full non-A inventory).
+- `pursuable_targets`: **63 rows** (non-A minus 8.4a).
+- Pursued for A: 63 (all `phase26_target = A` per Section 8.1 column).
 
 ---
 
@@ -1105,14 +1222,29 @@ outperforming, or Phase 27 rollover) explain the next moves.
   consider a stricter hint format (e.g. JSON-shaped "RECOMMENDED
   QUERY" preamble).
 
-**Abort threshold**: if Phase 26.1 (lap-distance) doesn't pass its
-acceptance gate within 3 days of focused work, descope 26.2 and
-shift to maximize cleanup / synthesis fixes only. Realistic ceiling
-without lap-distance is **gated** until rev3 measures it against
-the 2026-05-05 baseline — qualitatively, this is "short of the
-90% target but a meaningful improvement," with the exact A-rate
-ceiling depending on how many spatial-dependent questions the
-2026-05-05 baseline shows still non-A.
+**Abort threshold (rev5 — measured against May-5 baseline)**: if
+Phase 26.1 (lap-distance) doesn't pass its acceptance gate within
+3 days of focused work, descope 26.2 and shift to maximize
+cleanup / synthesis fixes only.
+
+**Concrete ceiling without lap-distance**: dropping Stream 26.2's
++7 target leaves a max stream sum of approximately +43 (26.0 +13,
+26.3a +2, 26.3d +22, 26.4 +3, 26.5 +1-2, plus Stream 26.2 = 0
+because 26.2 candidates can't lift without 26.1). Starting from
+101 A:
+
+  101 + 43 = **144 / 167 = 86.2%**
+
+That is the realistic Phase-26 ceiling without the lap-distance
+infrastructure. Short of the 151 / 167 (90.4%) headline target by
+7 questions, but a meaningful +43 over the May-5 starting position.
+
+If this ceiling is acceptable for shipping Phase 26 without the
+infra investment, sub-stream 26.3d can be expanded (deeper audit
+pass on the cross-category bucket) to claw back another 3-5 A
+grades, pushing the no-lap-distance ceiling to roughly 88-89%.
+The hard 90% line still requires 26.1+26.2 OR a Phase 27 grader-
+loosening pass.
 
 ---
 
@@ -1146,7 +1278,13 @@ Before implementation begins, codex should verify:
      rules listed in Section 8.1.
    - The `expected_tables` references a matview that exists OR a
      Phase 26 slice that ships it.
-   - The `expected_grade_floor` matches the assigned target grade.
+   - The `phase26_target` column equals A for every pursuable row
+     (rev5 contract: Phase 26 always targets A for pursuable rows
+     regardless of source `expected_grade_floor`). For 8.4a rows,
+     `phase26_target` matches the manifest entry's
+     `phase25_target_grade`. Note that `expected_grade_floor` is
+     informational only — the original Phase 25 contract floor —
+     and is NOT required to match `phase26_target`.
 3. **Lap-distance feasibility**: walk a single Race session's
    raw.location density (samples per lap, sample gap distribution).
    Flag if any 2025 Race session has < 200 samples per lap on
