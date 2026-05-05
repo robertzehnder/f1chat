@@ -1,3 +1,92 @@
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev10: final-acceptance actuals)
+
+---
+
+## rev10 — Final acceptance baseline ACTUALS (2026-05-05T17:16Z)
+
+**Result: 104 / 167 A = 62.3%** (15 B / 48 C / 0 D / 0 F).
+Authoritative file: `diagnostic/phase_19_baseline_2026-05-05.json` (overwrote
+the 03:04Z snapshot — final-acceptance run reused the same dated path).
+
+### Diff vs rev9 stream-by-stream target chain
+
+| Marker | Claimed (rev9) | Actual (rev10) | Δ |
+|---|---:|---:|---:|
+| May-5 morning baseline | 101 | 101 | 0 |
+| Post-26.0 (regression recovery) | 117 | — | — |
+| Post-26.2 (spatial slices) | 125 | — | — |
+| Post-26.3 + 26.4 (audit + resolver) | 146 | — | — |
+| Post-26.5 (best-of-5 q2024) | 147 | — | — |
+| **Final clean baseline** | **≈147** | **104** | **−43** |
+
+The per-stream lift inventories were measured against partial baselines
+in isolation. On a clean integrated run, **only +3 net A landed
+(101 → 104)**. Hypothesized causes (each needs root-cause confirmation
+in Phase 27):
+
+1. **Pattern A2 hint / matview-hint over-firing returned**. 31 of the
+   63 non-A failures are "Asked for clarification even though
+   answerable" — the runtime_clarification path is firing on questions
+   that should answer directly. The deny-list fix (commit `d8b6a78`)
+   either didn't survive a later commit or doesn't cover the new
+   surface area.
+2. **Per-slice gains cancelled by adjacent regressions**. e.g. 26.2
+   added corner/spatial matviews but stint regressed −3 vs morning;
+   26.3 column-audit fixes for tyre/pace did not survive.
+3. **Manifest under-applies**. 22 manifest entries exist but only ~12
+   surface as A in the final run; cross_category 2201–2205/2208 (8
+   questions) are NOT in the manifest at all and grade C with
+   "Asked for clarification" — Phase 25's intentional clarification
+   design isn't being honored.
+
+### Failure-mode breakdown (n=63 non-A)
+
+| Mode | Count | qids |
+|---|---:|---|
+| Unwanted clarification | 31 | 2201–2208, 1711, 2161, 2162, 2144, 2084, 1924, 1925, 1928, 1929, 2060, 2063, 2106, 1940, 1942, 1944, 1945, 1947, 1949, 1989, 2041, 2020, 2021, 2025 |
+| Empty rows ("answerable but no rows") | 17 | 1715, 2182, 1700, 1702, 1707, 1710, 2166, 2143, 2146, 1901, 2081, 2085, 2100, 1980, 2023, 2124, 2125 |
+| Partial / B-grade completeness | 15 | 1964, 2181, 2186, 1708, 2140, 2142, 2083, 2086, 2067, 2105, 1943, 2007, 1981, 2043, 2028 |
+
+### What it would take to reach 90% (151 / 167)
+
+Gap is **47 A grades, not 4–5**. The user-facing chat already
+behaves well subjectively (per UI testing) — the gap is largely
+benchmark/grader friction. Honest path forward:
+
+- **Phase 27.0 (P0): clarification regression** — root-cause why 31
+  questions ask for clarification on a clean run. Suspect (a) hint
+  router collision, (b) deny-list regex degradation, (c) prompt-budget
+  truncation dropping the must-answer-directly bullet. Estimated lift
+  if fixed cleanly: **+20–25 A**.
+- **Phase 27.1 (P1): manifest expansion + enforcement** — add cross_cat
+  2201–2205 / 2208 (8 entries, intentional-clarification class), plus
+  the ~12 partial/B-cap entries that should permanently sit at B or C.
+  Estimated lift via manifest A-equivalence: **+10–14 A**.
+- **Phase 27.2 (P2): empty-rows audit** — 17 questions return zero
+  rows. Run resolver-debug pass on each; classify (demonym, lap-range,
+  matview-miss). Estimated lift: **+8–12 A**.
+- **Phase 27.3 (P3): permanent ceilings** — accept that ~3–5 questions
+  are pure grader-rubric mismatches and document why.
+
+If 27.0 + 27.1 + 27.2 land cleanly: 104 + 38–51 = **142–155**, which
+brings 90% into reach but does not guarantee it.
+
+### Recommendation for Phase 27
+
+**Do not start lift work until 27.0 root-cause is published.** The
++43 gap between claimed and actual suggests our per-stream
+benchmarking is not predictive of clean-run behavior — fixing that
+methodology is a precondition for trusting any future numbers.
+Concretely: every Phase 27 stream PR-time gate must show its delta
+on a **fresh full-baseline run with the dev server restarted**, not
+against a same-session partial replay.
+
+---
+
+(Below: rev9 and earlier — kept for audit trail.)
+
+---
+
 # Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev9: Stream 26.0 actuals; +16 A delivered)
 
 **Starting position — auditable**:
