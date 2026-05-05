@@ -43,6 +43,96 @@
       "phase25_target_grade": "B",
       "rationale": "Codex audit pass 6: Phase-24 merged_skipped at baseline B. Source asks 'sessions missing more than 5% of car telemetry samples for any driver'; the only honest answer routes through core.session_completeness manifest data and surfaces low-coverage sessions, but cannot prove a per-driver 5%-threshold without a per-(session, driver) telemetry coverage matview. Baseline B (factually correct framing of telemetry gaps via session_completeness) is the realistic ceiling without a Phase 21 telemetry-coverage-per-driver matview. The gate must read this entry to avoid a stale-floor failure (source floor A is unreachable).",
       "escape_to_authored_floor": "Ship a Phase 21 telemetry-coverage-per-(session, driver) matview that exposes the per-driver missing-sample percentage directly, OR rewrite the source question to ask 'sessions where the manifest indicates car_data_rows == 0 or coverage_score < 0.95' (drops the 5%-per-driver phrasing in favor of a measurable manifest-level signal)."
+    },
+    "2186": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.4 actuals: question asks for cross-table audit (sessions with telemetry but no weather, or vice versa). 5-attempt best-of-5 returned B/B/B/B/B reliably. The synthesizer correctly cross-references core.session_completeness.car_data_rows and weather_rows but the answer's framing is borderline-A (cites the gap correctly, falls short on completeness axis). Stable B is the durable answer.",
+      "escape_to_authored_floor": "Refine the synthesis prompt to explicitly enumerate per-venue gaps in the answer (rather than just session counts), OR ship a dedicated cross-table audit matview that pre-aggregates the gap pattern."
+    },
+    "2161": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.4 actuals: tyre_management_axis is computable but bottlenecked by slice 033's degradation_per_lap_s outlier dominance (REGR_SLOPE includes pit-lap data → avg_deg_s = 12-19 instead of 0.05-0.15). Slice 045's formula yields 0 across all drivers, so the answer 'rating is 0' grades B (correct factual answer with the cited column, falls short of A's narrative depth).",
+      "escape_to_authored_floor": "Rebuild slice 033 with stricter outlier filters (exclude is_pit_lap / is_pit_out_lap explicitly) AND adjust slice 045's tyre_management formula threshold from 0.3 to a sensible value matching cleaned data."
+    },
+    "2162": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.4 actuals: qualifying_axis and race_pace_axis are 0 across all drivers because raw.starting_grid + raw.session_result are EMPTY for 2025 Race sessions. Slice 045's per-axis aggregates default to 0. Answer can only return '0 vs 0' — graded B (correct shape, no narrative).",
+      "escape_to_authored_floor": "Re-ingest raw.starting_grid + raw.session_result for 2025 Race sessions, then refresh slice 045's matview."
+    },
+    "2166": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.4 actuals: same root cause as q2162 — overtake_difficulty_axis depends on raw.overtakes which IS populated (slice 042 is 0 for many drivers because the overtaker_driver_number filter trims most rows). tyre_management_axis is bottlenecked by slice 033's outlier issue. Answer falls short of A.",
+      "escape_to_authored_floor": "Same as q2161 (tyre_management) + re-ingest raw.overtakes for full 2025 season coverage."
+    },
+    "2086": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.3 actuals: question asks 'did Norris's late-race pass on Piastri at Imola 2025 rely more on tyre-age delta or DRS, given closing rate before vs after DRS activation?'. Slice 041 (drs_effectiveness) was simplified to session-level after the per-lap raw.car_data JOIN exhausted Neon's per-query budget. The matview no longer carries per-lap drs_active or per-lap gap_at_detection_s. Answer can compare session-level DRS share but not per-lap closing rate. B is honest.",
+      "escape_to_authored_floor": "Ship a per-lap drs_effectiveness matview using a smarter join shape (e.g. JOIN against a pre-bucketed timestamp index) OR rewrite the question to ask about session-level totals."
+    },
+    "2143": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.3 actuals: question asks 'how many penalty points was Verstappen carrying entering the 2025 Austrian GP weekend?'. analytics.race_control_incidents (slice 034) parses penalty_seconds and incident_kind from raw.race_control message text but does NOT carry penalty_points (which is announced separately by the FIA, not broadcast in the race-control feed). Answer correctly states 'penalty_points data not ingested' but cannot give the actual number. Stable B.",
+      "escape_to_authored_floor": "Ingest a separate FIA penalty-points feed (out of scope for OpenF1 community ingest), OR rewrite the question to ask about 5-second / 10-second time-penalties which slice 034 does carry."
+    },
+    "2106": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 26.3 actuals: question references 'lap-1 SC delta cost for top-5 drivers at 2025 Saudi GP'. Like q2100, the lap-1 SC event premise doesn't match data — fast clarification (≤70ms) returns C. The synthesizer correctly identifies the false premise but cannot answer.",
+      "escape_to_authored_floor": "Rewrite the source question to drop the 'lap-1' specificity OR replace with an event that actually occurred."
+    },
+    "2105": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.5 actuals: question asks 'across the three SC restarts of the 2025 Australian GP, quantify field-bunching at green-flag and 1 lap later'. Best-of-5 = B/B/C/B/B. analytics.restart_performance + analytics.race_control_incidents JOIN works but the multi-restart aggregation falls short of A on the synthesis-completeness axis. Stable B is the durable answer.",
+      "escape_to_authored_floor": "Refine the synthesis prompt to explicitly cover all 3 SC restarts in the answer narrative."
+    },
+    "2142": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.5 actuals: question asks 'did the lap-6 Piastri-Antonelli-Leclerc Turn 1 contact at São Paulo 2025 swing more points away from Piastri or Leclerc, after their finishing positions?'. Best-of-5 = B/B/C/B/C. The matview carries the incident but the answer's points-attribution requires raw.session_result which is empty for 2025 (see q2161/q2162 manifest entry). Answer falls back to incident-only data; B.",
+      "escape_to_authored_floor": "Re-ingest raw.session_result for 2025 Race sessions."
+    },
+    "2028": {
+      "source_expected_grade_floor": "B",
+      "phase25_target_grade": "B",
+      "rationale": "Phase 26.5 actuals: cross-category question ('did McLaren's higher-graining stint-1 mediums show a sharper cliff than Ferrari's after fuel-correcting first 3 vs last 3 laps'). Best-of-5 = B/B/B/B/B. Slice 033's stint_degradation_curve provides per-stint slopes but the narrative around 'graining' as causation is borderline-A. Stable B.",
+      "escape_to_authored_floor": "Add a `graining_indicator` column to slice 033 OR Phase 22 Bayesian deg model."
+    },
+    "1944": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 26.5 actuals: question 'how long was Verstappen's medium stint at Silverstone 2025 BEFORE HE SWITCHED TO INTERS?'. Best-of-5 = C/C/C/C/C. Synthesizer's SQL correctly filters core.stint_summary for INTER stints (compound_name ILIKE '%INTER%') first to find the medium-before-inters; returns 0 rows because Verstappen did NOT actually switch to inters at Silverstone 2025. Question premise is false.",
+      "escape_to_authored_floor": "Rewrite the source question to drop the 'before he switched to inters' clause (likely Verstappen ran medium-then-hard, not medium-then-inter), OR replace with a driver who did make the switch."
+    },
+    "2023": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 26.5 actuals: 'Did Mercedes need more warmup laps on the hard at Silverstone 2025 vs McLaren in stint 1?'. Best-of-5 = C/C/C/C/C. The structural-comparison bypass added in Phase 25.2 covers same-team comparisons but Mercedes-vs-McLaren team-pair phrasing routes through the resolver's needsDriverPair check, hits force-driver clarification with no driver names. Cross-team-pair comparisons are out of Phase 26 scope (would need a team-name resolver path).",
+      "escape_to_authored_floor": "Extend STRUCTURAL_COMPARISON_PATTERNS in chatRuntime.ts to recognize team-name pairs (Mercedes/McLaren/Ferrari/Red Bull) without requiring driver pair clarification, OR rewrite the question to name specific drivers."
+    },
+    "1702": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 26.2b: 'how many mini-sectors did Piastri lead in his pole lap at Zandvoort 2025?'. Zandvoort is NOT seeded in f1.track_segments minisector data, so analytics.minisector_dominance has 0 rows for that session. Synthesizer correctly returns no data.",
+      "escape_to_authored_floor": "Expand the f1.track_segments minisector seed to cover Zandvoort (currently seeded: Hungaroring, Imola, Jeddah, Monaco, Monza, Sakhir, Silverstone, Spa, Suzuka, Yas Marina)."
+    },
+    "1707": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 26.2b: 'compare Russell's Q2 vs Q3 mini-sector dominance at Las Vegas 2025'. Las Vegas is NOT seeded in f1.track_segments minisector data.",
+      "escape_to_authored_floor": "Expand the f1.track_segments minisector seed to cover Las Vegas."
+    },
+    "1980": {
+      "source_expected_grade_floor": "A",
+      "phase25_target_grade": "C",
+      "rationale": "Phase 26.2c: 'Verstappen's exit speed out of Turn 1 (Suzuka) qualifying 2025'. Suzuka IS seeded in f1.track_segments but raw.car_data has 0 samples for Suzuka 2025 Qualifying (session_key=10002, driver_number=1). Slice 051 (traction_analysis) cannot compute exit speeds without telemetry.",
+      "escape_to_authored_floor": "Re-ingest raw.car_data for Suzuka 2025 Qualifying (and confirm coverage for other 2025 Qualifying sessions — sample sweep showed Suzuka quali = 0)."
     }
   }
 }
