@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef } from "react";
 import type { ChatContext } from "@/lib/chatTypes";
 
 export type ComposerContext = ChatContext & {
@@ -20,13 +20,11 @@ export function Composer({
   value,
   onChange,
   onSubmit,
-  loading,
-  context,
-  onContextChange
+  loading
+  // Phase 26 UI: `context` and `onContextChange` are still on the
+  // prop type for callers but the chip row that exposed them was
+  // removed. Context is set/cleared via the side CONTEXT panel.
 }: ComposerProps) {
-  const [draftSession, setDraftSession] = useState("");
-  const [draftDriver, setDraftDriver] = useState("");
-  const [showContextRow, setShowContextRow] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const autoGrow = useCallback(() => {
@@ -53,102 +51,13 @@ export function Composer({
     }
   }
 
-  function applyDraftContext() {
-    const next = { ...context };
-    if (draftSession.trim() !== "") {
-      const sk = Number(draftSession.trim());
-      if (Number.isFinite(sk)) {
-        next.sessionKey = sk;
-        next.sessionLabel = undefined;
-      }
-    }
-    if (draftDriver.trim() !== "") {
-      const dn = Number(draftDriver.trim());
-      if (Number.isFinite(dn)) {
-        next.driverNumber = dn;
-      }
-    }
-    onContextChange(next);
-    setDraftSession("");
-    setDraftDriver("");
-    setShowContextRow(false);
-  }
-
-  function clearSession() {
-    onContextChange({ ...context, sessionKey: undefined, sessionLabel: undefined });
-  }
-
-  function clearDriver() {
-    onContextChange({ ...context, driverNumber: undefined });
-  }
-
   return (
     <div className="border-t border-border bg-white px-4 py-4">
       <form onSubmit={handleFormSubmit} className="mx-auto flex max-w-[720px] flex-col gap-2">
-        {/* Context chips */}
-        <div className="flex flex-wrap items-center gap-2">
-          {context.sessionKey != null ? (
-            <button
-              type="button"
-              onClick={clearSession}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-secondary px-3 py-1 text-xs text-ink-secondary shadow-sm hover:bg-surface-hover"
-            >
-              <span>Session · {context.sessionLabel ?? context.sessionKey}</span>
-              <span className="text-ink-tertiary">×</span>
-            </button>
-          ) : null}
-          {context.driverNumber != null ? (
-            <button
-              type="button"
-              onClick={clearDriver}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-secondary px-3 py-1 text-xs text-ink-secondary shadow-sm hover:bg-surface-hover"
-            >
-              <span>Driver · {context.driverNumber}</span>
-              <span className="text-ink-tertiary">×</span>
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setShowContextRow((s) => !s)}
-            className="rounded-full border border-dashed border-border bg-transparent px-3 py-1 text-xs text-ink-tertiary hover:border-border hover:bg-surface-hover hover:text-ink-secondary"
-            style={{ borderStyle: showContextRow ? "solid" : "dashed" }}
-          >
-            {showContextRow ? "Hide context" : "+ Session / driver"}
-          </button>
-        </div>
-
-        {/* Context editing row */}
-        {showContextRow ? (
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="grid gap-1 text-xs text-ink-secondary">
-              Session key
-              <input
-                className="w-32 rounded-sm border border-border bg-white px-2.5 py-1.5 font-mono text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                inputMode="numeric"
-                value={draftSession}
-                onChange={(e) => setDraftSession(e.target.value)}
-                placeholder="e.g. 9839"
-              />
-            </label>
-            <label className="grid gap-1 text-xs text-ink-secondary">
-              Driver #
-              <input
-                className="w-24 rounded-sm border border-border bg-white px-2.5 py-1.5 font-mono text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                inputMode="numeric"
-                value={draftDriver}
-                onChange={(e) => setDraftDriver(e.target.value)}
-                placeholder="e.g. 1"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={applyDraftContext}
-              className="rounded-sm bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-hover"
-            >
-              Apply
-            </button>
-          </div>
-        ) : null}
+        {/* Phase 26 UI: session/driver context chips removed at user
+            request — they were blocking info above the input row.
+            Context is still tracked in state and can be set via the
+            CONTEXT side panel pins; just no chip-row in the composer. */}
 
         {/* Input + send */}
         <div className="relative">
