@@ -361,9 +361,93 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
   }
 ];
 
+// Phase 26.0 regression-recovery: deny-list of question-text tokens
+// that indicate the question is too lap-range / event-specific for
+// the session-level matview to answer correctly. When the deny-list
+// fires, the matview-hint is suppressed so the LLM falls back to
+// hand-built SQL with the question's specific filters.
+//
+// Examples that the deny-list catches (all regressed A → B/C in
+// the May-5 baseline because the matview hint forced a session-
+// aggregate that was too coarse):
+//   q2040 "before his contact with Bearman"              → "before his contact"
+//   q2044 "during his second stint at Hungary 2025"      → "during his second stint"
+//   q2046 "once he cleared the train of cars"            → "once he"
+//   q2102 "on the lap-22 SC restart" + "his spin"        → "lap-N" + nested-event
+const MATVIEW_HINT_DENYLIST: ReadonlyArray<string> = [
+  // Specific event sequencing
+  "before his contact",
+  "before his crash",
+  "before the contact",
+  "before the spin",
+  "before the incident",
+  "after his contact",
+  "after the contact",
+  "after his spin",
+  "after the spin",
+  "once he cleared",
+  "once she cleared",
+  "once they cleared",
+  "once verstappen cleared",
+  "once norris cleared",
+  "once leclerc cleared",
+  "once piastri cleared",
+  "once russell cleared",
+  "once hamilton cleared",
+  "once sainz cleared",
+  // Specific stint/lap range
+  "during his second stint",
+  "during her second stint",
+  "during his third stint",
+  "during his first stint",
+  "during the second stint",
+  "during the first stint",
+  "during the third stint",
+  "during stint 2",
+  "during stint 3",
+  "in his second stint",
+  "in his first stint",
+  "in his third stint",
+  "second stint at",
+  "first stint at",
+  "third stint at",
+  "in the closing laps",
+  "in the opening laps",
+  "before his first pit",
+  "before her first pit",
+  "before the first pit",
+  "before his pit",
+  "before pit",
+  // Nested events
+  "and was",
+  "and his",
+  "and her",
+  "spin",
+  "brake-test",
+  "brake test penalty",
+  "track-limits violation",
+  // Multi-driver lap-by-lap (matview is per-driver session-level)
+  "lap-by-lap",
+  "lap by lap delta",
+  "rolling 5-lap",
+  "first-three-laps",
+  "first three laps of",
+  "last three laps of",
+  "first 3 laps of",
+  "last 3 laps of"
+];
+
 export function buildMatviewHint(question: string): string {
   if (!question) return "";
   const lower = question.toLowerCase();
+  // Phase 26.0: if the question carries a lap-range / event-specific
+  // / nested-event token, skip the matview hint and let the LLM
+  // hand-build SQL.
+  for (const denied of MATVIEW_HINT_DENYLIST) {
+    if (lower.includes(denied)) {
+      return "";
+    }
+  }
   for (const entry of MATVIEW_HINTS) {
     if (entry.triggers.some((t) => lower.includes(t))) {
       return `\n\n${entry.hint}\n`;
