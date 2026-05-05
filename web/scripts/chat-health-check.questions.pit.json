@@ -64,7 +64,7 @@
       "analytics.pit_loss_per_circuit.pit_loss_s"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-pit-loss-per-circuit",
+    "floor_active_after_slice": null,
     "author_note": "RaceFans live blog + F1.com Bahrain race report: multiple frontrunners double-stopped under SC.",
     "question": "Compare Hamilton's and Leclerc's pit-stop deltas at Bahrain 2025 across the SC window on lap 31."
   },
@@ -98,7 +98,7 @@
       "analytics.pit_loss_per_circuit.pit_loss_s"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-pit-loss-per-circuit",
+    "floor_active_after_slice": null,
     "author_note": "Sky Sports / Motorsport Week: Stella admitted Qatar SC non-stop was significantly penalising; Verstappen won by 8s.",
     "question": "Did the McLarens' decision to stay out under the lap-7 SC at Qatar 2025 cost them track position by the lap-11 restart, and by how much versus Verstappen?"
   },
@@ -117,7 +117,7 @@
       "analytics.stint_degradation_curve.degradation_per_lap_s"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-pit-loss-per-circuit",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes 'Everything that fed into McLaren's Qatar debacle' \u2014 equality policy + traffic miscalc + 25-lap hard cap.",
     "question": "At Qatar 2025, compare the time loss for the McLarens (who stayed out under the lap-7 SC) versus Verstappen (who pitted under SC), measuring delta-to-leader at lap 11 restart and again at the chequered flag \u2014 was the swing entirely the SC pit-stop delta or did stint-management on hards add to it?"
   },

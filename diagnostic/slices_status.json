@@ -75,8 +75,8 @@
     },
     {
       "slice_id": "21-tyre-warmup-curves",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T00:43:20Z",
       "depends_on": []
     },
     {
@@ -87,14 +87,14 @@
     },
     {
       "slice_id": "21-pit-loss-per-circuit",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T00:38:57Z",
       "depends_on": []
     },
     {
       "slice_id": "21-weather-impact",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T00:33:27Z",
       "depends_on": []
     },
     {

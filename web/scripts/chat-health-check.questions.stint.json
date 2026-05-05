@@ -121,7 +121,7 @@
       "analytics.tyre_warmup.warmup_laps_to_target"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-tyre-warmup-curves",
+    "floor_active_after_slice": null,
     "author_note": "The Race 'McLaren didn't intend strategy switch' on Norris's stretched medium one-stop.",
     "question": "What was the fresh-vs-used delta on the medium compound for Norris when McLaren switched him to a one-stop in Hungary 2025?"
   },

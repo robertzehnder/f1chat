@@ -43,7 +43,13 @@ const CORE_CONTRACTS: ReadonlyArray<{ schema: string; table: string }> = [
   // Phase 25.2 slice 21-race-control-incident-index.
   { schema: "analytics", table: "race_control_incidents" },
   // Phase 25.2 slice 21-fuel-corrected-pace.
-  { schema: "analytics", table: "fuel_corrected_pace" }
+  { schema: "analytics", table: "fuel_corrected_pace" },
+  // Phase 25.2 slice 21-weather-impact.
+  { schema: "analytics", table: "weather_impact" },
+  // Phase 25.2 slice 21-pit-loss-per-circuit.
+  { schema: "analytics", table: "pit_loss_per_circuit" },
+  // Phase 25.2 slice 21-tyre-warmup-curves (facade name = analytics.tyre_warmup).
+  { schema: "analytics", table: "tyre_warmup" }
 ];
 
 type CatalogRow = {
