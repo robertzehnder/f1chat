@@ -1,4 +1,4 @@
-# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev3: May-5 baseline consumed)
+# Phase 26 — Path to ≥90% A-rate (≥151/167) — 2026-05-05 (rev4: per-question table embedded; budget math corrected)
 
 **Starting position — auditable** (rev3):
 - Authoritative baseline: `diagnostic/phase_19_baseline_2026-05-05.json`
@@ -22,6 +22,62 @@ expands Stream 26.3 scope to handle the 30-question "audit"
 bucket Section 8.1 surfaced. Even with these expansions, the plan
 is **tight** — the realistic ceiling estimate at the bottom of
 Section 1 explains why.
+
+---
+
+## rev4 changes (codex audit pass 4 applied — 2026-05-05)
+
+Six findings; all addressed.
+
+- **HIGH (Section 8 missing the per-question target table)** —
+  rev3 had only the generator script + bucket summary. **Fix**:
+  ran the script and embedded the actual 66-row table verbatim
+  in Section 8.1 with columns `stream | qid | category | grade |
+  floor | first_table`. Each row now has a concrete stream
+  assignment ready for implementation handoff.
+- **HIGH (budget-exception math wrong)** — rev3 said 5 budget
+  exceptions and pursuable pool = 61. The real May-5 non-A pool
+  contains only **3 8.4a entries** (q2182, q2206, q2207). q1715
+  and q2008 are NOT in the May-5 non-A set (q1715 is now A; q2008
+  is also A in May-5 baseline). q2100 and q2144 are 8.4b rewrite
+  candidates, not budget exceptions. **Fix**: Section 1 stream
+  table updated to show 8.4a count = 3; Section 9 reconciliation
+  recomputed: pursuable pool = 66 - 3 = **63**, required lift rate
+  = 50 / 63 = **79.4%** (was 82.0%). Section 8.4 split rewritten
+  so 8.4a contains exactly the 3 questions in the May-5 non-A set.
+- **MEDIUM (Stream 26.0 list incomplete — claimed 19, listed 15)**
+  — rev3 said "(4 more from full diff)". **Fix**: ran the May-4 →
+  May-5 regression diff and added the 4 missing qids to Stream
+  26.0's target table: **q2186** (Data health, B→non-A), **q2102**
+  (Restart performance, A→B), **q2044** and **q2046** (Traffic-
+  adjusted pace, A→B). Stream 26.0's table now has all 19 rows
+  enumerated explicitly.
+- **MEDIUM (Section 8.3 stale exclusion conflicts with Stream 26.0)**
+  — Section 8.3 said q1713 and q1716 should be excluded from any
+  Phase 26 lift count, but rev3 correctly assigns them to Stream
+  26.0 because they regressed in the May-5 baseline. **Fix**:
+  Section 8.3 reworded — already-A qids are excluded ONLY if they
+  are still A in the May-5 baseline. q1713 and q1716 (and the
+  other 17 regression qids) are tracked in Stream 26.0, NOT
+  excluded. Section 8.3 now lists only the qids that are A in
+  May-5 (verified against the script output) plus the qids that
+  are nonexistent in the benchmark.
+- **MEDIUM (acceptance criterion 2 dimensional mismatch)** —
+  rev3 said "budget-exception count + actual A count must equal
+  Section 8.1 target list size", but actual A count is over all
+  167 questions while Section 8.1 is only the non-A pool.
+  **Fix**: criterion 2 reworded as the proper budget identity
+  `starting_A + new_A + remaining_BC = 167`, with budget
+  exceptions tracked in a separate sub-counter. The reconciliation
+  example in Section 9 walks the math through with concrete
+  May-5 numbers.
+- **LOW (stale "indicative" / "pending baseline" / "rev2 will"
+  wording)** — Streams 26.3 / 26.4 / 26.5 still had "indicative
+  pending baseline" wording from rev1/rev2. **Fix**: swept the
+  file; replaced with concrete targets derived from the May-5
+  baseline OR with explicit "rev4 actuals will refine" forward-
+  looking language (no more passive "indicative" / "gated" /
+  "pending").
 
 ---
 
@@ -188,8 +244,8 @@ observed average).
 | **26.3 Question-text + expected_columns cleanup** (26.3a rewrite=2 / 26.3b column audit / 26.3c cross-table / 26.3d audit-bucket=30) | 32 | **+22** | 2 days (was 1; expanded scope) | 85.6% |
 | **26.4 Resolver enhancements** (26.4a driver-without-session / 26.4b cross-team-compare / 26.4c lap-N JOIN hints) | 3 | **+2** | 1 day | 86.8% |
 | **26.5 Stochastic-variance robustness** (best-of-5 + matview refresh) | 3 (durability) | **+2** | 0.5 day | 88.0% |
-| **8.4a budget exceptions (NOT pursued)** | 3 (q1715/2008 corner-class + q2206 + q2207 + q2182) | 0 | n/a | 88.0% |
-| **TOTAL pursued** | 66 | **+46 to +50** | **8-11 days focused** | **88-90%** |
+| **8.4a budget exceptions (NOT pursued)** | 3 (q2182, q2206, q2207) | 0 | n/a | 88.0% |
+| **TOTAL pursued** | 63 | **+46 to +50** | **8-11 days focused** | **88-90%** |
 
 **Realistic ceiling**: the per-stream targets above sum to **+46
 A** at the high-confidence end (75% lift rate) and **+50 A** at
@@ -222,12 +278,12 @@ the cheapest A grades available — they were already A; some Round
 2 marker / matview-hint / season-retrospective change leaked into
 their resolver / synthesis path.
 
-**Target qids** (19 total; tagged from May-4-A → May-5-non-A in
-the diff against the May-5 baseline):
+**Target qids** (19 total; full diff May-4 A → May-5 non-A,
+generated by the Section 8.1 regression-set classifier):
 
 | qid | category | May-4 | May-5 | Likely cause |
 |---|---|---|---|---|
-| q1700 | Track dominance | A | B | Round-2 matview-hint over-firing? |
+| q1700 | Track dominance | A | B | Round-2 matview-hint over-firing |
 | q1702 | Track dominance | A | B | (same family) |
 | q1706 | Track dominance | A | B | (same family) |
 | q1709 | Track dominance | A | B | (same family) |
@@ -236,16 +292,16 @@ the diff against the May-5 baseline):
 | q1924 | Lap pace and fastest-lap | A | C | matview-hint regression |
 | q1928 | Lap pace and fastest-lap | A | C | matview-hint regression |
 | q1929 | Lap pace and fastest-lap | A | C | matview-hint regression |
-| q1942 | Stint analysis | A | C | season-retrospective leak? |
-| q1965 | Braking performance | A | C | unknown — investigate |
-| q1989 | Traction analysis | A | C | unknown |
+| q1942 | Stint analysis | A | C | season-retrospective leak |
+| q1965 | Braking performance | A | C | investigate per-question |
+| q1989 | Traction analysis | A | C | investigate per-question |
 | q2040 | Traffic-adjusted pace | A | B | clean-air-pace synthesis |
-| q2104 | Restart performance | A | C | restart-marker over-fire? |
+| q2044 | Traffic-adjusted pace | A | B | (same family as q2040) |
+| q2046 | Traffic-adjusted pace | A | B | (same family as q2040) |
+| q2102 | Restart performance | A | B | restart-marker over-fire |
+| q2104 | Restart performance | A | C | restart-marker over-fire (worse) |
+| q2186 | Data health | A | B | session_completeness synthesis |
 | q2200 | Cross-category | A | C | multi-matview synthesis |
-| (4 more from full diff) | various | A | non-A | tbd |
-
-(The exact 19th-row list is generated by the script in Section 8.1
-under `regressions` set.)
 
 **Mechanism (per-question):**
 
@@ -426,10 +482,13 @@ slice 041 with track-zone joins)
 - Lift target: q2085 (DRS-zone-percentage analysis) — verify it is
   still non-A in the 2026-05-05 baseline before scoping.
 
-**Stream 26.2 total**: indicative lift count comes from Section 8.1
-once the 2026-05-05 baseline lands. rev0's "+14 to +16 A" was
-relative to a fabricated qid set and is not auditable; rev2 will
-restate the count from the real non-A set.
+**Stream 26.2 total (rev4)**: 9 candidates (from Section 8.1:
+26.2a=3 corner / 26.2b=3 minisector / 26.2c=1 traction / 26.2d=2
+braking). Target lift +7 at 78% per-candidate rate. q2085 (DRS-
+zone augmentation) sits in 26.3d under the rev4 bucket assignment
+because it has no `floor_active_after_slice` tag — the lift
+depends on the spatial-zone augmentation work in 26.2e being
+folded into the audit-bucket classification.
 
 **Effort**: 3-4 days for all 5 slices, mostly in parallel since they
 share the lap-distance infrastructure from 26.1.
@@ -457,9 +516,10 @@ specificity, then drop the manifest C-cap.
 - **q2101** (TBD — probe to confirm false-premise; if confirmed
   rewrite, otherwise downstream synthesis fix).
 
-**A lift**: indicative pending baseline. Up to 3 questions if all
-three rewrites are accepted at review and grade A on best-of-5;
-fewer if any convert to budget exceptions.
+**A lift target (rev4)**: 2 questions (q2100, q2144 per Section
+8.1). q2101 was probed and found NOT to be false-premise — it
+ships under stream 26.3d, not 26.3a. Fewer than 2 if either
+rewrite is rejected at review (converts to budget exception).
 
 ### 26.3b — `expected_columns` corrections
 
@@ -473,13 +533,13 @@ check what columns IT picked, compare to `expected_columns`. If
 synthesis is correct but expected_columns is too narrow, expand
 the list.
 
-Candidates pre-baseline: q2086, q2143, q2200, q2202. Final
-candidates come from Section 8.1 and depend on which qids are
-non-A in the 2026-05-05 baseline.
+Candidates from Section 8.1 stream 26.3d (the audit bucket): 30
+questions across categories. Per-question audit during
+implementation classifies each into 26.3b (single-matview column
+expansion) vs 26.3c (cross-table) vs Phase 27 rollover.
 
-**A lift**: indicative pending baseline. Targets the largest
-remaining bucket of mis-tagged questions in the post-Phase-25.2
-state.
+**A lift target (rev4)**: ~14-22 of the 30 26.3d candidates,
+depending on per-question audit outcomes.
 
 ### 26.3c — Cross-table `expected_columns` additions
 
@@ -490,8 +550,8 @@ non-listed columns as missing. Add the implied columns.
 Final candidates from Section 8.1's 26.3c assignment (subset of
 the audit bucket where multiple matviews are needed).
 
-**A lift**: indicative; targeted at multi-matview synthesis
-mismatches surfaced by the audit pass.
+**A lift target (rev4)**: subset of the 30 26.3d candidates;
+exact count from per-question audit during implementation.
 
 ### 26.3d — Audit bucket (NEW in rev3) — 30 candidates
 
@@ -553,8 +613,10 @@ Files:
 - `web/src/lib/chatRuntime.ts` — when no session but a year is
   resolved, allow the cross-season driver lookup.
 
-**A lift**: indicative pending baseline. Targets q2161 plus any
-other season-wide single-driver questions surfaced in Section 8.1.
+**A lift target (rev4)**: 3 candidates (q2161, q2162, q2166 per
+Section 8.1 stream 26.4 assignment). All three are 7-axis season-
+aggregator questions where bare-driver resolution without session
+is the blocker.
 
 ### 26.4b — Cross-team comparison structural support (q2023 + others)
 
@@ -564,8 +626,10 @@ list so "compare McLaren vs Mercedes / Ferrari vs Red Bull /
 Mercedes pair / Ferrari drivers" patterns also bypass the driver-
 pair clarification.
 
-**A lift**: indicative pending baseline. Targets q2023 plus any
-sibling cross-team comparison questions in Section 8.1.
+**A lift target (rev4)**: q2023 ships under stream 26.3d (Tyre
+performance: cross-team warmup compare). 26.4b's primary
+candidates surface during the 26.3d audit pass when the bucket
+classifier surfaces additional cross-team patterns.
 
 ### 26.4c — Per-lap matview-hint expansion (DRS / restart per-lap)
 
@@ -576,10 +640,13 @@ include this JOIN pattern explicitly enough. Expand the existing
 hints with explicit "if you need lap-N position context, JOIN ..."
 guidance.
 
-**A lift**: indicative pending baseline.
+**A lift target (rev4)**: lap-N JOIN questions surface during
+Stream 26.3d's audit pass; once classified they get the matview-
+hint update from this sub-stream.
 
-**Stream 26.4 total**: indicative pending baseline. Cumulative
-A-rate (gated). Effort: 1 day.
+**Stream 26.4 total (rev4)**: 3 candidates (the 26.4 bucket from
+Section 8.1, all driver_performance_score 7-axis questions).
+Effort: 1 day.
 
 ---
 
@@ -605,8 +672,10 @@ ingests new data, these matviews stale. Add a daily refresh hook in
 runs `REFRESH MATERIALIZED VIEW analytics.* CONCURRENTLY` for all
 Phase 21 / Phase 26 matviews.
 
-**A lift**: indicative pending baseline. Durability — borderline-A
-questions that were flaking now stay A reliably.
+**A lift target (rev4)**: 1-2 questions (durability — borderline-A
+questions in the post-26 baseline that were flaking now stay A
+reliably). Specific qids surface from the post-26 best-of-5
+re-validation.
 
 **Effort**: 0.5 day.
 
@@ -719,27 +788,98 @@ for r in non_a:
 PY
 ```
 
-The output of this script becomes Section 8.1's table verbatim. The
-`manifest?` column flags which qids are already in the
-phase25_target_grades.json manifest (per Section 8.4's split). Each
-non-A row gets a stream assignment based on:
+The output of this script (rev4: extended with stream classification
+and regression-set membership) becomes Section 8.1's table. Stream
+assignment rules:
 
-- `floor_active_after_slice` references a Phase 26 spatial slice
-  (corner / minisector / traction / braking) → **26.2** with the
-  matching slice letter.
-- Question is in the manifest already → **manifest review** (NOT a
-  Phase 26 lift — see Section 9 for the budget-exception pathway).
-- `expected_tables` references multiple matviews → **26.3c** (cross-
-  table expected_columns) OR **26.4c** (lap-N JOIN hint), depending
-  on whether the synthesis path is structural (column shape) or
-  prompt (LLM picking the wrong shape).
-- Question text contains a single driver name AND season-wide phrasing
-  → **26.4a** (bare-driver season-wide).
-- Question text contains "compare X and Y" where X / Y are team names
-  → **26.4b** (cross-team comparison).
-- Question text references a specific event by lap → probe whether
-  the event exists in the data; if not → **26.3a** (false-premise
-  rewrite OR manifest C-cap).
+- May-4 A → May-5 non-A (regression set) → **26.0**.
+- `qid` in {q2182, q2206, q2207} → **8.4a** (budget exception).
+- `qid` in {q2100, q2144} → **26.3a** (rewrite candidate).
+- `floor_active_after_slice = '21-corner-analysis'` → **26.2a**.
+- `floor_active_after_slice = '21-minisector-dominance'` → **26.2b**.
+- `floor_active_after_slice = '21-traction-analysis'` → **26.2c**.
+- `floor_active_after_slice = '21-braking-performance'` → **26.2d**.
+- `expected_tables` includes `analytics.driver_performance_score` →
+  **26.4** (resolver / synthesis class).
+- Otherwise → **26.3d** (audit bucket; mis-tagged
+  `expected_columns` / cross-table multi-matview / per-question
+  classification).
+
+### 8.1 — Per-question target table (66 rows; rev4)
+
+| stream | qid | category | grade | floor | first_table |
+|---|---|---|---|---|---|
+| 26.0 | q1700 | Track dominance | B | A | analytics.minisector_dominance |
+| 26.0 | q1702 | Track dominance | B | A | analytics.minisector_dominance |
+| 26.0 | q1706 | Track dominance | B | A | analytics.minisector_dominance |
+| 26.2b | q1707 | Track dominance | C | A | analytics.minisector_dominance |
+| 26.2b | q1708 | Track dominance | B | B | analytics.minisector_dominance |
+| 26.0 | q1709 | Track dominance | B | B | analytics.minisector_dominance |
+| 26.2b | q1711 | Track dominance | C | B | analytics.sector_dominance |
+| 26.0 | q1713 | Corner analysis | B | A | analytics.corner_analysis |
+| 26.0 | q1716 | Corner analysis | C | A | analytics.corner_analysis |
+| 26.2a | q1717 | Corner analysis | B | B | analytics.corner_analysis |
+| 26.2a | q1718 | Corner analysis | B | B | analytics.corner_analysis |
+| 26.2a | q1719 | Corner analysis | B | B | analytics.corner_analysis |
+| 26.0 | q1924 | Lap pace and fastest-lap analysis | C | A | core.laps_enriched |
+| 26.3d | q1925 | Lap pace and fastest-lap analysis | C | A | analytics.fuel_corrected_pace |
+| 26.0 | q1928 | Lap pace and fastest-lap analysis | C | B | analytics.fuel_corrected_pace |
+| 26.0 | q1929 | Lap pace and fastest-lap analysis | C | B | analytics.fuel_corrected_pace |
+| 26.0 | q1942 | Stint analysis | C | A | core.stint_summary |
+| 26.3d | q1944 | Stint analysis | C | A | core.stint_summary |
+| 26.3d | q1945 | Stint analysis | C | A | core.stint_summary |
+| 26.3d | q1947 | Stint analysis | C | B | core.stint_summary |
+| 26.2d | q1960 | Braking performance | B | A | analytics.braking_performance |
+| 26.0 | q1965 | Braking performance | C | A | analytics.braking_performance |
+| 26.2d | q1967 | Braking performance | B | B | analytics.braking_performance |
+| 26.2c | q1980 | Traction analysis | B | A | analytics.traction_analysis |
+| 26.0 | q1989 | Traction analysis | C | B | analytics.traction_analysis |
+| 26.3d | q2020 | Tyre performance | C | A | analytics.stint_degradation_curve |
+| 26.3d | q2023 | Tyre performance | C | A | analytics.tyre_warmup |
+| 26.3d | q2024 | Tyre performance | B | A | analytics.stint_degradation_curve |
+| 26.3d | q2028 | Tyre performance | B | B | analytics.stint_degradation_curve |
+| 26.0 | q2040 | Traffic-adjusted pace | B | A | analytics.traffic_adjusted_pace |
+| 26.0 | q2044 | Traffic-adjusted pace | B | A | analytics.traffic_adjusted_pace |
+| 26.0 | q2046 | Traffic-adjusted pace | B | B | analytics.traffic_adjusted_pace |
+| 26.3d | q2060 | Pit strategy | C | A | core.strategy_summary |
+| 26.3d | q2063 | Pit strategy | C | A | analytics.pit_loss_per_circuit |
+| 26.3d | q2065 | Pit strategy | B | A | analytics.pit_loss_per_circuit |
+| 26.3d | q2081 | Overtake and battle analysis | C | A | analytics.overtake_events |
+| 26.3d | q2083 | Overtake and battle analysis | C | A | analytics.drs_effectiveness |
+| 26.3d | q2084 | Overtake and battle analysis | C | A | analytics.overtake_events |
+| 26.3d | q2085 | Overtake and battle analysis | C | B | analytics.drs_effectiveness |
+| 26.3d | q2086 | Overtake and battle analysis | B | B | analytics.drs_effectiveness |
+| 26.3a | q2100 | Restart performance | C | A | analytics.race_control_incidents |
+| 26.0 | q2102 | Restart performance | B | A | analytics.restart_performance |
+| 26.3d | q2103 | Restart performance | B | A | analytics.restart_performance |
+| 26.0 | q2104 | Restart performance | C | A | analytics.restart_performance |
+| 26.3d | q2105 | Restart performance | B | B | analytics.restart_performance |
+| 26.3d | q2106 | Restart performance | C | B | analytics.restart_performance |
+| 26.3d | q2124 | Weather impact | C | A | analytics.weather_impact |
+| 26.3d | q2125 | Weather impact | C | B | analytics.weather_impact |
+| 26.3d | q2140 | Race control incidents | C | A | analytics.race_control_incidents |
+| 26.3d | q2142 | Race control incidents | B | A | analytics.race_control_incidents |
+| 26.3d | q2143 | Race control incidents | C | A | analytics.race_control_incidents |
+| 26.3a | q2144 | Race control incidents | C | A | analytics.race_control_incidents |
+| 26.4 | q2161 | Driver performance score | C | B | analytics.driver_performance_score |
+| 26.4 | q2162 | Driver performance score | C | B | analytics.driver_performance_score |
+| 26.4 | q2166 | Driver performance score | C | B | analytics.driver_performance_score |
+| 8.4a | q2182 | Data health | C | A | core.session_completeness |
+| 26.0 | q2186 | Data health | B | B | core.session_completeness |
+| 26.0 | q2200 | Cross-category | C | B | analytics.stint_degradation_curve |
+| 26.3d | q2201 | Cross-category | C | B | analytics.traffic_adjusted_pace |
+| 26.3d | q2202 | Cross-category | C | B | analytics.traffic_adjusted_pace |
+| 26.3d | q2203 | Cross-category | C | B | analytics.stint_degradation_curve |
+| 26.3d | q2204 | Cross-category | C | B | analytics.fuel_corrected_pace |
+| 26.3d | q2205 | Cross-category | C | B | analytics.fuel_corrected_pace |
+| 8.4a | q2206 | Cross-category | C | B | analytics.corner_analysis |
+| 8.4a | q2207 | Cross-category | C | B | analytics.weather_impact |
+| 26.3d | q2208 | Cross-category | C | B | analytics.fuel_corrected_pace |
+
+**Bucket totals**: 26.0=19, 26.2a=3, 26.2b=3, 26.2c=1, 26.2d=2,
+26.3a=2, 26.3d=30, 26.4=3, 8.4a=3. **Sum = 66 ✓.**
+
+**Pursuable pool** (66 minus 8.4a budget exceptions) = **63**.
 
 ### 8.2 — Per-stream sum guarantees
 
@@ -752,49 +892,72 @@ rev3 demonstrates closure as follows:
   (+50) just hits.
 - No qid is double-counted across streams (Section 8.1 bucket
   classifier assigns each row to exactly one stream).
-- Manifest split per Section 8.4: 8.4a (5 entries) excluded from
-  the pursuable pool; 8.4b (q2100, q2144) stay in stream 26.3a.
+- Manifest split per Section 8.4: 8.4a (3 entries: q2182, q2206,
+  q2207) excluded from the pursuable pool; 8.4b (q2100, q2144)
+  stay in stream 26.3a.
 
 If the optimistic end fails to materialize, rev4 chooses one of:
 1. Expand a stream's scope (most likely 26.3d via a deeper audit
    bucket pass).
 2. Phase 27 rollover for the residual ~5-10 questions.
 
-### 8.3 — Already-A qids that should NOT appear in 8.1
+### 8.3 — Exclusions and inclusions verified against May-5 baseline (rev4)
 
-Per codex audit pass 1, these were in rev0's per-question table
-erroneously and must stay excluded from any Phase 26 lift count:
-- q1710, q1712, q1713, q1716, q2167 (already A in 2026-05-04
-  baseline; verify against 2026-05-05 baseline before relying on
-  this exclusion).
-- q1711 — already A in `Corner analysis` category but still C in
-  `Track dominance` category. Section 8.1 will surface the
-  Track-dominance C row (per the (qid, category) keying fixed in
-  rev2); the Corner-analysis A row is correctly excluded.
-- q2010-q2013, q2030-q2033, q2050, q2051 (not in benchmark at
-  all).
+The exclusion rule is **status as of May-5 baseline**, NOT status as
+of any earlier run. Earlier audit passes (rev0, rev1) cited "already
+A" exclusions from the May-4 baseline; rev4 corrects those against
+the May-5 actuals.
 
-The Section 8.1 generation script naturally excludes A-graded rows
-by reading the `baselineGrade != 'A'` filter.
+**Excluded from Section 8.1 (verified A in May-5 baseline)**:
+- q1710, q1712 — A in May-5 across all categories.
+- q2167 — A in May-5.
+- q2010-q2013, q2030-q2033, q2050, q2051 (not in benchmark at all).
 
-### 8.4 — Manifest-entry split (rev2)
+**INCLUDED in Section 8.1 despite rev0's "already A" claim**
+(rev3+rev4 correction — these regressed in May-5):
+- **q1713** (Corner analysis): A in May-4, **B in May-5** → Stream 26.0.
+- **q1716** (Corner analysis): A in May-4, **C in May-5** → Stream 26.0.
+- (Plus 17 other regression qids enumerated in the Stream 26.0
+  target table in Section 1.5.)
 
-Codex audit pass 2 flagged that rev1 lumped all manifest entries
-into "budget exceptions excluded from Section 8.1." But the
-manifest contains TWO different kinds of entries:
+**Cross-category duplicates** (same qid, multiple categories):
+- q1711 — A in `Corner analysis`, but C in `Track dominance`.
+  Section 8.1 surfaces only the Track-dominance C row (per the
+  (id, category) keying — see the q1711 row in Section 8.1's
+  table).
+
+The Section 8.1 generation script naturally excludes A-graded
+rows by `baselineGrade != 'A'` filter; the regressed-A qids stay
+in because their May-5 grade is no longer A.
+
+### 8.4 — Manifest-entry split (rev4: corrected against May-5 baseline)
+
+The manifest has 7 entries: q1715, q2008, q2100, q2144, q2182,
+q2206, q2207. Of those, only the qids that are **non-A in the
+May-5 baseline** affect Phase 26 budget math.
+
+**Excluded from Section 8.1 because they are A in May-5** (manifest
+entry is informational only — Phase 26 doesn't need to do anything
+about them):
+- **q1715** — A in May-5 (the manifest entry was a B → A promotion
+  rule from Phase 25; it took effect).
+- **q2008** — A in May-5 (lifted into A by the slice 044 straight-
+  line-dominance work, though the manifest still lists it as C-cap).
 
 **8.4a — Budget exceptions (NOT pursued in Phase 26)**
 
-Excluded from Section 8.1's lift table. Their target grade is
-the manifest entry, not A.
+Non-A in May-5 baseline AND have a manifest entry that says "do
+not pursue". Their target grade is the manifest entry, not A.
+Excluded from the Phase 26 pursuable pool.
 
-| qid  | manifest grade | reason | excluded? |
-|------|----------------|--------|-----------|
-| q1715 | A (promotion)  | not actually a non-A target — already a Phase 25 expected-A | yes |
-| q2008 | C              | Ferrari quali-trim vs race-trim attribution; needs setup data not ingested | yes |
-| q2182 | B              | per-driver telemetry coverage; matview shipped (slice 046) but the lift didn't take — Phase 27 candidate | yes |
-| q2206 | C              | Leclerc Monza compound vs corner-pace causation; needs Tier-4 driver-event-attribution model | yes |
-| q2207 | C              | Mercedes Spa C3 cliff cause-attribution; needs Phase 22 Bayesian deg model | yes |
+| qid  | manifest grade | May-5 grade | reason |
+|------|----------------|-------------|--------|
+| q2182 | B              | C           | per-driver telemetry coverage; matview shipped (slice 046) but the lift didn't take — Phase 27 candidate |
+| q2206 | C              | C           | Leclerc Monza compound vs corner-pace causation; needs Tier-4 driver-event-attribution model |
+| q2207 | C              | C           | Mercedes Spa C3 cliff cause-attribution; needs Phase 22 Bayesian deg model |
+
+Total 8.4a count: **3** (was 5 in rev3 — q1715/q2008 are A in
+May-5 and don't belong in this register).
 
 **8.4b — Rewrite candidates (PURSUED in Phase 26 stream 26.3a)**
 
@@ -827,7 +990,7 @@ When generating Section 8.1's table, post-process to:
 The post-processing pseudocode:
 
 ```python
-budget_exception_qids = {1715, 2008, 2182, 2206, 2207}
+budget_exception_qids = {2182, 2206, 2207}  # rev4: only entries non-A in May-5; q1715 and q2008 are A so they're not in 8.4a
 rewrite_candidate_qids = {2100, 2144}
 final_targets = [r for r in non_a if r['id'] not in budget_exception_qids]
 # rewrite_candidate_qids stay in final_targets but are tagged with stream 26.3a.
@@ -856,11 +1019,28 @@ Section 8.1 target that does NOT grade A on best-of-5 must either:
    *budget exception*), OR
 2. Be flagged as a Phase 27 follow-up.
 
-The total budget-exception count + the actual A count must equal
-the Section 8.1 target list size. If the budget exception
-register grows unexpectedly during implementation, criterion 1
-may not be reachable — surface this and rev3 the plan with
-expanded scope BEFORE final acceptance.
+**Budget identity** (rev4 — corrects the rev3 dimensional mismatch
+which compared "actual A count over 167" against "Section 8.1
+non-A pool size"). The acceptance equation is over the full
+167-question set:
+
+  starting_A_in_May5 (= 101)
+  + new_A_from_Phase26
+  + remaining_BC_in_post-26_baseline
+  = 167
+
+Sub-counters (all measured in the post-26 baseline):
+- `new_A_from_Phase26` ≥ 50 → Criterion 1 passes.
+- `remaining_BC_in_post-26_baseline` includes:
+  - 8.4a budget exceptions held at manifest grade (3 in rev4).
+  - 8.4b rewrite candidates that didn't lift after rewrite
+    (≤ 2 if any rewrite is rejected at review).
+  - Any Section 8.1 target that didn't lift AND wasn't logged
+    as a budget exception → these are Criterion 1 failures.
+
+If the budget-exception register grows unexpectedly during
+implementation, Criterion 1 may not be reachable — surface this
+and rev5 the plan with expanded scope BEFORE final acceptance.
 
 **Criterion 3**: the 5 spatial-slice deploys + the lap-distance
 infrastructure verify scripts all pass.
@@ -879,27 +1059,29 @@ rows that count against the 151 ceiling.
 
 **Numerator target**: 151 A.
 
-**Pursuable pool**:
+**Pursuable pool** (rev4 — corrected):
 - Total non-A in May-5 = 66.
-- 8.4a budget exceptions (q1715, q2008, q2182, q2206, q2207) = 5,
-  permanently non-A by acceptance.
-- (Note: q2100 and q2144 are in 8.4b, not 8.4a — they are pursued
-  via rewrite, NOT excluded from the pursuable pool.)
-- Pursuable pool = 66 - 5 = **61 questions**.
+- 8.4a budget exceptions in May-5 non-A pool = **3** (q2182,
+  q2206, q2207). q1715 and q2008 are A in May-5 and not part of
+  the non-A pool.
+- (q2100 and q2144 are in 8.4b — they are pursued via rewrite,
+  NOT excluded from the pursuable pool.)
+- Pursuable pool = 66 - 3 = **63 questions**.
 
-**Required lift rate of pursuable pool**: 50 / 61 = **82.0%**.
-That is the bar Phase 26 must clear to reach 151 A. It's higher
-than Phase 25.2's observed average lift rate (~75%), which is why
-Section 1's realistic-ceiling estimate flags the plan as tight.
+**Required lift rate of pursuable pool**: 50 / 63 = **79.4%**.
+That is the bar Phase 26 must clear to reach 151 A. It's slightly
+higher than Phase 25.2's observed average lift rate (~75%), which
+is why Section 1's realistic-ceiling estimate flags the plan as
+tight (but less tight than rev3 calculated under the wrong 82.0%).
 
-**The 5 unpursuable budget exceptions cap Phase 26 at 167 - 5 =
-162 A as the absolute ceiling**. Phase 26 cannot exceed 162 / 167 =
-97.0% without first removing one or more 8.4a entries from the
+**The 3 unpursuable budget exceptions cap Phase 26 at 167 - 3 =
+164 A as the absolute ceiling**. Phase 26 cannot exceed 164 / 167 =
+98.2% without first removing one or more 8.4a entries from the
 manifest (typically by shipping the infrastructure that unlocks
 that question — Phase 22 Bayesian deg model for q2207, etc).
 
-**If Phase 26 misses 151**: the plan is genuinely tight at the +50
-number. Section 1's contingency paths (26.3d outperforming, 26.0
+**If Phase 26 misses 151**: the plan is tight at the +50 number.
+Section 1's contingency paths (26.3d outperforming, 26.0
 outperforming, or Phase 27 rollover) explain the next moves.
 
 ---
@@ -987,8 +1169,8 @@ Before implementation begins, codex should verify:
      NOT from the 167-question denominator. The headline target
      stays 151 / 167; 8.4a entries remain permanent non-A rows
      that count against the 151 ceiling. The required lift rate
-     of the pursuable pool is therefore (151 - current A) / (167
-     - current A - 5 budget exceptions).
+     of the pursuable pool is (151 - current A) / (non-A pool
+     - 8.4a count). With May-5 numbers: 50 / 63 = 79.4%.
 
 ---
 
