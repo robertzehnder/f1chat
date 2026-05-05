@@ -17,7 +17,7 @@ export function ResultTable({
 }: ResultTableProps) {
   if (!rows.length) {
     return (
-      <div className="rounded-md border border-border bg-white px-3 py-2.5 text-[13px] text-ink-secondary shadow-card">
+      <div className="rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-ink-secondary shadow-card">
         {title ? <p className="m-0 mb-1 font-medium text-ink">{title}</p> : null}
         No rows returned.
       </div>
@@ -29,7 +29,7 @@ export function ResultTable({
   const totalCount = rowCount ?? displayCount;
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-white shadow-card">
+    <div className="overflow-hidden rounded-md border border-border bg-surface shadow-card">
       {title || rowCount != null ? (
         <div className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary px-3 py-2">
           {title ? (
@@ -62,7 +62,7 @@ export function ResultTable({
               <tr
                 key={index}
                 className={`border-b border-border-subtle/60 ${
-                  index % 2 === 0 ? "bg-white" : "bg-surface-secondary"
+                  index % 2 === 0 ? "bg-surface" : "bg-surface-secondary"
                 } hover:bg-surface-hover`}
               >
                 {columns.map((column) => (

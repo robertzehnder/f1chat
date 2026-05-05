@@ -13,9 +13,10 @@ type MessageThreadProps = {
 };
 
 const SUGGESTED_PROMPTS = [
-  "Compare lap pace for the top 3 in the last race",
-  "Which drivers pitted under the safety car?",
-  "Show tyre strategies for the race winner"
+  "What was Norris's apex speed through Eau Rouge during the 2025 Belgian Grand Prix?",
+  "Compare Verstappen and Hamilton through the Suzuka esses (Turns 7-9) at the 2025 Japanese GP — entry, apex, exit",
+  "How many on-track overtakes happened during the 2025 Singapore Grand Prix?",
+  "On which lap did the McLarens make the inters-to-slicks crossover at the 2025 British GP?"
 ];
 
 export function MessageThread({ messages, loading, onFollowUp, onSuggestedPrompt }: MessageThreadProps) {
@@ -28,22 +29,22 @@ export function MessageThread({ messages, loading, onFollowUp, onSuggestedPrompt
   const empty = messages.length === 0 && !loading;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-canvas px-4 py-8">
+    <div className="min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-8">
       {empty ? (
-        <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 pt-20 text-center">
+        <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-4 pt-20 text-center">
           <h2 className="m-0 text-xl font-semibold tracking-tight text-ink">
             What would you like to analyze?
           </h2>
           <p className="m-0 text-sm text-ink-secondary">
-            Ask about lap times, strategy, race pace, or any F1 data in your warehouse.
+            Ask about lap times, corner speeds, tyre strategy, or any 2025 F1 data.
           </p>
-          <div className="flex flex-wrap justify-center gap-2 pt-2">
+          <div className="mt-2 flex flex-wrap justify-center gap-2">
             {SUGGESTED_PROMPTS.map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => onSuggestedPrompt?.(p) ?? onFollowUp?.(p)}
-                className="rounded-full border border-border bg-white px-3.5 py-1.5 text-xs text-ink-secondary shadow-sm transition-colors hover:bg-surface-hover hover:text-ink"
+                className="rounded-full border border-border bg-surface px-4 py-2 text-left text-xs text-ink-secondary transition-colors hover:bg-surface-hover hover:text-ink"
               >
                 {p}
               </button>
@@ -51,7 +52,7 @@ export function MessageThread({ messages, loading, onFollowUp, onSuggestedPrompt
           </div>
         </div>
       ) : (
-        <div className="mx-auto flex max-w-[720px] flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-[920px] flex-col gap-6">
           {messages.map((m) =>
             m.role === "user" ? (
               <UserMessage key={m.id} text={m.text} />

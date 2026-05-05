@@ -6,10 +6,8 @@ import { createEmptyStore, loadChatStore, saveChatStore } from "@/lib/chatPersis
 import { mapChatApiResponseToParts } from "@/lib/mapChatResponse";
 import { deriveResolvedContext, type ResolvedSessionContext } from "@/lib/chatContext";
 import { sendChatMessage } from "@/lib/chat/sendChatMessage";
-import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { MessageThread } from "@/components/chat/MessageThread";
 import { Composer, type ComposerContext } from "@/components/chat/Composer";
-import { SessionContextPanel } from "@/components/chat/SessionContextPanel";
 
 function newId() {
   return crypto.randomUUID();
@@ -40,8 +38,7 @@ export function ChatWorkspace() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [composerCtx, setComposerCtx] = useState<ComposerContext>({});
-  const [resolved, setResolved] = useState<ResolvedSessionContext | null>(null);
-  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [, setResolved] = useState<ResolvedSessionContext | null>(null);
 
   useEffect(() => {
     setHydrated(true);
@@ -78,7 +75,7 @@ export function ChatWorkspace() {
       setComposerCtx(c.contextSnapshot ?? {});
       setResolved(c.lastResolved ?? null);
     }
-  }, [hydrated, store.activeConversationId]);
+  }, [hydrated, store.activeConversationId, store.conversations]);
 
   const activeConversation = useMemo(
     () => store.conversations.find((c) => c.id === store.activeConversationId) ?? null,
@@ -113,35 +110,9 @@ export function ChatWorkspace() {
     setInput("");
   }, []);
 
-  const togglePin = useCallback((id: string) => {
-    setStore((prev) => ({
-      ...prev,
-      conversations: prev.conversations.map((c) =>
-        c.id === id ? { ...c, pinned: !c.pinned } : c
-      )
-    }));
-  }, []);
-
-  const deleteConversation = useCallback((id: string) => {
-    setStore((prev) => {
-      const rest = prev.conversations.filter((c) => c.id !== id);
-      const nextActive =
-        prev.activeConversationId === id ? rest[0]?.id ?? null : prev.activeConversationId;
-      if (rest.length === 0) {
-        const c = makeConversation();
-        return {
-          ...prev,
-          conversations: [c],
-          activeConversationId: c.id
-        };
-      }
-      return {
-        ...prev,
-        conversations: rest,
-        activeConversationId: nextActive
-      };
-    });
-  }, []);
+  // Phase 26 UI: togglePin/deleteConversation were used by the
+  // (now-removed) ConversationSidebar — kept on the store schema
+  // for re-introduction later but not wired into the chat-only UI.
 
   const send = useCallback(async () => {
     const text = input.trim();
@@ -197,59 +168,44 @@ export function ChatWorkspace() {
 
   const messages = activeConversation?.messages ?? [];
 
+  // Phase 26 UI: F1 Insights header + chat-only column. The
+  // ConversationSidebar and SessionContextPanel were removed at
+  // user request — chat is the root experience.
   return (
-    <div className="flex h-full min-h-0 w-full bg-canvas">
-      <ConversationSidebar
-        conversations={store.conversations}
-        activeId={store.activeConversationId}
-        onSelect={(id) => setStore((prev) => ({ ...prev, activeConversationId: id }))}
-        onNew={newChat}
-        onTogglePin={togglePin}
-        onDelete={deleteConversation}
-      />
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <header className="flex shrink-0 items-center justify-between border-b border-border bg-white px-5 py-3">
-              <div>
-                <h1 className="m-0 text-base font-semibold text-ink">Analyst</h1>
-                <p className="m-0 text-xs text-ink-tertiary">
-                  Read-only SQL · answers and evidence stay in the thread
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPanelCollapsed((c) => !c)}
-                className="hidden rounded-sm border border-border bg-white px-2 py-1 text-xs text-ink-secondary hover:bg-surface-hover lg:inline-flex"
-                title={panelCollapsed ? "Show context" : "Hide context"}
-              >
-                {panelCollapsed ? "Show context" : "Hide context"}
-              </button>
-            </header>
-            <MessageThread
-              messages={messages}
-              loading={loading}
-              onFollowUp={(p) => setInput((prev) => (prev.trim() ? `${prev.trim()}\n${p}` : p))}
-              onSuggestedPrompt={(p) => setInput(p)}
-            />
-            <Composer
-              value={input}
-              onChange={setInput}
-              onSubmit={send}
-              loading={loading}
-              context={composerCtx}
-              onContextChange={setComposerCtx}
-            />
+    <div className="flex h-full min-h-0 w-full flex-col bg-canvas">
+      <header className="flex shrink-0 items-center justify-between border-b border-border bg-canvas px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white shadow-sm">
+            F1
           </div>
-          <div className="hidden min-h-0 lg:flex">
-            <SessionContextPanel
-              resolved={resolved}
-              composerContext={composerCtx}
-              collapsed={panelCollapsed}
-              onToggleCollapse={() => setPanelCollapsed((c) => !c)}
-            />
+          <div>
+            <h1 className="m-0 text-base font-semibold text-ink">F1 Insights</h1>
+            <p className="m-0 text-xs text-ink-tertiary">Powered by OpenF1</p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={newChat}
+          className="rounded-md border-0 bg-transparent px-3 py-1.5 text-sm text-ink-secondary hover:text-ink"
+        >
+          New chat
+        </button>
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <MessageThread
+          messages={messages}
+          loading={loading}
+          onFollowUp={(p) => setInput((prev) => (prev.trim() ? `${prev.trim()}\n${p}` : p))}
+          onSuggestedPrompt={(p) => setInput(p)}
+        />
+        <Composer
+          value={input}
+          onChange={setInput}
+          onSubmit={send}
+          loading={loading}
+          context={composerCtx}
+          onContextChange={setComposerCtx}
+        />
       </div>
     </div>
   );

@@ -51,43 +51,39 @@ export function Composer({
     }
   }
 
+  // Phase 26 UI: dark composer with a rounded textarea and a
+  // round red send button (F1 Insights design).
   return (
-    <div className="border-t border-border bg-white px-4 py-4">
-      <form onSubmit={handleFormSubmit} className="mx-auto flex max-w-[720px] flex-col gap-2">
-        {/* Phase 26 UI: session/driver context chips removed at user
-            request — they were blocking info above the input row.
-            Context is still tracked in state and can be set via the
-            CONTEXT side panel pins; just no chip-row in the composer. */}
-
-        {/* Input + send */}
+    <div className="bg-canvas px-6 pb-6 pt-2">
+      <form onSubmit={handleFormSubmit} className="mx-auto flex w-full max-w-[920px] flex-col gap-2">
         <div className="relative">
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Ask about lap times, strategy, intervals…"
+            placeholder="Ask about lap times, strategy, driver comparisons…"
             rows={1}
             disabled={loading}
-            className="w-full resize-none rounded-lg border border-border bg-white py-3 pl-4 pr-14 text-sm text-ink shadow-md placeholder:text-ink-tertiary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
-            style={{ minHeight: "48px", maxHeight: "160px" }}
+            className="w-full resize-none rounded-2xl border border-border bg-surface py-4 pl-5 pr-16 text-[15px] text-ink placeholder:text-ink-tertiary focus:border-ink-tertiary focus:outline-none disabled:opacity-60"
+            style={{ minHeight: "56px", maxHeight: "180px" }}
           />
           <button
             type="submit"
             disabled={loading || !value.trim()}
-            className="absolute bottom-2.5 right-2.5 flex size-9 items-center justify-center rounded-lg bg-accent text-white shadow-sm hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+            className="absolute bottom-3 right-3 flex size-10 items-center justify-center rounded-full bg-accent text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Send"
           >
             {loading ? (
               <span className="inline-block size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
             ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             )}
           </button>
         </div>
-        <p className="m-0 text-xs text-ink-tertiary">Enter to send · Shift+Enter for newline</p>
+        <p className="m-0 text-center text-xs text-ink-tertiary">Powered by OpenF1 data. Press Enter to send.</p>
       </form>
     </div>
   );

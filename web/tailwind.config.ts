@@ -5,35 +5,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Phase 26 UI: dark "F1 Insights" theme.
         canvas: {
-          DEFAULT: "#F6F5F2"
+          DEFAULT: "#0A0A0A"
         },
         surface: {
-          DEFAULT: "#FFFFFF",
-          secondary: "#FAF9F6",
-          hover: "#F0EFEC"
+          DEFAULT: "#111111",
+          secondary: "#161616",
+          hover: "#1C1C1C"
         },
         border: {
-          DEFAULT: "#E6E3DB",
-          subtle: "#EDEBE6"
+          DEFAULT: "#262626",
+          subtle: "#1F1F1F"
         },
         accent: {
-          DEFAULT: "#4F7FFF",
-          soft: "#EAF1FF",
-          hover: "#3D6CE8"
+          DEFAULT: "#E10600",     // F1 official red
+          soft: "#3A0A0A",
+          hover: "#FF1A0F"
         },
         ink: {
-          DEFAULT: "#171717",
-          secondary: "#706E67",
-          tertiary: "#9C9A93"
+          DEFAULT: "#FAFAFA",
+          secondary: "#A3A3A3",
+          tertiary: "#737373"
         },
         semantic: {
-          success: "#2F8F6B",
-          "success-soft": "#EEFBF4",
-          warning: "#B7791F",
-          "warning-soft": "#FEF9EE",
-          error: "#DC4A3D",
-          "error-soft": "#FEF1F0"
+          success: "#22C55E",
+          "success-soft": "#0F2A1B",
+          warning: "#F59E0B",
+          "warning-soft": "#2A1F0B",
+          error: "#EF4444",
+          "error-soft": "#2A0F0F"
         }
       },
       fontFamily: {
@@ -41,9 +42,9 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"]
       },
       boxShadow: {
-        sm: "0 1px 2px rgba(0,0,0,0.04)",
-        card: "0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px #EDEBE6",
-        md: "0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px #E6E3DB"
+        sm: "0 1px 2px rgba(0,0,0,0.4)",
+        card: "0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px #262626",
+        md: "0 4px 12px rgba(0,0,0,0.4), 0 0 0 1px #262626"
       },
       borderRadius: {
         sm: "8px",
