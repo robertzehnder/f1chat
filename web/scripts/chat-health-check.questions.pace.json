@@ -99,7 +99,7 @@
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-fuel-corrected-pace",
+    "floor_active_after_slice": null,
     "author_note": "Mark Hughes Saudi GP long-runs piece on McLaren's race-stint advantage.",
     "question": "What was Norris's average lap time advantage over Piastri once both had clean air at Saudi 2025 FP2 long runs?"
   },
@@ -116,7 +116,7 @@
       "analytics.fuel_corrected_pace.fuel_corrected_lap_s"
     ],
     "expected_grade_floor": "A",
-    "floor_active_after_slice": "21-fuel-corrected-pace",
+    "floor_active_after_slice": null,
     "author_note": "Motorsport.com 'Long-run shock in Australia' on Russell 0.6s/lap clear of Hamilton.",
     "question": "How big was Mercedes' long-run pace advantage over Ferrari at Australia 2025 Friday practice?"
   },
@@ -173,7 +173,7 @@
       "analytics.fuel_corrected_pace.lap_number"
     ],
     "expected_grade_floor": "B",
-    "floor_active_after_slice": "21-fuel-corrected-pace",
+    "floor_active_after_slice": null,
     "author_note": "ESPN/RaceFans/The Race Hungary 2025: Norris one-stop hinged on free-air stint-pace edge.",
     "question": "Compare Norris's first-three-laps-of-stint pace on the hard tyre at Hungary 2025 vs Piastri's hard pace on the same compound across the same lap window."
   }

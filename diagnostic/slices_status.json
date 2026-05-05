@@ -81,8 +81,8 @@
     },
     {
       "slice_id": "21-fuel-corrected-pace",
-      "status": "pending",
-      "merged_at": null,
+      "status": "merged",
+      "merged_at": "2026-05-05T00:19:46Z",
       "depends_on": []
     },
     {
