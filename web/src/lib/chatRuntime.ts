@@ -1761,7 +1761,46 @@ export async function buildChatRuntime(input: {
     !runtimeFastPath &&
     !hasStrongVenueYearAnchor &&
     !hasRaceShapedIntentForVenueYear;
-  const needsDriverPair = questionType === "comparison_analysis" && selectedDriverNumbers.length < 2;
+  // Phase 25.2 loop tightening: not every "compare X" question is a
+  // driver-pair comparison. Steward-decision / incident / strategy /
+  // deg-curve / sequence comparisons compare structural objects, not
+  // drivers. Detect those structural comparisons by looking for the
+  // characteristic noun-phrase right after "compare" (or as a topic
+  // anywhere in the question). If the comparison subject is a non-
+  // driver thing, do NOT require a driver pair — let the LLM do the
+  // multi-row analysis on its own. Driver names in the question still
+  // get pinned through the driver-resolution path; they just don't
+  // gate clarification.
+  const STRUCTURAL_COMPARISON_PATTERNS: ReadonlyArray<string> = [
+    "compare the lap",
+    "compare the turn",
+    "compare lap-",
+    "compare turn ",
+    "compare the stewards",
+    "compare the steward",
+    "compare the incident",
+    "compare the penalty",
+    "compare the penalties",
+    "compare the call",
+    "compare the calls",
+    "compare the deg",
+    "compare the strateg",
+    "compare the sequence",
+    "compare the cliff",
+    "compare the run",
+    "compare the rounds",
+    "compare medium-compound",
+    "compare hard-compound",
+    "compare soft-compound",
+    "compare the compound"
+  ];
+  const isStructuralComparison =
+    questionType === "comparison_analysis" &&
+    STRUCTURAL_COMPARISON_PATTERNS.some((p) => normalizedMessage.includes(p));
+  const needsDriverPair =
+    questionType === "comparison_analysis" &&
+    selectedDriverNumbers.length < 2 &&
+    !isStructuralComparison;
   const needsClarification =
     forceSessionClarification ||
     forceDriverClarification ||

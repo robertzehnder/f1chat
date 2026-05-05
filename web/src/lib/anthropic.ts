@@ -133,6 +133,88 @@ Rules:
 `.trim();
 }
 
+// Phase 25.2 loop tightening Fix 2: append a structured matview-
+// suggestion preamble to the user message when the question matches
+// known per-slice patterns. System-prompt bullets routinely get
+// ignored under load (LLM composes its own SQL from scratch);
+// per-question hints attached to the user message are harder to
+// skip and dramatically improve synthesis-prompt compliance.
+//
+// Each entry: a list of trigger substrings AND a multi-line hint
+// block. Triggers are matched case-insensitively against the
+// normalized question text. First-match wins (so put more-specific
+// patterns first if they would otherwise collide).
+const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
+  {
+    triggers: [
+      "deg curve", "deg per lap", "tyre deg", "compound deg",
+      "degradation curve", "degradation per lap", "deg cliff",
+      "compound cliff"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-stint-degradation-curve):",
+      "  primary table: analytics.stint_degradation_curve",
+      "  primary column: degradation_per_lap_s (REGR_SLOPE of lap_duration vs lap_number per (session_key, driver_number, stint_number))",
+      "  fuel-corrected variant: fuel_corrected_degradation_per_lap_s",
+      "  recommended shape: single SELECT WHERE session_key = :s AND driver_number IN (:d1, :d2) AND stint_number = :n",
+      "  do NOT compose multi-CTE rolling-window queries against core.laps_enriched directly."
+    ].join("\n")
+  },
+  {
+    triggers: [
+      "steward", "fia stewards", "incident involv", "penalty point",
+      "time penalty", "drive-through", "drive through penalty",
+      "track limits", "leaving the track", "forcing-off", "forcing off",
+      "unsafe release", "5 second penalty", "10 second penalty",
+      "5-second penalty", "10-second penalty"
+    ],
+    hint: [
+      "MATVIEW HINT (Phase 21 21-race-control-incident-index):",
+      "  primary table: analytics.race_control_incidents",
+      "  columns: driver_number, second_driver_number, incident_kind, action_status, penalty_seconds, message_text, lap_number",
+      "  incident_kind values: track_limits / collision / leaving_track_advantage / forcing_off / unsafe_release / pit_speeding / pit_lane_infraction / false_start / multiple_track_limits / other",
+      "  action_status values: time_penalty / drive_through / no_further_action / under_investigation / investigation_deferred / reprimand / grid_penalty / other",
+      "  penalty_points is ALWAYS NULL — note in synthesis that OpenF1 does not ingest FIA penalty-point assignments.",
+      "  recommended shape: SELECT ... FROM analytics.race_control_incidents WHERE session_key = :s [AND driver_number = :d] [AND incident_kind = :k] ORDER BY lap_number, date",
+      "  for 'who led at lap N after SC restart' questions: JOIN core.race_progression_summary ON (session_key, lap_number) for position_end_of_lap context."
+    ].join("\n")
+  },
+  {
+    triggers: [
+      "intermediate", "for inters", "switched to inter", "inter tyre",
+      "inters at"
+    ],
+    hint: [
+      "MATVIEW HINT (intermediate-tyre crossover):",
+      "  use core.stint_summary filtered by compound_name ILIKE '%INTER%' ORDER BY lap_start ASC",
+      "  do NOT compose multi-stint joins from raw.laps + raw.stints."
+    ].join("\n")
+  },
+  {
+    triggers: [
+      "fia pit log", "pit-stop timing data", "pit stop timing data",
+      "pit timing data"
+    ],
+    hint: [
+      "MATVIEW HINT (FIA pit log gap):",
+      "  JOIN core.session_completeness.pit_rows (manifest) vs COUNT(*) FROM raw.pit (observed) per session_key.",
+      "  do NOT embed semicolons or multi-clause notes inside SQL string literals.",
+      "  the FIA-pit-log caveat belongs in the synthesis text, not the SQL output."
+    ].join("\n")
+  }
+];
+
+export function buildMatviewHint(question: string): string {
+  if (!question) return "";
+  const lower = question.toLowerCase();
+  for (const entry of MATVIEW_HINTS) {
+    if (entry.triggers.some((t) => lower.includes(t))) {
+      return `\n\n${entry.hint}\n`;
+    }
+  }
+  return "";
+}
+
 function buildRepairPrompt() {
   return `
 You are fixing a PostgreSQL query for the OpenF1 warehouse.
@@ -417,10 +499,11 @@ export async function generateSqlWithAnthropic(
 
   const contextText = JSON.stringify(input.context ?? {});
   const runtimeText = JSON.stringify(input.runtime ?? {});
+  const matviewHint = buildMatviewHint(input.question);
   const userPrompt = `
 Question:
 ${input.question}
-
+${matviewHint}
 Context:
 ${contextText}
 

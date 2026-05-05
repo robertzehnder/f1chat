@@ -64,8 +64,44 @@ export function isWarehouseWideQuestion(normalizedText: string): boolean {
     normalizedText.includes("currently have") ||
     normalizedText.includes("how many unique drivers") ||
     normalizedText.includes("which driver numbers appear") ||
-    normalizedText.includes("appeared in all race sessions")
+    normalizedText.includes("appeared in all race sessions") ||
+    // Phase 25.2 loop tightening: season-scoped retrospectives are
+    // structurally warehouse-wide — they enumerate races/sessions
+    // across the season, not a specific weekend. Pinning a single
+    // session forces the LLM to filter by session_key, returning 0
+    // rows on a season-wide question.
+    isSeasonRetrospective(normalizedText)
   );
+}
+
+function isSeasonRetrospective(normalizedText: string): boolean {
+  // Conservative pattern set — fires only when the question
+  // explicitly enumerates "the season" or "each race / weekend
+  // / round / session" with a year anchor. False-positives on
+  // single-race questions ("at the 2025 Hungarian Grand Prix")
+  // would break Phase 25.1; the patterns below all require an
+  // enumeration verb + season scope.
+  const enumerative =
+    normalizedText.includes("each race") ||
+    normalizedText.includes("each weekend") ||
+    normalizedText.includes("each round") ||
+    normalizedText.includes("every race") ||
+    normalizedText.includes("every weekend") ||
+    normalizedText.includes("every round") ||
+    normalizedText.includes("identify each") ||
+    normalizedText.includes("identify all") ||
+    normalizedText.includes("list each") ||
+    normalizedText.includes("list all") ||
+    normalizedText.includes("which races") ||
+    normalizedText.includes("which weekends") ||
+    normalizedText.includes("which rounds") ||
+    normalizedText.includes("aggregate across") ||
+    normalizedText.includes("across the 2025 season") ||
+    normalizedText.includes("for the 2025 season") ||
+    normalizedText.includes("across all 2025") ||
+    normalizedText.includes("season-wide") ||
+    normalizedText.includes("season wide");
+  return enumerative;
 }
 
 export function requiresResolvedSession(questionType: QuestionType, normalizedText: string): boolean {
