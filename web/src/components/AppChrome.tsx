@@ -5,7 +5,9 @@ import { Nav } from "@/components/Nav";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isChat = pathname === "/chat";
+  // Phase 26: the analyst chat is the root experience. `/` and `/chat`
+  // both render the chat-only chrome (no left nav, no card hero).
+  const isChat = pathname === "/chat" || pathname === "/";
 
   if (isChat) {
     return (
