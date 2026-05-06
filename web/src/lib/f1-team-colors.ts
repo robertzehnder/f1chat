@@ -85,16 +85,54 @@ export function getTeamColorByDriver(driverName: string): string {
   if (F1_TEAM_COLORS[driverName]) {
     return F1_TEAM_COLORS[driverName]
   }
-  
+
   // Full name lookup
   if (F1_DRIVER_TEAMS[driverName]) {
     return F1_TEAM_COLORS[F1_DRIVER_TEAMS[driverName]]
   }
-  
+
   // Last name lookup for chart labels
   if (DRIVER_LAST_NAME_MAP[driverName]) {
     return F1_TEAM_COLORS[DRIVER_LAST_NAME_MAP[driverName]]
   }
-  
+
   return F1_TEAM_COLORS.default
 }
+
+// =============================================================================
+// Phase 10: token consolidation. Compound + chart-semantic colors live
+// alongside team colors so all chart renderers + builders import from a
+// single visual-tokens module. mapInsight.ts's local COMPOUND_HEX +
+// inlined chart-semantic hexes can re-export from here.
+// =============================================================================
+
+/** Tyre compound colors used in stint Gantt + tyre-strategy charts. */
+export const COMPOUND_COLORS: Record<string, string> = {
+  hard: "#E5E7EB",
+  medium: "#FCD34D",
+  soft: "#EF4444",
+  inter: "#22C55E",
+  intermediate: "#22C55E",
+  wet: "#3B82F6"
+}
+
+/** Chart-semantic colors used across renderers (success, warning,
+ *  in-traffic / dirty-air emphasis). The F1 red accent (#E10600) is
+ *  the primary highlight color used elsewhere — driving design system. */
+export const CHART_SEMANTIC_COLORS = {
+  positive: "#22C55E",
+  negative: "#E10600",
+  warning: "#F59E0B",
+  neutral: "#A3A3A3",
+  cleanAir: "#22C55E",
+  inTraffic: "#E10600",
+  rainfall: "#1868DB",
+  trackTemp: "#F59E0B"
+} as const
+
+/** Status-grid cell colors for data-coverage display. */
+export const COVERAGE_STATUS_COLORS = {
+  full: "#22C55E",
+  partial: "#F59E0B",
+  missing: "#EF4444"
+} as const

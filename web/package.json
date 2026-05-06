@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:grading": "node --test scripts/tests/*.test.mjs",
     "test:adapter": "tsx --test scripts/tests/mapInsight.test.ts",
+    "test:visualization-contract": "tsx --test scripts/tests/visualization-contract.test.ts",
+    "verify:ui": "npm run typecheck && npm run test:adapter && npm run test:visualization-contract",
     "test:resolver-lru": "node --test scripts/tests/resolver-lru.test.mjs",
     "healthcheck:chat": "node scripts/chat-health-check.mjs",
     "healthcheck:chat:intense": "node scripts/chat-health-check.mjs --rubric scripts/chat-health-check.rubric.intense.json",

@@ -826,6 +826,31 @@ function validateInsightFields(parsed: Record<string, unknown>): import("@/lib/c
   return Object.keys(out).length > 0 ? out : null;
 }
 
+/**
+ * Phase 11 telemetry: log insight-parse outcomes so we can monitor
+ * the rate of structured-output parse failures over time. Drives the
+ * decision of whether the JSON-key-extension format holds up or we
+ * need to migrate to tool-use / structured outputs (§4.7).
+ *
+ * Outcomes:
+ *   - "success"  — JSON parsed, validateInsightFields produced fields
+ *   - "no-fields" — JSON parsed but no insight fields extracted (LLM
+ *                   omitted the new keys; falls back to body-only)
+ *   - "fallback"  — JSON parse threw; whole synthesis path falls back
+ *                   to buildFallbackAnswer at the orchestration layer
+ */
+type InsightParseOutcome = "success" | "no-fields" | "fallback";
+
+function logInsightParseOutcome(outcome: InsightParseOutcome, details?: Record<string, unknown>): void {
+  // Async fire-and-forget log via the existing logServer path. Don't
+  // block synthesis on the log write.
+  void import("@/lib/serverLog").then(({ logServer }) => {
+    void logServer("INFO", "chat_insight_parse", { outcome, ...details });
+  }).catch(() => {
+    // Logging failures are not fatal.
+  });
+}
+
 function parseAnswerJsonPayload(
   jsonText: string,
   rawText: string
@@ -838,16 +863,22 @@ function parseAnswerJsonPayload(
   try {
     parsed = JSON.parse(jsonText);
   } catch {
+    logInsightParseOutcome("fallback", { rawSnippet: rawText.slice(0, 200) });
     throw new Error(`Could not parse JSON from model output: ${rawText.slice(0, 4000)}`);
   }
 
   if (!parsed.answer || typeof parsed.answer !== "string") {
+    logInsightParseOutcome("fallback", { reason: "missing_answer_field" });
     throw new Error("Model output did not include a valid 'answer' field.");
   }
+  const insight = validateInsightFields(parsed);
+  logInsightParseOutcome(insight ? "success" : "no-fields", {
+    fieldCount: insight ? Object.keys(insight).length : 0
+  });
   return {
     answer: parsed.answer.trim(),
     reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined,
-    insight: validateInsightFields(parsed)
+    insight
   };
 }
 
