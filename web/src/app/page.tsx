@@ -77,6 +77,25 @@ export default function F1InsightsChat() {
       )
     );
 
+  /**
+   * Functional patcher — merges a partial DraftInsight into whatever the
+   * assistant slot currently holds. Critical for streaming because the
+   * synthetic-phase setInterval and the SSE delta callbacks both mutate
+   * the insight concurrently; an absolute set (updateAssistantInsight)
+   * would wipe the other side's writes.
+   */
+  const patchAssistantInsight = (
+    assistantId: string,
+    patch: (prev: DraftInsight) => DraftInsight
+  ) =>
+    setMessages((m) =>
+      m.map((msg) => {
+        if (msg.id !== assistantId || msg.type !== "assistant") return msg;
+        const prev = msg.insight ?? { body: "" };
+        return { ...msg, insight: patch(prev) };
+      })
+    );
+
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
     const userId = makeId();
@@ -116,19 +135,16 @@ export default function F1InsightsChat() {
         clearInterval(phaseTimer);
         return;
       }
-      setMessages((m) =>
-        m.map((msg) => {
-          if (msg.id !== assistantId || msg.type !== "assistant" || !msg.insight) return msg;
-          if (!msg.insight.streaming) return msg; // stream already closed
-          const events: ActivityEvent[] = SYNTHETIC_PHASES.slice(0, phaseIdx + 1).map((p, i) => ({
-            id: `synth-${i}`,
-            label: p.label,
-            message: p.message,
-            status: i < phaseIdx ? "done" : "running"
-          }));
-          return { ...msg, insight: { ...msg.insight, activity: events } };
-        })
-      );
+      patchAssistantInsight(assistantId, (prev) => {
+        if (!prev.streaming) return prev; // stream already closed
+        const events: ActivityEvent[] = SYNTHETIC_PHASES.slice(0, phaseIdx + 1).map((p, i) => ({
+          id: `synth-${i}`,
+          label: p.label,
+          message: p.message,
+          status: i < phaseIdx ? ("done" as const) : ("running" as const)
+        }));
+        return { ...prev, activity: events };
+      });
     }, 1200);
 
     try {
@@ -141,27 +157,33 @@ export default function F1InsightsChat() {
         body: JSON.stringify({ message: text, context: {} })
       });
 
-      // Live streaming: keep a CUMULATIVE string and overwrite the body
-      // each tick. Do NOT call foldPartsIntoInsight on per-chunk text —
-      // that helper inserts "\n\n" between text parts, which is correct
-      // for distinct final-frame parts but wrong for SSE deltas.
+      // Live streaming: keep CUMULATIVE strings on the page handler scope
+      // (deltaCount, the body+reasoning strings used by the final-fold).
+      // The actual insight state is updated via patchAssistantInsight to
+      // preserve the activity field that setInterval is writing
+      // concurrently — using a local `live` snapshot would clobber it.
       let liveBody = "";
       let liveReasoning = "";
       let deltaCount = 0;
-      let live: DraftInsight = { body: "", streaming: true };
       const finalPayload: ChatApiResponse = await consumeChatStream(response, {
         onAnswerDelta: (chunk) => {
           if (!chunk) return;
           deltaCount += 1;
           liveBody += chunk;
-          live = { ...live, body: liveBody, streaming: true };
-          updateAssistantInsight(assistantId, live);
+          patchAssistantInsight(assistantId, (prev) => ({
+            ...prev,
+            body: liveBody,
+            streaming: true
+          }));
         },
         onReasoningDelta: (chunk) => {
           if (!chunk) return;
           liveReasoning += chunk;
-          live = { ...live, reasoning: liveReasoning, streaming: true };
-          updateAssistantInsight(assistantId, live);
+          patchAssistantInsight(assistantId, (prev) => ({
+            ...prev,
+            reasoning: liveReasoning,
+            streaming: true
+          }));
         }
       });
 
