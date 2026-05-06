@@ -3,18 +3,18 @@
 @tailwind utilities;
 
 /*
- * F1 Dark Theme — translated from v0's Tailwind 4 globals.css.
- * v0 used oklch() and `@theme inline`; we use HSL custom properties
+ * F1 Dark Theme - translated from v0's Tailwind 4 globals.css.
+ * v0 used oklch() and "@theme inline"; we use HSL custom properties
  * with Tailwind 3 + tailwind.config.ts mappings.
  *
- * oklch → hsl approximations:
- *   oklch(0.13 0.005 285)  →  hsl(285 5% 13%)   /* background */
- *   oklch(0.17 0.005 285)  →  hsl(285 5% 17%)   /* card */
- *   oklch(0.22 0.005 285)  →  hsl(285 5% 22%)   /* secondary/muted */
- *   oklch(0.28 0.005 285)  →  hsl(285 5% 28%)   /* border */
- *   oklch(0.55 0.25 25)    →  hsl(2 100% 44%)   /* F1 red primary */
- *   oklch(0.98 0 0)        →  hsl(0 0% 98%)     /* foreground */
- *   oklch(0.65 0 0)        →  hsl(0 0% 65%)     /* muted-foreground */
+ * oklch -> hsl approximations:
+ *   oklch(0.13 0.005 285)  ->  hsl(285 5% 13%)    background
+ *   oklch(0.17 0.005 285)  ->  hsl(285 5% 17%)    card
+ *   oklch(0.22 0.005 285)  ->  hsl(285 5% 22%)    secondary/muted
+ *   oklch(0.28 0.005 285)  ->  hsl(285 5% 28%)    border
+ *   oklch(0.55 0.25 25)    ->  hsl(2 100% 44%)    F1 red primary
+ *   oklch(0.98 0 0)        ->  hsl(0 0% 98%)      foreground
+ *   oklch(0.65 0 0)        ->  hsl(0 0% 65%)      muted-foreground
  */
 
 :root,
