@@ -212,36 +212,20 @@ function findCol(cols: string[], pattern: RegExp): string | undefined {
   return cols.find((c) => pattern.test(c));
 }
 
-function detectChart(rows: Record<string, unknown>[] | undefined): ChartSpec | undefined {
-  if (!rows || rows.length === 0) return undefined;
-  const cols = Object.keys(rows[0]);
+/**
+ * Phase 5: detectChart now delegates to the registry. The local
+ * builders below (buildGroupedBar, buildDivergingBar, etc.) are
+ * preserved for backwards compatibility with any caller that imports
+ * them, but new code should use the registry.
+ */
+import { runDetectorRegistry } from "@/lib/mapInsight/detectors/registry";
+import type { AdapterContext } from "@/lib/mapInsight/detectors/types";
 
-  if (cols.includes("corner_label") && cols.some((c) => /entry|apex|exit|speed/.test(c))) {
-    return buildGroupedBar(rows);
-  }
-  if (cols.includes("position_delta")) {
-    return buildDivergingBar(rows);
-  }
-  // Match clean_air_laps / total_clean_air_laps / clean_air_lap_count / etc.
-  // and the corresponding traffic_laps / total_traffic_laps / etc.
-  const cleanCol = findCol(cols, /(?:^|_)clean(?:_?air)?_laps?(?:_count|_total)?$/i);
-  const trafficCol = findCol(cols, /(?:^|_)traffic_laps?(?:_count|_total)?$/i);
-  if (cleanCol && trafficCol) {
-    return buildStackedHorizontal(rows, cleanCol, trafficCol);
-  }
-  if (cols.includes("compound") && cols.includes("stint_start_lap")) {
-    return buildStintGantt(rows);
-  }
-  if (cols.includes("lap_number") && cols.some((c) => /lap_time|delta/.test(c))) {
-    return buildLineChart(rows);
-  }
-  if (cols.includes("driver_name") || cols.includes("driver_number")) {
-    const numericCol = cols.find(
-      (c) => !IDENTIFIER_COLS.has(c) && typeof rows[0][c] === "number"
-    );
-    if (numericCol) return buildHorizontalBar(rows, numericCol);
-  }
-  return undefined;
+function detectChart(
+  rows: Record<string, unknown>[] | undefined,
+  ctx: AdapterContext = {}
+): ChartSpec | undefined {
+  return runDetectorRegistry(rows, ctx)?.spec;
 }
 
 // =============================================================================
