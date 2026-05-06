@@ -181,6 +181,8 @@ export interface DraftInsight extends Omit<InsightMock, "title"> {
   truncated?: boolean;
   /** Cumulative reasoning_delta stream — model's chain-of-thought. */
   reasoning?: string;
-  /** True while the SSE stream is still open. Drives the "Thinking…" UI. */
+  /** True while the SSE stream is still open. Drives the "Working…" UI. */
   streaming?: boolean;
+  /** Stage-by-stage activity (synthetic during stream, real after final). */
+  activity?: import("@/lib/activityLog").ActivityEvent[];
 }

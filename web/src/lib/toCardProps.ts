@@ -32,6 +32,7 @@ export function toCardProps(
     elapsedMs: "elapsedMs" in m ? m.elapsedMs : undefined,
     truncated: "truncated" in m ? m.truncated : undefined,
     reasoning: "reasoning" in m ? m.reasoning : undefined,
-    streaming: "streaming" in m ? m.streaming : undefined
+    streaming: "streaming" in m ? m.streaming : undefined,
+    activity: "activity" in m ? m.activity : undefined
   };
 }

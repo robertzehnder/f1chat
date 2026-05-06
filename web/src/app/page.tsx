@@ -20,6 +20,7 @@ import {
   foldPartsIntoInsight
 } from "@/lib/mapInsight";
 import { toCardProps } from "@/lib/toCardProps";
+import { buildActivityLog, SYNTHETIC_PHASES, type ActivityEvent } from "@/lib/activityLog";
 import type { DraftInsight } from "@/lib/chart-types";
 import type { ChatApiResponse } from "@/lib/chatTypes";
 
@@ -80,12 +81,55 @@ export default function F1InsightsChat() {
     if (!text.trim()) return;
     const userId = makeId();
     const assistantId = makeId();
+    // Seed the assistant message with the first synthetic phase so the
+    // activity log is visible the instant the user submits.
+    const initialActivity: ActivityEvent[] = [
+      {
+        id: "synth-0",
+        label: SYNTHETIC_PHASES[0].label,
+        message: SYNTHETIC_PHASES[0].message,
+        status: "running"
+      }
+    ];
+
     setMessages((m) => [
       ...m,
       { id: userId, type: "user", content: text },
-      // Start with streaming=true so the "Thinking…" affordance shows immediately.
-      { id: assistantId, type: "assistant", content: "", insight: { body: "", streaming: true } }
+      {
+        id: assistantId,
+        type: "assistant",
+        content: "",
+        insight: { body: "", streaming: true, activity: initialActivity }
+      }
     ]);
+
+    // Cycle synthetic phases on a timer so the user sees stage-by-stage
+    // progression while waiting for the SSE final frame. Each tick:
+    //   - mark current phase as done
+    //   - append next phase as running
+    // Capped at SYNTHETIC_PHASES.length; the timer is cleared when the
+    // try block's finalPayload await resolves (or throws).
+    let phaseIdx = 0;
+    const phaseTimer = setInterval(() => {
+      phaseIdx += 1;
+      if (phaseIdx >= SYNTHETIC_PHASES.length) {
+        clearInterval(phaseTimer);
+        return;
+      }
+      setMessages((m) =>
+        m.map((msg) => {
+          if (msg.id !== assistantId || msg.type !== "assistant" || !msg.insight) return msg;
+          if (!msg.insight.streaming) return msg; // stream already closed
+          const events: ActivityEvent[] = SYNTHETIC_PHASES.slice(0, phaseIdx + 1).map((p, i) => ({
+            id: `synth-${i}`,
+            label: p.label,
+            message: p.message,
+            status: i < phaseIdx ? "done" : "running"
+          }));
+          return { ...msg, insight: { ...msg.insight, activity: events } };
+        })
+      );
+    }, 1200);
 
     try {
       const response = await fetch("/api/chat", {
@@ -126,6 +170,9 @@ export default function F1InsightsChat() {
       // otherwise (deterministic / clarification / template paths emit a
       // single `final` frame with no deltas) we need to fold the text part
       // to populate the body.
+      // Stream closed — stop synthetic phase cycle.
+      clearInterval(phaseTimer);
+
       const parts = mapChatApiResponseToParts(finalPayload);
       const skipTextParts = deltaCount > 0;
       let folded: DraftInsight = { body: liveBody };
@@ -141,8 +188,14 @@ export default function F1InsightsChat() {
       // it into the <details> disclosure.
       if (liveReasoning) folded.reasoning = liveReasoning;
       folded.streaming = false;
+      // Replace synthetic phases with the real activity log built from
+      // response.runtime — the moment of truth where vague stages become
+      // concrete (resolved session, tables hit, rows + ms, generation
+      // source, coverage warnings).
+      folded.activity = buildActivityLog(finalPayload);
       updateAssistantInsight(assistantId, folded);
     } catch {
+      clearInterval(phaseTimer);
       updateAssistantInsight(assistantId, {
         body: "Unable to process this request right now.",
         title: "Error",
