@@ -8,21 +8,32 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:grading": "node --test scripts/tests/*.test.mjs",
+    "test:adapter": "tsx --test scripts/tests/mapInsight.test.ts",
     "test:resolver-lru": "node --test scripts/tests/resolver-lru.test.mjs",
     "healthcheck:chat": "node scripts/chat-health-check.mjs",
     "healthcheck:chat:intense": "node scripts/chat-health-check.mjs --rubric scripts/chat-health-check.rubric.intense.json",
     "healthcheck:grade": "node scripts/chat-health-check-grade.mjs",
     "healthcheck:grade:intense": "node scripts/chat-health-check-grade.mjs --rubric scripts/chat-health-check.rubric.intense.json",
-    "verify": "npm run typecheck && npm run test:grading && npm run build"
+    "verify": "npm run typecheck && npm run test:grading && npm run test:adapter && npm run build"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.13",
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "lru-cache": "^11.0.2",
+    "lucide-react": "^0.564.0",
     "next": "^15.5.15",
     "pg": "^8.13.1",
     "pgsql-ast-parser": "^12.0.2",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "recharts": "^2.15.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^22.8.6",
@@ -30,6 +41,7 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.5.0",
+    "depcheck": "^1.4.7",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.19",
     "tsx": "^4.19.2",
