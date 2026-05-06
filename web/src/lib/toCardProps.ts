@@ -30,6 +30,8 @@ export function toCardProps(
     rows: "rows" in m ? m.rows : undefined,
     rowCount: "rowCount" in m ? m.rowCount : undefined,
     elapsedMs: "elapsedMs" in m ? m.elapsedMs : undefined,
-    truncated: "truncated" in m ? m.truncated : undefined
+    truncated: "truncated" in m ? m.truncated : undefined,
+    reasoning: "reasoning" in m ? m.reasoning : undefined,
+    streaming: "streaming" in m ? m.streaming : undefined
   };
 }

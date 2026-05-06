@@ -179,4 +179,8 @@ export interface DraftInsight extends Omit<InsightMock, "title"> {
   rowCount?: number;
   elapsedMs?: number;
   truncated?: boolean;
+  /** Cumulative reasoning_delta stream — model's chain-of-thought. */
+  reasoning?: string;
+  /** True while the SSE stream is still open. Drives the "Thinking…" UI. */
+  streaming?: boolean;
 }

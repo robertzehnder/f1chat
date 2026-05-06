@@ -83,7 +83,8 @@ export default function F1InsightsChat() {
     setMessages((m) => [
       ...m,
       { id: userId, type: "user", content: text },
-      { id: assistantId, type: "assistant", content: "", insight: null }
+      // Start with streaming=true so the "Thinking…" affordance shows immediately.
+      { id: assistantId, type: "assistant", content: "", insight: { body: "", streaming: true } }
     ]);
 
     try {
@@ -101,14 +102,21 @@ export default function F1InsightsChat() {
       // that helper inserts "\n\n" between text parts, which is correct
       // for distinct final-frame parts but wrong for SSE deltas.
       let liveBody = "";
+      let liveReasoning = "";
       let deltaCount = 0;
-      let live: DraftInsight = { body: "" };
+      let live: DraftInsight = { body: "", streaming: true };
       const finalPayload: ChatApiResponse = await consumeChatStream(response, {
         onAnswerDelta: (chunk) => {
           if (!chunk) return;
           deltaCount += 1;
           liveBody += chunk;
-          live = { ...live, body: liveBody };
+          live = { ...live, body: liveBody, streaming: true };
+          updateAssistantInsight(assistantId, live);
+        },
+        onReasoningDelta: (chunk) => {
+          if (!chunk) return;
+          liveReasoning += chunk;
+          live = { ...live, reasoning: liveReasoning, streaming: true };
           updateAssistantInsight(assistantId, live);
         }
       });
@@ -129,11 +137,16 @@ export default function F1InsightsChat() {
       folded = applyScalarHero(folded);
       folded = applyVerdictSemantics(folded);
       if (!folded.title) folded.title = "Insight";
+      // Carry reasoning through; flip streaming off so the card collapses
+      // it into the <details> disclosure.
+      if (liveReasoning) folded.reasoning = liveReasoning;
+      folded.streaming = false;
       updateAssistantInsight(assistantId, folded);
     } catch {
       updateAssistantInsight(assistantId, {
         body: "Unable to process this request right now.",
-        title: "Error"
+        title: "Error",
+        streaming: false
       });
     }
   };

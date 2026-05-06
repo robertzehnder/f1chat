@@ -45,6 +45,10 @@ interface InsightCardProps {
   rowCount?: number
   elapsedMs?: number
   truncated?: boolean
+  /** Cumulative reasoning_delta — rendered live during stream, collapsed when done. */
+  reasoning?: string
+  /** Drives "Thinking…" treatment for reasoning. */
+  streaming?: boolean
 }
 
 export function InsightCard({
@@ -66,9 +70,15 @@ export function InsightCard({
   rows,
   rowCount,
   elapsedMs,
-  truncated
+  truncated,
+  reasoning,
+  streaming
 }: InsightCardProps) {
   const isMuted = tone === "muted"
+  // Don't show the empty card while streaming with no content yet — render
+  // a small "Thinking…" affordance so the UI feels alive immediately.
+  const hasContent =
+    !!body || !!hero || !!verdict || !!chart || !!metrics?.length || !!composite || !!what_we_have
   return (
     <Card className={cn("border-border/50 bg-card/50 backdrop-blur overflow-hidden w-full", className)}>
       {(title || subtitle) && (
@@ -85,6 +95,39 @@ export function InsightCard({
         </CardHeader>
       )}
       <CardContent className={cn("px-3 md:px-6 pb-3 md:pb-6", !title && !subtitle && "pt-3 md:pt-5")}>
+        {/* Reasoning — live "Thinking…" while streaming, collapsed once done. */}
+        {reasoning && streaming && (
+          <div className="mb-4 rounded-md border-l-2 border-[#E10600]/50 bg-secondary/30 px-3 py-2.5">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="size-2 rounded-full bg-[#E10600] animate-pulse" aria-hidden="true" />
+              <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Thinking…
+              </span>
+            </div>
+            <pre className="whitespace-pre-wrap font-sans text-[12px] leading-relaxed text-foreground/70">
+              {reasoning}
+            </pre>
+          </div>
+        )}
+        {reasoning && !streaming && (
+          <details className="mb-3 text-[11px] md:text-xs">
+            <summary className="cursor-pointer font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground/80">
+              Reasoning
+            </summary>
+            <pre className="mt-2 max-h-[280px] overflow-auto whitespace-pre-wrap rounded-md bg-secondary/30 px-3 py-2 font-sans text-[12px] leading-relaxed text-foreground/70">
+              {reasoning}
+            </pre>
+          </details>
+        )}
+
+        {/* "Thinking…" placeholder when no body or reasoning has arrived yet. */}
+        {streaming && !hasContent && !reasoning && (
+          <div className="flex items-center gap-2 py-2">
+            <span className="size-2 rounded-full bg-[#E10600] animate-pulse" aria-hidden="true" />
+            <span className="text-[12px] md:text-sm text-muted-foreground italic">Thinking…</span>
+          </div>
+        )}
+
         {/* Hero Scalar (M01) */}
         {hero && <HeroScalar hero={hero} />}
         
