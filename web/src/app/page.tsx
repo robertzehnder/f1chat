@@ -101,10 +101,12 @@ export default function F1InsightsChat() {
       // that helper inserts "\n\n" between text parts, which is correct
       // for distinct final-frame parts but wrong for SSE deltas.
       let liveBody = "";
+      let deltaCount = 0;
       let live: DraftInsight = { body: "" };
       const finalPayload: ChatApiResponse = await consumeChatStream(response, {
         onAnswerDelta: (chunk) => {
           if (!chunk) return;
+          deltaCount += 1;
           liveBody += chunk;
           live = { ...live, body: liveBody };
           updateAssistantInsight(assistantId, live);
@@ -112,11 +114,15 @@ export default function F1InsightsChat() {
       });
 
       // Final frame: fold structured parts (sql, table, warnings, followUps).
-      // Skip text parts — body already populated from the stream accumulator.
+      // Skip text parts ONLY IF the stream delivered answer_delta chunks —
+      // otherwise (deterministic / clarification / template paths emit a
+      // single `final` frame with no deltas) we need to fold the text part
+      // to populate the body.
       const parts = mapChatApiResponseToParts(finalPayload);
+      const skipTextParts = deltaCount > 0;
       let folded: DraftInsight = { body: liveBody };
       for (const p of parts) {
-        if (p.type === "text") continue;
+        if (skipTextParts && p.type === "text") continue;
         folded = foldPartsIntoInsight(folded, p);
       }
       folded = applyResponseSemantics(folded, finalPayload);

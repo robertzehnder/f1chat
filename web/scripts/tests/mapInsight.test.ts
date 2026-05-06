@@ -264,3 +264,25 @@ test("foldPartsIntoInsight — table part captures sql + rows + auto-detects cha
   assert.equal(insight.rowCount, 2);
   assert.equal(insight.chart?.type, "grouped_bar");
 });
+
+test("non-streaming path (clarification / deterministic) — body must populate from text part when no answer_delta arrives", () => {
+  // Regression guard: when the route emits a single `final` frame with no
+  // answer_delta events (e.g. runtime_clarification, deterministic_template),
+  // mapChatApiResponseToParts produces a `text` part carrying the answer.
+  // The page-level handler must fold the text part in this case (deltaCount=0).
+  // Without that branch, the assistant card shows an empty body.
+  const fxClarification: ChatApiResponse = {
+    answer:
+      "I couldn't resolve session/driver references within the time budget. Please rephrase or include explicit session_key.",
+    sql: "-- query not executed (resolve timeout)",
+    generationSource: "runtime_clarification"
+  };
+  const parts = mapChatApiResponseToParts(fxClarification);
+  // Simulate the page-level final-fold flow with deltaCount = 0.
+  let folded: DraftInsight = { body: "" };
+  for (const p of parts) {
+    folded = foldPartsIntoInsight(folded, p); // no skip — deltaCount === 0
+  }
+  assert.ok(folded.body.length > 0, "body must populate from text part");
+  assert.ok(folded.body.includes("rephrase"), "body must contain the answer text");
+});
