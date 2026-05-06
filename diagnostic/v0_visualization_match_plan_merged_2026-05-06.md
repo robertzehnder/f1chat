@@ -70,7 +70,9 @@ Carried from both source plans, deduplicated:
 
 6. **Synthesis structured output is the load-bearing change.**
    Without it, the visible card stays body+sql+rows even after every
-   other piece of work lands. It must be Phase 1 of execution.
+   other piece of work lands. It must be the first IMPLEMENTATION
+   phase after the source-of-truth declaration (i.e. Phase 2; Phase 1
+   is a doc-only declaration that gates everything else).
 
 7. **Fail to body-only, never blank.**
    Schema validation, malformed JSON, missing renderers — all
@@ -111,7 +113,23 @@ Carried from both source plans, deduplicated:
 
 **Summary**: 21 of 23 renderers exist; **all 23 mocks need
 metrics/takeaways/related_questions from the LLM**; 2 chart families
-need new renderers; 12 chart types need auto-detectors.
+need new renderers (M07, M23 — gated on Phase 1's
+`IN_SCOPE_MOCK_COUNT`).
+
+**Detector coverage gap**:
+- Tier 1 detectors built today: 6 (`grouped_bar`,
+  `horizontal_bar_diverging`, `stacked_horizontal_bar`, `stint_gantt`,
+  `line`, `horizontal_bar`)
+- Tier 2/3 detectors needed (when count=23): **12 total** —
+  `event_timeline`, `radar`, `scatter_with_regression`,
+  `status_grid`, `donut`, `line_dual_axis`,
+  `line_with_stint_markers`, `track_heatmap`, `pit_event_strip`,
+  `composite`, `horizontal_bar_team_grouped` (M07),
+  `track_marker_map` (M23)
+- When count=21: **10** (drop M07 + M23 from the list above)
+
+This is the single source of truth for the count. §4.3 table and
+Phase 6 mirror it.
 
 ---
 
@@ -121,7 +139,13 @@ need new renderers; 12 chart types need auto-detectors.
 
 How the LLM emits structured fields alongside prose. Three candidates:
 
-**Option A — JSON sidecar in the answer text** *(recommended)*
+**Option A — JSON sidecar in the answer text, server-extracted** *(recommended)*
+
+The LLM emits a sentinel-bracketed JSON block followed by prose. The
+**server** is the only consumer of the sentinel format — it extracts
+the JSON from the streaming buffer BEFORE forwarding any
+`answer_delta`, so clients never see the JSON wire format:
+
 ```
 <<INSIGHT>>
 { "title": "Clean Air vs Traffic — 2025 Season",
@@ -130,10 +154,26 @@ How the LLM emits structured fields alongside prose. Three candidates:
 <<END>>
 Across the 2025 season so far, Verstappen leads in clean-air share...
 ```
-Client splits on `<<END>>`, parses JSON, treats rest as body. Streams
-over `answer_delta` events normally.
-- ✓ streaming intact, minimal infra change, ~150-300 token cost
-- ✗ parse failures need fallback path
+
+**Canonical wire contract** (binding for §4.8 and Phase 2):
+- `synthesizeAnswerStream` parses the streaming buffer with a small
+  state machine. While inside `<<INSIGHT>>...<<END>>`, no `answer_delta`
+  is emitted to the client. When `<<END>>` is parsed, the server emits
+  one `event: insight` SSE frame with the validated payload. After
+  `<<END>>`, every subsequent token streams as `answer_delta` — pure
+  prose, no JSON.
+- `final.answer` in `ChatApiResponse` is the concatenated post-`<<END>>`
+  prose. JSON sentinel and structured fields are NEVER in `answer`.
+- `ChatApiResponse.insight: InsightFields | null` is additive — set
+  server-side when extraction succeeds, `null` on parse failure.
+- Old (non-SSE, JSON-only) clients see `answer` as prose and `insight`
+  as a new optional field they ignore.
+- The benchmark grader reads `answer` and gets identical prose to today.
+
+- ✓ streaming intact, single-source-of-truth on the server, no client
+  parser, no leak of sidecar into `answer_delta` or `final.answer`
+- ✗ requires a small streaming state-machine on the server (~60 LoC);
+  parse failures still need fallback (Phase 11)
 
 **Option B — Tool-use call** (`render_insight` tool)
 - ✓ Anthropic enforces schema; zero parse failures
@@ -169,22 +209,25 @@ Even with structured output from the LLM, the LLM may not always
 specify a chart shape (or hallucinate the wrong one). The client
 needs robust auto-detection from row signatures as a safety net.
 
-We have 6 detectors today (Tier 1). The remaining 11 need to be
-written. Each is a regex/column-set match → builder pair, ~20-35 LoC.
+We have 6 detectors today (Tier 1). The remaining count is **12 when
+`IN_SCOPE_MOCK_COUNT=23`** (i.e. M07 + M23 are in scope), or **10
+when count=21** (the last two rows of the table below are skipped).
+Each is a regex/column-set match → builder pair, ~20-35 LoC.
 
-| Chart type | Row signature | Priority |
-|---|---|---|
-| `event_timeline` | `lap` + `kind` + `driver` | High (M15) |
-| `radar` | per-axis numeric cols, ≤8 cols, 1-2 rows | High (M17) |
-| `scatter_with_regression` | `stint_lap` + `lap_time`, multi-driver | Med (M11) |
-| `status_grid` | `session_label` + `*_coverage` cols | Med (M18) |
-| `donut` | `label` + `value`, single-pivot | Low (M19) |
-| `line_dual_axis` | `lap` + `lap_time` + (`rainfall`\|`track_temp`) | Med (M14) |
-| `line_with_stint_markers` | `lap` + `delta` + multi-stint | Low (M10) |
-| `track_heatmap` | `minisector_index` + `name` + `leader` | Med (M16) |
-| `pit_event_strip` | `phase_label` + `duration_sec` | Low (M22) |
-| `horizontal_bar_team_grouped` | driver+team+ranking metric | Med (M07) |
-| `track_marker_map` | overtake-event coords or corner names | Low (M23) |
+| # | Chart type | Row signature | Priority | Conditional |
+|---:|---|---|---|---|
+| 1 | `event_timeline` | `lap` + `kind` + `driver` | High (M15) | always |
+| 2 | `radar` | per-axis numeric cols, ≤8 cols, 1-2 rows | High (M17) | always |
+| 3 | `scatter_with_regression` | `stint_lap` + `lap_time`, multi-driver | Med (M11) | always |
+| 4 | `status_grid` | `session_label` + `*_coverage` cols | Med (M18) | always |
+| 5 | `donut` | `label` + `value`, single-pivot | Low (M19) | always |
+| 6 | `line_dual_axis` | `lap` + `lap_time` + (`rainfall`\|`track_temp`) | Med (M14) | always |
+| 7 | `line_with_stint_markers` | `lap` + `delta` + multi-stint | Low (M10) | always |
+| 8 | `track_heatmap` | `minisector_index` + `name` + `leader` | Med (M16) | always |
+| 9 | `pit_event_strip` | `phase_label` + `duration_sec` | Low (M22) | always |
+| 10 | `composite` | per-question-type override (M20 only) | Low (M20) | always |
+| 11 | `horizontal_bar_team_grouped` | driver+team+ranking metric | Med (M07) | count=23 only |
+| 12 | `track_marker_map` | overtake-event coords or corner names | Low (M23) | count=23 only |
 
 ### 4.4 Detector registry vs monolithic `detectChart()`
 
@@ -265,9 +308,12 @@ Three layers:
 1. **Sentinel extraction**: pull text between `<<INSIGHT>>` and
    `<<END>>`; if no `<<END>>` in first ~3KB of output, treat whole
    response as body
-2. **Zod schema validation**: parse extracted JSON; on field-level
-   errors, drop the malformed field and log; structurally invalid
-   JSON falls through entirely
+2. **Hand-rolled validator** (no `zod` dep — `web/package.json` has no
+   schema-validation library and adding one is out of scope). The
+   validator is a single ~80-LoC function that walks the parsed JSON,
+   coerces primitives, drops fields that fail type/shape checks, and
+   logs `WARN` per drop. Structurally invalid JSON (parse throws)
+   falls through entirely to body-only.
 3. **Body-only fallback**: card renders today's body+sql+rows view
    when structured fields aren't available
 
@@ -277,14 +323,19 @@ Option A holds up or we migrate to B/C.
 
 ### 4.8 Backwards compatibility with the benchmark
 
-`run_category_benchmarks.mjs` posts to `/api/chat` and grades the
-`answer` field. Two requirements:
-1. The `answer` field in `ChatApiResponse` must contain ONLY the prose
-   body, NOT the JSON sidecar. The split happens server-side in the
-   synthesis pipeline.
-2. Structured fields land in a new `insight: InsightFields` field on
-   `ChatApiResponse`, separate from `answer`. Old clients ignore it;
-   new clients consume it.
+Per the canonical contract in §4.1: extraction is server-side, so the
+benchmark already gets prose-only `answer`. Specifically:
+
+1. `run_category_benchmarks.mjs` posts to `/api/chat` without
+   `Accept: text/event-stream`, so it gets the full `ChatApiResponse`
+   as JSON. The `answer` field contains only post-`<<END>>` prose
+   (the server has already stripped the sentinel block).
+2. The new `ChatApiResponse.insight: InsightFields | null` field is
+   additive — old clients (incl. the grader) ignore it; new clients
+   consume it.
+3. The benchmark grader reads `answer` and sees identical prose to
+   today — no A-rate movement from this change alone (Phase 15 gate
+   verifies).
 
 ### 4.9 Source-of-truth declaration
 
@@ -331,9 +382,15 @@ a visual opinion.
 1. **Source of truth**: restore original v0 export under
    `_v0_reference/`, or declare current imported state canonical?
    Codex flagged this and I assumed the latter without saying so.
-2. **M07 + M23 in milestone or follow-up**: full match requires both;
-   M23 alone is ~8-12 hours of SVG work. Acceptable to ship Phase
-   13 without M23 and add it later?
+2. **M07 + M23 in milestone or follow-up**: M23 alone is ~8-12 hours
+   of SVG work. **Phase 1 MUST emit a binding decision here** — the
+   source-of-truth doc records `IN_SCOPE_MOCK_COUNT` as either 21
+   (M07/M23 deferred) or 23 (full coverage). Every downstream gate
+   that mentions "all 23 fixtures" is read CONDITIONALLY against
+   that constant — see §6 Phase 4 / §6 Phase 6 / §9 Done /
+   §6 Phase 12 acceptance for the conditional language. The plan
+   does not let Phase 4 ship M07/M23 partially; either both ship in
+   Phase 4 (count=23) or both defer to a follow-up plan (count=21).
 3. **Snapshot storage**: PNG diffs committed to repo, Playwright
    `.snap` files, or generated artifacts under `diagnostic/`?
 4. **Chart selection driver**: row-shape only, or
@@ -380,19 +437,30 @@ includes M07 + M23 with `status: "follow_up"` until implemented.
 `web/src/app/api/chat/orchestration.ts` (final-frame payload),
 `web/src/lib/chat/consumeChatStream.ts` (new `onInsight` hook).
 
-**Delivers**:
+**Delivers** (per the canonical contract in §4.1):
 - New `<<INSIGHT>>` ... `<<END>>` sentinel format in the synthesis
   prompt
-- `synthesizeAnswerStream` extracts the JSON section before first
-  `answer_delta`; emits new `event: insight` SSE frame
-- `ChatApiResponse.insight: InsightFields` populated server-side
-- `consumeChatStream` gains `onInsight(fields)` hook
+- `synthesizeAnswerStream` runs a streaming state-machine that:
+  - while inside `<<INSIGHT>>...<<END>>`, accumulates JSON characters
+    and emits NO `answer_delta` to the client
+  - on `<<END>>`, parses + validates the JSON; emits one
+    `event: insight` SSE frame with `{ insight: InsightFields | null }`
+  - after `<<END>>`, every subsequent token streams as `answer_delta`
+    (pure prose)
+- `ChatApiResponse.insight: InsightFields | null` populated
+  server-side (the same value as the SSE `insight` event); `answer`
+  contains ONLY post-`<<END>>` prose
+- `consumeChatStream` gains `onInsight(fields)` hook for the new
+  SSE event type; existing `onAnswerDelta` and `onReasoningDelta`
+  unchanged
 - `mapInsight.ts` `applyInsightFields(insight, fields)` merges
   structured fields into `DraftInsight` (preserves existing fields
   not overridden)
-- Hand-crafted Zod schema validation; malformed JSON falls through
-  to body-only render
-- Adapter test fixtures for the 5 most common shapes
+- Hand-rolled validator (no `zod` dep — see §4.7) — fields that fail
+  validation are dropped with a `WARN` log; structurally invalid
+  JSON falls through entirely to body-only render
+- Adapter test fixtures for the 5 most common shapes (M01, M04, M06,
+  M09, M21)
 
 **Effort**: 6-8 hours (includes prompt engineering + 5 captured-fixture
 test cases).
@@ -422,7 +490,12 @@ takes iteration).
 comparison → M04 grouped-bar with metrics + takeaways. Visual /mock
 parity for the 6 shape archetypes.
 
-### Phase 4 — M07 renderer + M23 renderer (renderer coverage)
+### Phase 4 — M07 renderer + M23 renderer (renderer coverage) — *conditional on Phase 1*
+
+**Conditional on**: `IN_SCOPE_MOCK_COUNT === 23` from Phase 1's
+source-of-truth declaration. If Phase 1 set the count to 21, this
+phase is SKIPPED entirely and the corresponding gates in Phases 6, 9,
+12, and §9 Done read against count=21.
 
 **Owns**: `web/src/components/f1-chat/charts/team-grouped-horizontal-bar-chart.tsx` (new),
 `web/src/components/f1-chat/charts/track-marker-map.tsx` (new),
@@ -433,7 +506,7 @@ parity for the 6 shape archetypes.
   side strip + teammate adjacency. Falls back to team-color inference
   by driver name when team metadata absent.
 - `TrackMarkerMap`: SVG circuit outline + markers at overtake
-  locations. Phase 1: simplified outlines for top 6 venues (Spa,
+  locations. First-pass: simplified outlines for top 6 venues (Spa,
   Monaco, Suzuka, Silverstone, Monza, Bahrain — covers ~50% of seed
   questions); generic-track fallback for the rest.
 - `m07-team-grouped-ranking.ts` and `m23-track-marker-map.ts`
@@ -441,10 +514,12 @@ parity for the 6 shape archetypes.
 - `ChartSpec` extended with `teams?: string[]` and
   `markers?: Array<{ lap?, corner?, x_track_pct?, y_track_pct?, label, color? }>`
 
-**Effort**: 8-12 hours (most of it M23 SVG sourcing).
-**Acceptance**: `/mock` renders 23 fixtures cleanly. Both new
-renderers have test fixtures and don't crash on missing coordinates
-or team metadata.
+**Effort** (when count=23): 8-12 hours (most of it M23 SVG sourcing).
+**Effort** (when count=21): 0 hours — phase skipped.
+
+**Acceptance**: `/mock` renders `IN_SCOPE_MOCK_COUNT` fixtures
+cleanly. When count=23, both new renderers have test fixtures and
+don't crash on missing coordinates or team metadata.
 
 ### Phase 5 — Detector registry (replaces `detectChart()`)
 
@@ -464,21 +539,37 @@ or team metadata.
 **Acceptance**: existing 6 Tier-1 detectors pass adapter tests;
 registry pretty-prints coverage table.
 
-### Phase 6 — Tier 2/3 detector coverage (10 detectors)
+### Phase 6 — Tier 2/3 detector coverage (10 or 12 detectors, conditional)
 
-**Owns**: `web/src/lib/mapInsight/detectors/` (10 new files).
+**Conditional on**: `IN_SCOPE_MOCK_COUNT` from Phase 1. Ships **12
+detectors when count=23** (full coverage), or **10 detectors when
+count=21** (M07 + M23 detectors deferred). The list of names below
+is the complete count=23 set; drop the last two rows when count=21.
 
-**Delivers**:
-- Detectors for: `event_timeline`, `radar`, `scatter_with_regression`,
-  `status_grid`, `donut`, `line_dual_axis`,
-  `line_with_stint_markers`, `track_heatmap`, `pit_event_strip`,
-  `horizontal_bar_team_grouped`, `track_marker_map`
-- Adapter test per detector: one captured `ChatApiResponse` fixture
-  proving the row signature routes correctly
+**Owns**: `web/src/lib/mapInsight/detectors/` (10 or 12 new files).
 
-**Effort**: 4-5 hours (~20-35 LoC per detector + test).
+**Delivers** (count=23):
+1. `event_timeline` (M15)
+2. `radar` (M17)
+3. `scatter_with_regression` (M11)
+4. `status_grid` (M18)
+5. `donut` (M19)
+6. `line_dual_axis` (M14)
+7. `line_with_stint_markers` (M10)
+8. `track_heatmap` (M16)
+9. `pit_event_strip` (M22)
+10. `composite` (M20)
+11. `horizontal_bar_team_grouped` (M07) *— count=23 only*
+12. `track_marker_map` (M23) *— count=23 only*
+
+Plus an adapter test per detector: one captured `ChatApiResponse`
+fixture proving the row signature routes correctly.
+
+**Effort** (count=23): 5-6 hours (~20-35 LoC per detector + test).
+**Effort** (count=21): 4-5 hours (10 detectors).
 **Acceptance**: registry coverage report shows zero "renderer without
-detector" entries.
+detector" entries for the in-scope count. Adapter test count
+matches the detector count.
 
 ### Phase 7 — Discriminated `ChartSpec` union
 
@@ -557,15 +648,19 @@ all imports go through one module.
 
 ### Phase 11 — Reliability + retry + telemetry
 
-**Owns**: `web/src/lib/synthesis/*`, `web/src/lib/anthropic.ts`,
-`web/src/lib/perfTrace.ts`.
+**Owns**: `web/src/lib/synthesis/*`, `web/src/lib/anthropic.ts`.
+(Phase 11 only USES `web/src/lib/perfTrace.ts`'s existing
+`appendQueryTrace` / span-recording API; it does not modify the
+module itself, so `perfTrace.ts` stays byte-identical and is NOT
+in the allow-list.)
 
 **Delivers**:
 - Single retry on JSON parse failure (re-prompt with stricter
   instruction); fall through to body-only after 1 retry
-- New `chat_insight_parse` perf trace span:
-  `success | partial | fallback | retry`
-- Telemetry counter for parse-failure rate
+- New `chat_insight_parse` perf trace span recorded via the existing
+  `perfTrace` API: outcome `success | partial | fallback | retry`
+- Telemetry counter for parse-failure rate (queryable from existing
+  trace JSONL log; no new sink)
 
 **Effort**: 3-4 hours.
 **Acceptance**: synthetic malformed responses (truncated JSON, missing
@@ -579,16 +674,16 @@ benchmark questions.
 `web/playwright.config.ts` (new), Playwright snapshots committed.
 
 **Delivers**:
-- Playwright captures all 23 fixtures at 3 viewports
-  (1440×1200, 1280×900, 390×844)
+- Playwright captures all `IN_SCOPE_MOCK_COUNT` fixtures (21 or 23
+  per Phase 1) at 3 viewports (1440×1200, 1280×900, 390×844)
 - Recharts animations disabled; deterministic font loading; forced
   dark theme; stable `data-testid` per fixture
 - `npm run test:visual:mocks` script
 - First-pass pixel threshold loose, ratchets down over time
 
 **Effort**: 5-7 hours.
-**Acceptance**: every `/mock` fixture has a stable baseline; running
-`test:visual:mocks` passes deterministically.
+**Acceptance**: every `/mock` fixture in the manifest has a stable
+baseline; running `test:visual:mocks` passes deterministically.
 
 ### Phase 13 — Visual regression for live pipeline
 
@@ -714,8 +809,9 @@ change caused the regression and fix before merging.
       fixture per shape
 - [ ] `npm run test:visualization-contract` validates the per-qid
       expectation manifest against captured fixtures
-- [ ] `npm run test:visual:mocks` green — all 23 fixtures have stable
-      baselines at 3 viewports
+- [ ] `npm run test:visual:mocks` green — all `IN_SCOPE_MOCK_COUNT`
+      fixtures (21 or 23 per Phase 1) have stable baselines at 3
+      viewports
 - [ ] `npm run test:visual:live` green — live pipeline produces
       visuals matching fixtures for every implemented chart type
 - [ ] `npm run test:grading` clean (no regression on body-only
@@ -762,7 +858,28 @@ classification extension above), `web/src/lib/validators/**`,
 `web/src/lib/runtimeModels/**`, every existing `web/src/app/api/**`
 route handler.
 
-CI gate: `git diff --stat main..HEAD -- web/src/lib | grep -vE "(visualTokens|mapInsight|toCardProps|chatTypes|mapChatResponse|chat/consumeChatStream|synthesis/buildSynthesisPrompt|anthropic|chatRuntime/classification)" ` must show no other file changes.
+**CI gate** (covers BOTH `web/src/lib` AND
+`web/src/app/api/chat/orchestration.ts`):
+
+```sh
+# Lib allow-list
+git diff --stat main..HEAD -- web/src/lib | \
+  grep -vE "(visualTokens|mapInsight|toCardProps|chartTypes|chart-types|mapChatResponse|chat/consumeChatStream|synthesis/buildSynthesisPrompt|anthropic|chatRuntime/classification)" | \
+  grep -E "^\s+\S" && exit 1
+
+# API allow-list — the only API file allowed to change is chat/orchestration.ts
+git diff --stat main..HEAD -- web/src/app/api | \
+  grep -vE "chat/orchestration\.ts" | \
+  grep -E "^\s+\S" && exit 1
+
+echo ok
+```
+
+The lib allow-list is intentionally comprehensive: every modified
+file in §10 is covered. The API allow-list is intentionally tight:
+ONLY `chat/orchestration.ts` may change in `web/src/app/api/`.
+`perfTrace.ts` is NOT in the lib allow-list because no phase
+modifies it (Phase 11 only USES its existing API).
 
 ---
 
