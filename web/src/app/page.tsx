@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth-shim";
 import { consumeChatStream } from "@/lib/chat/consumeChatStream";
 import { mapChatApiResponseToParts } from "@/lib/mapChatResponse";
 import {
+  applyQuestionTitle,
   applyResponseSemantics,
   applyScalarHero,
   applyVerdictSemantics,
@@ -260,7 +261,7 @@ export default function F1InsightsChat() {
       folded = applyResponseSemantics(folded, finalPayload);
       folded = applyScalarHero(folded);
       folded = applyVerdictSemantics(folded);
-      if (!folded.title) folded.title = "Insight";
+      folded = applyQuestionTitle(folded, text);
       // Carry reasoning through; flip streaming off so the card collapses
       // it into the <details> disclosure.
       if (liveReasoning) folded.reasoning = liveReasoning;

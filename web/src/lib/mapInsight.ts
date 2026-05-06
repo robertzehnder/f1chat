@@ -165,6 +165,10 @@ export function applyVerdictSemantics(insight: DraftInsight): DraftInsight {
 // detectChart — Tier 1 chart auto-detection from result rows
 // =============================================================================
 
+function findCol(cols: string[], pattern: RegExp): string | undefined {
+  return cols.find((c) => pattern.test(c));
+}
+
 function detectChart(rows: Record<string, unknown>[] | undefined): ChartSpec | undefined {
   if (!rows || rows.length === 0) return undefined;
   const cols = Object.keys(rows[0]);
@@ -175,8 +179,12 @@ function detectChart(rows: Record<string, unknown>[] | undefined): ChartSpec | u
   if (cols.includes("position_delta")) {
     return buildDivergingBar(rows);
   }
-  if (cols.includes("clean_air_laps") && cols.includes("traffic_laps")) {
-    return buildStackedHorizontal(rows);
+  // Match clean_air_laps / total_clean_air_laps / clean_air_lap_count / etc.
+  // and the corresponding traffic_laps / total_traffic_laps / etc.
+  const cleanCol = findCol(cols, /(?:^|_)clean(?:_?air)?_laps?(?:_count|_total)?$/i);
+  const trafficCol = findCol(cols, /(?:^|_)traffic_laps?(?:_count|_total)?$/i);
+  if (cleanCol && trafficCol) {
+    return buildStackedHorizontal(rows, cleanCol, trafficCol);
   }
   if (cols.includes("compound") && cols.includes("stint_start_lap")) {
     return buildStintGantt(rows);
@@ -260,18 +268,28 @@ function buildDivergingBar(rows: Record<string, unknown>[]): ChartSpec {
   };
 }
 
-function buildStackedHorizontal(rows: Record<string, unknown>[]): ChartSpec {
-  // y_axis = drivers; two series: clean_air_laps + traffic_laps.
-  const labels = rows.map((r) => String(r.driver_name ?? r.driver_number ?? ""));
-  const cleanAir = rows.map((r) => Number(r.clean_air_laps ?? 0));
-  const traffic = rows.map((r) => Number(r.traffic_laps ?? 0));
+function buildStackedHorizontal(
+  rows: Record<string, unknown>[],
+  cleanCol = "clean_air_laps",
+  trafficCol = "traffic_laps"
+): ChartSpec {
+  // y_axis = drivers; two stacked series: clean air vs traffic. Last
+  // name in the driver string drives the label so "Charles LECLERC"
+  // → "LECLERC". Falls back to driver_number if name missing.
+  const labels = rows.map((r) => {
+    const full = String(r.driver_name ?? "");
+    const last = full.split(" ").pop() || full;
+    return last || String(r.driver_number ?? "");
+  });
+  const cleanAir = rows.map((r) => Number(r[cleanCol] ?? 0));
+  const traffic = rows.map((r) => Number(r[trafficCol] ?? 0));
 
   return {
     type: "stacked_horizontal_bar",
     y_axis: labels,
     x_label: "Laps",
     series: [
-      { name: "Clean Air", values: cleanAir, color: "#A3A3A3" },
+      { name: "Clean Air", values: cleanAir, color: "#22C55E" },
       { name: "In Traffic", values: traffic, color: "#E10600" }
     ]
   };
@@ -368,10 +386,73 @@ function buildHorizontalBar(
   };
 }
 
+/**
+ * Build a clean card title from the user's question. Used as a fallback
+ * when neither the LLM nor the table part supplied one. Strategy:
+ *   - strip leading filler ("how", "what", "across the 2025 season")
+ *   - title-case the first ~60 chars, ending at sentence break
+ *   - append "— 2025 Season" if the question mentions the season but
+ *     doesn't already include it in the picked phrase
+ */
+const QUESTION_FILLER_PREFIXES = [
+  "across the 2025 season,",
+  "across the 2025 season",
+  "for the 2025 season,",
+  "for the 2025 season",
+  "in the 2025 season,",
+  "during the 2025 season",
+  "throughout the 2025 season",
+  "at the",
+  "across",
+  "during",
+  "in the",
+  "what was ",
+  "what is ",
+  "what were ",
+  "how did ",
+  "how does ",
+  "how many ",
+  "who ",
+  "which ",
+  "where ",
+  "when ",
+  "did ",
+  "is ",
+  "show me ",
+  "tell me "
+];
+
+function titleFromQuestion(question: string): string {
+  let q = question.trim();
+  // Strip the longest matching filler prefix (case-insensitive).
+  const lower = q.toLowerCase();
+  let stripped = "";
+  for (const filler of QUESTION_FILLER_PREFIXES) {
+    if (lower.startsWith(filler) && filler.length > stripped.length) {
+      stripped = filler;
+    }
+  }
+  if (stripped) q = q.slice(stripped.length).trim();
+  // Cut at first sentence break or 70 chars.
+  const sentenceEnd = q.search(/[.?!]/);
+  if (sentenceEnd > 0) q = q.slice(0, sentenceEnd);
+  if (q.length > 70) q = q.slice(0, 67).trim() + "…";
+  // Capitalize first letter.
+  q = q.charAt(0).toUpperCase() + q.slice(1);
+  return q || "Insight";
+}
+
+/** Apply title fallback: question → title only if title still missing. */
+export function applyQuestionTitle(insight: DraftInsight, question: string): DraftInsight {
+  if (insight.title && insight.title !== "Insight") return insight;
+  return { ...insight, title: titleFromQuestion(question) };
+}
+
 // Internal helpers re-exported for tests.
 export const __test = {
   pickValueCol,
   humanizeColumnName,
+  titleFromQuestion,
   IDENTIFIER_COLS,
   COMPOUND_COLS
 };

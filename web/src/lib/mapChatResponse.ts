@@ -23,9 +23,11 @@ export function mapChatApiResponseToParts(data: ChatApiResponse): MessagePart[] 
   }
 
   if (data.result && data.result.rows.length >= 0) {
+    // No `title` field — the card already labels its own table section
+    // "Result (N rows · Mms)". Setting this would override a more
+    // meaningful card title set by the synthesis path.
     parts.push({
       type: "table",
-      title: "Result",
       rows: data.result.rows,
       rowCount: data.result.rowCount,
       elapsedMs: data.result.elapsedMs,

@@ -265,6 +265,34 @@ test("foldPartsIntoInsight — table part captures sql + rows + auto-detects cha
   assert.equal(insight.chart?.type, "grouped_bar");
 });
 
+test("clean_air_laps + traffic_laps with total_ prefix → stacked_horizontal_bar", () => {
+  // Regression guard: backend SQL returned `total_clean_air_laps` /
+  // `total_traffic_laps` but the original detector required the bare
+  // `clean_air_laps` / `traffic_laps`. Now matches both via regex.
+  const fx: ChatApiResponse = {
+    answer: "Across the 2025 season, Leclerc led clean-air laps with 4,224.",
+    sql: "SELECT ...",
+    generationSource: "anthropic",
+    result: {
+      rowCount: 2,
+      elapsedMs: 99,
+      truncated: false,
+      rows: [
+        { driver_name: "Charles LECLERC", total_clean_air_laps: 4224, total_traffic_laps: 1128 },
+        { driver_name: "George RUSSELL",  total_clean_air_laps: 4078, total_traffic_laps: 1294 }
+      ]
+    }
+  };
+  let insight: DraftInsight = { body: fx.answer ?? "" };
+  for (const p of mapChatApiResponseToParts(fx)) {
+    if (p.type !== "text") insight = foldPartsIntoInsight(insight, p);
+  }
+  assert.equal(insight.chart?.type, "stacked_horizontal_bar");
+  assert.equal(insight.chart?.series?.length, 2);
+  assert.equal(insight.chart?.series?.[0]?.name, "Clean Air");
+  assert.equal(insight.chart?.series?.[1]?.name, "In Traffic");
+});
+
 test("non-streaming path (clarification / deterministic) — body must populate from text part when no answer_delta arrives", () => {
   // Regression guard: when the route emits a single `final` frame with no
   // answer_delta events (e.g. runtime_clarification, deterministic_template),
