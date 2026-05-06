@@ -122,30 +122,70 @@ export default function F1InsightsChat() {
       }
     ]);
 
-    // Cycle synthetic phases on a timer so the user sees stage-by-stage
-    // progression while waiting for the SSE final frame. Each tick:
-    //   - mark current phase as done
-    //   - append next phase as running
-    // Capped at SYNTHETIC_PHASES.length; the timer is cleared when the
-    // try block's finalPayload await resolves (or throws).
+    // The synthetic phase timer drives ONLY phases 0-3 (Reading question,
+    // Resolving references, Planning query, Running query). Phase 4
+    // (Drafting answer) is gated on the first real SSE delta arriving —
+    // because the LLM synthesis stage is what produces answer_delta /
+    // reasoning_delta events, so a delta IS the signal that synthesis
+    // has begun (i.e. resolve + plan + SQL all finished server-side).
+    //
+    // Result: the visible progress tracks reality much better.
+    //   - Submit → phase 0 running
+    //   - +1.0s → phase 1 running, phase 0 done
+    //   - +2.0s → phase 2 running, phases 0-1 done
+    //   - +3.0s → phase 3 (Running query) running, phases 0-2 done. STOP.
+    //   - First answer_delta or reasoning_delta arrives → phase 4 (Drafting
+    //     answer) running, phases 0-3 done. (May happen at any point after
+    //     submit; if it arrives before the timer reaches phase 3, we
+    //     fast-forward through 0-3.)
+    //   - Final SSE frame → real activity log replaces synthetic.
+    const SYNTH_PRE_DRAFT_LIMIT = 4; // phases 0..3 are "preparation"
+    const SYNTH_DRAFTING_IDX = 4;    // phase 4 = "Drafting answer"
     let phaseIdx = 0;
+    let draftingStarted = false;
+
+    /** Advance to a specific phase (used by both timer and delta handler). */
+    const showPhase = (idx: number, draftingActive: boolean) => {
+      patchAssistantInsight(assistantId, (prev) => {
+        if (!prev.streaming) return prev; // stream already closed
+        const upTo = draftingActive ? SYNTH_DRAFTING_IDX : Math.min(idx, SYNTH_PRE_DRAFT_LIMIT - 1);
+        const events: ActivityEvent[] = SYNTHETIC_PHASES.slice(0, upTo + 1).map((p, i) => {
+          const isCurrent = draftingActive ? i === SYNTH_DRAFTING_IDX : i === upTo;
+          return {
+            id: `synth-${i}`,
+            label: p.label,
+            message: p.message,
+            status: isCurrent ? ("running" as const) : ("done" as const)
+          };
+        });
+        return { ...prev, activity: events };
+      });
+    };
+
     const phaseTimer = setInterval(() => {
-      phaseIdx += 1;
-      if (phaseIdx >= SYNTHETIC_PHASES.length) {
+      if (draftingStarted) {
         clearInterval(phaseTimer);
         return;
       }
-      patchAssistantInsight(assistantId, (prev) => {
-        if (!prev.streaming) return prev; // stream already closed
-        const events: ActivityEvent[] = SYNTHETIC_PHASES.slice(0, phaseIdx + 1).map((p, i) => ({
-          id: `synth-${i}`,
-          label: p.label,
-          message: p.message,
-          status: i < phaseIdx ? ("done" as const) : ("running" as const)
-        }));
-        return { ...prev, activity: events };
-      });
-    }, 1200);
+      phaseIdx += 1;
+      if (phaseIdx >= SYNTH_PRE_DRAFT_LIMIT) {
+        // Park at "Running query" — it stays in this state until a delta
+        // arrives (signaling synthesis has begun) OR the final frame lands.
+        phaseIdx = SYNTH_PRE_DRAFT_LIMIT - 1;
+        clearInterval(phaseTimer);
+        showPhase(phaseIdx, false);
+        return;
+      }
+      showPhase(phaseIdx, false);
+    }, 1000);
+
+    /** Called by the delta handlers on the FIRST chunk only. */
+    const enterDraftingPhase = () => {
+      if (draftingStarted) return;
+      draftingStarted = true;
+      clearInterval(phaseTimer);
+      showPhase(SYNTH_DRAFTING_IDX, true);
+    };
 
     try {
       const response = await fetch("/api/chat", {
@@ -168,6 +208,7 @@ export default function F1InsightsChat() {
       const finalPayload: ChatApiResponse = await consumeChatStream(response, {
         onAnswerDelta: (chunk) => {
           if (!chunk) return;
+          enterDraftingPhase();
           deltaCount += 1;
           liveBody += chunk;
           patchAssistantInsight(assistantId, (prev) => ({
@@ -178,6 +219,7 @@ export default function F1InsightsChat() {
         },
         onReasoningDelta: (chunk) => {
           if (!chunk) return;
+          enterDraftingPhase();
           liveReasoning += chunk;
           patchAssistantInsight(assistantId, (prev) => ({
             ...prev,
