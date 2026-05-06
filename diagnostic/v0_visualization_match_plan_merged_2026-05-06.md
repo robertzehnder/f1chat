@@ -111,9 +111,9 @@ Carried from both source plans, deduplicated:
 | M22 pit cycle | pit_event_strip | ✅ | ❌ | ⚠ | ❌ | ❌ | ❌ | – |
 | M23 track marker map | track_marker_map | ❌ | ❌ | ⚠ | ❌ | ❌ | ❌ | – |
 
-**Summary**: 21 of 23 renderers exist; **all 23 mocks need
-metrics/takeaways/related_questions from the LLM**; 2 chart families
-need new renderers (M07, M23 — gated on Phase 1's
+**Summary**: 21 of 23 renderers exist today; **all in-scope mocks
+need metrics/takeaways/related_questions from the LLM**; 2 chart
+families need new renderers (M07, M23 — gated on Phase 1's
 `IN_SCOPE_MOCK_COUNT`).
 
 **Detector coverage gap**:
@@ -259,31 +259,31 @@ Architectural considerations:
 
 Today's flat optional `ChartSpec` lets a `donut` fixture put `slices`
 on a `grouped_bar` and still typecheck. The renderer index uses
-`as any` casts in 5 places. Migrate to a discriminated union:
+`as any` casts in 5 places. Migrate to a discriminated union.
 
-```ts
-type ChartSpec =
-  | GroupedBarSpec
-  | HorizontalBarSpec
-  | StackedHorizontalBarSpec
-  | DivergingBarSpec
-  | LineSpec
-  | LineWithStintMarkersSpec
-  | LineDualAxisSpec
-  | ScatterRegressionSpec
-  | StintGanttSpec
-  | DonutSpec
-  | PitEventStripSpec
-  | RadarSpec
-  | StatusGridSpec
-  | EventTimelineSpec
-  | TrackHeatmapSpec
-  | TrackMarkerMapSpec
-  | TeamGroupedHorizontalBarSpec;
+**Canonical chart-type inventory** (single source of truth — the
+`ChartType` union in `web/src/lib/chart-types.ts`):
+
+```
+Always-present (17 types):
+  grouped_bar, line, horizontal_bar, horizontal_bar_diverging,
+  stacked_horizontal_bar, line_dual_axis, line_with_stint_markers,
+  timeline, event_timeline, radar, scatter_with_regression,
+  status_grid, metric_grid, stint_gantt, donut, pit_event_strip,
+  track_heatmap
+
+Conditionally added (count=23 only):
+  horizontal_bar_team_grouped     ← M07
+  track_marker_map                ← M23
 ```
 
-This must happen AFTER all 17 renderers exist, otherwise the
-intermediate state has invalid types.
+Total spec count: **17 when `IN_SCOPE_MOCK_COUNT=21`, 19 when
+`IN_SCOPE_MOCK_COUNT=23`**. Phase 7 ships exactly that many narrow
+Spec interfaces — see §6 Phase 7 for ownership and acceptance.
+
+Migration constraint: this must happen AFTER all in-scope renderers
+exist (Phase 4 must complete before Phase 7), otherwise the
+intermediate state has Spec interfaces without consumers.
 
 ### 4.6 Token budget + streaming overhead
 
@@ -296,11 +296,24 @@ Adding the JSON sidecar:
 - **Per-request cost on Sonnet 4.6**: ~+$0.003/question
 - **Over 167 benchmark questions**: +$0.50 per full run
 
-Streaming impact: JSON sidecar lands BEFORE the body, so:
-- First ~150-300 tokens of `answer_delta` are JSON (client buffers
-  them silently, doesn't render until `<<END>>`)
-- Activity log + reasoning_delta panel keep moving during the buffer
-- Total perceived latency: same as today
+Streaming impact (per the canonical contract in §4.1 — server holds
+back the sidecar; client never sees JSON in `answer_delta`):
+- The first ~150-300 tokens the LLM emits ARE the JSON sidecar; the
+  server's state-machine accumulates them in its own buffer and
+  emits ZERO `answer_delta` frames during this window
+- The activity log keeps moving (synthesis_start fires once
+  generation begins regardless of which tokens the server is
+  buffering); the reasoning_delta panel still streams normally
+  because reasoning is a separate event channel, unaffected by the
+  sidecar buffer
+- When `<<END>>` is parsed, the server fires one `event: insight`
+  frame, then immediately starts forwarding `answer_delta` frames
+  for every subsequent token. The client begins rendering body text
+  at this moment.
+- Total perceived latency: roughly +1-3s before the body starts
+  streaming (the time to generate the 150-300 sidecar tokens), but
+  the activity-log + reasoning-panel UX makes that feel like
+  expected progress, not stall
 
 ### 4.7 Schema validation + fallback degradation
 
@@ -400,8 +413,10 @@ a visual opinion.
    exactness, or accepted as repo-specific additions because the
    existing backend exposes them and v0 didn't?
 
-These should be settled in the source-of-truth doc before Phase 1
-starts.
+These are settled BY Phase 1 (the source-of-truth doc IS the
+deliverable that records the answers). Phase 2 is blocked until
+Phase 1 lands, but Phase 1 itself runs against an empty document
+— it doesn't read its own future state.
 
 ---
 
@@ -419,10 +434,15 @@ type safety, then verification infrastructure, then polish + CI gates.
 **Delivers**:
 - Decision document declaring whether `_v0_reference/` is restored or
   current imported state is canonical
-- Typed fixture manifest with all 23 mock entries:
+- Typed fixture manifest with all 23 mock entries (the manifest
+  always enumerates the full universe; `status` marks each entry as
+  `implemented` or `follow_up`):
   `{ id, title, mockFile, sourceExport, chartType, renderer, status, benchmarkQids }`
-- `/mock` route reads from manifest (cannot drift from declared
-  inventory)
+- When `IN_SCOPE_MOCK_COUNT=21`, M07 and M23 are listed with
+  `status: "follow_up"` and excluded from `/mock` rendering until a
+  follow-up plan ships their renderers
+- `/mock` route reads from manifest, filtering by `status === "implemented"`,
+  so the rendered count cannot drift from the source-of-truth declaration
 
 **Effort**: 2-3 hours.
 **Acceptance**: open question 1 has a documented answer; manifest
@@ -571,21 +591,27 @@ fixture proving the row signature routes correctly.
 detector" entries for the in-scope count. Adapter test count
 matches the detector count.
 
-### Phase 7 — Discriminated `ChartSpec` union
+### Phase 7 — Discriminated `ChartSpec` union (17 or 19 specs, conditional)
+
+**Conditional on**: `IN_SCOPE_MOCK_COUNT` from Phase 1. Ships **17
+narrow Spec interfaces when count=21**, or **19 narrow Specs when
+count=23** (adds `TeamGroupedHorizontalBarSpec` and
+`TrackMarkerMapSpec`). The 17 always-present specs map 1:1 to the
+17 chart types listed in §4.5's canonical inventory.
 
 **Owns**: `web/src/lib/chart-types.ts`, all chart renderers,
 `web/src/lib/mapInsight/detectors/*` builders.
 
 **Delivers**:
-- 17 narrow Spec interfaces (one per chart type) replacing the flat
-  optional `ChartSpec`
+- 17 (or 19) narrow Spec interfaces replacing the flat optional
+  `ChartSpec`. One spec per `ChartType` literal.
 - Renderer index switch narrows by `chart.type` discriminant; no
   more `as any` casts
 - Detector `build()` functions return their specific Spec type
 - Fixtures' chart fields fail typecheck if fields don't match the
   declared `type`
 
-**Effort**: 4-5 hours.
+**Effort**: 4-5 hours (count=21) or 5-6 hours (count=23).
 **Acceptance**: `npm run typecheck` clean; `grep -rE "as any" web/src/components/f1-chat`
 returns zero hits; an intentional bad fixture (test only) fails type
 narrowing.
@@ -719,9 +745,10 @@ fixture pipeline for every implemented chart type.
   empty table, one streaming response
 
 **Effort**: 4-5 hours.
-**Acceptance**: mobile screenshots for all 23 mocks pass; no chart
-overflows the card container at 390px; keyboard focus order usable
-for input + chips + disclosures + sidebar.
+**Acceptance**: mobile screenshots for all `IN_SCOPE_MOCK_COUNT`
+mocks (21 or 23 per Phase 1) pass; no chart overflows the card
+container at 390px; keyboard focus order usable for input + chips +
+disclosures + sidebar.
 
 ### Phase 15 — Backend benchmark parity gate
 
@@ -767,7 +794,7 @@ change caused the regression and fix before merging.
 | `cachedSynthesize` cache invalidation: same question, different cache key under new prompt | High | Low | Bump prompt-version constant; cache rebuilds naturally |
 | Streaming UX feels stalled while JSON sidecar buffers | Medium | Medium | Activity log + reasoning_delta keep moving during the buffer; net effect: no perceptible change |
 | Benchmark A-rate drops because takeaways change `answer` text | Low | High | Body field is split CLEANLY from JSON sidecar at `<<END>>`; grader sees identical body prose |
-| 11 new auto-detectors over-fire on questions they shouldn't catch | Medium | Medium | Tight column-signature regex; false positives surface in `/mock` review and adapter tests |
+| New auto-detectors (10 or 12 per `IN_SCOPE_MOCK_COUNT`) over-fire on questions they shouldn't catch | Medium | Medium | Tight column-signature regex; false positives surface in `/mock` review and adapter tests |
 | M23 SVG circuit outlines are tedious to source | High | Low | Start with 6 venues + generic fallback; expand incrementally |
 | Phase 11 retry path doubles latency on flaky responses | Low | Medium | Single retry; budget logged; fallback after retry returns body-only |
 | Recharts screenshots are flaky | Medium | Medium | Disable animations, wait for fonts/layout, deterministic dimensions |
@@ -804,8 +831,9 @@ change caused the regression and fix before merging.
 - [ ] Live `/api/chat` for representative questions per shape
       (M01-M06, M08-M22) produces a card visually matching the
       corresponding `/mock` fixture (≥90% pixel similar at 1440×1200)
-- [ ] `npm run test:adapter` covers all 17 chart shapes plus
-      hero/verdict/refusal — at least 1 captured `ChatApiResponse`
+- [ ] `npm run test:adapter` covers every in-scope chart shape (17
+      always-present + 2 conditionally when `IN_SCOPE_MOCK_COUNT=23`)
+      plus hero/verdict/refusal — at least 1 captured `ChatApiResponse`
       fixture per shape
 - [ ] `npm run test:visualization-contract` validates the per-qid
       expectation manifest against captured fixtures
@@ -855,8 +883,11 @@ adapter/UI additions:
 `web/src/lib/queries/**`, `web/src/lib/chatRuntime.ts` (except
 classification extension above), `web/src/lib/validators/**`,
 `web/src/lib/answerSanity*`, `web/src/lib/contracts/**`,
-`web/src/lib/runtimeModels/**`, every existing `web/src/app/api/**`
-route handler.
+`web/src/lib/runtimeModels/**`, `web/src/lib/perfTrace.ts`, AND
+every `web/src/app/api/**` route handler EXCEPT
+`web/src/app/api/chat/orchestration.ts` (which is the only API
+file that may change — emits the new `event: insight` SSE frame and
+threads `InsightFields` into the final-frame payload).
 
 **CI gate** (covers BOTH `web/src/lib` AND
 `web/src/app/api/chat/orchestration.ts`):
@@ -892,7 +923,7 @@ modifies it (Phase 11 only USES its existing API).
 | 3 — Per-shape prompt templates | 4-5 | 16 |
 | 4 — M07 + M23 renderers | 8-12 | 28 |
 | 5 — Detector registry | 3-4 | 32 |
-| 6 — Tier 2/3 detectors (10 of them) | 4-5 | 37 |
+| 6 — Tier 2/3 detectors (10 if count=21, 12 if count=23) | 4-6 | 37-38 |
 | 7 — Discriminated `ChartSpec` union | 4-5 | 42 |
 | 8 — Adapter fixture capture from benchmark | 5-6 | 48 |
 | 9 — Per-qid expectation manifest | 3-4 | 52 |
