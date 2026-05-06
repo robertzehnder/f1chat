@@ -423,7 +423,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       // a degraded Neon endpoint can hang the resolver SQL indefinitely.
       // We don't cancel the in-flight query (Postgres-side cancel is brittle);
       // we just reject the JS promise so the route returns a clarification.
-      const RESOLVE_DEADLINE_MS = Number(process.env.OPENF1_RESOLVE_DEADLINE_MS ?? "30000");
+      const RESOLVE_DEADLINE_MS = Number(process.env.OPENF1_RESOLVE_DEADLINE_MS ?? "150000");
       let resolveTimer: ReturnType<typeof setTimeout> | undefined;
       const resolvePromise = buildChatRuntime({
         message,
