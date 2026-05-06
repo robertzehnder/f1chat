@@ -135,53 +135,94 @@ Phase 6 mirror it.
 
 ## 4 · Architectural considerations (the deep ones)
 
-### 4.1 Synthesis output shape — three options, one recommendation
+### 4.1 Synthesis output shape — JSON-key-extension *(shipped)*
 
-How the LLM emits structured fields alongside prose. Three candidates:
+How the LLM emits structured fields alongside prose. **The shipped
+implementation extends the existing keyed-JSON output the synthesis
+pipeline already used** — far simpler than the originally-proposed
+sentinel-bracketed sidecar (the merged plan rev0-rev2 specified that
+sentinel approach; it was overengineered for a codebase that already
+parses keyed JSON).
 
-**Option A — JSON sidecar in the answer text, server-extracted** *(recommended)*
+The LLM was already returning a single JSON object with `answer` +
+`reasoning` keys; `synthesizeAnswerStream` already runs a streaming
+state-machine that yields `answer_delta` and `reasoning_delta` chunks
+as those keys' string contents accumulate. Phase 2 just **adds more
+keys** to the same JSON object:
 
-The LLM emits a sentinel-bracketed JSON block followed by prose. The
-**server** is the only consumer of the sentinel format — it extracts
-the JSON from the streaming buffer BEFORE forwarding any
-`answer_delta`, so clients never see the JSON wire format:
-
-```
-<<INSIGHT>>
-{ "title": "Clean Air vs Traffic — 2025 Season",
+```json
+{
+  "answer": "Across the 2025 season so far, Verstappen leads...",
+  "reasoning": "The rows show 412 clean-air laps for VER...",
+  "title": "Clean Air vs Traffic — 2025 Season",
   "subtitle": "All Race Sessions · 2025",
-  "metrics": [...], "key_takeaways": [...], "related_questions": [...] }
-<<END>>
-Across the 2025 season so far, Verstappen leads in clean-air share...
+  "metrics": [
+    { "label": "Most Clean-Air laps", "value": "412", "unit": "VER", "emphasis": true },
+    { "label": "Pace Delta",          "value": "+0.42", "unit": "s/lap" }
+  ],
+  "key_takeaways": [
+    "Verstappen led 82% of his laps in clean air",
+    "Avg traffic pace penalty: +0.42 s/lap field-wide"
+  ],
+  "related_questions": ["Show pace delta in traffic vs clean air", "Mexico 2025 specifically"]
+}
 ```
 
-**Canonical wire contract** (binding for §4.8 and Phase 2):
-- `synthesizeAnswerStream` parses the streaming buffer with a small
-  state machine. While inside `<<INSIGHT>>...<<END>>`, no `answer_delta`
-  is emitted to the client. When `<<END>>` is parsed, the server emits
-  one `event: insight` SSE frame with the validated payload. After
-  `<<END>>`, every subsequent token streams as `answer_delta` — pure
-  prose, no JSON.
-- `final.answer` in `ChatApiResponse` is the concatenated post-`<<END>>`
-  prose. JSON sentinel and structured fields are NEVER in `answer`.
-- `ChatApiResponse.insight: InsightFields | null` is additive — set
-  server-side when extraction succeeds, `null` on parse failure.
-- Old (non-SSE, JSON-only) clients see `answer` as prose and `insight`
-  as a new optional field they ignore.
-- The benchmark grader reads `answer` and gets identical prose to today.
+**Canonical wire contract** (binding for §4.8 and Phase 2; reflects
+shipped code):
+- The synthesis prompt asks for the new optional keys in the
+  existing JSON envelope. Each key is independently optional; the
+  LLM can omit any when not relevant (e.g. refusal questions emit
+  only `answer`, `reasoning`).
+- `synthesizeAnswerStream` continues to yield `answer_delta` and
+  `reasoning_delta` chunks for the `answer` and `reasoning` string
+  contents. **Other keys (`title`, `subtitle`, `metrics`, etc.) do
+  NOT stream** — they're parsed once when the full JSON object lands
+  at end-of-stream via `parseAnswerJsonPayload`.
+- The parsed `InsightFields` are returned in the `final` chunk's
+  `insight` property and forwarded server-side as both:
+  - `event: insight` SSE frame (validated payload, fired right after
+    synthesis completes; clients can populate metrics + takeaways
+    while body continues streaming)
+  - `ChatApiResponse.insight: InsightFields | null` on the final
+    response payload (covers non-SSE benchmark callers)
+- `final.answer` in `ChatApiResponse` is exactly the prose body the
+  LLM emitted in the `answer` key — identical shape to today.
+- Old (non-SSE, JSON-only) clients see `answer` as prose and ignore
+  the new `insight` field.
+- The benchmark grader reads `answer` and gets prose only — no
+  regression on grader behavior.
 
-- ✓ streaming intact, single-source-of-truth on the server, no client
-  parser, no leak of sidecar into `answer_delta` or `final.answer`
-- ✗ requires a small streaming state-machine on the server (~60 LoC);
-  parse failures still need fallback (Phase 11)
+**Why not the sentinel format** (`<<INSIGHT>>...<<END>>`)?
+- The codebase already had a tested keyed-JSON streaming extractor;
+  adding a sentinel state-machine on top would have been redundant
+- The sentinel approach would have buffered the first ~200-300
+  tokens before any `answer_delta` could emit — meaningful UX delay
+  during synthesis_start
+- With JSON-key-extension, `answer_delta` and `reasoning_delta` start
+  streaming as soon as those keys appear in the model output, which
+  in practice is at the top of the JSON object. Other keys follow
+  but don't block streaming.
 
-**Option B — Tool-use call** (`render_insight` tool)
-- ✓ Anthropic enforces schema; zero parse failures
-- ✗ doubles latency (tool round-trip + prose); breaks streaming UX
+**Trade-off**: structured fields don't stream — they all appear at
+once when the final SSE frame fires (or its dedicated `event: insight`
+frame). For metrics tiles + takeaway bullets this is fine; users
+expect those to populate atomically. Streaming partial JSON for
+chart specs is out of scope (see §8 Out of scope in this plan).
 
-**Option C — Anthropic structured outputs** (full schema-validated JSON)
-- ✓ zero parse failures
-- ✗ kills streaming entirely; user sees stalled UI
+**Options B and C considered and rejected**:
+
+- **Option B — Tool-use call** (`render_insight` tool):
+  ✓ Anthropic enforces schema; zero parse failures
+  ✗ doubles latency (tool round-trip + prose); breaks streaming UX
+
+- **Option C — Anthropic structured outputs** (full schema-validated):
+  ✓ zero parse failures
+  ✗ kills streaming entirely; user sees stalled UI
+
+Both reject for the same reason: streaming UX is load-bearing for
+the "feels alive" feel of the activity log + reasoning panel.
+JSON-key-extension keeps the stream intact.
 
 **Decision: Option A.** The streaming UX (synthesis_start stage event,
 reasoning_delta panel, answer_delta body fill) is load-bearing for the
@@ -290,49 +331,58 @@ intermediate state has Spec interfaces without consumers.
 Current synthesis prompt: ~2.5KB static prefix + ~1-3KB dynamic
 suffix. Output: ~500-1500 tokens.
 
-Adding the JSON sidecar:
+Adding the JSON-key extension (per §4.1):
 - **Prompt addition**: ~500 tokens of schema + 1-2 examples per shape
 - **Output addition**: ~200-400 tokens of structured fields
 - **Per-request cost on Sonnet 4.6**: ~+$0.003/question
 - **Over 167 benchmark questions**: +$0.50 per full run
 
-Streaming impact (per the canonical contract in §4.1 — server holds
-back the sidecar; client never sees JSON in `answer_delta`):
-- The first ~150-300 tokens the LLM emits ARE the JSON sidecar; the
-  server's state-machine accumulates them in its own buffer and
-  emits ZERO `answer_delta` frames during this window
-- The activity log keeps moving (synthesis_start fires once
-  generation begins regardless of which tokens the server is
-  buffering); the reasoning_delta panel still streams normally
-  because reasoning is a separate event channel, unaffected by the
-  sidecar buffer
-- When `<<END>>` is parsed, the server fires one `event: insight`
-  frame, then immediately starts forwarding `answer_delta` frames
-  for every subsequent token. The client begins rendering body text
-  at this moment.
-- Total perceived latency: roughly +1-3s before the body starts
-  streaming (the time to generate the 150-300 sidecar tokens), but
-  the activity-log + reasoning-panel UX makes that feel like
-  expected progress, not stall
+Streaming impact (per the shipped contract in §4.1):
+- `answer_delta` and `reasoning_delta` continue streaming as the
+  `answer` and `reasoning` keys' string contents accumulate — the
+  same behavior as before Phase 2. **Both `answer_delta` and
+  `reasoning_delta` are derived from the SAME model text stream**
+  via `synthesizeAnswerStream`'s keyed-JSON state machine; they're
+  not independent channels.
+- The new keys (`title`, `subtitle`, `metrics`, `key_takeaways`,
+  `related_questions`, `hero`, `verdict`) do NOT stream — they're
+  parsed once when the full JSON object lands at end-of-stream and
+  fired together via `event: insight` SSE frame + the
+  `ChatApiResponse.insight` field on the final response.
+- The order in which the LLM emits keys within the JSON object
+  determines what streams when: with `answer` emitted first (as the
+  current prompt instructs) the body starts streaming immediately;
+  if `title` / `metrics` / etc. land first, the user sees an empty
+  card briefly until `answer` begins. Phase 3 prompt templates
+  enforce `answer` first to preserve the streaming feel.
+- Total perceived latency: same as today. No buffer-induced delay.
+- The activity log + reasoning panel UX is also unchanged — Phase 2
+  did not modify the SSE event types they consume (`stage`,
+  `answer_delta`, `reasoning_delta`).
 
 ### 4.7 Schema validation + fallback degradation
 
-Three layers:
-1. **Sentinel extraction**: pull text between `<<INSIGHT>>` and
-   `<<END>>`; if no `<<END>>` in first ~3KB of output, treat whole
-   response as body
-2. **Hand-rolled validator** (no `zod` dep — `web/package.json` has no
+Two layers (the sentinel-extraction layer in earlier revs is
+obsolete — the shipped contract uses JSON-key extension on the
+existing JSON envelope, not a sentinel-bracketed sidecar):
+
+1. **Hand-rolled validator** (no `zod` dep — `web/package.json` has no
    schema-validation library and adding one is out of scope). The
-   validator is a single ~80-LoC function that walks the parsed JSON,
-   coerces primitives, drops fields that fail type/shape checks, and
-   logs `WARN` per drop. Structurally invalid JSON (parse throws)
-   falls through entirely to body-only.
-3. **Body-only fallback**: card renders today's body+sql+rows view
-   when structured fields aren't available
+   validator is a single ~80-LoC function (shipped in
+   `web/src/lib/anthropic.ts` as `validateInsightFields`) that
+   walks the parsed JSON, coerces primitives, drops fields that
+   fail type/shape checks, and logs `WARN` per drop. Structurally
+   invalid JSON (parse throws) falls through entirely to body-only
+   render via the existing `buildFallbackAnswer` path.
+2. **Body-only fallback**: card renders today's body+sql+rows view
+   when structured fields aren't available — the InsightCard's
+   metrics/chart/takeaways/related-questions slots simply stay empty
+   (their JSX is conditional on the corresponding props existing).
 
 Telemetry counter for `chat_insight_parse` outcomes
-(success/partial/fallback/retry) feeds the decision of whether
-Option A holds up or we migrate to B/C.
+(success/partial/fallback) feeds the decision of whether the
+JSON-key-extension format holds up or we need to migrate to
+tool-use / structured outputs (Phase 11).
 
 ### 4.8 Backwards compatibility with the benchmark
 
@@ -341,8 +391,8 @@ benchmark already gets prose-only `answer`. Specifically:
 
 1. `run_category_benchmarks.mjs` posts to `/api/chat` without
    `Accept: text/event-stream`, so it gets the full `ChatApiResponse`
-   as JSON. The `answer` field contains only post-`<<END>>` prose
-   (the server has already stripped the sentinel block).
+   as JSON. The `answer` field contains only the prose body the LLM
+   emitted in the `answer` JSON key — identical shape to today.
 2. The new `ChatApiResponse.insight: InsightFields | null` field is
    additive — old clients (incl. the grader) ignore it; new clients
    consume it.
@@ -448,42 +498,61 @@ type safety, then verification infrastructure, then polish + CI gates.
 **Acceptance**: open question 1 has a documented answer; manifest
 includes M07 + M23 with `status: "follow_up"` until implemented.
 
-### Phase 2 — Synthesis structured output (LOAD-BEARING)
+### Phase 2 — Synthesis structured output (LOAD-BEARING) ✅ *shipped*
+
+**Status**: shipped via commit `5a3a2e6` on the `ui/v0-frontend-replacement`
+branch (file count: 8, +318 / -14). Description below reflects the
+shipped implementation, not the original sentinel-format spec from
+rev0-rev2.
 
 **Owns**: `web/src/lib/synthesis/buildSynthesisPrompt.ts`,
-`web/src/lib/anthropic.ts` (`synthesizeAnswerStream`),
-`web/src/lib/chatTypes.ts` (`ChatApiResponse.insight`),
-`web/src/lib/mapChatResponse.ts`,
-`web/src/app/api/chat/orchestration.ts` (final-frame payload),
-`web/src/lib/chat/consumeChatStream.ts` (new `onInsight` hook).
+`web/src/lib/anthropic.ts` (`synthesizeAnswerStream`,
+`parseAnswerJsonPayload`, `validateInsightFields`),
+`web/src/lib/chatTypes.ts` (`InsightFields`, `InsightFieldMetric`,
+`ChatApiResponse.insight`),
+`web/src/app/api/chat/orchestration.ts` (final-frame payload +
+`emitInsight` SSE frame),
+`web/src/lib/chat/consumeChatStream.ts` (new `onInsight` hook),
+`web/src/lib/mapInsight.ts` (`applyInsightFields`),
+`web/src/app/page.tsx` (wires `onInsight` + final-fold merge).
 
-**Delivers** (per the canonical contract in §4.1):
-- New `<<INSIGHT>>` ... `<<END>>` sentinel format in the synthesis
-  prompt
-- `synthesizeAnswerStream` runs a streaming state-machine that:
-  - while inside `<<INSIGHT>>...<<END>>`, accumulates JSON characters
-    and emits NO `answer_delta` to the client
-  - on `<<END>>`, parses + validates the JSON; emits one
-    `event: insight` SSE frame with `{ insight: InsightFields | null }`
-  - after `<<END>>`, every subsequent token streams as `answer_delta`
-    (pure prose)
+**Delivers** (per the shipped contract in §4.1 — JSON key extension):
+- Synthesis prompt asks for new optional keys on the existing JSON
+  envelope: `title`, `subtitle`, `metrics[]`, `key_takeaways[]`,
+  `related_questions[]`, `hero{}`, `verdict{}`. Each independently
+  optional; refusal questions emit only `answer` + `reasoning`.
+- `synthesizeAnswerStream` continues to yield `answer_delta` and
+  `reasoning_delta` chunks for the `answer` and `reasoning` string
+  contents (existing keyed-JSON state machine, unchanged).
+- `parseAnswerJsonPayload` extracts `answer`, `reasoning`, and
+  `insight` (validated `InsightFields | null`) at end-of-stream;
+  the `final` chunk carries all three.
 - `ChatApiResponse.insight: InsightFields | null` populated
-  server-side (the same value as the SSE `insight` event); `answer`
-  contains ONLY post-`<<END>>` prose
+  server-side; the `answer` field is unchanged shape (prose only).
 - `consumeChatStream` gains `onInsight(fields)` hook for the new
-  SSE event type; existing `onAnswerDelta` and `onReasoningDelta`
-  unchanged
-- `mapInsight.ts` `applyInsightFields(insight, fields)` merges
-  structured fields into `DraftInsight` (preserves existing fields
-  not overridden)
-- Hand-rolled validator (no `zod` dep — see §4.7) — fields that fail
-  validation are dropped with a `WARN` log; structurally invalid
-  JSON falls through entirely to body-only render
-- Adapter test fixtures for the 5 most common shapes (M01, M04, M06,
-  M09, M21)
+  `event: insight` SSE frame the orchestration emits right after
+  synthesis completes. Existing `onAnswerDelta`, `onReasoningDelta`
+  and `onStage` are unchanged.
+- `mapInsight.applyInsightFields(insight, fields)` merges
+  structured fields into `DraftInsight` (preserves existing fields,
+  doesn't overwrite — lets question-derived title fallback survive
+  when the LLM doesn't emit one). ⚠ warning takeaways from the
+  warning-fold are preserved when LLM takeaways merge in.
+- Page handler wires `onInsight` to patch the live insight (so
+  metrics + takeaways can render before body finishes streaming)
+  AND calls `applyInsightFields(folded, finalPayload.insight)` at
+  final fold (covers non-SSE responses where `onInsight` never
+  fires).
+- Hand-rolled validator (no `zod` dep — see §4.7); shipped as
+  `validateInsightFields` in `anthropic.ts`. Length-clamps each
+  field, type-coerces primitives, drops invalids silently.
+- 4 new adapter tests cover applyInsightFields contract: full-fields
+  population, preserve-existing semantics, null no-op, ⚠ warning
+  preservation on merge.
 
-**Effort**: 6-8 hours (includes prompt engineering + 5 captured-fixture
-test cases).
+**Effort spent**: ~3 hours (down from estimated 6-8h — the existing
+keyed-JSON streaming infrastructure made this trivially smaller than
+the originally-planned sentinel state-machine).
 **Acceptance**: live chat for "Compare Verstappen vs Hamilton through
 the Suzuka esses" renders title + subtitle + metrics + chart +
 takeaways + related_questions, visually matching `/mock` M04.
@@ -793,7 +862,7 @@ change caused the regression and fix before merging.
 | Token budget overflow on synthesis prompt | Low | Medium | Few-shot examples are per-shape (not all-shapes); shape classifier picks 1 of 6 templates |
 | `cachedSynthesize` cache invalidation: same question, different cache key under new prompt | High | Low | Bump prompt-version constant; cache rebuilds naturally |
 | Streaming UX feels stalled while JSON sidecar buffers | Medium | Medium | Activity log + reasoning_delta keep moving during the buffer; net effect: no perceptible change |
-| Benchmark A-rate drops because takeaways change `answer` text | Low | High | Body field is split CLEANLY from JSON sidecar at `<<END>>`; grader sees identical body prose |
+| Benchmark A-rate drops because takeaways change `answer` text | Low | High | `answer` JSON key is unchanged in shape — only NEW optional keys (`title`, `metrics`, etc.) are added. Grader reads `answer`, sees identical body prose |
 | New auto-detectors (10 or 12 per `IN_SCOPE_MOCK_COUNT`) over-fire on questions they shouldn't catch | Medium | Medium | Tight column-signature regex; false positives surface in `/mock` review and adapter tests |
 | M23 SVG circuit outlines are tedious to source | High | Low | Start with 6 venues + generic fallback; expand incrementally |
 | Phase 11 retry path doubles latency on flaky responses | Low | Medium | Single retry; budget logged; fallback after retry returns body-only |
@@ -808,16 +877,18 @@ change caused the regression and fix before merging.
 ## 8 · Out of scope
 
 - **Streaming-first JSON parsing**: rendering structured fields
-  chunk-by-chunk as the JSON streams. Currently we wait for `<<END>>`
-  to fire all fields at once. Streaming partial JSON is fragile and
-  high-effort for marginal UX gain.
+  chunk-by-chunk as the JSON streams. Currently we wait for the full
+  JSON object to land at end-of-stream and fire all fields at once.
+  Streaming partial JSON is fragile and high-effort for marginal UX
+  gain.
 - **Conversation history**: sidebar's "0 conversations" stub is
   empty; localStorage-backed history is a separate feature.
 - **Light mode**: v0 ships dark-only; we keep dark.
-- **Adversarial input**: prompt injection mitigation (e.g. user puts
-  `<<END>>` in their question) is a separate threat model — handled
-  via stripping sentinel tokens from user input before prompt
-  assembly.
+- **Adversarial input**: prompt injection mitigation is a separate
+  threat model. The JSON-key format is naturally less injection-prone
+  than a sentinel format (no special tokens for the user to spoof),
+  but Phase 11 telemetry will surface any anomalous parse failures
+  for follow-up review.
 - **M07/M23 marked follow-up**: if the source-of-truth answer in
   Phase 1 says these can stay deferred, Phases 4 (their part) and
   the related fixtures/detectors slip to a follow-up plan.
@@ -829,8 +900,11 @@ change caused the regression and fix before merging.
 - [ ] Phase 1 source-of-truth doc exists; declares canonical baseline;
       manifest covers 23 mocks
 - [ ] Live `/api/chat` for representative questions per shape
-      (M01-M06, M08-M22) produces a card visually matching the
-      corresponding `/mock` fixture (≥90% pixel similar at 1440×1200)
+      produces a card visually matching the corresponding `/mock`
+      fixture (≥90% pixel similar at 1440×1200). The exact set of
+      shapes is `IN_SCOPE_MOCK_COUNT`-dependent:
+      - count=21: M01-M06, M08-M22 (M07 + M23 excluded)
+      - count=23: M01-M06, M07, M08-M23 (full coverage)
 - [ ] `npm run test:adapter` covers every in-scope chart shape (17
       always-present + 2 conditionally when `IN_SCOPE_MOCK_COUNT=23`)
       plus hero/verdict/refusal — at least 1 captured `ChatApiResponse`
@@ -861,7 +935,9 @@ adapter/UI additions:
 
 **New files**:
 - `web/src/lib/visualTokens.ts`
-- `web/src/lib/mapInsight/detectors/` (registry + 17 detector files)
+- `web/src/lib/mapInsight/detectors/` (registry + detector files;
+  count tracks `IN_SCOPE_MOCK_COUNT` — 16 files when count=21
+  [6 migrated Tier 1 + 10 new Tier 2/3], 18 files when count=23)
 - `web/src/__mocks__/insights/manifest.ts`
 
 **Existing files modified**:
@@ -872,8 +948,8 @@ adapter/UI additions:
   additive)
 - `web/src/lib/mapChatResponse.ts` (forward `insight` field if present)
 - `web/src/lib/chat/consumeChatStream.ts` (`onInsight` hook)
-- `web/src/lib/synthesis/buildSynthesisPrompt.ts` (sentinel format,
-  6 shape templates)
+- `web/src/lib/synthesis/buildSynthesisPrompt.ts` (JSON-key format
+  shipped in Phase 2; 6 shape templates added in Phase 3)
 - `web/src/lib/anthropic.ts` (`synthesizeAnswerStream` JSON extraction)
 - `web/src/lib/chatRuntime/classification.ts` (new `InsightShape` enum)
 - `web/src/app/api/chat/orchestration.ts` (final-frame `insight` field
