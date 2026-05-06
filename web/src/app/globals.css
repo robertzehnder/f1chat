@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * F1 Dark Theme — translated from v0's Tailwind 4 globals.css.
+ * v0 used oklch() and `@theme inline`; we use HSL custom properties
+ * with Tailwind 3 + tailwind.config.ts mappings.
+ *
+ * oklch → hsl approximations:
+ *   oklch(0.13 0.005 285)  →  hsl(285 5% 13%)   /* background */
+ *   oklch(0.17 0.005 285)  →  hsl(285 5% 17%)   /* card */
+ *   oklch(0.22 0.005 285)  →  hsl(285 5% 22%)   /* secondary/muted */
+ *   oklch(0.28 0.005 285)  →  hsl(285 5% 28%)   /* border */
+ *   oklch(0.55 0.25 25)    →  hsl(2 100% 44%)   /* F1 red primary */
+ *   oklch(0.98 0 0)        →  hsl(0 0% 98%)     /* foreground */
+ *   oklch(0.65 0 0)        →  hsl(0 0% 65%)     /* muted-foreground */
+ */
+
+:root,
+.dark {
+  --background: 285 5% 13%;
+  --foreground: 0 0% 98%;
+
+  --card: 285 5% 17%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 285 5% 17%;
+  --popover-foreground: 0 0% 98%;
+
+  /* F1 racing red — primary accent */
+  --primary: 2 100% 44%;
+  --primary-foreground: 0 0% 98%;
+
+  --secondary: 285 5% 22%;
+  --secondary-foreground: 0 0% 90%;
+
+  --muted: 285 5% 22%;
+  --muted-foreground: 0 0% 65%;
+
+  --accent: 285 5% 22%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 2 100% 44%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 285 5% 28%;
+  --input: 285 5% 22%;
+  --ring: 2 100% 44%;
+
+  /* Chart palette — F1 team-inspired */
+  --chart-1: 2 100% 44%;        /* F1 red */
+  --chart-2: 168 65% 60%;       /* Mercedes teal */
+  --chart-3: 28 90% 55%;        /* McLaren orange */
+  --chart-4: 350 80% 50%;       /* Ferrari red */
+  --chart-5: 145 50% 45%;       /* Aston green */
+
+  --radius: 0.75rem;
+
+  --sidebar: 285 5% 15%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 2 100% 44%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 285 5% 22%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 285 5% 28%;
+  --sidebar-ring: 2 100% 44%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+}
