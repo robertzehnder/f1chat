@@ -141,9 +141,32 @@ function wantsSse(request: Request): boolean {
 
 type SseDeltaKind = "answer_delta" | "reasoning_delta";
 
+/**
+ * Phases the orchestration emits as it runs. Maps to the client-side
+ * activity log. The client treats unknown kinds as no-ops, so adding a
+ * new kind here is non-breaking.
+ */
+export type StageKind =
+  | "intake_complete"
+  | "resolve_complete"
+  | "resolve_timeout"
+  | "plan_complete"
+  | "sql_start"
+  | "sql_complete"
+  | "synthesis_start";
+
+export type StagePayload = {
+  kind: StageKind;
+  /** Optional human-readable detail (e.g. "2025 British GP · drivers 4, 81"). */
+  detail?: string;
+  /** Server-side milliseconds elapsed since request start, for client diagnostics. */
+  elapsedMs?: number;
+};
+
 type RouteCtx = {
   sseRequested: boolean;
   emitDelta: (kind: SseDeltaKind, text: string) => void;
+  emitStage: (payload: StagePayload) => void;
 };
 
 type RouteOutcome = {
@@ -265,10 +288,13 @@ function enforcePinnedSessionKeyInSql(sql: string, pinnedSessionKey?: number): {
 export async function POST(request: Request): Promise<Response> {
   const sseRequested = wantsSse(request);
 
+  // Non-SSE callers (the benchmark runner, other server-to-server calls)
+  // get a no-op stage emitter — staging only makes sense over SSE.
   if (!sseRequested) {
     const outcome = await runChatRoute(request, {
       sseRequested: false,
-      emitDelta: () => {}
+      emitDelta: () => {},
+      emitStage: () => {}
     });
     return NextResponse.json(outcome.payload, { status: outcome.status });
   }
@@ -284,7 +310,8 @@ export async function POST(request: Request): Promise<Response> {
       try {
         const outcome = await runChatRoute(request, {
           sseRequested: true,
-          emitDelta: (kind, text) => writeFrame(kind, { text })
+          emitDelta: (kind, text) => writeFrame(kind, { text }),
+          emitStage: (payload) => writeFrame("stage", payload)
         });
         if (outcome.asError) {
           writeFrame("error", outcome.asError);
@@ -368,6 +395,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
     }
 
     endTrackedSpan(intakeSpan);
+    ctx.emitStage({ kind: "intake_complete", elapsedMs: Date.now() - startedAt });
 
     traceEnabled = traceEnabledForRequest(body);
     const benchmarkQuestionId = Number.isFinite(Number(body.debug?.questionId))
@@ -414,8 +442,25 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
             );
           })
         ]);
+        // Emit stage AFTER timeout window closes — detail surfaces the
+        // resolved session/driver so the client activity log shows
+        // "2025 British GP · drivers 4, 81" instead of the generic phase.
+        // ChatRuntimeNoDataRefusal lacks `.resolution` so guard with `in`.
+        const detailBits: string[] = [];
+        if (runtime && "resolution" in runtime) {
+          const resolved = runtime.resolution;
+          if (resolved?.selectedSession?.label) detailBits.push(resolved.selectedSession.label);
+          else if (resolved?.selectedSession?.sessionKey != null) detailBits.push(`session ${resolved.selectedSession.sessionKey}`);
+          if (resolved?.selectedDriverNumbers?.length) detailBits.push(`drivers ${resolved.selectedDriverNumbers.join(", ")}`);
+        }
+        ctx.emitStage({
+          kind: "resolve_complete",
+          detail: detailBits.join(" · ") || undefined,
+          elapsedMs: Date.now() - startedAt
+        });
       } catch (err) {
         if (err instanceof Error && err.message === "chat_resolve_timeout") {
+          ctx.emitStage({ kind: "resolve_timeout", elapsedMs: Date.now() - startedAt });
           await logServer("WARN", "chat_resolve_timeout", {
             requestId,
             deadlineMs: RESOLVE_DEADLINE_MS
@@ -912,12 +957,20 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           });
         }
         const sqlStartedAt = Date.now();
+        // Stage events frame the orchestration's two distinct DB phases:
+        // sql_start (query about to run) → sql_complete (rows back).
+        ctx.emitStage({ kind: "sql_start", elapsedMs: sqlStartedAt - startedAt });
         const execDbSpan = startTrackedSpan(startSpan("execute_db"));
         try {
           const executed = await cachedRunSql(sqlToExecute, { preview: true });
           endTrackedSpan(execDbSpan);
           generatedSqlForTrace = executed.sql;
           lastSqlElapsedMsForTrace = executed.elapsedMs ?? Date.now() - sqlStartedAt;
+          ctx.emitStage({
+            kind: "sql_complete",
+            detail: `${executed.rowCount} row${executed.rowCount === 1 ? "" : "s"} · ${lastSqlElapsedMsForTrace}ms`,
+            elapsedMs: Date.now() - startedAt
+          });
           await appendQueryTrace({
             status: "sql_attempt",
             sqlAttemptNumber: sqlAttemptCount,
@@ -1345,6 +1398,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
               const contract = buildSynthesisContract({ runtime, rows: result.rows });
               synthesisContract = contract;
               if (ctx.sseRequested) {
+                ctx.emitStage({ kind: "synthesis_start", elapsedMs: Date.now() - startedAt });
                 let streamedAnswer = "";
                 let streamedReasoning: string | undefined;
                 for await (const chunk of synthesizeAnswerStream({

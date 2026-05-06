@@ -122,70 +122,77 @@ export default function F1InsightsChat() {
       }
     ]);
 
-    // The synthetic phase timer drives ONLY phases 0-3 (Reading question,
-    // Resolving references, Planning query, Running query). Phase 4
-    // (Drafting answer) is gated on the first real SSE delta arriving —
-    // because the LLM synthesis stage is what produces answer_delta /
-    // reasoning_delta events, so a delta IS the signal that synthesis
-    // has begun (i.e. resolve + plan + SQL all finished server-side).
+    // Backend emits real stage events at orchestration boundaries:
+    //   intake_complete → resolve_complete (or resolve_timeout) →
+    //     sql_start → sql_complete → synthesis_start
     //
-    // Result: the visible progress tracks reality much better.
-    //   - Submit → phase 0 running
-    //   - +1.0s → phase 1 running, phase 0 done
-    //   - +2.0s → phase 2 running, phases 0-1 done
-    //   - +3.0s → phase 3 (Running query) running, phases 0-2 done. STOP.
-    //   - First answer_delta or reasoning_delta arrives → phase 4 (Drafting
-    //     answer) running, phases 0-3 done. (May happen at any point after
-    //     submit; if it arrives before the timer reaches phase 3, we
-    //     fast-forward through 0-3.)
-    //   - Final SSE frame → real activity log replaces synthetic.
-    const SYNTH_PRE_DRAFT_LIMIT = 4; // phases 0..3 are "preparation"
-    const SYNTH_DRAFTING_IDX = 4;    // phase 4 = "Drafting answer"
-    let phaseIdx = 0;
+    // Each stage event maps to a phase index in SYNTHETIC_PHASES so the
+    // visible activity log tracks real server-side progress instead of
+    // a guessed timer cadence. Stage events also carry a `detail` field
+    // (e.g. resolved session label, row count + ms) which becomes the
+    // phase's `message` — so the user sees concrete info as it lands.
+    //
+    // Fallback: a 1.5s heartbeat ticks the spinner forward even when
+    // stage events lag, so the UI never feels frozen on slow Neon.
+    //
+    // The first answer_delta / reasoning_delta also enters the drafting
+    // phase as a defensive backstop in case `synthesis_start` is missed
+    // (older backend, network truncation).
+    const PHASE_BY_STAGE: Record<string, number> = {
+      intake_complete: 1,    // → "Resolving references"
+      resolve_complete: 2,   // → "Planning query"
+      resolve_timeout: 1,    // stays on resolution (will be marked warn at final)
+      plan_complete: 3,      // → "Running query"
+      sql_start: 3,          // running query (DB executing)
+      sql_complete: 4,       // → "Drafting answer"
+      synthesis_start: 4     // confirms drafting started
+    };
+    const SYNTH_DRAFTING_IDX = 4;
+    let currentPhaseIdx = 0;
     let draftingStarted = false;
+    let phaseFromBackend = false; // flips true on first stage event
 
-    /** Advance to a specific phase (used by both timer and delta handler). */
-    const showPhase = (idx: number, draftingActive: boolean) => {
+    /** Render the activity panel up through `idx`, with `idx` running. */
+    const showPhase = (idx: number, customMessage?: string) => {
       patchAssistantInsight(assistantId, (prev) => {
-        if (!prev.streaming) return prev; // stream already closed
-        const upTo = draftingActive ? SYNTH_DRAFTING_IDX : Math.min(idx, SYNTH_PRE_DRAFT_LIMIT - 1);
-        const events: ActivityEvent[] = SYNTHETIC_PHASES.slice(0, upTo + 1).map((p, i) => {
-          const isCurrent = draftingActive ? i === SYNTH_DRAFTING_IDX : i === upTo;
-          return {
-            id: `synth-${i}`,
-            label: p.label,
-            message: p.message,
-            status: isCurrent ? ("running" as const) : ("done" as const)
-          };
-        });
+        if (!prev.streaming) return prev;
+        const upTo = Math.min(idx, SYNTHETIC_PHASES.length - 1);
+        const events: ActivityEvent[] = SYNTHETIC_PHASES.slice(0, upTo + 1).map((p, i) => ({
+          id: `synth-${i}`,
+          label: p.label,
+          message: i === upTo && customMessage ? customMessage : p.message,
+          status: i < upTo ? ("done" as const) : ("running" as const)
+        }));
         return { ...prev, activity: events };
       });
     };
 
-    const phaseTimer = setInterval(() => {
-      if (draftingStarted) {
-        clearInterval(phaseTimer);
-        return;
-      }
-      phaseIdx += 1;
-      if (phaseIdx >= SYNTH_PRE_DRAFT_LIMIT) {
-        // Park at "Running query" — it stays in this state until a delta
-        // arrives (signaling synthesis has begun) OR the final frame lands.
-        phaseIdx = SYNTH_PRE_DRAFT_LIMIT - 1;
-        clearInterval(phaseTimer);
-        showPhase(phaseIdx, false);
-        return;
-      }
-      showPhase(phaseIdx, false);
-    }, 1000);
+    /** Advance to phase idx if it's strictly forward; ignore stale signals. */
+    const advanceToPhase = (idx: number, message?: string) => {
+      if (idx <= currentPhaseIdx && currentPhaseIdx > 0) return;
+      currentPhaseIdx = idx;
+      if (idx >= SYNTH_DRAFTING_IDX) draftingStarted = true;
+      showPhase(idx, message);
+    };
 
-    /** Called by the delta handlers on the FIRST chunk only. */
+    /** Backstop: first delta arriving forces drafting phase. */
     const enterDraftingPhase = () => {
       if (draftingStarted) return;
-      draftingStarted = true;
-      clearInterval(phaseTimer);
-      showPhase(SYNTH_DRAFTING_IDX, true);
+      advanceToPhase(SYNTH_DRAFTING_IDX);
     };
+
+    // Heartbeat fallback — only ticks if NO stage events have arrived.
+    // Once the first real stage lands, we trust the backend to drive
+    // progress and the heartbeat goes silent.
+    const phaseTimer = setInterval(() => {
+      if (draftingStarted || phaseFromBackend) return;
+      const next = currentPhaseIdx + 1;
+      if (next >= SYNTH_DRAFTING_IDX) {
+        // Park at "Running query" — wait for real signal to advance.
+        return;
+      }
+      advanceToPhase(next);
+    }, 1500);
 
     try {
       const response = await fetch("/api/chat", {
@@ -206,6 +213,12 @@ export default function F1InsightsChat() {
       let liveReasoning = "";
       let deltaCount = 0;
       const finalPayload: ChatApiResponse = await consumeChatStream(response, {
+        onStage: (payload) => {
+          phaseFromBackend = true;
+          const idx = PHASE_BY_STAGE[payload.kind];
+          if (typeof idx !== "number") return;
+          advanceToPhase(idx, payload.detail);
+        },
         onAnswerDelta: (chunk) => {
           if (!chunk) return;
           enterDraftingPhase();

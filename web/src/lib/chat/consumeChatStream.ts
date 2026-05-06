@@ -1,8 +1,25 @@
 import type { ChatApiResponse } from "@/lib/chatTypes";
 
+/** Mirrors the StageKind union exported from web/src/app/api/chat/orchestration.ts. */
+export type StageKind =
+  | "intake_complete"
+  | "resolve_complete"
+  | "resolve_timeout"
+  | "plan_complete"
+  | "sql_start"
+  | "sql_complete"
+  | "synthesis_start";
+
+export type StagePayload = {
+  kind: StageKind;
+  detail?: string;
+  elapsedMs?: number;
+};
+
 export type ConsumeChatStreamHooks = {
   onAnswerDelta?(text: string): void;
   onReasoningDelta?(text: string): void;
+  onStage?(payload: StagePayload): void;
 };
 
 type StreamFrame = { event: string; data: unknown };
@@ -76,6 +93,8 @@ export async function consumeChatStream(
             hooks.onAnswerDelta?.(getDeltaText(frame.data));
           } else if (frame.event === "reasoning_delta") {
             hooks.onReasoningDelta?.(getDeltaText(frame.data));
+          } else if (frame.event === "stage") {
+            hooks.onStage?.(frame.data as StagePayload);
           } else if (frame.event === "final") {
             finalPayload = frame.data as ChatApiResponse;
           } else if (frame.event === "error") {
