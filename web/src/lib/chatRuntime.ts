@@ -1799,9 +1799,43 @@ export async function buildChatRuntime(input: {
     "compare soft-compound",
     "compare the compound"
   ];
+  // State-vs-state comparisons (clean air vs traffic, dry vs wet,
+  // qualifying vs race trim, inters vs slicks, etc.) use "vs" but
+  // are NOT driver-pair questions — they aggregate per-driver metrics
+  // across two operational states. These should fall through to the
+  // aggregate path with no driver-pair clarification demand.
+  const STATE_VS_STATE_PATTERNS: ReadonlyArray<string> = [
+    "clean air vs traffic",
+    "clean-air vs traffic",
+    "vs traffic",
+    "in traffic vs",
+    "dry vs wet",
+    "wet vs dry",
+    "qualifying vs race",
+    "quali vs race",
+    "qualifying-trim vs race-trim",
+    "qualifying trim vs race trim",
+    "quali-trim vs race-trim",
+    "inters vs slicks",
+    "slicks vs inters",
+    "dry-tyre vs wet",
+    "fresh vs used",
+    "used vs fresh",
+    "before vs after",
+    "race vs sprint",
+    "sprint vs race",
+    "stint 1 vs stint",
+    "first stint vs second stint",
+    "first stint vs final stint",
+    "medium vs hard",
+    "hard vs medium",
+    "soft vs medium",
+    "medium vs soft"
+  ];
   const isStructuralComparison =
     questionType === "comparison_analysis" &&
-    STRUCTURAL_COMPARISON_PATTERNS.some((p) => normalizedMessage.includes(p));
+    (STRUCTURAL_COMPARISON_PATTERNS.some((p) => normalizedMessage.includes(p)) ||
+      STATE_VS_STATE_PATTERNS.some((p) => normalizedMessage.includes(p)));
   const needsDriverPair =
     questionType === "comparison_analysis" &&
     selectedDriverNumbers.length < 2 &&
