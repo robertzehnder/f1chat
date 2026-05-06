@@ -322,8 +322,8 @@ export default function F1InsightsChat() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="shrink-0 border-b border-border/50 bg-background/80 backdrop-blur-sm z-10">
-          <div className="max-w-4xl mx-auto px-3 md:px-4 py-3 flex items-center justify-between">
+        <header className="shrink-0 border-b border-border/50 bg-background/80 backdrop-blur-sm z-10 min-h-16">
+          <div className="max-w-4xl mx-auto px-3 md:px-4 py-3 flex items-center justify-between min-h-16">
             <div className="flex items-center gap-2 md:gap-3">
               <Button
                 variant="ghost"
@@ -390,8 +390,8 @@ export default function F1InsightsChat() {
           </ScrollArea>
         )}
 
-        <div className="shrink-0 border-t border-border/50 bg-background/80 backdrop-blur-sm">
-          <div className="max-w-3xl mx-auto px-3 md:px-4 py-3 md:py-4">
+        <div className="shrink-0 border-t border-border/50 bg-background/80 backdrop-blur-sm min-h-[88px] flex flex-col justify-center">
+          <div className="w-full max-w-3xl mx-auto px-3 md:px-4 py-3 md:py-4">
             <ChatInput
               onSend={(q) => void handleSend(q)}
               placeholder="Ask about lap times, strategy..."

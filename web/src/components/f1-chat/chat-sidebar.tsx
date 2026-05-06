@@ -106,13 +106,13 @@ export function ChatSidebar({
           isMobileOpen && "fixed inset-y-0 left-0 z-50 flex w-72"
         )}
       >
-      {/* Header */}
-        <div className="shrink-0 p-3 border-b border-sidebar-border">
-          <div className="flex items-center justify-between">
+      {/* Header — min-h-16 to align bottom border with main panel header */}
+        <div className="shrink-0 px-3 py-3 border-b border-sidebar-border min-h-16 flex items-center">
+          <div className="flex items-center justify-between w-full">
             {(!isCollapsed || isMobileOpen) && (
               <div className="flex items-center gap-2">
-                <div className="size-7 rounded-lg bg-[#E10600] flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">F1</span>
+                <div className="size-9 rounded-xl bg-[#E10600] flex items-center justify-center shadow-lg shadow-[#E10600]/20">
+                  <span className="text-white font-bold text-sm">F1</span>
                 </div>
                 <span className="font-semibold text-sidebar-foreground text-sm">OpenF1</span>
               </div>
@@ -199,13 +199,13 @@ export function ChatSidebar({
           </div>
         </ScrollArea>
       
-      {/* Footer - User Profile */}
+      {/* Footer - User Profile (min-h-[88px] aligns top border with main panel input footer) */}
         {user && (
           <div className={cn(
-            "shrink-0 border-t border-sidebar-border",
-            (isCollapsed && !isMobileOpen) ? "p-2" : "p-3"
+            "shrink-0 border-t border-sidebar-border min-h-[88px] flex flex-col justify-center",
+            (isCollapsed && !isMobileOpen) ? "p-2" : "px-3 py-3"
           )}>
-            <UserProfile 
+            <UserProfile
               user={user}
               variant={(isCollapsed && !isMobileOpen) ? "avatar-only" : "full"}
               onSignOut={onSignOut}

@@ -128,11 +128,9 @@ export function buildActivityLog(response: ChatApiResponse): ActivityEvent[] {
       response.generationSource === "no_data_refusal" ||
       response.generationSource === "proprietary_no_data";
     const isClarification = response.generationSource === "runtime_clarification";
-    const sourceLabel = response.generationSource.replace(/_/g, " ");
     events.push({
       id: "synth",
       label: isRefusal ? "Refused" : isClarification ? "Asked for clarification" : "Drafted answer",
-      message: `via ${sourceLabel}`,
       status: isRefusal || isClarification ? "warn" : "done"
     });
   }
