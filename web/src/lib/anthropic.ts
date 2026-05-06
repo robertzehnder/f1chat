@@ -44,6 +44,10 @@ export type AnswerSynthesisInput = {
 type AnswerSynthesisOutput = {
   answer: string;
   reasoning?: string;
+  /** Phase 2: structured insight fields extracted from the JSON
+   *  payload, or null when the model didn't emit them / validation
+   *  produced no usable fields. */
+  insight: import("@/lib/chatTypes").InsightFields | null;
   model: string;
   rawText: string;
 };
@@ -743,8 +747,89 @@ function parseSqlJsonPayload(jsonText: string, rawText: string): { sql: string; 
   };
 }
 
-function parseAnswerJsonPayload(jsonText: string, rawText: string): { answer: string; reasoning?: string } {
-  let parsed: { answer?: string; reasoning?: string };
+/**
+ * Hand-rolled validator for `InsightFields` (Phase 2 of the v0 match
+ * plan; no `zod` dependency). Each field is independently coerced;
+ * fields that fail validation are dropped silently and a `WARN` is
+ * logged. Structurally invalid JSON throws and falls through to
+ * body-only at the call site.
+ */
+function validateInsightFields(parsed: Record<string, unknown>): import("@/lib/chatTypes").InsightFields | null {
+  const out: import("@/lib/chatTypes").InsightFields = {};
+
+  if (typeof parsed.title === "string" && parsed.title.trim().length > 0) {
+    out.title = parsed.title.trim().slice(0, 120);
+  }
+  if (typeof parsed.subtitle === "string" && parsed.subtitle.trim().length > 0) {
+    out.subtitle = parsed.subtitle.trim().slice(0, 120);
+  }
+
+  if (Array.isArray(parsed.metrics)) {
+    const metrics: import("@/lib/chatTypes").InsightFieldMetric[] = [];
+    for (const raw of parsed.metrics.slice(0, 3)) {
+      if (!raw || typeof raw !== "object") continue;
+      const m = raw as Record<string, unknown>;
+      if (typeof m.label !== "string" || typeof m.value !== "string") continue;
+      metrics.push({
+        label: m.label.trim().slice(0, 40),
+        value: m.value.trim().slice(0, 30),
+        unit: typeof m.unit === "string" ? m.unit.trim().slice(0, 20) : undefined,
+        emphasis: m.emphasis === true || undefined
+      });
+    }
+    if (metrics.length > 0) out.metrics = metrics;
+  }
+
+  if (Array.isArray(parsed.key_takeaways)) {
+    const takeaways = parsed.key_takeaways
+      .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+      .map((t) => t.trim().slice(0, 140))
+      .slice(0, 6);
+    if (takeaways.length > 0) out.key_takeaways = takeaways;
+  }
+
+  if (Array.isArray(parsed.related_questions)) {
+    const followUps = parsed.related_questions
+      .filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+      .map((q) => q.trim().slice(0, 120))
+      .slice(0, 4);
+    if (followUps.length > 0) out.related_questions = followUps;
+  }
+
+  if (parsed.hero && typeof parsed.hero === "object") {
+    const h = parsed.hero as Record<string, unknown>;
+    if (typeof h.value === "string" && typeof h.label === "string") {
+      out.hero = {
+        value: h.value.trim().slice(0, 60),
+        label: h.label.trim().slice(0, 80),
+        context: typeof h.context === "string" ? h.context.trim().slice(0, 120) : undefined
+      };
+    }
+  }
+
+  if (parsed.verdict && typeof parsed.verdict === "object") {
+    const v = parsed.verdict as Record<string, unknown>;
+    if ((v.label === "YES" || v.label === "NO") && typeof v.summary === "string") {
+      out.verdict = {
+        label: v.label,
+        summary: v.summary.trim().slice(0, 200),
+        color: typeof v.color === "string" ? v.color : undefined
+      };
+    }
+  }
+
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function parseAnswerJsonPayload(
+  jsonText: string,
+  rawText: string
+): {
+  answer: string;
+  reasoning?: string;
+  insight: import("@/lib/chatTypes").InsightFields | null;
+} {
+  let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(jsonText);
   } catch {
@@ -756,7 +841,8 @@ function parseAnswerJsonPayload(jsonText: string, rawText: string): { answer: st
   }
   return {
     answer: parsed.answer.trim(),
-    reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined
+    reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : undefined,
+    insight: validateInsightFields(parsed)
   };
 }
 
@@ -1000,6 +1086,7 @@ export async function synthesizeAnswerWithAnthropic(
   return {
     answer: parsed.answer,
     reasoning: parsed.reasoning,
+    insight: parsed.insight,
     model,
     rawText
   };
@@ -1008,7 +1095,16 @@ export async function synthesizeAnswerWithAnthropic(
 export type StreamChunk =
   | { kind: "answer_delta"; text: string }
   | { kind: "reasoning_delta"; text: string }
-  | { kind: "final"; answer: string; reasoning?: string; model: string; rawText: string };
+  | {
+      kind: "final";
+      answer: string;
+      reasoning?: string;
+      /** Phase 2: structured insight fields extracted from the
+       *  synthesis JSON. `null` when validation produced no fields. */
+      insight: import("@/lib/chatTypes").InsightFields | null;
+      model: string;
+      rawText: string;
+    };
 
 function decodeJsonStringSoFar(
   raw: string,
@@ -1173,6 +1269,7 @@ export async function* synthesizeAnswerStream(
     kind: "final",
     answer: parsed.answer,
     reasoning: parsed.reasoning,
+    insight: parsed.insight,
     model,
     rawText: accumulated
   };

@@ -63,6 +63,41 @@ export type ChatStore = {
   activeConversationId: string | null;
 };
 
+/**
+ * Phase 2 of the v0 visualization match plan: structured fields the
+ * synthesis LLM produces alongside `answer` + `reasoning`. The wire
+ * format is just additional JSON keys on the synthesis output (the
+ * existing pipeline already does keyed-JSON extraction); the merged
+ * plan's `<<INSIGHT>>...<<END>>` sentinel framing was overengineered
+ * for this codebase. See rev3 of the merged plan.
+ *
+ * All fields are optional. Missing fields fall back to today's
+ * body+sql+rows render — never blank.
+ */
+export type InsightFieldMetric = {
+  label: string;
+  value: string;
+  unit?: string;
+  emphasis?: boolean;
+};
+
+export type InsightFields = {
+  /** Question-relevant title — replaces the question-derived fallback. */
+  title?: string;
+  /** Venue · session · year line under the title. */
+  subtitle?: string;
+  /** 2-3 hero metric tiles under the body. */
+  metrics?: InsightFieldMetric[];
+  /** 3-5 bullet takeaways. */
+  key_takeaways?: string[];
+  /** 2-4 follow-up question chips. */
+  related_questions?: string[];
+  /** M01 hero scalar payload (bypasses the body for single-fact answers). */
+  hero?: { value: string; label: string; context?: string };
+  /** M02 yes/no verdict (bypasses the body when present). */
+  verdict?: { label: "YES" | "NO"; summary: string; color?: string };
+};
+
 /** API response shape from POST /api/chat (subset used by UI). */
 export type ChatApiResponse = {
   requestId?: string;
@@ -109,6 +144,9 @@ export type ChatApiResponse = {
       expected_row_count?: string;
     };
   };
+  /** Phase 2: structured fields from synthesis. `null` when extraction
+   *  failed or the model didn't emit them; old clients ignore. */
+  insight?: InsightFields | null;
   error?: string;
 };
 

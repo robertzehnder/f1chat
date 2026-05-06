@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth-shim";
 import { consumeChatStream } from "@/lib/chat/consumeChatStream";
 import { mapChatApiResponseToParts } from "@/lib/mapChatResponse";
 import {
+  applyInsightFields,
   applyQuestionTitle,
   applyResponseSemantics,
   applyScalarHero,
@@ -220,6 +221,14 @@ export default function F1InsightsChat() {
           if (typeof idx !== "number") return;
           advanceToPhase(idx, payload.detail);
         },
+        onInsight: (fields) => {
+          // Structured insight arrives as its own SSE frame, often
+          // before the body finishes streaming. Patch into the live
+          // insight so metrics + takeaways + chips can render in
+          // place while body continues to stream below them.
+          if (!fields) return;
+          patchAssistantInsight(assistantId, (prev) => applyInsightFields(prev, fields));
+        },
         onAnswerDelta: (chunk) => {
           if (!chunk) return;
           enterDraftingPhase();
@@ -258,6 +267,10 @@ export default function F1InsightsChat() {
         if (skipTextParts && p.type === "text") continue;
         folded = foldPartsIntoInsight(folded, p);
       }
+      // Apply structured insight from the final payload — covers
+      // non-SSE responses (where onInsight never fires) and re-merges
+      // for SSE in case the insight frame was missed.
+      folded = applyInsightFields(folded, finalPayload.insight ?? null);
       folded = applyResponseSemantics(folded, finalPayload);
       folded = applyScalarHero(folded);
       folded = applyVerdictSemantics(folded);

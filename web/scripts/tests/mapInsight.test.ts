@@ -18,13 +18,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  applyInsightFields,
   applyResponseSemantics,
   applyScalarHero,
   applyVerdictSemantics,
   foldPartsIntoInsight
 } from "../../src/lib/mapInsight";
 import { mapChatApiResponseToParts } from "../../src/lib/mapChatResponse";
-import type { ChatApiResponse } from "../../src/lib/chatTypes";
+import type { ChatApiResponse, InsightFields } from "../../src/lib/chatTypes";
 import type { DraftInsight } from "../../src/lib/chart-types";
 
 function runPipeline(fx: ChatApiResponse): DraftInsight {
@@ -291,6 +292,53 @@ test("clean_air_laps + traffic_laps with total_ prefix → stacked_horizontal_ba
   assert.equal(insight.chart?.series?.length, 2);
   assert.equal(insight.chart?.series?.[0]?.name, "Clean Air");
   assert.equal(insight.chart?.series?.[1]?.name, "In Traffic");
+});
+
+test("applyInsightFields — populates title, subtitle, metrics, takeaways, related_questions from synthesis JSON", () => {
+  const fields: InsightFields = {
+    title: "Clean Air vs Traffic — 2025 Season",
+    subtitle: "All Race Sessions · 2025",
+    metrics: [
+      { label: "Most Clean-Air laps", value: "412", unit: "VER", emphasis: true },
+      { label: "Pace Delta", value: "+0.42", unit: "s/lap" }
+    ],
+    key_takeaways: [
+      "Verstappen led 82% of his laps in clean air",
+      "Avg traffic pace penalty: +0.42 s/lap"
+    ],
+    related_questions: ["Show pace delta in traffic vs clean air", "Mexico 2025 specifically"]
+  };
+  const r = applyInsightFields({ body: "field-derived body" }, fields);
+  assert.equal(r.title, "Clean Air vs Traffic — 2025 Season");
+  assert.equal(r.subtitle, "All Race Sessions · 2025");
+  assert.equal(r.metrics?.length, 2);
+  assert.equal(r.metrics?.[0]?.emphasis, true);
+  assert.equal(r.key_takeaways?.length, 2);
+  assert.equal(r.related_questions?.length, 2);
+});
+
+test("applyInsightFields — preserves existing fields, doesn't overwrite", () => {
+  const r = applyInsightFields(
+    { body: "", title: "Existing title", metrics: [{ label: "x", value: "1" }] },
+    { title: "New title", metrics: [{ label: "y", value: "2" }] }
+  );
+  assert.equal(r.title, "Existing title", "existing title kept");
+  assert.equal(r.metrics?.[0]?.label, "x", "existing metrics kept");
+});
+
+test("applyInsightFields — null is a no-op (parse-failure fallback)", () => {
+  const before: DraftInsight = { body: "hello" };
+  const after = applyInsightFields(before, null);
+  assert.deepEqual(after, before);
+});
+
+test("applyInsightFields — merges takeaways without dropping ⚠ warnings already present", () => {
+  const r = applyInsightFields(
+    { body: "", key_takeaways: ["⚠ Coverage gap on Lusail"] },
+    { key_takeaways: ["Verstappen led 82%", "Avg pace penalty +0.42"] }
+  );
+  assert.equal(r.key_takeaways?.length, 3);
+  assert.ok(r.key_takeaways?.[0].startsWith("⚠"), "warning preserved");
 });
 
 test("non-streaming path (clarification / deterministic) — body must populate from text part when no answer_delta arrives", () => {

@@ -1,4 +1,4 @@
-import type { ChatApiResponse, MessagePart } from "@/lib/chatTypes";
+import type { ChatApiResponse, InsightFields, MessagePart } from "@/lib/chatTypes";
 import type { ChartSpec, DraftInsight } from "@/lib/chart-types";
 import { getTeamColor } from "@/lib/f1-team-colors";
 
@@ -45,6 +45,49 @@ export function foldPartsIntoInsight(
       // applyResponseSemantics on the final ChatApiResponse.
       break;
   }
+  return next;
+}
+
+// =============================================================================
+// applyInsightFields — Phase 2 structured fields from synthesis JSON
+// =============================================================================
+
+/**
+ * Merge LLM-emitted structured fields (title / subtitle / metrics /
+ * key_takeaways / related_questions / hero / verdict) into the draft
+ * insight. Called when the SSE `event: insight` frame arrives OR when
+ * the non-SSE response includes a top-level `insight` field.
+ *
+ * Fields already present on the draft are NOT overwritten — this lets
+ * the question-derived title fallback survive, and lets the chart
+ * auto-detector or hero-detector run independently. Pass `null` for
+ * a no-op (synthesis didn't extract fields).
+ */
+export function applyInsightFields(
+  insight: DraftInsight,
+  fields: InsightFields | null
+): DraftInsight {
+  if (!fields) return insight;
+  const next = { ...insight };
+  if (fields.title && !next.title) next.title = fields.title;
+  if (fields.subtitle && !next.subtitle) next.subtitle = fields.subtitle;
+  if (fields.metrics && fields.metrics.length > 0 && !next.metrics) {
+    next.metrics = fields.metrics;
+  }
+  if (fields.key_takeaways && fields.key_takeaways.length > 0) {
+    // Merge: dedupe against existing takeaways (warning prefixes survive).
+    const existing = new Set((next.key_takeaways ?? []).map((t) => t.replace(/^⚠\s+/, "")));
+    const merged = [...(next.key_takeaways ?? [])];
+    for (const t of fields.key_takeaways) {
+      if (!existing.has(t)) merged.push(t);
+    }
+    next.key_takeaways = merged;
+  }
+  if (fields.related_questions && fields.related_questions.length > 0 && !next.related_questions) {
+    next.related_questions = fields.related_questions;
+  }
+  if (fields.hero && !next.hero) next.hero = fields.hero;
+  if (fields.verdict && !next.verdict) next.verdict = fields.verdict;
   return next;
 }
 

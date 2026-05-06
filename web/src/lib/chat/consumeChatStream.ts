@@ -1,4 +1,4 @@
-import type { ChatApiResponse } from "@/lib/chatTypes";
+import type { ChatApiResponse, InsightFields } from "@/lib/chatTypes";
 
 /** Mirrors the StageKind union exported from web/src/app/api/chat/orchestration.ts. */
 export type StageKind =
@@ -20,6 +20,12 @@ export type ConsumeChatStreamHooks = {
   onAnswerDelta?(text: string): void;
   onReasoningDelta?(text: string): void;
   onStage?(payload: StagePayload): void;
+  /** Phase 2: structured InsightFields fired once when the synthesis
+   *  pipeline emits its `event: insight` SSE frame. May arrive before
+   *  the final frame; in that case the client can populate metrics +
+   *  takeaways while the body is still streaming. `null` payload
+   *  means extraction succeeded but produced no usable fields. */
+  onInsight?(fields: InsightFields | null): void;
 };
 
 type StreamFrame = { event: string; data: unknown };
@@ -95,6 +101,9 @@ export async function consumeChatStream(
             hooks.onReasoningDelta?.(getDeltaText(frame.data));
           } else if (frame.event === "stage") {
             hooks.onStage?.(frame.data as StagePayload);
+          } else if (frame.event === "insight") {
+            const data = frame.data as { insight?: InsightFields | null } | null;
+            hooks.onInsight?.(data?.insight ?? null);
           } else if (frame.event === "final") {
             finalPayload = frame.data as ChatApiResponse;
           } else if (frame.event === "error") {

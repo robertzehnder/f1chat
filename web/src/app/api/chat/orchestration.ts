@@ -167,6 +167,10 @@ type RouteCtx = {
   sseRequested: boolean;
   emitDelta: (kind: SseDeltaKind, text: string) => void;
   emitStage: (payload: StagePayload) => void;
+  /** Phase 2: emit the synthesis-time structured InsightFields as an
+   *  `event: insight` SSE frame so the client can populate the card
+   *  before the `final` frame lands. `null` means no fields extracted. */
+  emitInsight: (fields: import("@/lib/chatTypes").InsightFields | null) => void;
 };
 
 type RouteOutcome = {
@@ -294,7 +298,8 @@ export async function POST(request: Request): Promise<Response> {
     const outcome = await runChatRoute(request, {
       sseRequested: false,
       emitDelta: () => {},
-      emitStage: () => {}
+      emitStage: () => {},
+      emitInsight: () => {}
     });
     return NextResponse.json(outcome.payload, { status: outcome.status });
   }
@@ -311,7 +316,8 @@ export async function POST(request: Request): Promise<Response> {
         const outcome = await runChatRoute(request, {
           sseRequested: true,
           emitDelta: (kind, text) => writeFrame(kind, { text }),
-          emitStage: (payload) => writeFrame("stage", payload)
+          emitStage: (payload) => writeFrame("stage", payload),
+          emitInsight: (fields) => writeFrame("insight", { insight: fields })
         });
         if (outcome.asError) {
           writeFrame("error", outcome.asError);
@@ -1375,6 +1381,10 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           ? `No rows matched this question with the current context.${caveatText}`
           : "";
       let synthesisContract: FactContract | null = null;
+      // Phase 2: insight fields extracted from synthesis JSON. Stays
+      // null on cached / template / refusal paths and on parse
+      // failures — body-only fallback in the UI.
+      let synthesisInsight: import("@/lib/chatTypes").InsightFields | null = null;
 
       if (result.rowCount > 0) {
         if (generationSource === "deterministic_template") {
@@ -1401,6 +1411,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 ctx.emitStage({ kind: "synthesis_start", elapsedMs: Date.now() - startedAt });
                 let streamedAnswer = "";
                 let streamedReasoning: string | undefined;
+                let streamedInsight: import("@/lib/chatTypes").InsightFields | null = null;
                 for await (const chunk of synthesizeAnswerStream({
                   question: message,
                   sql: result.sql,
@@ -1413,10 +1424,15 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                   } else if (chunk.kind === "final") {
                     streamedAnswer = chunk.answer;
                     streamedReasoning = chunk.reasoning;
+                    streamedInsight = chunk.insight;
                   }
                 }
                 synthAnswer = streamedAnswer;
                 synthReasoning = streamedReasoning;
+                synthesisInsight = streamedInsight;
+                // Emit insight as its own SSE frame so the client can
+                // populate the card before the `final` frame lands.
+                ctx.emitInsight(streamedInsight);
               } else {
                 const synthesis = await cachedSynthesize({
                   question: message,
@@ -1425,6 +1441,9 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 });
                 synthAnswer = synthesis.answer;
                 synthReasoning = synthesis.reasoning;
+                // Non-SSE callers (benchmark) get insight only via
+                // ChatApiResponse.insight — no SSE channel to emit on.
+                synthesisInsight = synthesis.insight ?? null;
               }
               answer = synthAnswer;
               if (caveatText) {
@@ -1588,7 +1607,11 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           generationNotes: finalGenerationNotes,
           sql: result.sql,
           result,
-          runtime
+          runtime,
+          // Phase 2: structured InsightFields. Null on cached / template /
+          // refusal paths and on parse failures. Non-SSE clients consume
+          // via this field; SSE clients also receive it via event: insight.
+          insight: synthesisInsight
         },
         status: 200
       };
