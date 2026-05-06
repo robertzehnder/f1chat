@@ -132,19 +132,8 @@ export function buildActivityLog(response: ChatApiResponse): ActivityEvent[] {
     events.push({
       id: "synth",
       label: isRefusal ? "Refused" : isClarification ? "Asked for clarification" : "Drafted answer",
-      message: `via ${sourceLabel}${response.model ? ` · ${response.model}` : ""}`,
+      message: `via ${sourceLabel}`,
       status: isRefusal || isClarification ? "warn" : "done"
-    });
-  }
-
-  // 7. Quality check (if grader ran)
-  if (response.adequacyGrade || response.responseGrade) {
-    const grade = response.adequacyGrade ?? response.responseGrade ?? "";
-    events.push({
-      id: "grade",
-      label: "Quality check",
-      message: `Grade: ${grade}`,
-      status: grade === "A" ? "done" : grade === "B" ? "done" : "warn"
     });
   }
 
