@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:reset": "pkill -f 'next dev' 2>/dev/null; rm -rf .next && next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
