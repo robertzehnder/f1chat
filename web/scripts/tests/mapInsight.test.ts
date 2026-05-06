@@ -25,6 +25,7 @@ import {
   foldPartsIntoInsight
 } from "../../src/lib/mapInsight";
 import { mapChatApiResponseToParts } from "../../src/lib/mapChatResponse";
+import { pickInsightShape } from "../../src/lib/chatRuntime/insightShape";
 import type { ChatApiResponse, InsightFields } from "../../src/lib/chatTypes";
 import type { DraftInsight } from "../../src/lib/chart-types";
 
@@ -292,6 +293,63 @@ test("clean_air_laps + traffic_laps with total_ prefix → stacked_horizontal_ba
   assert.equal(insight.chart?.series?.length, 2);
   assert.equal(insight.chart?.series?.[0]?.name, "Clean Air");
   assert.equal(insight.chart?.series?.[1]?.name, "In Traffic");
+});
+
+test("pickInsightShape — refusal generationSource → refusal", () => {
+  const r = pickInsightShape({
+    message: "What was Hamilton's brake temperature at Turn 8?",
+    questionType: "telemetry_analysis",
+    generationSource: "no_data_refusal"
+  });
+  assert.equal(r, "refusal");
+});
+
+test("pickInsightShape — 'did X work' verdict pattern → verdict", () => {
+  const r = pickInsightShape({
+    message: "Did Russell's overcut on Verstappen work at Canada 2025?",
+    questionType: "comparison_analysis"
+  });
+  assert.equal(r, "verdict");
+});
+
+test("pickInsightShape — pole-lap question → hero", () => {
+  const r = pickInsightShape({
+    message: "What was Verstappen's pole lap time at Suzuka 2025?",
+    questionType: "aggregate_analysis"
+  });
+  assert.equal(r, "hero");
+});
+
+test("pickInsightShape — single-corner brake-zone → metric-grid", () => {
+  const r = pickInsightShape({
+    message: "What was Verstappen's brake-zone speed drop into Turn 22?",
+    questionType: "telemetry_analysis"
+  });
+  assert.equal(r, "metric-grid");
+});
+
+test("pickInsightShape — cross-category 'coincide with' → composite", () => {
+  const r = pickInsightShape({
+    message: "Did the front-right graining coincide with a pace cliff at Imola?",
+    questionType: "comparison_analysis"
+  });
+  assert.equal(r, "composite");
+});
+
+test("pickInsightShape — default falls through to chart-with-metrics", () => {
+  const r = pickInsightShape({
+    message: "Compare Verstappen and Hamilton through the Suzuka esses",
+    questionType: "comparison_analysis"
+  });
+  assert.equal(r, "chart-with-metrics");
+});
+
+test("pickInsightShape — 'how did X compare' is NOT verdict (false-positive guard)", () => {
+  const r = pickInsightShape({
+    message: "How did Hamilton's race pace compare to Russell at Monza?",
+    questionType: "comparison_analysis"
+  });
+  assert.equal(r, "chart-with-metrics", "'how did' must not flip to verdict");
 });
 
 test("applyInsightFields — populates title, subtitle, metrics, takeaways, related_questions from synthesis JSON", () => {

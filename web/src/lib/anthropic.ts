@@ -39,6 +39,11 @@ export type AnswerSynthesisInput = {
   question: string;
   sql: string;
   contract: FactContract;
+  /** Phase 3: optional shape selector — drives which prompt template
+   *  (hero / verdict / metric-grid / chart-with-metrics / composite /
+   *  refusal) the LLM sees. Defaults to chart-with-metrics when
+   *  omitted, so existing callers don't break. */
+  shape?: import("@/lib/chatRuntime/insightShape").InsightShape;
 };
 
 type AnswerSynthesisOutput = {

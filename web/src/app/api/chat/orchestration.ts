@@ -12,6 +12,7 @@ import { getSchemaCatalog } from "@/lib/schemaCatalog";
 import { buildHeuristicSql, runReadOnlySql } from "@/lib/queries";
 import { warmPool } from "@/lib/db";
 import { buildDeterministicSqlTemplate } from "@/lib/deterministicSql";
+import { pickInsightShape } from "@/lib/chatRuntime/insightShape";
 import {
   buildChatRuntime,
   type ChatRuntimeProceed,
@@ -1407,6 +1408,14 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
             try {
               const contract = buildSynthesisContract({ runtime, rows: result.rows });
               synthesisContract = contract;
+              // Phase 3: pick the shape template before kicking off
+              // synthesis so the LLM sees few-shot examples matched
+              // to the question type.
+              const insightShape = pickInsightShape({
+                message,
+                questionType: runtime.questionType,
+                generationSource
+              });
               if (ctx.sseRequested) {
                 ctx.emitStage({ kind: "synthesis_start", elapsedMs: Date.now() - startedAt });
                 let streamedAnswer = "";
@@ -1415,7 +1424,8 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 for await (const chunk of synthesizeAnswerStream({
                   question: message,
                   sql: result.sql,
-                  contract
+                  contract,
+                  shape: insightShape
                 })) {
                   if (chunk.kind === "answer_delta") {
                     ctx.emitDelta("answer_delta", chunk.text);
@@ -1437,7 +1447,8 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 const synthesis = await cachedSynthesize({
                   question: message,
                   sql: result.sql,
-                  contract
+                  contract,
+                  shape: insightShape
                 });
                 synthAnswer = synthesis.answer;
                 synthReasoning = synthesis.reasoning;
