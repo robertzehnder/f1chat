@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# slice_run_adapter_tests — run mapInsight smoke tests in the proposal worktree.
+set -euo pipefail
+[[ $# -eq 1 ]] || { echo "ERROR: expected 1 arg, got $#" >&2; exit 2; }
+slice_id="$1"
+if [[ ! -f web/package.json ]]; then
+  echo "ERROR: web/package.json not found in $(pwd) — wrong cwd?" >&2
+  exit 3
+fi
+( cd web && npm run test:mapinsight 2>/dev/null || npm run test:adapter 2>/dev/null || npm test )

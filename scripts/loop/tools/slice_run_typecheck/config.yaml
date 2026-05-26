@@ -1,0 +1,5 @@
+tools:
+  slice_run_typecheck:
+    signature: "slice_run_typecheck <slice-id>"
+    docstring: "Run `npm run typecheck` (tsc) in the proposal worktree. Prints stdout/stderr and exit code."
+    arity: 1

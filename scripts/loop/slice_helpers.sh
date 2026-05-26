@@ -24,19 +24,21 @@ read_slice_field() {
   ' "$f"
 }
 
-# Atomically flip a frontmatter field. Args: <slice_id> <new_status> <new_owner>
+# Atomically flip a frontmatter field. Args: <slice_id> <new_status> <new_owner> [<status_before_block>]
 # Operates on the file in $WORKING_DIR if set, else LOOP_MAIN_WORKTREE.
 # Caller is responsible for committing the change under the appropriate lock.
+# 4th arg (§B.2.8.e) — when present, writes/updates `status_before_block` to that value.
+# To CLEAR the field, use clear_slice_field instead (this helper only writes).
 flip_slice_status() {
   local slice_id="$1" new_status="$2" new_owner="$3"
+  local status_before_block="${4:-}"
   local work_dir="${WORKING_DIR:-$LOOP_MAIN_WORKTREE}"
   local f="$work_dir/diagnostic/slices/${slice_id}.md"
   [[ -f "$f" ]] || { echo "flip_slice_status: missing $f" >&2; return 1; }
   local now; now=$(date -Iseconds)
-  # Use python for safe in-place frontmatter editing.
-  python3 - "$f" "$new_status" "$new_owner" "$now" <<'PY'
+  python3 - "$f" "$new_status" "$new_owner" "$now" "$status_before_block" <<'PY'
 import sys, re
-path, new_status, new_owner, now = sys.argv[1:5]
+path, new_status, new_owner, now, sbb = sys.argv[1:6]
 with open(path, 'r') as fh:
     text = fh.read()
 m = re.match(r'^---\n(.*?)\n---\n', text, flags=re.S)
@@ -50,13 +52,39 @@ def repl(field, value):
         fm = pat.sub(r'\g<1>' + value, fm)
     else:
         fm = fm.rstrip() + '\n' + field + ': ' + value
-fm_orig = fm
 repl('status', new_status)
 repl('owner', new_owner)
 repl('updated', now)
+if sbb:
+    repl('status_before_block', sbb)
 new_text = '---\n' + fm + '\n---\n' + text[m.end():]
 with open(path, 'w') as fh:
     fh.write(new_text)
+PY
+}
+
+# Remove a frontmatter field. Idempotent — no-op when field is absent.
+# Args: <slice_id> <field>
+# Operates on $WORKING_DIR if set, else LOOP_MAIN_WORKTREE (same contract as flip_slice_status).
+# §B.2.8.f — used by loop_review.sh --approve to clear status_before_block after release.
+clear_slice_field() {
+  local slice_id="$1" field="$2"
+  local work_dir="${WORKING_DIR:-$LOOP_MAIN_WORKTREE}"
+  local f="$work_dir/diagnostic/slices/${slice_id}.md"
+  [[ -f "$f" ]] || { echo "clear_slice_field: missing $f" >&2; return 1; }
+  python3 - "$f" "$field" <<'PY'
+import sys, re
+path, field = sys.argv[1:3]
+with open(path) as fh: text = fh.read()
+m = re.match(r'^---\n(.*?)\n---\n', text, flags=re.S)
+if not m: sys.exit("no frontmatter in " + path)
+fm = m.group(1)
+pat = re.compile(r'^' + re.escape(field) + r':[^\n]*\n', flags=re.M)
+fm_new = pat.sub('', fm)
+if fm_new == fm:
+    sys.exit(0)  # field absent; idempotent no-op
+new_text = '---\n' + fm_new.rstrip() + '\n---\n' + text[m.end():]
+with open(path, 'w') as fh: fh.write(new_text)
 PY
 }
 

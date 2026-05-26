@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# slice_view_history — show audit history for a slice.
+set -euo pipefail
+[[ $# -eq 1 ]] || { echo "ERROR: expected 1 arg, got $#" >&2; exit 2; }
+slice_id="$1"
+: "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE not set}"
+f="$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md"
+[[ -f "$f" ]] || { echo "ERROR: slice file not found: $f" >&2; exit 2; }
+
+echo "=== git log (last 20) ==="
+git -C "$(dirname "$f")/.." log --oneline -20 -- "$f" 2>/dev/null || true
+
+echo ""
+echo "=== Audit verdict history ==="
+awk '
+  /^## Audit verdict/ { in_sec = 1; print; next }
+  /^## / && in_sec { in_sec = 0 }
+  in_sec { print }
+' "$f"

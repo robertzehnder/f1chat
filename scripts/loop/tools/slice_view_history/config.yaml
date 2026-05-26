@@ -1,0 +1,5 @@
+tools:
+  slice_view_history:
+    signature: "slice_view_history <slice-id>"
+    docstring: "Print the slice's git log and prior Audit verdict sections, for context inspection during a fresh audit."
+    arity: 1

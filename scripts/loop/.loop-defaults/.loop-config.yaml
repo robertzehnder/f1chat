@@ -1,0 +1,17 @@
+# .loop-config.yaml
+#
+# Host-project loop configuration. Persisted (not in submodule). Edit by hand
+# or via setup_host_project.sh (for the loop_references_dir key).
+
+# Path to the documentation reference repos (plandex, swe-agent, cline, aider, gsd-redux).
+# Set by `./.loop/setup_host_project.sh` on first run if the default location has them.
+# loop_references_dir: /abs/path/to/loop-references
+
+# Active model pack (overridable per-run via LOOP_PACK env var).
+active_pack: nightly-cost-optimized
+
+# Speculative branches: opt-in. Requires LOOP_ALLOW_SPECULATIVE=1 in the runner's env.
+allow_speculative: false
+
+# Approval queue cap. Runner pauses queue dispatch if pending_approvals exceeds this.
+max_pending_approvals: 20

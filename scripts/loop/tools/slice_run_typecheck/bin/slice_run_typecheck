@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# slice_run_typecheck — run typecheck in the proposal worktree.
+set -euo pipefail
+[[ $# -eq 1 ]] || { echo "ERROR: expected 1 arg, got $#" >&2; exit 2; }
+slice_id="$1"
+# cwd is the proposal worktree; npm is invoked there.
+if [[ ! -f web/package.json ]]; then
+  echo "ERROR: web/package.json not found in $(pwd) — wrong cwd?" >&2
+  exit 3
+fi
+( cd web && npm run typecheck )

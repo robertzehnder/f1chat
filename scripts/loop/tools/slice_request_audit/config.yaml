@@ -1,0 +1,5 @@
+tools:
+  slice_request_audit:
+    signature: "slice_request_audit <slice-id>"
+    docstring: "Flip the slice's status to awaiting_audit + owner=codex. Implementer calls this after completing the implementation and self-checks. The runner picks up the slice on the next tick and dispatches the auditor."
+    arity: 1

@@ -35,19 +35,32 @@ source "$LOOP_MAIN_WORKTREE/scripts/loop/repo_lock.sh"
 # re-entry (round-2 M-6). Detects orphan dirs not in `git worktree list` and
 # prunes them.
 #
+# §A.1 — if the slice file's frontmatter declares `proposal_branch: slice/<id>/proposal-<n>`,
+# this helper uses the proposal-branch worktree path (WORKTREE_BASE/<slice_id>-proposal-<n>/);
+# otherwise it falls back to the legacy slice/<id> path. Callers don't need to know which.
+#
 # Args: <slice_id>
 # Echoes: the worktree path on stdout.
 ensure_slice_worktree() {
   local slice_id="$1"
-  local slice_worktree="$WORKTREE_BASE/$slice_id"
-  local slice_branch="slice/$slice_id"
+  local slice_worktree slice_branch declared n
+
+  # Detect §A.1 proposal-branch slice via frontmatter (no extra source — minimal awk reuse).
+  declared="$(awk '
+    /^---$/ { fm = !fm; if (!fm && seen) exit; seen = 1; next }
+    fm && $1 == "proposal_branch:" { sub(/^[^:]+: */, ""); print; exit }
+  ' "$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md" 2>/dev/null)"
+
+  if [[ -n "$declared" ]] && [[ "$declared" =~ ^slice/.+/proposal-([0-9]+)$ ]]; then
+    n="${BASH_REMATCH[1]}"
+    slice_branch="$declared"
+    slice_worktree="$WORKTREE_BASE/${slice_id}-proposal-${n}"
+  else
+    slice_branch="slice/$slice_id"
+    slice_worktree="$WORKTREE_BASE/$slice_id"
+  fi
 
   mkdir -p "$WORKTREE_BASE"
-
-  # Round-3 H-1: a single locked call writes the path to a known temp file
-  # so the caller can read it after the lock releases. (When this helper is
-  # called via `with_repo_lock _ensure_slice_worktree_to_file`, the wrapper
-  # below handles that path indirection.)
 
   # If the directory exists but git doesn't know about it, prune.
   if [[ -d "$slice_worktree" ]]; then
@@ -95,6 +108,7 @@ cleanup_slice_worktree() {
 # Without this, a slice that merged after a prior repair cycle could leave
 # stale sentinel files that would re-trigger the resume hook on the next
 # runner start.
+# §C.3 — also prune the slice's trajectory dir to keep .loop-state/ small.
 cleanup_slice_state() {
   local slice_id="$1"
   rm -f "$LOOP_STATE_DIR/repair_count_${slice_id}" \
@@ -102,4 +116,6 @@ cleanup_slice_state() {
         "$LOOP_STATE_DIR/fail_count_${slice_id}"
   # Glob all attempt-N sentinels for this slice id.
   rm -f "$LOOP_MAIN_WORKTREE/diagnostic/slices/.approved-loop-infra-repair/${slice_id}__attempt-"* 2>/dev/null || true
+  # §C.3: trajectory rotation.
+  rm -rf "$LOOP_STATE_DIR/dispatches/${slice_id}" 2>/dev/null || true
 }

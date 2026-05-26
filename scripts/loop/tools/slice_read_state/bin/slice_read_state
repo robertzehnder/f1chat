@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# slice_read_state — print slice frontmatter + key sections.
+set -euo pipefail
+[[ $# -eq 1 ]] || { echo "ERROR: expected 1 arg, got $#" >&2; exit 2; }
+slice_id="$1"
+: "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE not set}"
+f="$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md"
+[[ -f "$f" ]] || { echo "ERROR: slice file not found: $f" >&2; exit 2; }
+
+# Print frontmatter + the Steps and Acceptance criteria sections.
+awk '
+  /^---$/ { fm = !fm; print; if (!fm && seen) { seen = 1; next }; seen = 1; next }
+  fm { print; next }
+  /^## (Steps|Acceptance criteria|Changed files expected|Gate commands|Slice-completion note)$/ { in_sec = 1; print; next }
+  /^## / && in_sec { in_sec = 0 }
+  in_sec { print }
+' "$f"

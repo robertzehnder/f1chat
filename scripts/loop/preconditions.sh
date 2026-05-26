@@ -11,21 +11,33 @@ cd "$(git rev-parse --show-toplevel)"
 #    (via their .gitkeep), but the token files inside them are intentionally
 #    git-ignored — otherwise every approval would taint the worktree and the
 #    loop would block forever.
-#    The grep below is belt-and-suspenders: even if a stray untracked sentinel
-#    appears (e.g. on a fresh checkout before .gitignore is loaded), we skip
-#    it here so the loop keeps moving.
-dirty=$(git status --porcelain | grep -vE '^\?\?[[:space:]]+diagnostic/slices/\.approved(-merge|-loop-infra-repair)?/[^/]+$' || true)
-if [[ -n "$dirty" ]]; then
-  echo "FAIL: dirty worktree (ignoring approval sentinels)" >&2
-  echo "  Files dirty:" >&2
-  echo "$dirty" | sed 's/^/    /' >&2
-  exit 1
+#
+#    Also (Phase 22 — visualization roadmap run, 2026-05-25): the loop is being
+#    exercised against the v0-frontend-replacement branch where the user has
+#    active hand-driven WIP. The runner's per-slice worktrees isolate the
+#    agent's work, so the main worktree's dirty state isn't a correctness
+#    issue for dispatch; only the merger (which checks out integration) cares.
+#    LOOP_ALLOW_DIRTY_WORKTREE=1 waives this gate.
+if [[ "${LOOP_ALLOW_DIRTY_WORKTREE:-0}" != "1" ]]; then
+  dirty=$(git status --porcelain | grep -vE '^\?\?[[:space:]]+diagnostic/slices/\.approved(-merge|-loop-infra-repair)?/[^/]+$' || true)
+  if [[ -n "$dirty" ]]; then
+    echo "FAIL: dirty worktree (ignoring approval sentinels)" >&2
+    echo "  Files dirty:" >&2
+    echo "$dirty" | sed 's/^/    /' >&2
+    echo "  To waive (e.g. running against an active feature branch with WIP):" >&2
+    echo "    LOOP_ALLOW_DIRTY_WORKTREE=1" >&2
+    exit 1
+  fi
 fi
 
 # 2. On the right base branch.
+#    Default-allowed: integration/perf-roadmap or slice/*. LOOP_TARGET_BRANCH
+#    overrides the integration default for runs on feature branches.
 branch=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$branch" != "integration/perf-roadmap" && "$branch" != slice/* ]]; then
-  echo "FAIL: not on integration/perf-roadmap or a slice branch (current: $branch)" >&2
+target_branch="${LOOP_TARGET_BRANCH:-integration/perf-roadmap}"
+if [[ "$branch" != "$target_branch" && "$branch" != slice/* ]]; then
+  echo "FAIL: not on $target_branch or a slice branch (current: $branch)" >&2
+  echo "  Override via LOOP_TARGET_BRANCH=<branch>" >&2
   exit 1
 fi
 

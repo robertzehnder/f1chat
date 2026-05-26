@@ -1,0 +1,53 @@
+# .loop-rules/approval-policy.yaml
+#
+# Dispatcher-enforced approval policy. The slice_* wrapper scripts (under
+# .loop/tools/) call lib/policy_check.sh with the proposed change; this file
+# is the policy source.
+#
+# Decision values: pass | require_approval | forbidden
+# Precedence: forbidden > require_approval > pass
+#
+# The model's optional `requires_approval: true` annotation also queues the
+# action even if no rule fires here — see §4.2.2.
+
+require_approval:
+  # File paths the proposed patch touches → matched against `git diff --name-only` for the patch.
+  paths:
+    - "sql/migrations/**"
+    - ".env*"
+    - "infra/**"
+    - "web/src/lib/db/**"
+    - ".loop-packs.yaml"
+
+  # Patch content patterns (matched against the patch hunks).
+  patch_patterns:
+    - "DROP\\s+TABLE"
+    - "TRUNCATE"
+    - "DELETE\\s+FROM"
+    - "ALTER\\s+TABLE.*DROP"
+    - "rm\\s+-rf"
+    - "force-with-lease|force\\s*$"
+
+  # Shell command prefixes (the slice_run_shell wrapper inspects argv).
+  shell_prefixes:
+    - "rm -rf"
+    - "sudo"
+    - "git push"
+    - "git reset --hard"
+    - "git rebase"
+    - "npm publish"
+    - "DROP "
+
+# Operations always blocked outright (not even queueable; tool returns an error).
+# Anything that would let the agent mutate its own enforcement boundary lives here.
+forbidden:
+  paths:
+    - ".loop/**"
+    - ".loop-rules/**"
+    - ".loop-config.yaml"
+    - ".loop-state/**"
+  patterns:
+    - "git push.*--force[^-]"
+    - "rm -rf /"
+    - "rm -rf \\.git"
+    - "rm -rf \\.loop"

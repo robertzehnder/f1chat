@@ -1,0 +1,32 @@
+# .loop-packs.yaml
+#
+# Named bundles of (role → model). Selected at runtime via `LOOP_PACK=<name>`.
+# Roles: planner, implementer, auditor, summarizer.
+#
+# Fallback-on-unset: missing roles fall back to `planner` (Plandex GetCoder()
+# pattern). See scripts/loop/lib/pack_resolver.sh.
+#
+# Provider must be one of: anthropic | openai.
+# Implementer role must be `anthropic` — Codex CLI cannot restrict the tool
+# surface to slice_* wrappers (see §4.1.2 enforcement design).
+
+packs:
+  nightly-cost-optimized:
+    planner:     { provider: anthropic, model: claude-sonnet-4-6 }
+    implementer: { provider: anthropic, model: claude-sonnet-4-6 }
+    auditor:     { provider: openai,    model: gpt-5-codex }
+    summarizer:  { provider: anthropic, model: claude-haiku-4-5 }
+
+  premium-quality:
+    planner:     { provider: anthropic, model: claude-opus-4-7 }
+    implementer: { provider: anthropic, model: claude-opus-4-7 }
+    auditor:     { provider: openai,    model: gpt-5-codex }
+    summarizer:  { provider: anthropic, model: claude-sonnet-4-6 }
+
+  daytime-debug:
+    planner:     { provider: anthropic, model: claude-sonnet-4-6 }
+    implementer: { provider: anthropic, model: claude-sonnet-4-6 }
+    auditor:     { provider: anthropic, model: claude-sonnet-4-6 }
+    summarizer:  { provider: anthropic, model: claude-haiku-4-5 }
+
+default_pack: nightly-cost-optimized

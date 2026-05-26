@@ -37,7 +37,9 @@ while IFS= read -r sid; do
   approval=$(read_field "$f" user_approval_required)
 
   case "$status" in
-    done|"")
+    done|""|awaiting_human_review|awaiting_rebase|awaiting_rebase_audit)
+      # awaiting_human_review (§B.2): waiting on loop_review.sh --approve|--reject
+      # awaiting_rebase / awaiting_rebase_audit (§A.1): waiting on human triage
       continue
       ;;
     pending_plan_audit)

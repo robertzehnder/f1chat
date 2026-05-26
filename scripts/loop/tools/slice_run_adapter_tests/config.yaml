@@ -1,0 +1,5 @@
+tools:
+  slice_run_adapter_tests:
+    signature: "slice_run_adapter_tests <slice-id>"
+    docstring: "Run mapInsight adapter smoke tests in the proposal worktree."
+    arity: 1

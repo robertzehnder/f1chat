@@ -33,13 +33,22 @@ is_valid_terminal_transition() {
     impl)
       [[ "$before" == "pending" || "$before" == "revising" ]] || return 1
       case "$after" in
-        awaiting_audit|blocked) return 0 ;;
+        awaiting_audit|blocked|awaiting_human_review) return 0 ;;
         *) return 1 ;;
       esac ;;
     impl_audit)
       [[ "$before" == "awaiting_audit" ]] || return 1
       case "$after" in
-        ready_to_merge|revising|blocked) return 0 ;;
+        ready_to_merge|revising|blocked|awaiting_human_review) return 0 ;;
+        *) return 1 ;;
+      esac ;;
+    release_approval)
+      # §B.2 — loop_review.sh --approve or --reject. The "before" status is
+      # awaiting_human_review. The "after" status comes from the slice's
+      # status_before_block (--approve) or is set to blocked (--reject).
+      [[ "$before" == "awaiting_human_review" ]] || return 1
+      case "$after" in
+        pending|revising|awaiting_audit|ready_to_merge|blocked) return 0 ;;
         *) return 1 ;;
       esac ;;
     merger)

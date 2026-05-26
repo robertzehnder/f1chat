@@ -1,0 +1,5 @@
+tools:
+  slice_propose_change:
+    signature: "slice_propose_change <slice-id> <patch-file>"
+    docstring: "Apply a unified diff to the active slice's proposal worktree. Writes are confined to the proposal branch and cannot touch integration."
+    arity: 2

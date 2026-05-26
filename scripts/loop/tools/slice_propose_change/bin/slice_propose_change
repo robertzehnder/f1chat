@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# slice_propose_change <slice-id> <patch-file>
+# Apply a unified diff inside the proposal worktree. Calls §B.2 policy_check
+# (if present) before applying; refuses if the patch hits a `forbidden` rule.
+set -euo pipefail
+[[ $# -eq 2 ]] || { echo "ERROR: expected 2 args, got $#" >&2; exit 2; }
+slice_id="$1"
+patch_file="$2"
+: "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE not set}"
+[[ -f "$patch_file" ]] || { echo "ERROR: patch file not found: $patch_file" >&2; exit 2; }
+
+# §B.2 hook: if the policy controller exists, run it against the patch.
+policy="$LOOP_MAIN_WORKTREE/scripts/loop/lib/policy_check.sh"
+if [[ -x "$policy" ]]; then
+  case "$("$policy" patch "$slice_id" "$patch_file")" in
+    pass)                    ;;
+    forbidden:*)             echo "POLICY: ${REPLY#forbidden:}" >&2; exit 3 ;;
+    require_approval:*)
+      # The policy controller writes the pending_approvals/ entry itself.
+      echo "POLICY: queued for human review (${REPLY#require_approval:})" >&2
+      exit 0   # success-but-queued — agent should treat the slice as awaiting_human_review
+      ;;
+  esac
+fi
+
+# Validate cwd is a proposal worktree (basic guard — branch name starts with slice/).
+current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+case "$current_branch" in
+  slice/${slice_id}*) ;;
+  *) echo "ERROR: cwd is not on a slice/${slice_id} branch (HEAD=$current_branch)" >&2; exit 4 ;;
+esac
+
+# Apply with strict mode — fail on any rejected hunk.
+git apply --check "$patch_file" || { echo "ERROR: patch did not apply cleanly (check phase)" >&2; exit 5; }
+git apply "$patch_file"
+echo "ok: applied $patch_file to $current_branch"

@@ -23,6 +23,37 @@ source "$LOOP_MAIN_WORKTREE/scripts/loop/worktree_helpers.sh"
 # shellcheck disable=SC1091
 source "$LOOP_MAIN_WORKTREE/scripts/loop/mirror_helper.sh"
 
+# §A.4 — Auditor sandbox mode. Default 'hardened'; flip 'legacy' to revert.
+# Three vars get set by the block below; consumed by run_codex_native /
+# run_claude_fallback / the post-dispatch parser.
+loop_auditor_sandbox="${LOOP_AUDITOR_SANDBOX:-hardened}"
+registry="$LOOP_MAIN_WORKTREE/scripts/loop/lib/tool_registry.sh"
+parser="$LOOP_MAIN_WORKTREE/scripts/loop/lib/parse_and_apply_verdict.py"
+case "$loop_auditor_sandbox" in
+  legacy)
+    codex_sandbox_flag="--sandbox danger-full-access"
+    claude_fallback_allowed_tools="Read,Edit,Write,Bash,Grep,Glob"
+    claude_fallback_disallowed_tools=""
+    claude_fallback_permission_mode="acceptEdits"
+    use_verdict_parser=0
+    ;;
+  hardened)
+    codex_sandbox_flag="--sandbox read-only"
+    if [[ -x "$registry" ]]; then
+      claude_fallback_allowed_tools="$("$registry" bundle_allowed_tools_flag --role=auditor)"
+    else
+      claude_fallback_allowed_tools="Read,Grep,Glob,Bash(git diff:*),Bash(git log:*)"
+    fi
+    claude_fallback_disallowed_tools="Edit,Write,MultiEdit,NotebookEdit,Bash(rm:*),Bash(sudo:*),Bash(git push:*)"
+    claude_fallback_permission_mode="default"
+    use_verdict_parser=1
+    ;;
+  *)
+    echo "ERROR: LOOP_AUDITOR_SANDBOX must be 'hardened' or 'legacy' (got: $loop_auditor_sandbox)" >&2
+    exit 2
+    ;;
+esac
+
 slice_id="${1:?slice_id required}"
 slice_file_main="$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md"
 prompt_file="$LOOP_MAIN_WORKTREE/scripts/loop/prompts/codex_auditor.md"
@@ -101,47 +132,111 @@ trap 'rm -f "$worktree_path_file" "$inline_payload"' EXIT
   } > "$inline_payload"
 )
 
+CAPTURE_FILE="$LOOP_STATE_DIR/.codex_capture_${slice_id}.$$"
+
 run_codex_native() {
-  local capture="$LOOP_STATE_DIR/.codex_capture_${slice_id}.$$"
   local rc=0
   (
     cd "$slice_worktree"
     {
       cat "$prompt_file"
+      # §A.4: under hardened mode, the auditor must emit a structured verdict
+      # block on stdout instead of editing the slice file directly. Append
+      # the protocol description to the prompt.
+      if [[ "$use_verdict_parser" == "1" ]]; then
+        cat <<'VERDICT_PROTOCOL'
+
+---
+
+## Verdict emission protocol (§A.4 hardened mode)
+
+You CANNOT edit files in this sandbox (`--sandbox read-only`). The dispatcher
+writes the verdict for you. End your response with EXACTLY this block, on its
+own lines, with no surrounding code fences or quoting:
+
+===VERDICT-START===
+kind: <pass|revise|reject>
+===BODY===
+<your verdict markdown body — multi-line, no escaping needed, any character
+allowed except the literal line `===VERDICT-END===`>
+===VERDICT-END===
+
+The dispatcher parses this block; the body becomes the new "## Audit verdict"
+section verbatim; kind controls the status/owner transition
+(pass→ready_to_merge/user; revise→revising/claude; reject→blocked/user).
+Do NOT push.
+VERDICT_PROTOCOL
+      fi
       echo
       echo "---"
       echo
       cat "$inline_payload"
     } | codex exec \
-        --sandbox danger-full-access \
+        $codex_sandbox_flag \
         --ignore-user-config \
-        -c "model=\"${CODEX_AUDIT_MODEL:-gpt-5.4}\"" \
+        -c "model=\"${LOOP_MODEL_AUDITOR:-${CODEX_AUDIT_MODEL:-gpt-5.4}}\"" \
         -c "model_reasoning_effort=\"${CODEX_AUDIT_REASONING:-medium}\"" \
         -c model_reasoning_summary=none \
         -c model_verbosity=low \
         -o "$LOOP_STATE_DIR/.last_msg_${slice_id}.txt" \
-        - 2>&1 | tee "$capture"
+        - 2>&1 | tee "$CAPTURE_FILE"
   ) || rc=$?
   # Detect Codex usage-limit errors: write cooldown sentinel + return rc=42
   # so the runner can pause cleanly without burning more retries.
-  if [[ -f "$capture" ]] && \
-     "$LOOP_MAIN_WORKTREE/scripts/loop/codex_usage_limit.sh" "$capture" 2>/dev/null; then
-    rm -f "$capture"
+  if [[ -f "$CAPTURE_FILE" ]] && \
+     "$LOOP_MAIN_WORKTREE/scripts/loop/codex_usage_limit.sh" "$CAPTURE_FILE" 2>/dev/null; then
+    rm -f "$CAPTURE_FILE"
     return 42
   fi
-  rm -f "$capture"
+  # NOTE: CAPTURE_FILE is preserved here so the post-dispatch parser can read it.
+  # Cleanup happens at the bottom of the script after the parser runs.
   return "$rc"
 }
 
 run_claude_fallback() {
   (
     cd "$slice_worktree"
-    claude --print \
+    local claude_args=(
+      --print
       --append-system-prompt "$(cat "$prompt_file")
 ROLEPLAY (adversarial self-audit, Tier B): You did NOT implement this slice. You are the impartial auditor. Be ruthlessly skeptical. Assume the implementer cut corners — find them. Re-run EVERY gate command yourself; never trust 'Slice-completion note' claims without executing them. The diff in the prompt is your scope-check evidence — if any file outside 'Changed files expected' is modified, that is REJECT for scope creep regardless of substantive correctness.
-Cold context discipline: do NOT use any inherited conversation context. Audit the slice from scratch as if seeing it for the first time." \
-      --permission-mode acceptEdits \
-      --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
+Cold context discipline: do NOT use any inherited conversation context. Audit the slice from scratch as if seeing it for the first time."
+      --permission-mode "$claude_fallback_permission_mode"
+      --allowed-tools "$claude_fallback_allowed_tools"
+    )
+    [[ -n "$claude_fallback_disallowed_tools" ]] && claude_args+=(--disallowed-tools "$claude_fallback_disallowed_tools")
+
+    # §A.4 hardened-mode prompt vs legacy.
+    if [[ "$use_verdict_parser" == "1" ]]; then
+      claude "${claude_args[@]}" 2>&1 <<EOF | tee "$CAPTURE_FILE"
+Audit slice diagnostic/slices/${slice_id}.md.
+
+You are in a dedicated worktree at: ${slice_worktree}
+You are ALREADY on the proposal branch — do NOT switch branches. You CANNOT
+write files; the dispatcher writes the verdict for you.
+
+Steps:
+1. Run every command in the slice's "Gate commands" block; record exit codes.
+2. git diff --name-only integration/perf-roadmap...HEAD must match "Changed files expected".
+3. Run each "Acceptance criteria" check.
+4. End your response with EXACTLY this block, on its own lines, with no
+   surrounding code fences or quoting:
+
+===VERDICT-START===
+kind: <pass|revise|reject>
+===BODY===
+<your verdict markdown body — multi-line, no escaping needed, any character
+allowed except the literal line \`===VERDICT-END===\`>
+===VERDICT-END===
+
+The dispatcher parses this block; the body becomes the new "## Audit verdict"
+section verbatim; kind controls the status/owner transition
+(pass→ready_to_merge/user; revise→revising/claude; reject→blocked/user).
+Do NOT push. Note in the body: "AUDITED IN CLAUDE-FALLBACK MODE (Codex CLI unavailable)".
+EOF
+    else
+      # Legacy Edit-based prompt (LOOP_AUDITOR_SANDBOX=legacy).
+      claude "${claude_args[@]}" 2>&1 <<EOF | tee "$CAPTURE_FILE"
 Audit slice diagnostic/slices/${slice_id}.md.
 
 You are in a dedicated worktree at: ${slice_worktree}
@@ -163,6 +258,7 @@ Steps:
 DO NOT mirror to integration — the dispatcher does that.
 DO NOT touch any other worktree on disk.
 EOF
+    fi
   )
 }
 
@@ -220,6 +316,28 @@ else
   echo "neither codex nor claude CLI available" >&2
   exit 3
 fi
+
+# §A.4 — Runner-side verdict parsing under hardened mode. The auditor's stdout
+# was captured to $CAPTURE_FILE (preserved through dispatch; closes v2.9 MEDIUM).
+# Parser writes the slice file + commits. On parse failure, slice stays in
+# awaiting_audit; capture is archived for triage.
+if [[ "$use_verdict_parser" == "1" ]] && [[ "$agent_rc" -eq 0 ]] && [[ -f "$CAPTURE_FILE" ]]; then
+  parser_log="$LOOP_STATE_DIR/audit_parse_failures"
+  mkdir -p "$parser_log"
+  if ! python3 "$parser" "$CAPTURE_FILE" "$slice_id" "$slice_worktree" 2>>"$LOG"; then
+    parse_archive="$parser_log/${slice_id}-$(date +%s).txt"
+    cp "$CAPTURE_FILE" "$parse_archive"
+    echo "[$(date -Iseconds)] dispatch_codex $slice_id audit_parse_failure; capture archived to $parse_archive; slice stays awaiting_audit" >> "$LOG"
+  fi
+fi
+
+# §C.3 — archive trajectory before cleanup.
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/lib/trajectory.sh"
+record_trajectory "$slice_id" audit "$CAPTURE_FILE" >/dev/null 2>&1 || true
+
+# Capture cleanup happens NOW — after the parser AND the trajectory archive.
+rm -f "$CAPTURE_FILE"
 
 # Cost telemetry (round-12 Item 9). Always run, even on rc=42, so the ledger
 # carries a row for every dispatch attempt.

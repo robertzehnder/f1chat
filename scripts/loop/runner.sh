@@ -184,6 +184,15 @@ source "$LOOP_DIR/slice_helpers.sh"
 # shellcheck disable=SC1091
 source "$LOOP_DIR/state_transitions.sh"
 
+# §A.3 — Resolve active model pack → export LOOP_MODEL_PLANNER/IMPLEMENTER/AUDITOR/SUMMARIZER.
+# Dispatchers read these; falls back to legacy LOOP_CLAUDE_IMPL_MODEL / CODEX_AUDIT_MODEL if a
+# role is unresolvable. Silent on success, vocal on a misconfigured pack.
+if [[ -x "$LOOP_DIR/lib/pack_resolver.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$LOOP_DIR/lib/pack_resolver.sh"
+  loop_export_pack_models || echo "[runner] WARN: pack_resolver returned non-zero; dispatchers will use legacy env vars" >&2
+fi
+
 echo "$$" > "$PIDFILE"
 
 # Spawn the watchdog sidecar (deterministic auto-heal for the failure

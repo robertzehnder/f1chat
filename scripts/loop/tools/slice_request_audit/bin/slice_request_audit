@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# slice_request_audit — flip status to awaiting_audit + commit on proposal branch.
+set -euo pipefail
+[[ $# -eq 1 ]] || { echo "ERROR: expected 1 arg, got $#" >&2; exit 2; }
+slice_id="$1"
+: "${LOOP_MAIN_WORKTREE:?LOOP_MAIN_WORKTREE not set}"
+
+# WORKING_DIR must be the proposal worktree so the helper edits the right file.
+export WORKING_DIR="$(pwd)"
+# shellcheck source=../../../slice_helpers.sh
+source "$LOOP_MAIN_WORKTREE/scripts/loop/slice_helpers.sh"
+flip_slice_status "$slice_id" awaiting_audit codex
+git add "diagnostic/slices/${slice_id}.md"
+git commit -m "impl: ${slice_id} → awaiting_audit [slice:${slice_id}][awaiting-audit]"
+echo "ok: $slice_id status=awaiting_audit owner=codex"

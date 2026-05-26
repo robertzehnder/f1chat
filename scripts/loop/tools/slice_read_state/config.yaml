@@ -1,0 +1,5 @@
+tools:
+  slice_read_state:
+    signature: "slice_read_state <slice-id>"
+    docstring: "Print the slice file frontmatter + Steps + Acceptance criteria sections to stdout. Read-only."
+    arity: 1

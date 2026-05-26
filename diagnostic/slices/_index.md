@@ -141,3 +141,19 @@ Baseline (gates Phase 1):
 - `12-read-replica-pool-split`
 - `12-env-assertions`
 - `12-migration-runner-adoption`
+
+## Phase 22 — F1 Visualizations coverage (combined plan)
+
+Source roadmap: [f1_visualizations_combined_plan_2026-05-25.md](../f1_visualizations_combined_plan_2026-05-25.md)
+
+- `viz-01-screenshot-manifest`
+- `viz-02-coverage-matrix`
+- `viz-03a-discriminated-chart-spec`
+- `viz-03b-top-level-card-slots`
+- `viz-04-visualization-contracts`
+- `viz-05-detector-tolerance-pass`
+- `viz-06-synthesis-slot-coverage`
+- `viz-07a-parity-harness-dev-route`
+- `viz-07b-playwright-visual-baselines`
+- `viz-08-live-response-fixtures`
+- `viz-09-card-shell-parity`

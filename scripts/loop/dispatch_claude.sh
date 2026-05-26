@@ -23,6 +23,15 @@ source "$LOOP_MAIN_WORKTREE/scripts/loop/worktree_helpers.sh"
 # shellcheck disable=SC1091
 source "$LOOP_MAIN_WORKTREE/scripts/loop/mirror_helper.sh"
 
+# §A.2 tool surface — registry-emitted allowlist + docstrings. Default ON; flip
+# LOOP_TOOL_SURFACE=permissive to disable (§12 rollback).
+loop_tool_surface="${LOOP_TOOL_SURFACE:-restricted}"
+registry="$LOOP_MAIN_WORKTREE/scripts/loop/lib/tool_registry.sh"
+
+# §C.3 trajectory.
+# shellcheck disable=SC1091
+source "$LOOP_MAIN_WORKTREE/scripts/loop/lib/trajectory.sh"
+
 slice_id="${1:?slice_id required}"
 slice_file_main="$LOOP_MAIN_WORKTREE/diagnostic/slices/${slice_id}.md"
 prompt_file="$LOOP_MAIN_WORKTREE/scripts/loop/prompts/claude_implementer.md"
@@ -55,39 +64,62 @@ slice_worktree=$(cat "$worktree_path_file")
 # Run the agent in the slice worktree via subshell. Note: the working dir
 # must be the slice worktree so claude sees the right git context.
 claude_result_capture="$LOOP_STATE_DIR/.claude_result_impl_${slice_id}.json"
+
+# §A.2 — pick allowlist + docstrings via the registry, or fall back to permissive.
+if [[ "$loop_tool_surface" == "restricted" ]] && [[ -x "$registry" ]]; then
+  allowed_tools="$("$registry" bundle_allowed_tools_flag --role=implementer)"
+  disallowed_tools="Edit,Write,MultiEdit,NotebookEdit,Bash(rm:*),Bash(sudo:*),Bash(git push:*),Bash(npm publish:*)"
+  tool_docs="$("$registry" bundle_docstrings --role=implementer)"
+else
+  allowed_tools="Read,Edit,Write,Bash,Grep,Glob"
+  disallowed_tools=""
+  tool_docs="(legacy mode: full Claude Code tool surface available; no wrapper docs)"
+fi
+
 (
   cd "$slice_worktree"
-  claude --print \
-    --model "${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}" \
-    --output-format json \
-    --append-system-prompt "$(cat "$prompt_file")" \
-    --permission-mode acceptEdits \
-    --allowed-tools "Read,Edit,Write,Bash,Grep,Glob" <<EOF
+  claude_args=(
+    --print
+    --model "${LOOP_MODEL_IMPLEMENTER:-${LOOP_CLAUDE_IMPL_MODEL:-claude-opus-4-7}}"
+    --output-format json
+    --append-system-prompt "$(cat "$prompt_file")"
+    --permission-mode acceptEdits
+    --allowed-tools "$allowed_tools"
+  )
+  [[ -n "$disallowed_tools" ]] && claude_args+=(--disallowed-tools "$disallowed_tools")
+  claude "${claude_args[@]}" <<EOF
 You are the Claude implementation agent in the OpenF1 perf-roadmap autonomous loop.
 
 You are running in a dedicated git worktree at: ${slice_worktree}
 The slice you are working on is: diagnostic/slices/${slice_id}.md
 
-Read its frontmatter and "Steps" section. Execute the slice end-to-end:
+Your available tools (wrappers under .loop/tools/ — invoke via Bash):
+
+${tool_docs}
+
+Read the slice file's frontmatter and "Steps" section first. Then execute end-to-end:
 
 1. Verify the frontmatter shows status=pending or status=revising; if not, exit immediately.
-2. Update the frontmatter: status=in_progress, owner=claude, updated=$(date -Iseconds).
-3. You are ALREADY on branch slice/${slice_id} in this worktree — do NOT switch branches.
+2. Use slice_read_state to inspect frontmatter + Steps + Acceptance criteria.
+3. You are ALREADY on the proposal branch in this worktree — do NOT switch branches.
 4. Execute every numbered step in the slice's "Steps" section.
-5. Run every command in the slice's "Gate commands" block. Record exit codes.
-6. If all gates exit zero: fill in "Slice-completion note" with branch name, commit hashes, decisions, and self-check results. Set frontmatter status=awaiting_audit, owner=codex.
-7. Commit your work with a message tagged: [slice:${slice_id}][awaiting-audit]
-8. Push branch slice/${slice_id} to origin.
+5. To apply code changes, prepare a unified diff file and call slice_propose_change <slice-id> <patch-file>. The policy check runs automatically.
+6. Run gate commands via slice_run_typecheck / slice_run_adapter_tests.
+7. If all gates pass: fill in "Slice-completion note" by editing the slice file via slice_propose_change (the patch should add the note section); then call slice_request_audit <slice-id> to flip status to awaiting_audit + commit on this branch.
+8. Do NOT push — pushes happen at merge time via the merger's ff-only flow.
 
 CRITICAL CONSTRAINTS:
-- Do NOT modify any file not listed in "Changed files expected".
+- Do NOT modify any file not listed in "Changed files expected" (slice_propose_change's policy check enforces this).
 - Do NOT advance to a different slice — that is the runner's job.
 - Do NOT push to integration/perf-roadmap or main.
 - Do NOT touch ../<other-slice-worktrees> — you only own this worktree.
-- If gates fail and you cannot fix them within scope, set status=blocked, owner=user, and document why.
+- If gates fail and you cannot fix them within scope, document why in the slice file via slice_propose_change; the runner's classifier will route to repair or block.
 EOF
 ) > "$claude_result_capture"
 agent_rc=$?
+
+# §C.3 — record this dispatch's trajectory artifact for triage.
+record_trajectory "$slice_id" impl "$claude_result_capture" >/dev/null 2>&1 || true
 
 # 3. Mirror the slice file from slice branch back to integration under lock.
 #    Expected terminal states for impl dispatch: awaiting_audit | blocked.
