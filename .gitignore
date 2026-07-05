@@ -80,4 +80,4 @@ data/ingest/
 
 # Local build artifacts / downloads (not source)
 web/test-results/
-diagnostic/*.zip
+diagnostic/**/*.zip
