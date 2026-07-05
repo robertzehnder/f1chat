@@ -254,6 +254,16 @@
       "class": "gated",
       "truthTier": "hard-truth",
       "note": "the ten fastest laps overall in a session"
+    },
+    "driver_pair_corner_delta": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "per-corner entry/apex/exit delta from each driver's best-apex lap"
+    },
+    "session_type_share": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "count of sessions by session_type for a season"
     }
   },
   "detectors": {
@@ -348,6 +358,10 @@
     "track_speed_map": {
       "class": "gated",
       "note": "builds track_speed_map spec; has fixtures in registry.ts"
+    },
+    "corner_delta_grid": {
+      "class": "gated",
+      "note": "builds corner_delta_grid spec; keyed on corner_delta_kind marker column"
     }
   },
   "generationSources": {
@@ -640,16 +654,32 @@
     "track-speed-map.tsx -> /api/track-outline": {
       "class": "required",
       "note": "outline===null renders 'No location telemetry'; no chart without fetch"
+    },
+    "corner-delta-grid.tsx -> /api/track-outline": {
+      "class": "degraded-fallback",
+      "note": "A5 corner nodes; tiles + diverging ladder render without outline"
+    },
+    "corner-mini-map.tsx -> /api/track-outline": {
+      "class": "degraded-fallback",
+      "note": "A1 corner-on-map; returns null when outline/corner unresolved, card keeps metrics"
+    },
+    "status-grid.tsx -> /api/track-outline": {
+      "class": "degraded-fallback",
+      "note": "A3 venue tiles fetch per-circuit outline; fall back to status dot when absent"
+    },
+    "telemetry-overlay-chart.tsx -> /api/track-outline": {
+      "class": "degraded-fallback",
+      "note": "A2 biggest-delta minimap; overlay traces render without it"
+    },
+    "timeline-chart.tsx -> /api/track-outline": {
+      "class": "degraded-fallback",
+      "note": "A4 on-track incident pin; lanes render without it"
     }
   },
   "rendererChartTypes": {
     "degradation_curve": {
       "class": "pixel-gated",
       "note": "rendered by ChartRenderer branch"
-    },
-    "delta_comparison": {
-      "class": "excluded",
-      "note": "dead code — nothing in the live pipeline emits it (index.tsx)"
     },
     "donut": {
       "class": "pixel-gated",
@@ -723,10 +753,6 @@
       "class": "pixel-gated",
       "note": "rendered by ChartRenderer branch"
     },
-    "timeline": {
-      "class": "pixel-gated",
-      "note": "rendered by ChartRenderer branch"
-    },
     "track_corner_delta": {
       "class": "pixel-gated",
       "note": "rendered by ChartRenderer branch"
@@ -738,16 +764,16 @@
     "track_speed_map": {
       "class": "pixel-gated",
       "note": "rendered by ChartRenderer branch"
+    },
+    "corner_delta_grid": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
     }
   },
   "rendererBranches": {
     "degradation_curve": {
       "class": "pixel-gated",
       "note": "ChartRenderer case -> component"
-    },
-    "delta_comparison": {
-      "class": "excluded",
-      "note": "dead branch — no live emitter"
     },
     "donut": {
       "class": "pixel-gated",
@@ -817,10 +843,6 @@
       "class": "pixel-gated",
       "note": "ChartRenderer case -> component"
     },
-    "timeline": {
-      "class": "pixel-gated",
-      "note": "ChartRenderer case -> component"
-    },
     "track_corner_delta": {
       "class": "pixel-gated",
       "note": "ChartRenderer case -> component"
@@ -830,6 +852,10 @@
       "note": "ChartRenderer case -> component"
     },
     "track_speed_map": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "corner_delta_grid": {
       "class": "pixel-gated",
       "note": "ChartRenderer case -> component"
     }
