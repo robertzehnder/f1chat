@@ -75,3 +75,9 @@ fastf1_openf1_audit_toolkit/reports/
 
 # Phase 13 ingest CLI workspace
 data/ingest/
+.loop-state/
+.loop-worktrees/
+
+# Local build artifacts / downloads (not source)
+web/test-results/
+diagnostic/*.zip
