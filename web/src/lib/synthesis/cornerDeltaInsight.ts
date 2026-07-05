@@ -72,6 +72,15 @@ export function buildCornerDeltaInsight(rows: Row[] | undefined): CornerDeltaIns
   const year = num(rows[0].year);
   const venueYear = [venue, year !== null ? String(year) : null].filter(Boolean).join(" ");
 
+  // Coverage: how many of the circuit's corners actually had a fully-sampled
+  // lap for BOTH drivers (the returned rows) vs total corners with any
+  // telemetry this session. Surfaced so a thin "2 of 16" result reads honestly.
+  const totalCorners = num(rows[0].total_corners);
+  const partialCoverage = totalCorners !== null && totalCorners > apexCorners.length;
+  const cornersLabel = partialCoverage
+    ? `${apexCorners.length} of ${totalCorners} corners`
+    : `${apexCorners.length} corners`;
+
   // A5 P0: no yes/no verdict — route the summary into the free-form
   // at_a_glance line rendered above the metric tiles.
   const atAGlance =
@@ -96,22 +105,25 @@ export function buildCornerDeltaInsight(rows: Row[] | undefined): CornerDeltaIns
     `Apex-speed corners won: ${aLast} ${aWon.length}, ${bLast} ${bWon.length}${even ? `, even ${even}` : ""} (of ${apexCorners.length})`,
     `Average apex edge: ${overallLeader} by ${Math.abs(meanApex).toFixed(1)} km/h`,
     `Biggest swing: ${biggest.label}, ${biggestLeader} by ${Math.abs(biggest.apex).toFixed(1)} km/h`,
-    `Deltas are each driver's BEST phase speed per corner across their valid laps (max entry, min apex, max exit) — telemetry corner samples, not continuous traces`
+    ...(partialCoverage
+      ? [`Coverage: ${apexCorners.length} of ${totalCorners} corners had a fully-sampled lap for both drivers`]
+      : []),
+    `Entry/apex/exit come from each driver's single highest-apex-speed lap at that corner — a telemetry corner-sample approximation, not continuous traces`
   ];
 
   const answer =
-    `Across ${apexCorners.length} corners at ${venueYear || "this race"}, ` +
+    `Across ${cornersLabel} at ${venueYear || "this race"}, ` +
     `${overallLeader} carried more apex speed at ${leaderWonCount} of them ` +
     `(${Math.abs(meanApex).toFixed(1)} km/h average edge over ${overallTrailer}), ` +
     `with the biggest gap at ${biggest.label} (${biggestLeader} by ${Math.abs(biggest.apex).toFixed(1)} km/h). ` +
     `The map sizes each corner node by the apex-speed gap and colours it by the faster driver; the ladder ranks corners by that gap. ` +
-    `Speeds are best-per-phase across each driver's valid laps from telemetry corner samples.`;
+    `Entry/apex/exit are read from each driver's single highest-apex-speed lap at each corner — a telemetry corner-sample approximation.`;
 
   return {
     answer,
     insight: {
       title: `Corner-by-corner — ${aLast} vs ${bLast}${venueYear ? ` · ${venueYear}` : ""}`,
-      subtitle: [venueYear || venue, str(rows[0].session_name) ?? "Race", `${apexCorners.length} corners`].filter(Boolean).join(" · "),
+      subtitle: [venueYear || venue, str(rows[0].session_name) ?? "Race", cornersLabel].filter(Boolean).join(" · "),
       at_a_glance: atAGlance,
       metrics,
       key_takeaways: takeaways.slice(0, 6),

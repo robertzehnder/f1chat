@@ -2,22 +2,29 @@ import type { DeterministicSqlTemplate } from "./types";
 
 /**
  * Driver-pair ALL-CORNER entry/apex/exit delta card (A5). For a resolved
- * pair, one row per corner in analytics.corner_analysis carrying each
- * driver's BEST phase speed across their valid laps (max entry, min apex,
- * max exit), the three signed phase deltas (A - B), and the corner window
- * (zone_f0/zone_f1) for the track-map nodes. The marker column
- * `corner_delta_kind` routes the rows to the corner_delta_grid detector
- * (priority 108) rather than the generic grouped_bar / brake-zone detectors.
+ * pair, one row per corner in analytics.corner_analysis. That matview is
+ * per-(session, driver, LAP, corner): each row is one lap's entry / apex /
+ * exit speed at one corner.
  *
- * Corner-phase counterpart to buildSectorDominanceTemplate: that 3-row
- * S1/S2/S3 card explicitly rejects entry/apex/exit and named-turn phrasings
- * and lets them fall to the LLM. This template catches exactly those.
+ * Representative lap: for each (driver, corner) we take the SINGLE lap where
+ * the driver carried the highest apex speed (their best cornering attempt),
+ * and read entry / apex / exit all from THAT one lap. This keeps the three
+ * phase speeds internally consistent — earlier the template aggregated each
+ * phase independently (MAX entry, MIN apex, MAX exit) across ALL laps, so the
+ * apex figure was actually each driver's WORST apex, mixed with best-entry /
+ * best-exit from other laps, producing implausible deltas.
  *
- * Best-per-phase across laps (not lap 1 only, unlike brakeZones.ts). Apex
- * uses MIN (slowest point); entry/exit use MAX (peak carried in/out).
+ * Only laps that sampled all three sub-zones (entry, apex, exit all non-null)
+ * are eligible, so no phase is fabricated and the delta detector never has to
+ * coerce a missing value to zero. This is a telemetry corner-sample
+ * approximation, not a continuous trace.
+ *
+ * The marker column `corner_delta_kind` routes the rows to the
+ * corner_delta_grid detector (priority 108). `total_corners` (distinct corners
+ * with telemetry this session) lets the card caption "N of M corners".
  *
  * Keep the SQL free of the statement separator and the banned keywords
- * scanned by src/lib/querySafety.ts.
+ * scanned by src/lib/querySafety.ts (no semicolon anywhere, comments included).
  */
 
 type BuildCornerDeltaTemplateInput = {
@@ -41,21 +48,48 @@ export function buildCornerDeltaTemplate(
   if (!COMPARE_TRIGGER.test(lower) && !TURN_LIST.test(lower)) return null;
 
   const sql = `
-    WITH best AS (
+    WITH per_lap AS (
+      -- One row per (driver, corner, lap), keeping only laps that fully
+      -- sampled the corner (entry, apex and exit all present) so no phase is
+      -- fabricated downstream.
       SELECT
         corner_number,
         corner_label,
         driver_number,
-        MAX(driver_name) AS driver_name,
-        MIN(start_normalized) AS zone_f0,
-        MAX(end_normalized) AS zone_f1,
-        MAX(entry_speed_kph) AS entry_kph,
-        MIN(apex_min_speed_kph) AS apex_kph,
-        MAX(exit_speed_kph) AS exit_kph
+        driver_name,
+        start_normalized,
+        end_normalized,
+        entry_speed_kph,
+        apex_min_speed_kph,
+        exit_speed_kph,
+        sample_count
       FROM analytics.corner_analysis
       WHERE session_key = ${targetSession}
         AND driver_number IN (${driverA}, ${driverB})
-      GROUP BY corner_number, corner_label, driver_number
+        AND entry_speed_kph IS NOT NULL
+        AND apex_min_speed_kph IS NOT NULL
+        AND exit_speed_kph IS NOT NULL
+    ),
+    best AS (
+      -- The representative lap per (driver, corner): the highest apex speed
+      -- (best cornering attempt). Tie-break toward the better-sampled lap.
+      SELECT DISTINCT ON (driver_number, corner_number)
+        corner_number,
+        corner_label,
+        driver_number,
+        driver_name,
+        start_normalized AS zone_f0,
+        end_normalized   AS zone_f1,
+        entry_speed_kph  AS entry_kph,
+        apex_min_speed_kph AS apex_kph,
+        exit_speed_kph   AS exit_kph
+      FROM per_lap
+      ORDER BY driver_number, corner_number, apex_min_speed_kph DESC, sample_count DESC
+    ),
+    all_corners AS (
+      SELECT COUNT(DISTINCT corner_number) AS total_corners
+      FROM analytics.corner_analysis
+      WHERE session_key = ${targetSession}
     ),
     a AS (
       SELECT * FROM best WHERE driver_number = ${driverA}
@@ -79,6 +113,7 @@ export function buildCornerDeltaTemplate(
       ${driverB} AS b_driver_number,
       (SELECT MAX(driver_name) FROM a) AS a_driver_name,
       (SELECT MAX(driver_name) FROM b) AS b_driver_name,
+      (SELECT total_corners FROM all_corners) AS total_corners,
       ROUND(a.entry_kph::numeric, 1) AS a_entry_kph,
       ROUND(b.entry_kph::numeric, 1) AS b_entry_kph,
       ROUND(a.apex_kph::numeric, 1) AS a_apex_kph,
@@ -95,7 +130,6 @@ export function buildCornerDeltaTemplate(
       (SELECT session_name FROM sess) AS session_name
     FROM a
     JOIN b ON b.corner_number = a.corner_number
-    WHERE a.apex_kph IS NOT NULL AND b.apex_kph IS NOT NULL
     ORDER BY a.corner_number
   `;
 
