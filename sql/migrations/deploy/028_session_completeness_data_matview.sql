@@ -390,10 +390,15 @@ BEGIN
   END IF;
 END $$;
 
--- Re-run dependent view bodies verbatim from 005 so a CASCADE drop above
--- on the audited-Neon path doesn't leave them missing. CREATE OR REPLACE
--- is a no-op on the fresh-branch path where they were never dropped.
--- Bodies sourced from sql/migrations/deploy/005_helper_tables.sql.
+-- Rebuild the three dependent views. On the audited-Neon ('m') path they were
+-- already CASCADE-dropped above. On the FRESH-branch ('v') path they still exist
+-- from 005 with a DIFFERENT column shape than the bodies below (028 upgrades
+-- them), so a plain CREATE OR REPLACE fails with "cannot drop columns from view".
+-- Drop them first, in reverse dependency order, so the recreate works on BOTH
+-- paths. Idempotent via IF EXISTS.
+DROP VIEW IF EXISTS core.source_anomaly_tracking;
+DROP VIEW IF EXISTS core.weekend_session_expectation_audit;
+DROP VIEW IF EXISTS core.weekend_session_coverage;
 
 -- weekend_session_coverage (005:702)
 CREATE OR REPLACE VIEW core.weekend_session_coverage AS

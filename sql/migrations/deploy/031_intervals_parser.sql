@@ -35,19 +35,24 @@ AS $$
     -- form takes precedence below).
     CASE
       WHEN input IS NULL THEN NULL::DOUBLE PRECISION
-      WHEN input ~* '\\b\\d+\\s*(L|LAP|LAPS)\\b' THEN NULL::DOUBLE PRECISION
-      WHEN input ~* '^[+\\-]?\\d+(\\.\\d+)?\\s*s?$' THEN
-        REGEXP_REPLACE(input, '[^0-9.\\-]', '', 'g')::DOUBLE PRECISION
+      WHEN input ~* '\y\d+\s*(LAPS|LAP|L)' THEN NULL::DOUBLE PRECISION
+      WHEN input ~* '^[+\-]?\d+(\.\d+)?\s*s?$' THEN
+        REGEXP_REPLACE(input, '[^0-9.-]', '', 'g')::DOUBLE PRECISION
       ELSE NULL::DOUBLE PRECISION
     END AS seconds,
     -- Laps-down: match a leading optional sign, digits, then 'L' or
     -- 'LAP[S]'. Returns the integer laps. Reject if a decimal seconds
-    -- form is present.
+    -- form is present. NOTE: Postgres ARE uses \y for word boundary
+    -- (\b is backspace here); \d/\s are digit/whitespace. Single
+    -- backslashes — these are standard-conforming string literals, so
+    -- doubling them (\\d) matches a literal backslash and never fires.
     CASE
       WHEN input IS NULL THEN NULL::INTEGER
-      WHEN input ~* '\\.\\d+' THEN NULL::INTEGER
-      WHEN input ~* '\\b(\\d+)\\s*(L|LAP|LAPS)\\b' THEN
-        SUBSTRING(input FROM '\\b(\\d+)\\s*(L|LAP|LAPS)\\b')::INTEGER
+      WHEN input ~* '\.\d+' THEN NULL::INTEGER
+      WHEN input ~* '\y\d+\s*(LAPS|LAP|L)' THEN
+        -- SUBSTRING(... FROM pattern) is case-SENSITIVE (unlike ~*), so
+        -- upper-case the input first or lowercase 'laps' would not extract.
+        SUBSTRING(UPPER(input) FROM '\y(\d+)\s*(LAPS|LAP|L)')::INTEGER
       ELSE NULL::INTEGER
     END AS laps_down
 $$;

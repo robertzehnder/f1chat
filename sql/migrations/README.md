@@ -100,6 +100,19 @@ sqitch --chdir sql/migrations revert --to @HEAD^ <target>
 `@HEAD^` resolves to "one before head" in plan order, so this command
 undoes only the most recently deployed change.
 
+> **Rollback GATE — don't trust `@HEAD^` alone.** Reverting only the latest
+> change leaves every other revert script unproven. The chain-integrity gate
+> (`web/scripts/health/check_migration_chain.mjs`) deploys the whole chain to
+> an ephemeral sandbox, then rolls the entire repaired **028→051 segment** back
+> to the last-known-good (`revert --to 027_user_feedback`) and re-applies +
+> verifies it, so every revert in the segment is exercised, not just 051. Run
+> it before shipping any migration change:
+>
+> ```bash
+> node web/scripts/health/check_migration_chain.mjs          # parity + sandbox round-trip
+> node web/scripts/health/check_migration_chain.mjs --parity-only   # filesystem only, no DB
+> ```
+
 ### Revert to a specific change
 
 ```bash
