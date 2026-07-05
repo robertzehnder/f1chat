@@ -1,5 +1,5 @@
 import type { FactContract } from "@/lib/contracts/factContract";
-import { buildSynthesisPrompt } from "@/lib/synthesis/buildSynthesisPrompt";
+import { buildSynthesisPrompt, answerHedgesVerdict } from "@/lib/synthesis/buildSynthesisPrompt";
 
 const DEFAULT_ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 /** Phase 15-1: Haiku for SQL generation (fast + cheap), Sonnet as fallback on parse/validate failure. */
@@ -44,6 +44,8 @@ export type AnswerSynthesisInput = {
    *  refusal) the LLM sees. Defaults to chart-with-metrics when
    *  omitted, so existing callers don't break. */
   shape?: import("@/lib/chatRuntime/insightShape").InsightShape;
+  /** F01 honesty clamp — see BuildSynthesisPromptInput.resolvedSession. */
+  resolvedSession?: { sessionKey: number; label: string };
 };
 
 type AnswerSynthesisOutput = {
@@ -124,7 +126,7 @@ Guidance:
 - For intermediate-tyre crossover questions ("who pitted first for inters"), use core.stint_summary filtered by compound_name ILIKE '%INTER%' ORDER BY lap_start ASC.
 - For per-driver telemetry-coverage questions, use core.session_completeness.car_data_rows / coverage_score; no per-driver coverage matview exists yet.
 - For "pit-stop timing vs FIA pit log" questions, JOIN core.session_completeness.pit_rows (manifest) vs COUNT(*) FROM raw.pit (observed) per session_key. Surface manifest-vs-observed deltas only; do not embed semicolons or multi-clause notes inside SQL string literals (the FIA-pit-log caveat belongs in the synthesis text, not the SQL output).
-- For tyre-degradation / deg-curve / compound-deg-comparison questions, use analytics.stint_degradation_curve.degradation_per_lap_s as a single SELECT — do NOT compose multi-CTE rolling-window queries against core.laps_enriched. Use fuel_corrected_degradation_per_lap_s when fuel-corrected.
+- For tyre-degradation / deg-curve / compound-deg-comparison questions, return ROW-LEVEL data so the chart can draw a scatter-with-regression: SELECT driver_name, stint_number, lap_in_stint AS stint_lap, lap_time_s FROM core.laps_enriched JOINed with core.stint_summary, WHERE compound and stint and session_key match, ORDER BY driver_number, stint_lap. Also include the precomputed degradation_per_lap_s from analytics.stint_degradation_curve as a constant per-(driver, stint) column so the synthesis layer can read the slope. Do NOT collapse to one row per stint — the visual REQUIRES per-lap points.
 - For steward / penalty / incident questions, use analytics.race_control_incidents (driver_number, incident_kind, action_status, penalty_seconds, message_text). penalty_points is always NULL — note as data-not-ingested. JOIN core.race_progression_summary on (session_key, lap_number) when position context is needed.
 
 Rules:
@@ -158,15 +160,75 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
     triggers: [
       "deg curve", "deg per lap", "tyre deg", "compound deg",
       "degradation curve", "degradation per lap", "deg cliff",
-      "compound cliff"
+      "compound cliff", "compare tyre degradation", "tyre degradation between",
+      "deg comparison", "stint degradation"
     ],
     hint: [
-      "MATVIEW HINT (Phase 21 21-stint-degradation-curve):",
-      "  primary table: analytics.stint_degradation_curve",
-      "  primary column: degradation_per_lap_s (REGR_SLOPE of lap_duration vs lap_number per (session_key, driver_number, stint_number))",
-      "  fuel-corrected variant: fuel_corrected_degradation_per_lap_s",
-      "  recommended shape: single SELECT WHERE session_key = :s AND driver_number IN (:d1, :d2) AND stint_number = :n",
-      "  do NOT compose multi-CTE rolling-window queries against core.laps_enriched directly."
+      "MATVIEW HINT (Phase 21 21-stint-degradation-curve, comparison-aware):",
+      "  Two output shapes depending on intent:",
+      "",
+      "  (1) SCALAR / 'what is the degradation slope' question:",
+      "      SELECT driver_name, stint_number, compound_name, degradation_per_lap_s, fuel_corrected_degradation_per_lap_s, lap_start, lap_end",
+      "      FROM analytics.stint_degradation_curve sdc",
+      "      WHERE session_key = :s AND driver_number IN (:d1, :d2) [AND compound_name = :c]",
+      "      ORDER BY driver_number, stint_number;",
+      "",
+      "  (2) COMPARISON / CHART intent — triggered by 'compare', 'between X and Y', 'show', 'visualize', 'profile':",
+      "      The card needs lap-by-lap rows so the chart adapter can render a scatter-with-regression.",
+      "      MUST return one row per (driver, lap-in-stint) with these columns:",
+      "        driver_name (string)",
+      "        stint_number (int)",
+      "        stint_lap (int)             — alias for lap_in_stint",
+      "        lap_time_s (numeric)        — alias of lap_duration",
+      "        degradation_per_lap_s       — constant per (driver, stint), from analytics.stint_degradation_curve",
+      "      Recommended shape:",
+      "        WITH stints AS (",
+      "          SELECT session_key, driver_number, driver_name, stint_number, compound_name, lap_start, lap_end,",
+      "                 degradation_per_lap_s, fuel_corrected_degradation_per_lap_s",
+      "          FROM analytics.stint_degradation_curve",
+      "          WHERE session_key = :s AND driver_number IN (:d1, :d2) AND compound_name = :c",
+      "        )",
+      "        SELECT s.driver_name, s.stint_number,",
+      "               (l.lap_number - s.lap_start + 1) AS stint_lap,",
+      "               l.lap_duration AS lap_time_s,",
+      "               s.degradation_per_lap_s",
+      "        FROM stints s",
+      "        JOIN core.laps_enriched l",
+      "          ON l.session_key = s.session_key",
+      "         AND l.driver_number = s.driver_number",
+      "         AND l.lap_number BETWEEN s.lap_start AND s.lap_end",
+      "        WHERE l.is_clean_lap = TRUE",
+      "        ORDER BY s.driver_name, stint_lap;",
+      "  Do NOT collapse to one row per stint when the intent is comparison/chart — the chart REQUIRES per-lap points."
+    ].join("\n")
+  },
+  {
+    triggers: [
+      "pit stop time", "pit stop times", "pit losses",
+      "stationary time", "pit lane time", "pit times at", "pit stops at",
+      "how long did pit", "fastest pit stop", "slowest pit stop",
+      "best pit stop", "worst pit stop"
+    ],
+    hint: [
+      "MATVIEW HINT (pit-stop time comparison, one-row-per-driver):",
+      "  The horizontal bar chart adapter needs ONE row per driver with driver_name + a pit-loss numeric.",
+      "  Per-stop data lives on analytics.pit_loss_per_circuit (columns: session_key, driver_number,",
+      "  pit_in_lap_number, out_lap_number, pit_loss_s, baseline_lap_s, new_compound_name, stop_number).",
+      "  Aggregate per driver and join raw.drivers for the human-readable name:",
+      "    SELECT d.full_name                          AS driver_name,",
+      "           MIN(plc.pit_loss_s)::numeric(6,3)    AS best_pit_loss_s,",
+      "           AVG(plc.pit_loss_s)::numeric(6,3)    AS avg_pit_loss_s,",
+      "           MAX(plc.pit_loss_s)::numeric(6,3)    AS worst_pit_loss_s,",
+      "           COUNT(*)                             AS stop_count",
+      "    FROM analytics.pit_loss_per_circuit plc",
+      "    JOIN raw.drivers d",
+      "      ON d.session_key = plc.session_key AND d.driver_number = plc.driver_number",
+      "    WHERE plc.session_key = :s",
+      "    GROUP BY d.full_name",
+      "    ORDER BY best_pit_loss_s ASC;",
+      "  Do NOT use core.pit_cycle_summary for pit_loss_s — that column lives on analytics.pit_loss_per_circuit.",
+      "  Do NOT return one row per individual stop — that produces a 50-row chart with driver_number axis labels.",
+      "  driver_name MUST be present and human-readable so the chart renders team-coloured per-driver bars."
     ].join("\n")
   },
   {
@@ -271,7 +333,8 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
       "  primary table: analytics.traffic_adjusted_pace",
       "  columns: clean_air_pace_s, traffic_pace_s, traffic_pace_delta_s, clean_air_laps, traffic_laps",
       "  per-(session, driver) granularity (one row per driver per session). Filter session_key + driver_number for single-row answers.",
-      "  traffic_pace_delta_s is positive when traffic cost time."
+      "  traffic_pace_delta_s is positive when traffic cost time.",
+      "  WARNING: clean_air_laps / traffic_laps are inflated ~2x (they count over duplicated laps_enriched rows). Their sum can exceed race distance. Treat them as a RATIO (clean_air_laps / (clean_air_laps + traffic_laps)), not absolute lap totals, and never state a per-driver total above ~78."
     ].join("\n")
   },
   {
@@ -338,19 +401,44 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
   {
     // Phase 21 Tier 4 21-driver-performance-7axis: season aggregator.
     triggers: [
+      // Original axis-keyword triggers
       "axis score", "axis rating", "qualifying axis", "race-pace axis",
       "race pace axis", "tyre-management axis", "tyre management axis",
       "restart axis", "traffic-handling axis", "traffic handling axis",
       "overtake-difficulty axis", "overtake difficulty axis",
       "error-rate axis", "error rate axis", "performance axis",
-      "season axis", "performance score"
+      "season axis", "performance score",
+      // Comparison-flavor triggers: "compare X vs Y across all metrics",
+      // "season performance comparison", "all performance metrics",
+      // "how does X rate", "driver rating", "season-wide comparison".
+      "performance metrics", "all performance metrics",
+      "performance comparison", "performance breakdown",
+      "across all metrics", "across all performance",
+      "across the season", "season-wide", "season wide",
+      "season aggregate", "season-aggregate", "for the season",
+      "driver rating", "driver ratings",
+      "all the metrics", "every metric", "every axis",
+      "compare drivers", "head-to-head"
     ],
     hint: [
       "MATVIEW HINT (Phase 21 Tier 4 21-driver-performance-7axis):",
       "  primary table: analytics.driver_performance_score",
-      "  columns: qualifying_axis, race_pace_axis, tyre_management_axis, restart_axis, traffic_handling_axis, overtake_difficulty_axis, error_rate_axis (each 0-100; higher = better)",
-      "  recommended shape: SELECT season_year, driver_number, driver_name, <axis> FROM analytics.driver_performance_score WHERE season_year = 2025 [AND driver_number = :d]",
-      "  This is a season-wide aggregator — do NOT pin a specific session_key for axis-rating questions."
+      "  columns: season_year, driver_number, driver_name,",
+      "           qualifying_axis, race_pace_axis, tyre_management_axis,",
+      "           restart_axis, traffic_handling_axis, overtake_difficulty_axis,",
+      "           error_rate_axis (each 0-100; higher = better).",
+      "  CRITICAL: this is a SEASON-WIDE aggregate — do NOT pin a specific session_key.",
+      "  CRITICAL: ALWAYS filter season_year = the year named in the question (e.g. season_year = 2025).",
+      "  recommended shape for a two-driver comparison (returns one row per driver — perfect for the radar chart):",
+      "    SELECT driver_number, driver_name,",
+      "           qualifying_axis, race_pace_axis, tyre_management_axis,",
+      "           restart_axis, traffic_handling_axis, overtake_difficulty_axis,",
+      "           error_rate_axis",
+      "    FROM analytics.driver_performance_score",
+      "    WHERE season_year = 2025 AND driver_number IN (:d1, :d2)",
+      "    ORDER BY driver_number;",
+      "  Do NOT JOIN core.session_drivers / core.sessions / core.laps_enriched — the matview is already season-aggregated;",
+      "  composing your own multi-table aggregation will return session metadata only and the chart adapter will get a 0-axis result."
     ].join("\n")
   },
   {
@@ -430,6 +518,11 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
       "apex speed", "apex-speed", "minimum speed at turn", "min speed at turn",
       "entry speed", "exit speed", "mid-corner speed",
       "through turn", "at turn ", "at corner ",
+      // Comparison-flavor: "which corners did X gain on Y", "where did X
+      // lose to Y", "through sector N", "sector 1/2/3 corners".
+      "which corner", "which corners", "gain on", "gained on", "lost to",
+      "lose time to", "through sector", "in sector 1", "in sector 2",
+      "in sector 3", "across sector",
       "eau rouge", "raidillon", "pouhon", "stavelot", "copse",
       "tarzan", "rettifilo", "ste devote", "casino", "hairpin",
       "degner", "spoon", "130r", "parabolica", "maggotts", "becketts",
@@ -447,7 +540,31 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
       "    Suzuka:      'Turn 1', 'Turn 2', 'Turn 7 (Esses)', 'Turn 8 (Degner 1)', 'Turn 9 (Degner 2)', '130R'",
       "    Monza:       'Turn 1 (Rettifilo)', 'Turn 6 (Lesmo 1)', 'Turn 7 (Lesmo 2)', 'Turn 8 (Ascari)', 'Turn 11 (Parabolica)'",
       "  to match a corner robustly, use ILIKE on the canonical name — e.g. corner_label ILIKE '%Devote%' matches Sainte Devote; corner_label ILIKE '%Hairpin%' matches Loews / Hairpin; corner_label ILIKE '%Casino%' matches Casino.",
-      "  recommended: SELECT corner_label, AVG(apex_min_speed_kph), AVG(entry_speed_kph), AVG(exit_speed_kph) FROM analytics.corner_analysis WHERE session_key=:s AND driver_number IN (...) AND corner_label ILIKE ANY(ARRAY['%Devote%','%Casino%','%Hairpin%']) GROUP BY corner_label, corner_number"
+      "  recommended (single-driver corner profile):",
+      "    SELECT corner_label, AVG(apex_min_speed_kph), AVG(entry_speed_kph), AVG(exit_speed_kph)",
+      "    FROM analytics.corner_analysis",
+      "    WHERE session_key=:s AND driver_number IN (...) AND corner_label ILIKE ANY(ARRAY['%Devote%','%Casino%','%Hairpin%'])",
+      "    GROUP BY corner_label, corner_number;",
+      "  recommended (comparison — 'which corners did X gain on Y'):",
+      "    Sector→corner_number ranges (Silverstone Race): Sector 1 = turns 1-6; Sector 2 = turns 7-12; Sector 3 = turns 13-18.",
+      "    Use corner_number BETWEEN :s_start AND :s_end to restrict by sector when the user names one.",
+      "    WITH per_corner AS (",
+      "      SELECT corner_number, corner_label, driver_name,",
+      "             AVG(apex_min_speed_kph) AS avg_apex_kph,",
+      "             AVG(entry_speed_kph)    AS avg_entry_kph,",
+      "             AVG(exit_speed_kph)     AS avg_exit_kph",
+      "      FROM analytics.corner_analysis",
+      "      WHERE session_key=:s AND driver_number IN (:d1, :d2)",
+      "        AND corner_number BETWEEN :sector_start AND :sector_end",
+      "      GROUP BY corner_number, corner_label, driver_name",
+      "    )",
+      "    SELECT corner_number, corner_label,",
+      "           MAX(CASE WHEN driver_name=:d1_name THEN avg_apex_kph END) AS d1_apex_kph,",
+      "           MAX(CASE WHEN driver_name=:d2_name THEN avg_apex_kph END) AS d2_apex_kph,",
+      "           MAX(CASE WHEN driver_name=:d1_name THEN avg_apex_kph END) -",
+      "           MAX(CASE WHEN driver_name=:d2_name THEN avg_apex_kph END) AS apex_delta_d1_minus_d2",
+      "    FROM per_corner GROUP BY corner_number, corner_label ORDER BY corner_number;",
+      "  Positive *_delta_d1_minus_d2 = driver 1 (the named subject) carried MORE speed → they 'gained on' the comparison driver at that corner."
     ].join("\n")
   }
 ];
@@ -768,6 +885,19 @@ function validateInsightFields(parsed: Record<string, unknown>): import("@/lib/c
   if (typeof parsed.subtitle === "string" && parsed.subtitle.trim().length > 0) {
     out.subtitle = parsed.subtitle.trim().slice(0, 120);
   }
+  if (typeof parsed.at_a_glance === "string" && parsed.at_a_glance.trim().length > 0) {
+    out.at_a_glance = parsed.at_a_glance.trim().slice(0, 200);
+  }
+  if (parsed.corner_map && typeof parsed.corner_map === "object") {
+    const cm = parsed.corner_map as Record<string, unknown>;
+    if (typeof cm.circuit === "string" && cm.circuit.trim().length > 0) {
+      out.corner_map = {
+        circuit: cm.circuit.trim().slice(0, 40),
+        corner_number: typeof cm.corner_number === "number" ? cm.corner_number : undefined,
+        corner_label: typeof cm.corner_label === "string" ? cm.corner_label.slice(0, 40) : undefined
+      };
+    }
+  }
 
   if (Array.isArray(parsed.metrics)) {
     const metrics: import("@/lib/chatTypes").InsightFieldMetric[] = [];
@@ -775,10 +905,24 @@ function validateInsightFields(parsed: Record<string, unknown>): import("@/lib/c
       if (!raw || typeof raw !== "object") continue;
       const m = raw as Record<string, unknown>;
       if (typeof m.label !== "string" || typeof m.value !== "string") continue;
+      // Legacy data sometimes packs qualifier text into `unit` like
+      // "s — Antonelli (lap 3)". Split on the em-dash so the unit stays
+      // pure ("s") and the rest becomes context. Falls through cleanly
+      // if the unit is already a bare token.
+      let unit = typeof m.unit === "string" ? m.unit.trim() : undefined;
+      let context = typeof m.context === "string" ? m.context.trim() : undefined;
+      if (unit) {
+        const splitMatch = /^(.{0,8}?)\s+[—–-]\s+(.+)$/.exec(unit);
+        if (splitMatch) {
+          unit = splitMatch[1].trim();
+          if (!context) context = splitMatch[2].trim();
+        }
+      }
       metrics.push({
         label: m.label.trim().slice(0, 40),
         value: m.value.trim().slice(0, 30),
-        unit: typeof m.unit === "string" ? m.unit.trim().slice(0, 20) : undefined,
+        unit: unit ? unit.slice(0, 12) : undefined,
+        context: context ? context.slice(0, 60) : undefined,
         emphasis: m.emphasis === true || undefined
       });
     }
@@ -815,11 +959,21 @@ function validateInsightFields(parsed: Record<string, unknown>): import("@/lib/c
   if (parsed.verdict && typeof parsed.verdict === "object") {
     const v = parsed.verdict as Record<string, unknown>;
     if ((v.label === "YES" || v.label === "NO") && typeof v.summary === "string") {
-      out.verdict = {
-        label: v.label,
-        summary: v.summary.trim().slice(0, 200),
-        color: typeof v.color === "string" ? v.color : undefined
-      };
+      // A categorical YES/NO over a hedging answer ("…cannot be confirmed
+      // from the returned rows") misleads — the verdict banner reads as
+      // the answer. Drop the verdict and let the prose carry the
+      // uncertainty (2025 Bahrain stint-delta incident: "NO" over an
+      // answer that said the hard-stint rows were truncated away).
+      const answerText = typeof parsed.answer === "string" ? parsed.answer : undefined;
+      if (answerHedgesVerdict(answerText, v.summary)) {
+        logInsightParseOutcome("success", { droppedVerdict: "hedged_answer", label: v.label });
+      } else {
+        out.verdict = {
+          label: v.label,
+          summary: v.summary.trim().slice(0, 200),
+          color: typeof v.color === "string" ? v.color : undefined
+        };
+      }
     }
   }
 

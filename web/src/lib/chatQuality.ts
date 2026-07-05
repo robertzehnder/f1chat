@@ -101,6 +101,30 @@ export function assessChatQuality(input: GradeInput): ChatQualityAssessment {
     };
   }
 
+  // F24 (golden-set audit 2026-07-02): rowCount>0 used to grade B even when
+  // the rows came from a degraded fallback query or the answer itself said
+  // the data couldn't answer the question — the whole fabricated-absence P0
+  // class shipped as grade-B responses, invisible to grade-based gates.
+  const DEGRADED_SOURCES = new Set([
+    "heuristic_after_template_failure",
+    "heuristic_after_sql_timeout",
+    "heuristic_fallback"
+  ]);
+  if (rowCount > 0 && DEGRADED_SOURCES.has(input.generationSource ?? "")) {
+    return {
+      grade: "C",
+      reason: "Answered from a degraded fallback query — rows may not match the question's entities."
+    };
+  }
+  const SELF_DECLARED_UNABLE =
+    /not possible to determine|cannot be determined from|not visible in the provided sample|does not (contain|include|cover)|not (in|part of) the dataset|not (yet )?(been )?ingested/i;
+  if (rowCount > 0 && SELF_DECLARED_UNABLE.test(answer)) {
+    return {
+      grade: "C",
+      reason: "The answer itself states the returned data cannot answer the question."
+    };
+  }
+
   if (rowCount > 0) {
     return {
       grade: "B",

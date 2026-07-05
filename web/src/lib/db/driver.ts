@@ -1,6 +1,14 @@
-import { Client, Pool, QueryResultRow } from "pg";
+import { Client, Pool, QueryResultRow, types as pgTypes } from "pg";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
+
+// Postgres returns NUMERIC (oid 1700) and BIGINT (oid 20) as strings by
+// default to preserve precision. F1 telemetry (speeds, lap times,
+// counts) fits comfortably in JS doubles, and the chart detectors key
+// off `typeof v === "number"` — without these parsers, every numeric
+// column comes through as a string and bars render as zero.
+pgTypes.setTypeParser(1700, (v) => (v === null ? null : parseFloat(v)));
+pgTypes.setTypeParser(20, (v) => (v === null ? null : parseInt(v, 10)));
 
 type PoolGlobal = {
   __openf1Pool?: Pool;
@@ -40,7 +48,14 @@ function sslForHost(host: string): { rejectUnauthorized: boolean } | undefined {
 }
 
 function createPool(): Pool {
-  const statementTimeout = Number(process.env.OPENF1_QUERY_TIMEOUT_MS ?? "15000");
+  // F29 (golden-set audit 2026-07-02): this pool serves ONLY the heavy
+  // background derivations (/api/track-outline, /api/lap-telemetry), not
+  // the chat pipeline. Cold track-outline derivation ran 14.5–15.0s
+  // against the shared 15s statement timeout and silently vanished the
+  // ribbon; give these background fetches their own 30s budget.
+  const statementTimeout = Number(
+    process.env.OPENF1_DERIVATION_TIMEOUT_MS ?? process.env.OPENF1_QUERY_TIMEOUT_MS ?? "30000"
+  );
   const base = {
     max: 10,
     idleTimeoutMillis: 30_000,

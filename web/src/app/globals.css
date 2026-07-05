@@ -17,38 +17,58 @@
  *   oklch(0.65 0 0)        ->  hsl(0 0% 65%)      muted-foreground
  */
 
+/*
+ * vNext (2026-07) — near-black, cool-neutral surfaces (was warm 285°/13%).
+ * Values traced from the approved Claude Design deck and verified for WCAG
+ * contrast on the new background. Two-layer rule: these are SEMANTIC UI tokens;
+ * domain colors (team/compound raw hex) live in f1-team-colors.ts, never here.
+ */
 :root,
 .dark {
-  --background: 285 5% 13%;
-  --foreground: 0 0% 98%;
+  --background: 240 3% 6%;       /* #0e0e0f near-black */
+  --foreground: 240 5% 96%;      /* #f4f4f5  (17.6:1 on bg) */
 
-  --card: 285 5% 17%;
-  --card-foreground: 0 0% 98%;
+  --card: 240 4% 11%;            /* #1a1a1c */
+  --card-foreground: 240 5% 96%;
 
-  --popover: 285 5% 17%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 240 4% 11%;
+  --popover-foreground: 240 5% 96%;
 
-  /* F1 racing red — primary accent */
-  --primary: 2 100% 44%;
+  /* F1 racing red — BRAND accent only. 3.88:1 on near-black FAILS AA as small
+     text, so use for large numbers / borders / dots / buttons / active states.
+     For small red FOREGROUND text use --red-text (4.79:1). */
+  --primary: 2 100% 44%;         /* #E10600 */
   --primary-foreground: 0 0% 98%;
+  --red-text: 356 85% 57%;       /* #ef3340  accessible red text (4.79:1) */
+  --accent-amber: 44 99% 48%;    /* #f5b301  second accent / teammate secondary */
 
-  --secondary: 285 5% 22%;
-  --secondary-foreground: 0 0% 90%;
+  --secondary: 240 6% 13%;
+  --secondary-foreground: 240 5% 90%;
 
-  --muted: 285 5% 22%;
-  --muted-foreground: 0 0% 65%;
+  --muted: 240 6% 13%;
+  --muted-foreground: 240 3% 53%;  /* #82828a (5.06:1 on bg) */
 
-  --accent: 285 5% 22%;
-  --accent-foreground: 0 0% 98%;
+  --accent: 240 6% 13%;
+  --accent-foreground: 240 5% 96%;
 
   --destructive: 2 100% 44%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 285 5% 28%;
-  --input: 285 5% 22%;
+  --border: 240 5% 17%;          /* #2a2a2e */
+  --input: 240 5% 15%;
   --ring: 2 100% 44%;
 
-  /* Chart palette — F1 team-inspired */
+  /* vNext additions */
+  --surface-raised: 240 6% 13%;  /* #202024 metric tiles / raised panels */
+  --chart-grid: 240 5% 16%;      /* chart gridlines / axes */
+  --chart-axis: 240 4% 40%;      /* axis lines / tick labels (was raw gray) */
+  --section-label: 240 4% 45%;   /* mono uppercase eyebrows */
+  --syntax-keyword: 274 100% 75%;/* #c77dff SQL keyword highlight */
+  --semantic-positive: 145 63% 49%;/* #22c55e gains / YES / throttle (7.0:1) */
+  --semantic-negative: 0 84% 63%;  /* #ef4444 losses / NO / brake (4.6:1) */
+  --semantic-warning: 38 92% 50%;  /* #f59e0b SC/VSC / caution */
+
+  /* Chart palette — F1 team-inspired (data colors; unchanged) */
   --chart-1: 2 100% 44%;        /* F1 red */
   --chart-2: 168 65% 60%;       /* Mercedes teal */
   --chart-3: 28 90% 55%;        /* McLaren orange */
@@ -57,13 +77,18 @@
 
   --radius: 0.75rem;
 
-  --sidebar: 285 5% 15%;
-  --sidebar-foreground: 0 0% 98%;
+  /* Motion */
+  --dur-fast: 140ms;
+  --dur-med: 240ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --sidebar: 240 4% 8%;
+  --sidebar-foreground: 240 5% 96%;
   --sidebar-primary: 2 100% 44%;
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 285 5% 22%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 285 5% 28%;
+  --sidebar-accent: 240 6% 13%;
+  --sidebar-accent-foreground: 240 5% 96%;
+  --sidebar-border: 240 5% 17%;
   --sidebar-ring: 2 100% 44%;
 }
 
@@ -74,5 +99,23 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;
+  }
+}
+
+/* vNext: "live" pulse for streaming / active indicators (the header dot). */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.82); }
+}
+
+/* Respect reduced-motion: kill pulse/skeleton/transition animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

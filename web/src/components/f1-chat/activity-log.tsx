@@ -12,10 +12,10 @@ const ICONS: Record<ActivityStatus, typeof Loader2> = {
 };
 
 const COLORS: Record<ActivityStatus, string> = {
-  running: "text-[#E10600]",
-  done: "text-emerald-500/80",
-  warn: "text-amber-500/80",
-  error: "text-red-500"
+  running: "text-red-text",
+  done: "text-semantic-positive/80",
+  warn: "text-semantic-warning/80",
+  error: "text-semantic-negative"
 };
 
 interface ActivityLogProps {
@@ -31,13 +31,13 @@ export function ActivityLog({ events, live, className }: ActivityLogProps) {
     <div
       className={cn(
         "rounded-md border-l-2 bg-secondary/30 px-3 py-2.5 mb-4",
-        live ? "border-[#E10600]" : "border-[#E10600]/40",
+        live ? "border-primary" : "border-primary/40",
         className
       )}
     >
       {live && (
         <div className="mb-2 flex items-center gap-2">
-          <span className="size-2 rounded-full bg-[#E10600] animate-pulse" aria-hidden="true" />
+          <span className="size-2 rounded-full bg-primary animate-live-pulse" aria-hidden="true" />
           <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Working
           </span>

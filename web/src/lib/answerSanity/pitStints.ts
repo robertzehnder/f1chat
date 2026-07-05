@@ -56,7 +56,18 @@ export function summarizeStrategyRows(rows: Record<string, unknown>[]): string |
   if (!hasAnyKey(rows, ["strategy_type", "pit_stops", "pit_stop_count", "total_stints"])) {
     return null;
   }
-  const parts = rows
+  // One sentence per DRIVER, not per row — strategy queries often join
+  // per-stint detail, returning several rows per driver with identical
+  // strategy-level columns ("HAMILTON ran a two-stop strategy (2 stops)"
+  // repeated once per stint). Keep the first row per driver label.
+  const seenDrivers = new Set<string>();
+  const driverRows = rows.filter((row) => {
+    const label = driverLabel(row);
+    if (seenDrivers.has(label)) return false;
+    seenDrivers.add(label);
+    return true;
+  });
+  const parts = driverRows
     .map((row) => {
       const label = driverLabel(row);
       const strategyType = asString(row.strategy_type);

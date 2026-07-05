@@ -39,6 +39,17 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        // vNext semantic additions
+        "red-text": "hsl(var(--red-text))",
+        amber: "hsl(var(--accent-amber))",
+        "surface-raised": "hsl(var(--surface-raised))",
+        "chart-grid": "hsl(var(--chart-grid))",
+        "chart-axis": "hsl(var(--chart-axis))",
+        "section-label": "hsl(var(--section-label))",
+        syntax: "hsl(var(--syntax-keyword))",
+        "semantic-positive": "hsl(var(--semantic-positive))",
+        "semantic-negative": "hsl(var(--semantic-negative))",
+        "semantic-warning": "hsl(var(--semantic-warning))",
         chart: {
           "1": "hsl(var(--chart-1))",
           "2": "hsl(var(--chart-2))",
@@ -74,11 +85,16 @@ const config: Config = {
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" }
+        },
+        "live-pulse": {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.4", transform: "scale(0.82)" }
         }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out"
+        "accordion-up": "accordion-up 0.2s ease-out",
+        "live-pulse": "live-pulse 2.4s ease-in-out infinite"
       }
     }
   },

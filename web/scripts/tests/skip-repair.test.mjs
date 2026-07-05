@@ -335,7 +335,7 @@ async function withNodeEnv(value, fn) {
   }
 }
 
-test("deterministic SQL exec failure falls back to heuristic without invoking LLM repair", async () => {
+test("deterministic SQL non-timeout exec failure → honest structured failure, no heuristic, no LLM repair (F05)", async () => {
   await withRoute(async (loaded) => {
     resetAll(loaded);
 
@@ -347,9 +347,46 @@ test("deterministic SQL exec failure falls back to heuristic without invoking LL
       makeFakeRuntime({ sessionKey: 9839 })
     );
 
-    // The route's post-recovery synthesize path runs for `heuristic_after_template_failure`.
-    // Route the synth call through answerCache's DI hook so it does not increment the anthropic
-    // counter, leaving the counter as a clean signal for repair/generate calls only.
+    let runCallCount = 0;
+    loaded.queries.__setRunReadOnlySqlImpl(async () => {
+      runCallCount += 1;
+      // Non-timeout error: permanent failure class → immediate honest
+      // failure, no retry, no heuristic substitution.
+      throw new Error("simulated column error: no such column foo");
+    });
+
+    const { status, body } = await withNodeEnv("production", async () => postChat(loaded));
+
+    assert.equal(status, 200);
+    // F05/F01: the recent-sessions heuristic is gone; a non-timeout template
+    // exec error is an honest structured failure (no empty tables in the
+    // fake runtime → sql_generation_failed).
+    assert.equal(body.generationSource, "sql_generation_failed");
+    assert.equal(runCallCount, 1, "only the initial exec runs; no heuristic re-query");
+    assert.doesNotMatch(
+      String(body.answer ?? ""),
+      /not (in|part of) the dataset|not (yet )?(been )?ingested|does not (contain|include)/i,
+      "must not fabricate a data-absence claim on a query failure"
+    );
+    assert.equal(
+      loaded.anthropic.__getAnthropicCounter(),
+      0,
+      `expected zero LLM calls on deterministic-source failure path, got ${loaded.anthropic.__getAnthropicCounter()}`
+    );
+  });
+});
+
+test("deterministic SQL timeout → one same-SQL retry succeeds, stays deterministic_template (F05)", async () => {
+  await withRoute(async (loaded) => {
+    resetAll(loaded);
+
+    loaded.deterministic.__setBuildDeterministicSqlTemplateImpl(() => ({
+      templateKey: DETERMINISTIC_KEYS[0],
+      sql: "SELECT 1 FROM core.sessions WHERE session_key = 9839"
+    }));
+    loaded.chatRuntime.__setBuildChatRuntimeImpl(async () =>
+      makeFakeRuntime({ sessionKey: 9839 })
+    );
     loaded.answerCache.__answerCacheTestHooks.synthesize = async () => ({
       answer: "no-llm synth stub",
       reasoning: "no-llm synth stub"
@@ -359,26 +396,18 @@ test("deterministic SQL exec failure falls back to heuristic without invoking LL
     loaded.queries.__setRunReadOnlySqlImpl(async (sql) => {
       runCallCount += 1;
       if (runCallCount === 1) {
-        throw new Error("simulated SQL exec failure");
+        throw new Error("canceling statement due to statement timeout");
       }
-      return {
-        sql,
-        rows: [{ stub_col: 1 }],
-        rowCount: 1,
-        elapsedMs: 1,
-        truncated: false
-      };
+      return { sql, rows: [{ stub_col: 1 }], rowCount: 1, elapsedMs: 1, truncated: false };
     });
 
     const { status, body } = await withNodeEnv("production", async () => postChat(loaded));
 
     assert.equal(status, 200);
-    assert.equal(body.generationSource, "heuristic_after_template_failure");
-    assert.equal(
-      loaded.anthropic.__getAnthropicCounter(),
-      0,
-      `expected zero LLM calls on deterministic-source failure path, got ${loaded.anthropic.__getAnthropicCounter()}`
-    );
+    assert.equal(body.generationSource, "deterministic_template");
+    assert.match(String(body.generationNotes ?? ""), /template_timeout_retry_succeeded/);
+    assert.equal(runCallCount, 2, "initial timeout + one successful retry of the same SQL");
+    assert.equal(loaded.anthropic.__getAnthropicCounter(), 0);
   });
 });
 

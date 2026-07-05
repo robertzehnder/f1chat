@@ -19,7 +19,8 @@ export function DonutChart({ chart }: DonutChartProps) {
   const total = slices.reduce((sum, s) => sum + s.value, 0)
 
   return (
-    <div className="relative h-64">
+    <div>
+      <div className="relative h-64">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -70,15 +71,18 @@ export function DonutChart({ chart }: DonutChartProps) {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3 justify-center mt-4">
-        {slices.map((slice, idx) => (
-          <div key={idx} className="flex items-center gap-1.5">
-            <div 
-              className="w-2.5 h-2.5 rounded-full" 
-              style={{ backgroundColor: slice.color }}
-            />
-            <span className="text-xs text-muted-foreground">{slice.label}</span>
+      </div>
+
+      {/* Readout — in-place share labels (value + %) per slice, deck-style */}
+      <div className="mt-4 flex flex-col gap-1.5">
+        {[...slices].sort((a, b) => b.value - a.value).map((slice, idx) => (
+          <div key={idx} className="flex items-center gap-2 text-xs">
+            <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
+            <span className="text-foreground/85 flex-1 truncate">{slice.label}</span>
+            <span className="font-mono tabular-nums text-foreground/70">{slice.value}</span>
+            <span className="font-mono tabular-nums text-muted-foreground w-9 text-right">
+              {total > 0 ? `${Math.round((slice.value / total) * 100)}%` : ""}
+            </span>
           </div>
         ))}
       </div>

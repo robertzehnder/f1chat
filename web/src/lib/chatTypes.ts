@@ -79,6 +79,11 @@ export type InsightFieldMetric = {
   value: string;
   unit?: string;
   emphasis?: boolean;
+  /** Optional contextual annotation (e.g. "Antonelli (lap 3)"). Rendered
+   *  on its own subdued line below the label — keeps the value/unit
+   *  pair clean. Prompt rule: unit is pure ("s", "kph", "%"), context
+   *  holds qualifiers like driver + lap. */
+  context?: string;
 };
 
 export type InsightFields = {
@@ -86,12 +91,20 @@ export type InsightFields = {
   title?: string;
   /** Venue · session · year line under the title. */
   subtitle?: string;
+  /** vNext: promoted one-line answer ("answer at a glance") above the tiles. */
+  at_a_glance?: string;
+  /** A1: corner-metrics card → mini track-map highlighting one corner. */
+  corner_map?: { circuit: string; corner_number?: number; corner_label?: string };
   /** 2-3 hero metric tiles under the body. */
   metrics?: InsightFieldMetric[];
   /** 3-5 bullet takeaways. */
   key_takeaways?: string[];
   /** 2-4 follow-up question chips. */
   related_questions?: string[];
+  /** M21 refusal: what the warehouse DOES have (rendered as the muted
+   *  "Not in dataset" card's bullet list). Lets a server-side data-gap
+   *  refusal supply a relevant list instead of the generic fallback. */
+  what_we_have?: string[];
   /** M01 hero scalar payload (bypasses the body for single-fact answers). */
   hero?: { value: string; label: string; context?: string };
   /** M02 yes/no verdict (bypasses the body when present). */
@@ -128,6 +141,20 @@ export type ChatApiResponse = {
         label?: string;
       };
       selectedDriverNumbers?: number[];
+      /** B17: session disambiguation candidates. Present (with the full
+       *  runtime object) on runtime_clarification responses so the client
+       *  can render one-tap choice buttons instead of prose. `label` is the
+       *  human-readable "Qualifying / United Arab Emirates / Yas Marina / 2025"
+       *  string from buildSessionLabel(); NEVER surface sessionKey as the
+       *  visible option text. */
+      sessionCandidates?: Array<{
+        sessionKey: number;
+        sessionName?: string | null;
+        year?: number | null;
+        confidence?: number;
+        score?: number;
+        label?: string;
+      }>;
     };
     completeness?: {
       warnings?: string[];

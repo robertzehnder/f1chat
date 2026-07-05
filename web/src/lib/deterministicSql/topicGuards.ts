@@ -108,7 +108,17 @@ const STINT_KEYWORDS: ReadonlyArray<string> = [
   "fresh tyres",
   "fresh tires",
   "used tyres",
-  "used tires"
+  "used tires",
+  // Tyre-degradation / pace-cliff phrasings (drive the pace-cliff card).
+  "graining",
+  "pace cliff",
+  "deg cliff",
+  "cliff",
+  "degradation",
+  "drop-off",
+  "drop off",
+  "fall-off",
+  "fall off"
 ];
 
 const STRATEGY_KEYWORDS: ReadonlyArray<string> = [
@@ -119,10 +129,33 @@ const STRATEGY_KEYWORDS: ReadonlyArray<string> = [
   "pit count",
   "undercut",
   "overcut",
+  "under-cut",
+  "over-cut",
+  // Race-trace phrasings (session_race_trace card).
+  "race trace",
+  "race story",
+  "gap evolution",
+  "gap to the leader",
+  "race unfold",
+  "covering stop",
   "two-stopper",
   "one-stopper",
   "stop count",
-  "pit duration"
+  "pit duration",
+  // Single-stop "cycle" phrasings (drive the pit_event_strip card). Bare
+  // "stop"/"cycle" are too broad, so we anchor on the pit-stop ordinal forms
+  // and "stop lap".
+  "stop lap",
+  "first stop",
+  "second stop",
+  "third stop",
+  "fourth stop",
+  "fifth stop",
+  "last stop",
+  "final stop",
+  "1st stop",
+  "2nd stop",
+  "3rd stop"
 ];
 
 const TELEMETRY_KEYWORDS: ReadonlyArray<string> = [
@@ -134,7 +167,17 @@ const TELEMETRY_KEYWORDS: ReadonlyArray<string> = [
   "drs",
   "rpm",
   "speed trap",
-  "trap speed"
+  "trap speed",
+  "speed trace",
+  "lap telemetry",
+  // Speed/traction map phrasings (single_driver_speed_map card).
+  "speed map",
+  "traction zone",
+  "fastest parts",
+  "slowest parts",
+  "fastest sections",
+  "slowest sections",
+  "speed around the"
 ];
 
 // Phase 21: keyword sets for the new topic flags. Kept conservative —
@@ -153,7 +196,12 @@ const DOMINANCE_KEYWORDS: ReadonlyArray<string> = [
   "owned s1",
   "owned s2",
   "owned s3",
-  "purple sector"
+  "purple sector",
+  // Sector-gain phrasings ("which sectors did A gain on B") — the
+  // dominance signal is owned-only (no template rejects on it), so the
+  // broad "sector" substring is safe.
+  "sector",
+  "sectors"
 ];
 
 const CORNER_KEYWORDS: ReadonlyArray<string> = [
@@ -166,7 +214,10 @@ const CORNER_KEYWORDS: ReadonlyArray<string> = [
   "turn-in",
   "turn in",
   "trail-brake",
-  "trail brake"
+  "trail brake",
+  "minisector",
+  "mini-sector",
+  "mini sector"
 ];
 
 const BRAKING_KEYWORDS: ReadonlyArray<string> = [
@@ -240,7 +291,9 @@ const RESTART_KEYWORDS: ReadonlyArray<string> = [
   "lap 1 launch",
   "race start",
   "standing start",
-  "rolling start"
+  "rolling start",
+  "opening lap",
+  "first lap"
 ];
 
 const OVERTAKE_BATTLE_KEYWORDS: ReadonlyArray<string> = [
@@ -251,7 +304,16 @@ const OVERTAKE_BATTLE_KEYWORDS: ReadonlyArray<string> = [
   "side by side",
   "drs zone",
   "wheel-to-wheel",
-  "wheel to wheel"
+  "wheel to wheel",
+  // Position-changes phrasings (race_position_changes card).
+  "position change",
+  "position changes",
+  "race progression",
+  "recovery drive",
+  "places gained",
+  "places lost",
+  "positions gained",
+  "positions lost"
 ];
 
 const DRIVER_SCORE_KEYWORDS: ReadonlyArray<string> = [
@@ -260,7 +322,10 @@ const DRIVER_SCORE_KEYWORDS: ReadonlyArray<string> = [
   "7-axis",
   "seven axis",
   "season ranking",
-  "axis score"
+  "axis score",
+  // "qualifying axis", "race-pace axis", etc. — any space-prefixed axis
+  // mention signals the 7-axis performance model.
+  " axis"
 ];
 
 const DATA_HEALTH_KEYWORDS: ReadonlyArray<string> = [
@@ -357,6 +422,63 @@ export const TEMPLATE_TOPICS: Readonly<Record<string, TemplateTopicEntry>> = {
   max_leclerc_position_change_around_pit_cycle:     { owns: ["strategy"], rejectIfPresent: ["telemetry"] },
   max_leclerc_opening_closing_stint_lengths:        { owns: ["stint", "strategy"], rejectIfPresent: ["telemetry"] },
 
+  // pitCycle.ts (single-driver pit_event_strip card)
+  single_driver_pit_cycle:                          { owns: ["strategy", "stint"], rejectIfPresent: ["telemetry"] },
+
+  // paceCliff.ts (single-driver pre-stop pace-cliff verdict card)
+  single_driver_pace_cliff:                         { owns: ["stint", "pace"], rejectIfPresent: ["telemetry"] },
+
+  // inferredOvertakes.ts (session-scoped inferred on-track overtakes card)
+  inferred_overtakes:                               { owns: ["overtake_battle"] },
+
+  // minisectorDominance.ts (driver-pair minisector dominance card)
+  minisector_dominance:                             { owns: ["dominance", "corner"] },
+
+  // sectorDominance.ts (driver-pair official-sector dominance card)
+  driver_pair_sector_dominance:                     { owns: ["dominance", "corner", "pace"] },
+
+  // speedMap.ts (single-driver speed/traction gradient map card)
+  single_driver_speed_map:                          { owns: ["telemetry", "traction", "braking", "pace"] },
+
+  // raceTrace.ts (gap-evolution trace + over/under-cut verdict)
+  session_race_trace:                               { owns: ["strategy", "pace"] },
+
+  // degradationCurve.ts (median delta vs tyre age per compound)
+  compound_degradation_curve:                       { owns: ["stint", "pace"], rejectIfPresent: ["telemetry"] },
+
+  // positionChanges.ts (full-field grid→flag position lines)
+  race_position_changes:                            { owns: ["overtake_battle", "restart", "strategy"] },
+
+  // telemetryOverlay.ts (fastest-lap speed/gear/pedal stacks)
+  driver_telemetry_overlay:                         { owns: ["telemetry", "pace"] },
+
+  // stintDelta.ts (driver-pair stint-by-stint lap-delta verdict card)
+  driver_pair_stint_delta:                          { owns: ["stint", "pace"], rejectIfPresent: ["telemetry"] },
+
+  // strategySplit.ts (driver-pair strategy-split gantt + verdict card)
+  driver_pair_strategy_split:                       { owns: ["strategy", "stint"], rejectIfPresent: ["telemetry"] },
+
+  // performanceRadar.ts (driver-pair season 7-axis radar card)
+  driver_pair_performance_radar:                    { owns: ["driver_score"] },
+
+  // raceControlIncidents.ts (session steward/penalty event timeline)
+  session_race_control_incidents:                   { owns: ["incident"] },
+
+  // telemetryWeatherGap.ts (season data-health status grid)
+  sessions_telemetry_without_weather:               { owns: ["dataHealth", "telemetry"] },
+
+  // lap1Positions.ts (driver-pair lap-1 launch diverging bar)
+  driver_pair_lap1_positions:                       { owns: ["restart", "overtake_battle"] },
+
+  // wetCrossover.ts (driver-pair inter→slick crossover dual-axis line)
+  driver_pair_wet_crossover:                        { owns: ["weather", "strategy"] },
+
+  // brakeZones.ts (driver-pair heaviest-brake-zones grouped bar)
+  driver_pair_brake_zones:                          { owns: ["braking"] },
+
+  // cornerDelta.ts (driver-pair all-corner entry/apex/exit delta grid)
+  driver_pair_corner_delta:                         { owns: ["corner"] },
+
   // result.ts (split)
   max_leclerc_positions_gained_or_lost: { owns: ["strategy"], rejectIfPresent: ["pace", "telemetry"] },
 
@@ -382,11 +504,14 @@ export const TEMPLATE_TOPICS: Readonly<Record<string, TemplateTopicEntry>> = {
 };
 
 /**
- * templateKeys that intentionally have no topic annotation. Empty for now;
- * if a future template legitimately answers across all topics (e.g. a
- * "session metadata" template), add it here with a justification.
+ * templateKeys that intentionally have no topic annotation. These answer a
+ * session-metadata / composition question that doesn't map onto a single
+ * analytical topic. `templateAllowsTopic` already returns true for unknown
+ * keys, so this list is coverage-test tidiness (keeps the topic-coverage
+ * assertion honest), NOT a routing control.
+ *   - session_type_share: season-grain session-type composition donut.
  */
-export const TEMPLATE_TOPICS_EXEMPT: ReadonlyArray<string> = [];
+export const TEMPLATE_TOPICS_EXEMPT: ReadonlyArray<string> = ["session_type_share"];
 
 /**
  * Phase 18-A guard: returns true iff the topic signal is compatible with

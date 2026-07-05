@@ -15,7 +15,15 @@ export function DivergingBarChart({ chart, className }: DivergingBarChartProps) 
   if (!chart.y_axis || !chart.series?.[0]) return null
 
   const series = chart.series[0]
-  
+  // Unit + legend semantics come from the spec — this renderer also serves
+  // non-position deltas (brake-zone apex-speed in km/h). Defaults keep the
+  // original lap-1 positions behavior.
+  const unit = chart.y_value_format === "kph" ? "km/h" : "positions"
+  const positiveLabel = chart.legend?.positive ?? "Positions gained"
+  const negativeLabel = chart.legend?.negative ?? "Positions lost"
+  const positiveColor = chart.diverging_colors?.positive ?? "hsl(var(--semantic-positive))"
+  const negativeColor = chart.diverging_colors?.negative ?? "hsl(var(--semantic-negative))"
+
   // Transform data for Recharts
   const data = chart.y_axis.map((label, index) => ({
     name: label,
@@ -27,6 +35,8 @@ export function DivergingBarChart({ chart, className }: DivergingBarChartProps) 
   // Calculate domain
   const allValues = series.values
   const maxAbs = Math.max(...allValues.map(Math.abs))
+  // Winner emphasis: the biggest mover (largest |Δ|) reads at full strength.
+  const winnerIdx = allValues.map(Math.abs).indexOf(maxAbs)
 
   return (
     <div className={cn("w-full", className)}>
@@ -52,8 +62,8 @@ export function DivergingBarChart({ chart, className }: DivergingBarChartProps) 
               tickLine={false}
               width={80}
             />
-            <Tooltip 
-              content={<SimpleTooltip valueFormatter={(v) => `${v > 0 ? '+' : ''}${v} positions`} />}
+            <Tooltip
+              content={<SimpleTooltip valueFormatter={(v) => `${v > 0 ? '+' : ''}${v} ${unit}`} />}
               cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
             />
             <ReferenceLine x={0} stroke="hsl(var(--border))" strokeWidth={1} />
@@ -64,7 +74,8 @@ export function DivergingBarChart({ chart, className }: DivergingBarChartProps) 
               {data.map((entry, index) => (
                 <Cell
                   key={index}
-                  fill={entry.isPositive ? '#22c55e' : '#ef4444'}
+                  fill={entry.isPositive ? positiveColor : negativeColor}
+                  fillOpacity={index === winnerIdx ? 1 : 0.5}
                   // recharts type for `radius` on Cell is too narrow — the
                   // 4-tuple form is supported at runtime; cast through unknown.
                   radius={(entry.isPositive ? [0, 4, 4, 0] : [4, 0, 0, 4]) as unknown as number}
@@ -76,12 +87,12 @@ export function DivergingBarChart({ chart, className }: DivergingBarChartProps) 
       </div>
       <div className="flex justify-center gap-6 mt-2">
         <div className="flex items-center gap-2 text-xs">
-          <div className="size-3 rounded-sm bg-[#22c55e]" />
-          <span className="text-muted-foreground">Positions gained</span>
+          <div className="size-3 rounded-sm" style={{ backgroundColor: positiveColor }} />
+          <span className="text-muted-foreground">{positiveLabel}</span>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <div className="size-3 rounded-sm bg-[#ef4444]" />
-          <span className="text-muted-foreground">Positions lost</span>
+          <div className="size-3 rounded-sm" style={{ backgroundColor: negativeColor }} />
+          <span className="text-muted-foreground">{negativeLabel}</span>
         </div>
       </div>
       {chart.x_label && (

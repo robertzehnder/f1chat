@@ -8,22 +8,22 @@ interface NoDataCardProps {
 
 export function NoDataCard({ what_we_have }: NoDataCardProps) {
   return (
-    <div className="space-y-4 py-4">
-      <div className="flex items-center justify-center gap-2 text-muted-foreground">
-        <AlertCircle className="size-5" />
-        <span className="text-sm font-medium">Data not available in OpenF1</span>
+    <div className="space-y-3 py-2">
+      <div className="flex items-center gap-2 text-semantic-warning">
+        <AlertCircle className="size-4 shrink-0" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em]">The metric can&apos;t be computed — here&apos;s why, honestly</span>
       </div>
-      
+
       {what_we_have && what_we_have.length > 0 && (
-        <div className="bg-secondary/30 rounded-lg p-4">
-          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">
-            What we can show instead
+        <div className="rounded-xl border border-border/60 bg-surface-raised p-4">
+          <p className="font-mono text-[10px] md:text-[10.5px] text-section-label mb-2.5 uppercase tracking-[0.16em]">
+            What we can answer instead
           </p>
-          <ul className="space-y-1">
+          <ul className="space-y-1.5">
             {what_we_have.map((item, idx) => (
-              <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
-                <span className="text-[#22C55E] mt-0.5">•</span>
-                {item}
+              <li key={idx} className="text-[13px] md:text-sm text-foreground/85 flex items-start gap-2.5">
+                <span className="text-semantic-positive mt-px font-semibold shrink-0">→</span>
+                <span>{item}</span>
               </li>
             ))}
           </ul>

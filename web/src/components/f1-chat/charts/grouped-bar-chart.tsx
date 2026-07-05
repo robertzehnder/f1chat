@@ -28,10 +28,13 @@ export function GroupedBarChart({ chart, className }: GroupedBarChartProps) {
   const maxVal = Math.max(...allValues)
   const range = maxVal - minVal
   
-  // For small values (like deltas), use auto domain
-  // For large values (like speeds), add padding
+  // For small values (like deltas), use auto domain so tiny spreads read.
+  // For large values (absolute speeds) baseline at 0 rather than
+  // `minVal - padding`: a suppressed origin turns a 3 km/h gap between
+  // 280-283 km/h bars into a full-height difference, misreading the data.
+  // (Dedicated deltas now route to corner_delta_grid / diverging bars.)
   const isSmallRange = range < 10
-  const domainMin = isSmallRange ? 'auto' : minVal - range * 0.1
+  const domainMin = isSmallRange ? 'auto' : 0
   const domainMax = isSmallRange ? 'auto' : maxVal + range * 0.1
 
   return (
@@ -45,12 +48,15 @@ export function GroupedBarChart({ chart, className }: GroupedBarChartProps) {
               axisLine={{ stroke: 'hsl(var(--border))' }}
               tickLine={false}
             />
-            <YAxis 
+            <YAxis
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               domain={[domainMin, domainMax]}
-              tickFormatter={(v) => isSmallRange ? v.toFixed(2) : `${v}`}
+              // Round large-range ticks (speeds) to whole numbers — Recharts'
+              // auto-domain otherwise emits ugly fractional ticks (e.g. 267.7).
+              tickFormatter={(v) => isSmallRange ? Number(v).toFixed(2) : `${Math.round(Number(v))}`}
+              allowDecimals={!isSmallRange ? false : true}
             />
             <Tooltip 
               content={<ChartTooltip formatter={(v) => `${v.toFixed(1)} ${chart.y_label || 'km/h'}`} />}

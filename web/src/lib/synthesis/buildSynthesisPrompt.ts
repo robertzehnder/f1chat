@@ -10,6 +10,11 @@ export type BuildSynthesisPromptInput = {
    *  template) for backwards compatibility with callers that
    *  haven't been updated to pass it yet. */
   shape?: InsightShape;
+  /** F01 honesty clamp (golden-set audit 2026-07-02): when the runtime
+   *  pinned a session at high confidence, the model must never claim
+   *  that session/event is absent from the dataset — fallback SQL that
+   *  missed it is a query failure, not a data gap. */
+  resolvedSession?: { sessionKey: number; label: string };
 };
 
 const COMMON_RULES = `
@@ -27,6 +32,12 @@ Rules for "answer":
 - Keep stint count and pit-stop count logically consistent (pit_stops = stints - 1 when both are present).
 - Keep sector winner statements consistent with reported best/average sector values.
 - Keep "answer" concise (2-6 sentences).
+
+Rules for formatting lap times and durations (apply EVERYWHERE — answer, reasoning, metrics values, key_takeaways, related_questions):
+- Any lap time, stint average, or session-duration value ≥ 60 seconds MUST be written as M:SS.mmm (minutes : two-digit seconds . three-digit milliseconds). Examples: 82.878 → "1:22.878", 89 → "1:29.000", 124.531 → "2:04.531".
+- Values < 60 seconds (sector times, pit losses, gaps, deltas) stay in decimal seconds with up to three decimals + an "s" suffix. Examples: 22.63 → "22.630s", 0.36 → "+0.36s".
+- Never emit a bare number like "82.878 seconds" or "82.878s" for a full lap — always use mm:ss.mmm above 60s.
+- The same rule applies to differences phrased as totals (e.g. cumulative time lost) but NOT to per-lap deltas, which stay in decimal seconds.
 
 Rules for "title" / "subtitle":
 - "title" should describe the topic + scope (e.g. "Clean Air vs Traffic — 2025 Season").
@@ -48,19 +59,32 @@ You are reviewing SQL query output from an OpenF1 analytics system.
 Return JSON only with these keys:
 
   "answer"             — REQUIRED, plain-language answer (2-6 sentences)
+  "at_a_glance"        — recommended, ONE punchy sentence (≤120 chars) that
+                          leads with the direct answer (who/what/how much).
+                          Rendered big above the tiles; must NOT just repeat
+                          the first sentence of "answer" verbatim.
   "reasoning"          — optional, brief justification from the rows
   "title"              — recommended, ≤60 chars
   "subtitle"           — recommended, ≤60 chars (venue/session/year)
   "metrics"            — recommended, 2-3 hero metric tiles
   "key_takeaways"      — recommended, 3-5 bullet takeaways
   "related_questions"  — optional, 2-4 follow-up prompts
+  "corner_map"         — ONLY when the answer is about a SINGLE named corner and
+                          the rows carry a circuit + corner number/label (e.g.
+                          entry/apex/exit speeds through one corner). Emit
+                          { "circuit": "<circuit_short_name>", "corner_number": <N> }
+                          so the UI pins that corner on the real track outline.
+                          Omit for anything not tied to one specific corner.
 
-Each "metrics" item: { "label": "...", "value": "...", "unit": "...", "emphasis": true }
+Each "metrics" item: { "label": "...", "value": "...", "unit": "...", "context": "...", "emphasis": true }
 At most ONE metric may have "emphasis": true (the headline figure).
 
 Rules for "metrics":
-- 2-3 tiles. Each has a 1-3 word "label", a number/time/string "value", optional "unit".
-- Prefer signed deltas (e.g. "+0.36" with unit "sec/lap") over raw values when the question implies comparison.
+- 2-3 tiles. Each has a 1-3 word "label", a number/time/string "value", optional "unit", optional "context".
+- "unit" is a PURE token only: "s", "kph", "km/h", "%", "sec/lap", "s/lap", "laps". NEVER pack qualifiers into unit.
+- "context" is the qualifier annotation (driver name, lap number, compound, scope). Examples: "Antonelli (lap 3)", "vs Russell · medium tyres", "race-stint avg". Keep ≤ 40 chars.
+- NEVER concatenate value + qualifier with em-dash inside "unit" or "value" — split them across the dedicated fields.
+- Prefer signed deltas (e.g. "+0.36" with unit "s/lap") over raw values when the question implies comparison.
 - Skip metrics entirely for trivial single-fact answers (use the hero shape instead).
 
 Rules for "key_takeaways":
@@ -81,8 +105,8 @@ EXAMPLE (clean-air vs traffic question):
   "title": "Clean Air vs Traffic — 2025 Season",
   "subtitle": "All Race Sessions · 2025",
   "metrics": [
-    { "label": "Most Clean-Air laps", "value": "412", "unit": "VER", "emphasis": true },
-    { "label": "Pace Delta", "value": "+0.42", "unit": "s/lap" },
+    { "label": "Most Clean-Air laps", "value": "412", "unit": "laps", "context": "Verstappen", "emphasis": true },
+    { "label": "Pace Delta", "value": "+0.42", "unit": "s/lap", "context": "vs traffic" },
     { "label": "Drivers ≥70% Clean", "value": "5" }
   ],
   "key_takeaways": [
@@ -166,6 +190,18 @@ DO NOT include the YES/NO word at the start of "answer" — the verdict
 component renders the label in its own visual slot. Start "answer"
 with the explanation.
 
+If the returned rows CANNOT support a categorical answer (data missing,
+truncated, or covering only part of the question's scope), OMIT the
+"verdict" field entirely and say so in "answer". Never pair a YES/NO
+verdict with an answer that hedges ("cannot be confirmed", "data only
+covers…") — an unsupported NO reads as "the thing did not happen",
+which is wrong, not cautious.
+
+The inverse also holds: when your "answer" DOES state a categorical
+outcome ("the over-cut did not succeed", "yes, the gap reversed"), the
+"verdict" field is REQUIRED — a categorical answer without a verdict is
+an error, not caution.
+
 ${COMMON_RULES}
 
 EXAMPLE (overcut-success question):
@@ -180,8 +216,8 @@ EXAMPLE (overcut-success question):
     "color": "#E10600"
   },
   "metrics": [
-    { "label": "Gap before", "value": "1.8s", "unit": "Russell behind" },
-    { "label": "Gap after", "value": "1.4s", "unit": "Russell ahead", "emphasis": true },
+    { "label": "Gap before", "value": "1.8s", "context": "Russell behind" },
+    { "label": "Gap after", "value": "1.4s", "context": "Russell ahead", "emphasis": true },
     { "label": "Net swing", "value": "+3.2s" }
   ]
 }
@@ -351,10 +387,17 @@ export function buildSynthesisPrompt(
     coverage: contract.coverage ?? null
   });
   const rowsForPrompt = contract.rows.slice(0, 25);
+  const resolvedSessionBlock = input.resolvedSession
+    ? `
+RESOLVED SESSION (authoritative): session_key=${input.resolvedSession.sessionKey} — ${input.resolvedSession.label}.
+This session EXISTS in the dataset. Never claim it, its event, or its year is missing, absent, or "not yet ingested".
+If the returned rows do not cover it, say the query failed to target it — not that the data is absent.
+`
+    : "";
   const dynamicSuffix = `
 Question:
 ${input.question}
-
+${resolvedSessionBlock}
 SQL:
 ${input.sql}
 
@@ -374,4 +417,48 @@ Return JSON only.
     staticPrefix: buildAnswerSynthesisPrompt(shape),
     dynamicSuffix
   };
+}
+
+// ===========================================================================
+// Verdict hedge guard (synthesis-output validation)
+//
+// The verdict shape asks for a YES/NO verdict, but when the returned data
+// can't actually support one the model sometimes emits a categorical
+// verdict anyway while the prose hedges ("…the final hard stint comparison
+// is not present in the returned rows, so a reversal cannot be confirmed"
+// — rendered under a giant red NO). A skimming reader takes the verdict as
+// the answer, which is worse than no verdict at all. validateInsightFields
+// (anthropic.ts) calls this and drops the verdict on a hit; deterministic
+// builders never hedge, so only the LLM synthesis path is affected.
+// ===========================================================================
+
+const VERDICT_HEDGE_PATTERNS: ReadonlyArray<RegExp> = [
+  /\b(?:cannot|can(?:'|no)?t|can not)\s+(?:be\s+)?(?:confirm|determin|verif|conclud|establish|assess)/i,
+  /\bunable to\s+(?:confirm|determine|verify|conclude|establish|assess)/i,
+  /\bimpossible to\s+(?:confirm|determine|verify|say|tell|conclude)/i,
+  /\binsufficient\s+(?:data|evidence|information|rows|laps|coverage)/i,
+  /\bnot enough\s+(?:data|evidence|information|rows|laps|coverage)/i,
+  /\bdata\s+(?:is|are|was|were)?\s*(?:incomplete|absent|missing|unavailable|not available|not present|not returned)/i,
+  /\bincomplete\s+(?:data|coverage|rows)\b/i,
+  /\b(?:absent|missing|not present|not included)\s+(?:from|in)\s+the\s+returned\b/i,
+  /\bnot present in the (?:returned|result)/i,
+  /\b(?:rows?|data|results?)\s+(?:was|were|are|is)\s+(?:truncated|cut off|capped)/i,
+  /\b(?:row|result)\s+limit\b/i,
+  /\bonly covers?\b/i,
+  /\bdoes not cover\b/i,
+  /\bno (?:rows|data|laps)\s+(?:for|covering|matching)\b/i
+];
+
+/**
+ * True when the answer body or verdict summary contains language that
+ * contradicts a categorical YES/NO verdict.
+ */
+export function answerHedgesVerdict(
+  answerText: string | null | undefined,
+  verdictSummary: string | null | undefined
+): boolean {
+  const haystacks = [answerText, verdictSummary].filter(
+    (s): s is string => typeof s === "string" && s.length > 0
+  );
+  return haystacks.some((text) => VERDICT_HEDGE_PATTERNS.some((pattern) => pattern.test(text)));
 }

@@ -4,6 +4,7 @@ import { ScatterChart as RechartsScatterChart, Scatter, XAxis, YAxis, Responsive
 import type { ChartSpec } from "@/lib/chart-types"
 import { cn } from "@/lib/utils"
 import { SimpleTooltip } from "./chart-tooltip"
+import { formatChartValue } from "@/lib/f1-formatters"
 
 interface ScatterChartProps {
   chart: ChartSpec
@@ -14,20 +15,23 @@ export function ScatterChart({ chart, className }: ScatterChartProps) {
   if (!chart.series) return null
 
   // Calculate Y domain from all points
-  const allYValues = chart.series.flatMap(s => s.points?.map(p => p[1]) || [])
-  const minY = Math.min(...allYValues)
-  const maxY = Math.max(...allYValues)
-  const yPadding = (maxY - minY) * 0.1
+  const allYValues = chart.series.flatMap(s => s.points?.map(p => p[1]) || []).filter((v) => Number.isFinite(v))
+  const minY = allYValues.length ? Math.min(...allYValues) : 0
+  const maxY = allYValues.length ? Math.max(...allYValues) : 1
+  const yPadding = Math.max((maxY - minY) * 0.1, 0.1)
 
   // Calculate X domain from all points
-  const allXValues = chart.series.flatMap(s => s.points?.map(p => p[0]) || [])
-  const maxX = Math.max(...allXValues)
+  const allXValues = chart.series.flatMap(s => s.points?.map(p => p[0]) || []).filter((v) => Number.isFinite(v))
+  const maxX = allXValues.length ? Math.max(...allXValues) : 1
+
+  const fmt = chart.y_value_format
+  const yTickFmt = (v: number) => formatChartValue(v, fmt) || v.toFixed(1)
 
   return (
     <div className={cn("w-full", className)}>
       <div className="h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
-          <RechartsScatterChart margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <RechartsScatterChart margin={{ top: 10, right: 10, left: fmt === "lap_time_s" ? 4 : -10, bottom: 0 }}>
             <XAxis 
               type="number"
               dataKey="x"
@@ -49,8 +53,9 @@ export function ScatterChart({ chart, className }: ScatterChartProps) {
               axisLine={false}
               tickLine={false}
               domain={[minY - yPadding, maxY + yPadding]}
-              tickFormatter={(v) => v.toFixed(1)}
-              label={{ 
+              tickFormatter={yTickFmt}
+              width={fmt === "lap_time_s" ? 72 : 40}
+              label={{
                 value: chart.y_label || "Lap time (s)", 
                 angle: -90, 
                 position: "insideLeft",
@@ -67,7 +72,7 @@ export function ScatterChart({ chart, className }: ScatterChartProps) {
                   <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-lg">
                     <p className="text-sm font-semibold text-foreground">{data?.driver}</p>
                     <p className="text-xs text-muted-foreground">
-                      Lap {data?.x}: <span className="text-foreground font-medium">{data?.y?.toFixed(2)}s</span>
+                      Lap {data?.x}: <span className="text-foreground font-medium">{yTickFmt(data?.y)}</span>
                     </p>
                   </div>
                 )

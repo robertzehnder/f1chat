@@ -24,17 +24,45 @@ export function formatSpeedDiff(diff: number): string {
   return `${sign}${diff.toFixed(1)} km/h`
 }
 
-// Format lap time from seconds to MM:SS.sss
+// Format a lap time / duration in seconds.
+//   ≥ 60s → "M:SS.mmm"   (82.878 → "1:22.878")
+//   <  60s → "SS.mmms"    (22.63  → "22.630s")
+// Returns "" for non-finite input so callers can choose a fallback.
 export function formatLapTime(seconds: number): string {
-  if (!seconds || isNaN(seconds)) return "N/A"
-  
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  
-  if (mins > 0) {
-    return `${mins}:${secs.toFixed(3).padStart(6, "0")}`
+  if (!Number.isFinite(seconds)) return ""
+  const abs = Math.abs(seconds)
+  if (abs >= 60) {
+    const sign = seconds < 0 ? "-" : ""
+    const mins = Math.floor(abs / 60)
+    const secs = abs - mins * 60
+    return `${sign}${mins}:${secs.toFixed(3).padStart(6, "0")}`
   }
-  return secs.toFixed(3)
+  return `${seconds.toFixed(3)}s`
+}
+
+// Format a signed per-lap delta or gap.
+//   0.36  → "+0.360s",  -0.26 → "-0.260s"
+export function formatDeltaSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds)) return ""
+  const sign = seconds >= 0 ? "+" : ""
+  return `${sign}${seconds.toFixed(3)}s`
+}
+
+// Dispatch a chart's y_value_format hint to the right formatter.
+export function formatChartValue(value: number, fmt: string | undefined): string {
+  if (!Number.isFinite(value)) return ""
+  switch (fmt) {
+    case "lap_time_s":
+      return formatLapTime(value)
+    case "decimal_seconds":
+      return formatDeltaSeconds(value)
+    case "kph":
+      return `${value.toFixed(1)} km/h`
+    case "percent":
+      return `${value.toFixed(1)}%`
+    default:
+      return value.toFixed(1)
+  }
 }
 
 // Format session type

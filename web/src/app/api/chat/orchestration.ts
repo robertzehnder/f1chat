@@ -32,6 +32,25 @@ import {
   type AnswerCacheSubset
 } from "@/lib/cache/answerCache";
 import { assertNoLlmForDeterministic } from "@/lib/zeroLlmGuard";
+import { buildPitCycleInsight } from "@/lib/synthesis/pitCycleInsight";
+import { buildPaceCliffInsight } from "@/lib/synthesis/paceCliffInsight";
+import { buildInferredOvertakesInsight } from "@/lib/synthesis/inferredOvertakesInsight";
+import { buildMinisectorDominanceInsight } from "@/lib/synthesis/minisectorDominanceInsight";
+import { buildStintDeltaInsight } from "@/lib/synthesis/stintDeltaInsight";
+import { buildStrategySplitInsight } from "@/lib/synthesis/strategySplitInsight";
+import { buildPerformanceRadarInsight } from "@/lib/synthesis/performanceRadarInsight";
+import { buildRaceControlIncidentsInsight } from "@/lib/synthesis/raceControlIncidentsInsight";
+import { buildTelemetryWeatherGapInsight } from "@/lib/synthesis/telemetryWeatherGapInsight";
+import { buildLap1PositionsInsight } from "@/lib/synthesis/lap1PositionsInsight";
+import { buildWetCrossoverInsight } from "@/lib/synthesis/wetCrossoverInsight";
+import { buildBrakeZonesInsight } from "@/lib/synthesis/brakeZonesInsight";
+import { buildCornerDeltaInsight } from "@/lib/synthesis/cornerDeltaInsight";
+import { buildSectorDominanceInsight } from "@/lib/synthesis/sectorDominanceInsight";
+import { buildSpeedMapInsight } from "@/lib/synthesis/speedMapInsight";
+import { buildRaceTraceInsight } from "@/lib/synthesis/raceTraceInsight";
+import { buildDegradationCurveInsight } from "@/lib/synthesis/degradationCurveInsight";
+import { buildPositionChangesInsight } from "@/lib/synthesis/positionChangesInsight";
+import { buildTelemetryOverlayInsight } from "@/lib/synthesis/telemetryOverlayInsight";
 import {
   serializeRowsToFactContract,
   type FactContract,
@@ -134,6 +153,15 @@ const SSE_RESPONSE_HEADERS = {
   Connection: "keep-alive",
   "X-Accel-Buffering": "no"
 } as const;
+
+// Single-driver templates whose empty result deserves a factual "what IS
+// recorded" no-data message (lap/pit record counts) rather than a bare
+// "no rows matched" — see Fix 5 in the zero-row branch below.
+const NO_DATA_ENRICH_TEMPLATES = new Set<string>([
+  "single_driver_pit_cycle",
+  "single_driver_pace_cliff",
+  "single_driver_speed_map",
+]);
 
 function wantsSse(request: Request): boolean {
   const accept = request.headers.get("accept") ?? "";
@@ -426,11 +454,16 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
     };
 
     try {
-      // Phase 17-E: 30 s hard cap on resolver. Even with 17-B's warm pool,
-      // a degraded Neon endpoint can hang the resolver SQL indefinitely.
-      // We don't cancel the in-flight query (Postgres-side cancel is brittle);
-      // we just reject the JS promise so the route returns a clarification.
-      const RESOLVE_DEADLINE_MS = Number(process.env.OPENF1_RESOLVE_DEADLINE_MS ?? "150000");
+      // Phase 2 (roadmap_to_A_grade): hard cap on the resolver, default 30s via
+      // OPENF1_RESOLVE_DEADLINE_MS. The F08 probe fix (raw-table populated-checks
+      // instead of core-view probes) cut typical cold resolution to ~3.7s, so the
+      // prior 150s cap was ~40× the typical p99 — a degraded Neon endpoint could
+      // hang a single request for 2.5 minutes. 30s is ~8× typical with margin and
+      // sits under the 90s TOTAL_REQUEST_BUDGET_MS, so a genuinely-hung resolver
+      // now rejects to an honest clarification an order of magnitude faster. We
+      // don't cancel the in-flight query (Postgres-side cancel is brittle); we
+      // reject the JS promise so the route returns a clarification.
+      const RESOLVE_DEADLINE_MS = Number(process.env.OPENF1_RESOLVE_DEADLINE_MS ?? "30000");
       let resolveTimer: ReturnType<typeof setTimeout> | undefined;
       const resolvePromise = buildChatRuntime({
         message,
@@ -763,7 +796,10 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         driverNumber:
           runtime.resolution.selectedDriverNumbers[0] !== undefined
             ? runtime.resolution.selectedDriverNumbers[0]
-            : body.context?.driverNumber
+            : body.context?.driverNumber,
+        // F07: heuristic fallback SQL must honor ALL resolved drivers —
+        // two-driver comparisons were returning one driver's laps.
+        driverNumbers: runtime.resolution.selectedDriverNumbers
       };
       const pinnedSessionKey =
         runtime.resolution.requiresSession && Number.isFinite(Number(resolvedContext.sessionKey))
@@ -820,14 +856,19 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           model = llm.model;
           generationNotes = llm.reasoning;
         } catch (error) {
-          generatedSql = buildHeuristicSql(message, resolvedContext);
-          generationSource = "heuristic_fallback";
+          // F01: heuristic may decline (null) — leave SQL empty; the
+          // pipeline converts that into an honest heuristic_unavailable
+          // failure instead of executing an off-topic catch-all.
+          const heuristicSql = buildHeuristicSql(message, resolvedContext);
+          generatedSql = heuristicSql ?? "";
+          generationSource = heuristicSql ? "heuristic_fallback" : "heuristic_unavailable";
           generationNotes =
             error instanceof Error
-              ? `SQL generation failed; heuristic fallback applied: ${error.message}`
-              : "SQL generation failed; heuristic fallback applied.";
+              ? `SQL generation failed; ${heuristicSql ? "heuristic fallback applied" : "no safe heuristic fallback exists"}: ${error.message}`
+              : `SQL generation failed; ${heuristicSql ? "heuristic fallback applied." : "no safe heuristic fallback exists."}`;
           await logServer("WARN", "chat_anthropic_fallback", {
             requestId,
+            heuristicAvailable: Boolean(heuristicSql),
             error: error instanceof Error ? error.message : String(error)
           });
         } finally {
@@ -931,6 +972,11 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           autoResolutionNote: autoResolutionNoteForTrace
         });
 
+        // Re-emit the cached insight on the SSE channel so a streaming client
+        // gets the full card on a cache hit, exactly like the first run.
+        if (ctx.sseRequested && cachedAnswer.insight) {
+          ctx.emitInsight(cachedAnswer.insight);
+        }
         return {
           payload: {
             requestId,
@@ -944,6 +990,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
             model: cachedAnswer.model,
             generationNotes: cachedAnswer.generationNotes,
             sql: cachedAnswer.sql,
+            insight: cachedAnswer.insight ?? undefined,
             result: hitResult,
             runtime
           },
@@ -951,7 +998,12 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         };
       }
 
-      const executeSqlWithTrace = async (sql: string, queryPath: string, attemptLabel: string) => {
+      const executeSqlWithTrace = async (
+        sql: string,
+        queryPath: string,
+        attemptLabel: string,
+        timeoutMs?: number
+      ) => {
         sqlAttemptCount += 1;
         const enforcedSessionSql = enforcePinnedSessionKeyInSql(sql, pinnedSessionKey);
         const sqlToExecute = enforcedSessionSql.sql;
@@ -969,7 +1021,25 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         ctx.emitStage({ kind: "sql_start", elapsedMs: sqlStartedAt - startedAt });
         const execDbSpan = startTrackedSpan(startSpan("execute_db"));
         try {
-          const executed = await cachedRunSql(sqlToExecute, { preview: true });
+          // Deterministic templates control their own row volume and some
+          // (race trace, position changes) legitimately return one row per
+          // driver-lap — the 200-row preview cap silently truncated them
+          // to the first ~3 drivers. LLM-generated SQL keeps the tight cap.
+          // F04: hand-audited deterministic templates get their own,
+          // higher statement-timeout budget (they legitimately run 8–13s
+          // against unmaterialized core.* views and had near-zero headroom
+          // under the shared 15s cap). LLM SQL keeps the tight 15s default.
+          // An explicit timeoutMs (the retry's remaining-budget cap) wins.
+          const templateTimeoutMs =
+            queryPath === "deterministic_template"
+              ? Number(process.env.OPENF1_TEMPLATE_TIMEOUT_MS ?? "25000")
+              : undefined;
+          const effectiveTimeoutMs = timeoutMs ?? templateTimeoutMs;
+          const executed = await cachedRunSql(sqlToExecute, {
+            preview: true,
+            maxRows: queryPath === "deterministic_template" ? 1500 : undefined,
+            ...(effectiveTimeoutMs !== undefined ? { timeoutMs: effectiveTimeoutMs } : {})
+          });
           endTrackedSpan(execDbSpan);
           generatedSqlForTrace = executed.sql;
           lastSqlElapsedMsForTrace = executed.elapsedMs ?? Date.now() - sqlStartedAt;
@@ -1043,7 +1113,18 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       // - At most 1 repair attempt; on exhaustion, return a structured
       //   honest error (no more "recent sessions" heuristic).
       const SQL_REPAIR_BUDGET_MS = Number(process.env.OPENF1_SQL_REPAIR_BUDGET_MS ?? "60000");
-      const sqlPipelineDeadline = startedAt + SQL_REPAIR_BUDGET_MS;
+      // F09 (golden-set audit 2026-07-02): anchor the SQL budget at
+      // SQL-PIPELINE ENTRY, not request start. Charging a 41s cold
+      // resolution against the 60s SQL budget left ~19s — one 15s timeout
+      // then the deadline was blown and the repair/retry path was
+      // unreachable (M09 shipped a doubled "couldn't construct…" sentence).
+      // A separate total-request cap keeps re-anchoring from producing
+      // 100s requests.
+      const sqlPipelineStartedAt = Date.now();
+      const TOTAL_REQUEST_BUDGET_MS = Number(process.env.OPENF1_TOTAL_REQUEST_BUDGET_MS ?? "90000");
+      const remainingTotalMs = TOTAL_REQUEST_BUDGET_MS - (sqlPipelineStartedAt - startedAt);
+      const sqlBudgetMs = Math.max(35000, Math.min(SQL_REPAIR_BUDGET_MS, remainingTotalMs));
+      const sqlPipelineDeadline = sqlPipelineStartedAt + sqlBudgetMs;
       const isTimeoutError = (err: unknown): boolean =>
         (err instanceof Error ? err.message : String(err))
           .toLowerCase()
@@ -1107,6 +1188,17 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         execError: null as string | null
       };
 
+      // F01: buildHeuristicSql is now nullable — when SQL generation failed
+      // AND no safe topical fallback exists, take the honest structured
+      // failure path instead of executing anything.
+      if (!generatedSql || !generatedSql.trim()) {
+        sqlPipelineError = {
+          message:
+            "SQL generation failed for this question and no safe fallback query exists.",
+          code: "heuristic_unavailable"
+        };
+      }
+
       const tryRepairAndExecute = async (failingSql: string, dbError: string, validatorHint: string) => {
         assertNoLlmForDeterministic({
           generationSource,
@@ -1147,7 +1239,10 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       };
 
       try {
-        if (preExecMissing && preExecMissing.ok === false) {
+        if (sqlPipelineError) {
+          // Honest failure already decided (heuristic_unavailable) — skip
+          // execution entirely; the sqlPipelineError block below responds.
+        } else if (preExecMissing && preExecMissing.ok === false) {
           await appendQueryTrace({
             status: "column_validation_failed",
             sqlAttemptNumber: sqlAttemptCount,
@@ -1233,20 +1328,30 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 if (isTimeoutError(repairError) || isTimeoutError(execOrValidationError)) {
                   // Phase 17-D: timeouts keep the heuristic fallback —
                   // syntactically valid SQL that ran too long is a different
-                  // class of failure than column-hallucination.
-                  generatedSql = buildHeuristicSql(message, resolvedContext);
-                  generationSource = "heuristic_after_sql_timeout";
-                  generatedSqlForTrace = generatedSql;
-                  generationSourceForTrace = generationSource;
-                  templateKeyForTrace = null;
-                  generationNotes = [generationNotes, "repair_failed_heuristic_used_timeout"]
-                    .filter(Boolean)
-                    .join(" | ");
-                  result = await executeSqlWithTrace(
-                    generatedSql,
-                    generationSource,
-                    "heuristic_after_timeout"
-                  );
+                  // class of failure than column-hallucination. F01: the
+                  // heuristic may decline (null) — honest failure then.
+                  const timeoutHeuristic = buildHeuristicSql(message, resolvedContext);
+                  if (!timeoutHeuristic) {
+                    sqlPipelineError = {
+                      message:
+                        "The query timed out and no safe fallback query exists for this question.",
+                      code: "heuristic_unavailable"
+                    };
+                  } else {
+                    generatedSql = timeoutHeuristic;
+                    generationSource = "heuristic_after_sql_timeout";
+                    generatedSqlForTrace = generatedSql;
+                    generationSourceForTrace = generationSource;
+                    templateKeyForTrace = null;
+                    generationNotes = [generationNotes, "repair_failed_heuristic_used_timeout"]
+                      .filter(Boolean)
+                      .join(" | ");
+                    result = await executeSqlWithTrace(
+                      generatedSql,
+                      generationSource,
+                      "heuristic_after_timeout"
+                    );
+                  }
                 } else {
                   // Phase 17-D: exhaustion on column / SQL errors → honest
                   // structured failure, NOT a heuristic that returns
@@ -1259,21 +1364,62 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
               }
             }
           } else if (generationSource === "deterministic_template") {
-            generatedSql = buildHeuristicSql(message, resolvedContext);
-            generationSource = "heuristic_after_template_failure";
-            generatedSqlForTrace = generatedSql;
-            generationSourceForTrace = generationSource;
-            templateKeyForTrace = null;
-            generationNotes = [generationNotes, "template_failed_heuristic_used"]
-              .filter(Boolean)
-              .join(" | ");
-            result = await executeSqlWithTrace(
-              generatedSql,
-              generationSource,
-              "heuristic_after_template_failure"
-            );
+            // F05 (golden-set audit 2026-07-02): this branch used to swap in
+            // buildHeuristicSql on ANY exec error — off-topic rows that
+            // synthesis turned into fabricated "not in dataset" claims.
+            // Policy now mirrors Phase 17-D: transient Neon timeouts get ONE
+            // same-SQL retry (a re-fire of the identical template SQL was
+            // observed succeeding warm); everything else — and a failed
+            // retry — is an honest structured failure.
+            // Only retry when enough budget remains for a full attempt to be
+            // meaningful; cap the retry's statement_timeout to what's left so
+            // a cold-start + double-timeout can't overrun the 60s wall clock.
+            const remainingBudgetMs = sqlPipelineDeadline - Date.now();
+            const RETRY_MIN_BUDGET_MS = 3000;
+            if (isTimeoutError(execOrValidationError) && remainingBudgetMs >= RETRY_MIN_BUDGET_MS) {
+              try {
+                result = await executeSqlWithTrace(
+                  generatedSql,
+                  generationSource,
+                  "template_retry_after_timeout",
+                  Math.min(Number(process.env.OPENF1_TEMPLATE_TIMEOUT_MS ?? "25000"), remainingBudgetMs)
+                );
+                generationNotes = [generationNotes, "template_timeout_retry_succeeded"]
+                  .filter(Boolean)
+                  .join(" | ");
+              } catch (retryError) {
+                await logServer("WARN", "chat_template_retry_failed", {
+                  requestId,
+                  error: retryError instanceof Error ? retryError.message : String(retryError)
+                });
+                sqlPipelineError = {
+                  message:
+                    "The optimized query for this question timed out twice against the warehouse.",
+                  code: "template_exec_timeout"
+                };
+              }
+            } else if (isTimeoutError(execOrValidationError)) {
+              // Timed out with too little budget left to retry meaningfully.
+              sqlPipelineError = {
+                message:
+                  "The optimized query for this question timed out against the warehouse.",
+                code: "template_exec_timeout"
+              };
+            } else {
+              // Permanent failure class (column / SQL error).
+              sqlPipelineError = {
+                message: errorMessage,
+                code: "template_exec_failed"
+              };
+            }
           } else {
-            throw execOrValidationError;
+            // F04/F05 (GPT review #4): heuristic_fallback / heuristic_after_sql_timeout
+            // exec failures used to `throw` here and surface as a raw 500. A
+            // failed fallback is an honest structured failure, not a crash.
+            sqlPipelineError = {
+              message: errorMessage,
+              code: "fallback_exec_failed"
+            };
           }
         }
       }
@@ -1281,16 +1427,38 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       if (sqlPipelineError) {
         const sqlErrorDetail = sqlPipelineError.message;
         const validatorMissing = initialFailureSnapshot.validatorMissing;
-        const userFacing = validatorMissing
-          ? `I couldn't construct a valid SQL query for this question. The query referenced columns that don't exist on the targeted contract: ${validatorMissing
-              .map((m) => `${m.sourceRef} (no such column on ${m.table})`)
-              .join("; ")}.`
-          : "I couldn't construct a valid SQL query for this question. " + sqlErrorDetail;
+        // If a required table is empty, the SQL error is a downstream symptom
+        // of a real data gap. Surface a clean "Not in dataset" refusal citing
+        // the empty table(s) instead of leaking the SQL error to the user.
+        const emptyTables = runtime.completeness.tableChecks
+          .filter((c) => c.status === "globally_empty" || c.status === "session_empty")
+          .map((c) => c.table);
+        const isDataGap = emptyTables.length > 0;
+        const failureSource = isDataGap ? "no_data_refusal" : "sql_generation_failed";
+        const dataGapInsight: import("@/lib/chatTypes").InsightFields | undefined = isDataGap
+          ? {
+              title: "Not in dataset",
+              what_we_have: runtime.completeness.fallbackOptions.length
+                ? runtime.completeness.fallbackOptions
+                : ["Lap times and sector times", "Pit stops and stint data", "Per-lap track positions"]
+            }
+          : undefined;
+        const userFacing = isDataGap
+          ? `INSUFFICIENT_DATA: This can't be answered from the current data — ${emptyTables.join(", ")} ${emptyTables.length === 1 ? "is" : "are"} empty in this warehouse, so there are no rows to analyse.`
+          : validatorMissing
+            ? `I couldn't construct a valid SQL query for this question. The query referenced columns that don't exist on the targeted contract: ${validatorMissing
+                .map((m) => `${m.sourceRef} (no such column on ${m.table})`)
+                .join("; ")}.`
+            // F09: don't double the generic sentence when sqlErrorDetail is
+            // itself already the generic "couldn't construct…" message.
+            : /^I couldn't construct a valid SQL query for this question/i.test(sqlErrorDetail)
+              ? sqlErrorDetail
+              : "I couldn't construct a valid SQL query for this question. " + sqlErrorDetail;
         const honestAnswer = userFacing;
         const quality = assessChatQuality({
           question: message,
           answer: honestAnswer,
-          generationSource: "sql_generation_failed",
+          generationSource: failureSource,
           runtime,
           error: sqlErrorDetail
         });
@@ -1308,7 +1476,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           adequacyReason: quality.reason,
           responseGrade: quality.grade,
           gradeReason: quality.reason,
-          generationSource: "sql_generation_failed",
+          generationSource: failureSource,
           sqlError: sqlErrorDetail,
           missingColumns: validatorMissing,
           model: modelForTrace,
@@ -1316,7 +1484,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           runtime
         });
         await appendQueryTrace({
-          status: "sql_generation_failed",
+          status: failureSource,
           timeout: false,
           error: sqlErrorDetail,
           missingColumns: validatorMissing,
@@ -1329,9 +1497,9 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
             score: candidate.score,
             matchedOn: candidate.matchedOn
           })),
-          queryPath: "sql_generation_failed",
+          queryPath: failureSource,
           templateKey: templateKeyForTrace,
-          generationSource: "sql_generation_failed",
+          generationSource: failureSource,
           model: modelForTrace,
           sql: initialFailureSnapshot.sql,
           sqlElapsedMs: lastSqlElapsedMsForTrace,
@@ -1350,12 +1518,15 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
             adequacyReason: quality.reason,
             responseGrade: quality.grade,
             gradeReason: quality.reason,
-            generationSource: "sql_generation_failed",
+            generationSource: failureSource,
             model: modelForTrace,
-            generationNotes: [generationNotes, sqlPipelineError.code].filter(Boolean).join(" | "),
+            generationNotes: [generationNotes, isDataGap ? `empty_tables:${emptyTables.join(",")}` : sqlPipelineError.code]
+              .filter(Boolean)
+              .join(" | "),
             sql: initialFailureSnapshot.sql,
             sqlError: sqlErrorDetail,
             missingColumns: validatorMissing,
+            insight: dataGapInsight,
             runtime
           },
           status: 200
@@ -1381,6 +1552,52 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         result.rowCount === 0
           ? `No rows matched this question with the current context.${caveatText}`
           : "";
+
+      // Fix 5 (chart-audit 2026-07-03): DNF-aware no-data. A bare "no rows
+      // matched" is honest but unhelpful when a single-driver question resolves
+      // fine yet the driver simply has no data for it (e.g. asking Tsunoda's
+      // first-stop lap at Jeddah 2025, where he retired on lap 2 and never
+      // pitted). Probe what IS recorded and state ONLY observed facts — record
+      // counts — never inferring "retired" (that needs classification evidence
+      // we don't have). Must never fabricate absence or break the response.
+      if (
+        result.rowCount === 0 &&
+        generationSource === "deterministic_template" &&
+        NO_DATA_ENRICH_TEMPLATES.has(selectedTemplateKey ?? "") &&
+        runtime.resolution.selectedSession?.sessionKey != null &&
+        runtime.resolution.selectedDriverNumbers.length === 1
+      ) {
+        const sKey = Math.trunc(Number(runtime.resolution.selectedSession.sessionKey));
+        const dNum = Math.trunc(Number(runtime.resolution.selectedDriverNumbers[0]));
+        if (Number.isFinite(sKey) && Number.isFinite(dNum)) {
+          try {
+            const probe = await cachedRunSql(
+              `SELECT
+                 (SELECT COUNT(*) FROM core.laps_enriched WHERE session_key = ${sKey} AND driver_number = ${dNum}) AS lap_records,
+                 (SELECT COUNT(*) FROM raw.pit WHERE session_key = ${sKey} AND driver_number = ${dNum}) AS pit_records,
+                 (SELECT MAX(driver_name) FROM core.laps_enriched WHERE session_key = ${sKey} AND driver_number = ${dNum}) AS driver_name`,
+              { preview: true, maxRows: 1, timeoutMs: 5000 }
+            );
+            const row = probe.rows?.[0] as
+              | { lap_records?: number | string; pit_records?: number | string; driver_name?: string | null }
+              | undefined;
+            if (row) {
+              const laps = Number(row.lap_records ?? 0);
+              const pits = Number(row.pit_records ?? 0);
+              const who = row.driver_name ? String(row.driver_name) : "this driver";
+              if (laps === 0) {
+                answer = `No lap data is recorded for ${who} in this session, so there is nothing to report here.${caveatText}`;
+              } else if (pits === 0) {
+                answer = `No pit stop is recorded for ${who} in this race — only ${laps} lap record${laps === 1 ? "" : "s"} exist, so there is no stop lap to report.${caveatText}`;
+              }
+              // pits > 0 but the specific template still matched nothing: keep the
+              // generic message rather than guess at the reason.
+            }
+          } catch {
+            // Probe failure keeps the honest generic no-data message.
+          }
+        }
+      }
       let synthesisContract: FactContract | null = null;
       // Phase 2: insight fields extracted from synthesis JSON. Stays
       // null on cached / template / refusal paths and on parse
@@ -1389,12 +1606,67 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
 
       if (result.rowCount > 0) {
         if (generationSource === "deterministic_template") {
-          answer = buildFallbackAnswer({
-            question: message,
-            rowCount: result.rowCount,
-            rows: result.rows,
-            caveatText
-          });
+          // Some deterministic templates build a full insight (title /
+          // verdict / metric tiles / takeaways / chips) deterministically —
+          // no LLM — so their card matches the rich visualization rather
+          // than the generic "top visible row" fallback. Others keep the
+          // plain fallback answer.
+          const deterministicInsight =
+            selectedTemplateKey === "single_driver_pit_cycle"
+              ? buildPitCycleInsight(result.rows)
+              : selectedTemplateKey === "single_driver_pace_cliff"
+                ? buildPaceCliffInsight(result.rows)
+                : selectedTemplateKey === "inferred_overtakes"
+                  ? buildInferredOvertakesInsight(result.rows)
+                  : selectedTemplateKey === "minisector_dominance"
+                    ? buildMinisectorDominanceInsight(result.rows)
+                    : selectedTemplateKey === "driver_pair_stint_delta"
+                      ? buildStintDeltaInsight(result.rows)
+                      : selectedTemplateKey === "driver_pair_strategy_split"
+                        ? buildStrategySplitInsight(result.rows)
+                        : selectedTemplateKey === "driver_pair_performance_radar"
+                          ? buildPerformanceRadarInsight(result.rows)
+                          : selectedTemplateKey === "session_race_control_incidents"
+                            ? buildRaceControlIncidentsInsight(result.rows)
+                            : selectedTemplateKey === "sessions_telemetry_without_weather"
+                              ? buildTelemetryWeatherGapInsight(result.rows)
+                              : selectedTemplateKey === "driver_pair_lap1_positions"
+                                ? buildLap1PositionsInsight(result.rows)
+                                : selectedTemplateKey === "driver_pair_wet_crossover"
+                                  ? buildWetCrossoverInsight(result.rows)
+                                  : selectedTemplateKey === "driver_pair_brake_zones"
+                                    ? buildBrakeZonesInsight(result.rows)
+                                    : selectedTemplateKey === "driver_pair_corner_delta"
+                                      ? buildCornerDeltaInsight(result.rows)
+                                    : selectedTemplateKey === "driver_pair_sector_dominance"
+                                      ? buildSectorDominanceInsight(result.rows)
+                                      : selectedTemplateKey === "single_driver_speed_map"
+                                        ? buildSpeedMapInsight(result.rows)
+                                        : selectedTemplateKey === "session_race_trace"
+                                          ? buildRaceTraceInsight(result.rows)
+                                          : selectedTemplateKey === "compound_degradation_curve"
+                                            ? buildDegradationCurveInsight(result.rows)
+                                            : selectedTemplateKey === "race_position_changes"
+                                              ? buildPositionChangesInsight(result.rows)
+                                              : selectedTemplateKey === "driver_telemetry_overlay"
+                                                ? buildTelemetryOverlayInsight(result.rows)
+                                                : null;
+          if (deterministicInsight) {
+            answer = caveatText
+              ? `${deterministicInsight.answer}${caveatText}`
+              : deterministicInsight.answer;
+            synthesisInsight = deterministicInsight.insight;
+            if (ctx.sseRequested) {
+              ctx.emitInsight(synthesisInsight);
+            }
+          } else {
+            answer = buildFallbackAnswer({
+              question: message,
+              rowCount: result.rowCount,
+              rows: result.rows,
+              caveatText
+            });
+          }
         } else {
           assertNoLlmForDeterministic({
             generationSource,
@@ -1416,6 +1688,16 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 questionType: runtime.questionType,
                 generationSource
               });
+              // F01 honesty clamp: a high-confidence pinned session is
+              // authoritative — synthesis must never declare it absent.
+              const resolvedSessionForSynthesis =
+                runtime.resolution.selectedSession &&
+                runtime.resolution.selectedSession.confidence >= 0.9
+                  ? {
+                      sessionKey: runtime.resolution.selectedSession.sessionKey,
+                      label: runtime.resolution.selectedSession.label
+                    }
+                  : undefined;
               if (ctx.sseRequested) {
                 ctx.emitStage({ kind: "synthesis_start", elapsedMs: Date.now() - startedAt });
                 let streamedAnswer = "";
@@ -1425,7 +1707,8 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                   question: message,
                   sql: result.sql,
                   contract,
-                  shape: insightShape
+                  shape: insightShape,
+                  resolvedSession: resolvedSessionForSynthesis
                 })) {
                   if (chunk.kind === "answer_delta") {
                     ctx.emitDelta("answer_delta", chunk.text);
@@ -1448,7 +1731,8 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                   question: message,
                   sql: result.sql,
                   contract,
-                  shape: insightShape
+                  shape: insightShape,
+                  resolvedSession: resolvedSessionForSynthesis
                 });
                 synthAnswer = synthesis.answer;
                 synthReasoning = synthesis.reasoning;
@@ -1550,6 +1834,36 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       const countListParityValidation: CountListParityValidationResult | null = synthesisContract
         ? validateCountListParity(answer, synthesisContract)
         : null;
+
+      // Phase 4 (roadmap_to_A_grade): answer-consistency validators GATE the
+      // grade — they used to be trace-only. A validator that flags an
+      // inconsistency between the answer's claims and the returned rows
+      // (wrong pit count, contradicted sector/grid claim, count-vs-list
+      // mismatch, …) caps adequacy at C and surfaces the reason, so a
+      // factually-inconsistent answer can never ship as A/B.
+      const answerValidators: ReadonlyArray<readonly [string, { ok: boolean; reasons: string[] } | null]> = [
+        ["pit/stint consistency", pitStintsValidation],
+        ["sector consistency", sectorConsistencyValidation],
+        ["grid/finish consistency", gridFinishValidation],
+        ["strategy evidence", strategyEvidenceValidation],
+        ["count-vs-list parity", countListParityValidation]
+      ];
+      const failedValidators = answerValidators.filter(([, v]) => v !== null && !v.ok);
+      if (failedValidators.length > 0) {
+        const validatorReasons = failedValidators.flatMap(([name, v]) =>
+          (v!.reasons.length ? v!.reasons : ["flagged an inconsistency"]).map((r) => `${name}: ${r}`)
+        );
+        if (quality.grade === "A" || quality.grade === "B") {
+          quality.grade = "C";
+        }
+        quality.reason = [quality.reason, `answer-consistency validators flagged: ${validatorReasons.join("; ")}`]
+          .filter(Boolean)
+          .join(" | ");
+        answerReasoning = [answerReasoning, `Consistency check flagged: ${validatorReasons.join("; ")}`]
+          .filter(Boolean)
+          .join(" | ");
+      }
+
       await appendQueryTrace({
         status: "success",
         cache_hit: false,
@@ -1595,6 +1909,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
           model,
           generationNotes: finalGenerationNotes,
           sql: result.sql,
+          insight: synthesisInsight,
           result: {
             sql: result.sql,
             rows: result.rows,

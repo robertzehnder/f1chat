@@ -1,6 +1,6 @@
 import type { ChatApiResponse, InsightFields, MessagePart } from "@/lib/chatTypes";
 import type { ChartSpec, DraftInsight } from "@/lib/chart-types";
-import { getTeamColor } from "@/lib/f1-team-colors";
+import { getTeamColor, getDistinctTeamColors } from "@/lib/f1-team-colors";
 
 // =============================================================================
 // foldPartsIntoInsight — collapse SSE MessagePart stream into DraftInsight
@@ -8,7 +8,8 @@ import { getTeamColor } from "@/lib/f1-team-colors";
 
 export function foldPartsIntoInsight(
   prev: DraftInsight | null,
-  part: MessagePart
+  part: MessagePart,
+  ctx: { question?: string } = {}
 ): DraftInsight {
   const next: DraftInsight = prev ?? { body: "" };
   switch (part.type) {
@@ -24,7 +25,9 @@ export function foldPartsIntoInsight(
       next.elapsedMs = part.elapsedMs;
       next.truncated = part.truncated;
       if (part.title) next.title = part.title;
-      next.chart = detectChart(part.rows) ?? next.chart;
+      // Pass question through so topic-sensitive detectors (radar, etc.)
+      // can match on natural-language signals as well as column shape.
+      next.chart = detectChart(part.rows, ctx) ?? next.chart;
       break;
     case "warning":
       // InsightMock doesn't define a `warnings` field; fold validator
@@ -71,6 +74,8 @@ export function applyInsightFields(
   const next = { ...insight };
   if (fields.title && !next.title) next.title = fields.title;
   if (fields.subtitle && !next.subtitle) next.subtitle = fields.subtitle;
+  if (fields.at_a_glance && !next.at_a_glance) next.at_a_glance = fields.at_a_glance;
+  if (fields.corner_map?.circuit && !next.corner_map) next.corner_map = fields.corner_map;
   if (fields.metrics && fields.metrics.length > 0 && !next.metrics) {
     next.metrics = fields.metrics;
   }
@@ -85,6 +90,9 @@ export function applyInsightFields(
   }
   if (fields.related_questions && fields.related_questions.length > 0 && !next.related_questions) {
     next.related_questions = fields.related_questions;
+  }
+  if (fields.what_we_have && fields.what_we_have.length > 0 && !next.what_we_have) {
+    next.what_we_have = fields.what_we_have;
   }
   if (fields.hero && !next.hero) next.hero = fields.hero;
   if (fields.verdict && !next.verdict) next.verdict = fields.verdict;
@@ -102,6 +110,24 @@ const PROPRIETARY_FALLBACK = [
   "Lap-time deltas through the brake zone"
 ];
 
+// Patterns that signal "this answer is about missing/unavailable data" even
+// when the SQL returned rows. Drives chart suppression so we don't render an
+// irrelevant fallback visual (e.g. sector-1 durations for a pole-lap question
+// that hit the Race session, or grid positions for a position-gain question
+// where the gain column is NULL for every driver).
+const DATA_UNAVAILABLE_TITLE = /\b(data mismatch|not (in|available)|unavailable|no data|missing data|mismatch|empty)\b/i;
+const NA_HERO_VALUE = /^(n\/?a|null|none|—|-)$/i;
+
+function answerSignalsDataUnavailable(insight: DraftInsight): boolean {
+  if (insight.hero?.value && NA_HERO_VALUE.test(String(insight.hero.value).trim())) {
+    return true;
+  }
+  if (insight.title && DATA_UNAVAILABLE_TITLE.test(insight.title)) {
+    return true;
+  }
+  return false;
+}
+
 export function applyResponseSemantics(
   insight: DraftInsight,
   response: ChatApiResponse
@@ -118,6 +144,81 @@ export function applyResponseSemantics(
     next.chart = undefined;
   }
 
+  // Chart-suppression guard: even on successful (rows > 0) responses,
+  // the LLM sometimes recognizes a data mismatch and emits a hero of
+  // "N/A" or a title like "Data Mismatch — …". In that case the
+  // auto-detected chart is meaningless — drop it so the user sees the
+  // explanation, not a fallback visual that looks like an answer.
+  if (next.chart && answerSignalsDataUnavailable(next)) {
+    next.chart = undefined;
+    next.tone = next.tone ?? "muted";
+  }
+
+  return next;
+}
+
+// =============================================================================
+// applyClarification — B17 session-disambiguation choice card
+// =============================================================================
+
+/** Derive a short session-type label ("Qualifying", "Sprint Qualifying",
+ *  "Race", "Practice 3") from the candidate's sessionName, falling back to the
+ *  head of the full label. */
+function sessionTypeLabel(sessionName: string | null | undefined, fullLabel: string): string {
+  const name = (sessionName ?? "").trim();
+  if (name) return name;
+  const head = fullLabel.split("/")[0]?.trim();
+  return head && head.length > 0 ? head : "Session";
+}
+
+/** Compact the buildSessionLabel() " / "-joined label into a " · " line and
+ *  drop the leading session-type token (already shown bold above it). */
+function compactCandidateLabel(fullLabel: string): string {
+  const segs = fullLabel.split("/").map((s) => s.trim()).filter(Boolean);
+  const rest = segs.slice(1);
+  return (rest.length ? rest : segs).join(" · ");
+}
+
+export function applyClarification(
+  insight: DraftInsight,
+  response: ChatApiResponse,
+  question: string
+): DraftInsight {
+  if (response.generationSource !== "runtime_clarification") return insight;
+  const res = response.runtime?.resolution;
+  const candidates = res?.sessionCandidates ?? [];
+  // Only render the choice card for a genuine session-type ambiguity (2+
+  // candidates). Driver-pair / "specify the session" prose clarifications have
+  // no candidate list and keep their existing text-body rendering.
+  if (candidates.length < 2) return insight;
+
+  const trimmedQuestion = question.trim();
+  const options = candidates.slice(0, 4).map((c, i) => {
+    const full = c.label ?? [c.sessionName, c.year].filter(Boolean).join(" ") ?? "session";
+    const sessionType = sessionTypeLabel(c.sessionName, full);
+    // parseSessionKeyMention() in chatRuntime matches /\bsession(?:\s+key)?\s*(\d{3,6})\b/i,
+    // so appending "(session <key>)" deterministically pins this exact session
+    // on the re-send and skips the clarification branch entirely.
+    const resolvedQuery = `${trimmedQuestion} (session ${c.sessionKey})`;
+    return {
+      sessionKey: c.sessionKey,
+      sessionType,
+      label: compactCandidateLabel(full),
+      resolvedQuery,
+      primary: i === 0
+    };
+  });
+
+  const next = { ...insight };
+  next.clarification = {
+    prompt: (response.answer ?? "").trim() || "Which session did you mean?",
+    question: trimmedQuestion,
+    options
+  };
+  // The prose prompt now lives inside the choice card; clear the duplicated
+  // body so the card is the single surface. Keep title/subtitle if present.
+  next.body = "";
+  next.chart = undefined;
   return next;
 }
 
@@ -192,9 +293,13 @@ export function applyScalarHero(insight: DraftInsight): DraftInsight {
 export function applyVerdictSemantics(insight: DraftInsight): DraftInsight {
   if (insight.verdict) return insight;
   const body = insight.body?.trimStart() ?? "";
-  const m = body.match(/^(YES|NO)\b[\s—:.,-]*(.*?)(?:[.!?](?:\s|$)|$)/i);
+  // UPPERCASE only — a case-insensitive match promoted ordinary prose
+  // openers into verdicts ("No rows matched this question…" rendered as a
+  // giant NO with summary "rows matched this question…"). A deliberate
+  // verdict prefix is always written "YES"/"NO".
+  const m = body.match(/^(YES|NO)\b[\s—:.,-]*(.*?)(?:[.!?](?:\s|$)|$)/);
   if (!m) return insight;
-  const label = m[1].toUpperCase() as "YES" | "NO";
+  const label = m[1] as "YES" | "NO";
   const summary = m[2].trim();
   if (summary.length === 0) return insight;
 
@@ -202,6 +307,72 @@ export function applyVerdictSemantics(insight: DraftInsight): DraftInsight {
   next.verdict = { label, summary, color: "#E10600" };
   next.body = body.slice(m[0].length).trimStart();
   return next;
+}
+
+// =============================================================================
+// applyCornerMap — A1 deterministic corner_map derive from result rows
+// =============================================================================
+
+/**
+ * A1: DERIVE `corner_map` from the result rows when the answer is about a
+ * SINGLE named corner (a single-corner metric card). The LLM does not
+ * reliably emit corner_map, so when the rows carry exactly one distinct
+ * `corner_number` (or, as a fallback, one distinct `corner_label`) together
+ * with a `circuit_short_name`, we set it here so <CornerMiniMap> (resolved
+ * client-side against the real track outline) can render.
+ *
+ * Guards (mirror applyScalarHero's conservatism): never overwrite an existing
+ * corner_map (LLM path wins); require a resolvable circuit; require EXACTLY
+ * ONE distinct corner (multi-corner grouped-bar results are not single-corner);
+ * skip when no corner column is present.
+ */
+export function applyCornerMap(insight: DraftInsight): DraftInsight {
+  if (insight.corner_map) return insight;
+  const rows = insight.rows;
+  if (!rows || rows.length === 0) return insight;
+  const cols = Object.keys(rows[0]);
+  if (!cols.includes("circuit_short_name")) return insight;
+
+  const circuits = new Set(
+    rows
+      .map((r) => (typeof r.circuit_short_name === "string" ? r.circuit_short_name.trim() : ""))
+      .filter((c) => c.length > 0)
+  );
+  if (circuits.size !== 1) return insight;
+  const circuit = [...circuits][0];
+
+  if (cols.includes("corner_number")) {
+    // EVERY row must resolve to the same finite corner — a null/mixed set is a
+    // multi-corner or non-single-corner result, not a single-corner card.
+    const nums = rows.map((r) => {
+      const n = typeof r.corner_number === "number" ? r.corner_number : Number(r.corner_number);
+      return Number.isFinite(n) ? n : null;
+    });
+    if (nums.some((n) => n === null)) return insight;
+    const distinctNums = new Set(nums as number[]);
+    if (distinctNums.size !== 1) return insight;
+    const cornerNumber = [...distinctNums][0];
+    const labelForNum = rows.find((r) => Number(r.corner_number) === cornerNumber)?.corner_label;
+    return {
+      ...insight,
+      corner_map: {
+        circuit,
+        corner_number: cornerNumber,
+        corner_label:
+          typeof labelForNum === "string" && labelForNum.trim().length > 0 ? labelForNum.trim() : undefined
+      }
+    };
+  }
+
+  if (cols.includes("corner_label")) {
+    const labels = rows.map((r) => (typeof r.corner_label === "string" ? r.corner_label.trim() : ""));
+    if (labels.some((l) => l.length === 0)) return insight; // mixed/partial
+    const distinctLabels = new Set(labels);
+    if (distinctLabels.size !== 1) return insight;
+    return { ...insight, corner_map: { circuit, corner_label: [...distinctLabels][0] } };
+  }
+
+  return insight;
 }
 
 // =============================================================================
@@ -250,6 +421,7 @@ function buildGroupedBar(rows: Record<string, unknown>[]): ChartSpec {
   const corners = Array.from(new Set(rows.map((r) => String(r.corner_label ?? "")))).filter(Boolean);
   const drivers = Array.from(new Set(rows.map((r) => String(r.driver_name ?? "")))).filter(Boolean);
 
+  const driverColors = getDistinctTeamColors(drivers);
   const series = drivers.map((driver) => {
     const values = corners.map((corner) => {
       const match = rows.find(
@@ -261,7 +433,7 @@ function buildGroupedBar(rows: Record<string, unknown>[]): ChartSpec {
     return {
       name: driver,
       values,
-      color: getTeamColor(driver)
+      color: driverColors[driver]
     };
   });
 
@@ -369,9 +541,10 @@ function buildLineChart(rows: Record<string, unknown>[]): ChartSpec {
   const laps = Array.from(new Set(rows.map((r) => Number(r.lap_number ?? 0)))).sort((a, b) => a - b);
 
   // Build y-array per driver aligned to the laps axis.
+  const driverColors = getDistinctTeamColors(drivers);
   const series = drivers.map((driver) => ({
     name: driver,
-    color: getTeamColor(driver),
+    color: driverColors[driver],
     values: laps.map((lap) => {
       const match = rows.find(
         (r) => String(r.driver_name) === driver && Number(r.lap_number) === lap
@@ -460,19 +633,70 @@ function titleFromQuestion(question: string): string {
     }
   }
   if (stripped) q = q.slice(stripped.length).trim();
-  // Cut at first sentence break or 70 chars.
+  // Cut at first sentence break only — DO NOT cap length. The card
+  // header CSS wraps long titles naturally; ellipsis truncation
+  // makes long fallback titles look broken.
   const sentenceEnd = q.search(/[.?!]/);
   if (sentenceEnd > 0) q = q.slice(0, sentenceEnd);
-  if (q.length > 70) q = q.slice(0, 67).trim() + "…";
   // Capitalize first letter.
   q = q.charAt(0).toUpperCase() + q.slice(1);
   return q || "Insight";
 }
 
-/** Apply title fallback: question → title only if title still missing. */
+/** B14: true when the title just echoes the user's question (self-title bug) —
+ *  the LLM sometimes returns the raw prompt as the title. Normalize both and
+ *  compare so punctuation/casing differences don't hide the echo. */
+function isSelfTitle(title: string, question: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const t = norm(title);
+  const q = norm(question);
+  if (!t || !q) return false;
+  if (t === q) return true;
+  // Echo only when the title covers MOST of the question — a short, concise
+  // title that merely shares a prefix (e.g. "Hamilton vs Leclerc" for a longer
+  // question) is NOT a self-echo and must be kept.
+  const longer = Math.max(t.length, q.length);
+  const shorter = Math.min(t.length, q.length);
+  if (shorter >= 15 && shorter >= longer * 0.7 && (q.startsWith(t) || t.startsWith(q))) return true;
+  return false;
+}
+
+/** B14: deterministic title from the resolved references in the result rows —
+ *  distinct driver surname(s) + a corner + venue. Returns undefined when the
+ *  rows don't carry enough to build a clean, non-echoed title. */
+function titleFromRows(rows: Record<string, unknown>[] | undefined): string | undefined {
+  if (!rows || rows.length === 0) return undefined;
+  const cols = Object.keys(rows[0]);
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const distinct = (col: string) =>
+    cols.includes(col) ? [...new Set(rows.map((r) => str(r[col])).filter(Boolean))] : [];
+  const drivers = distinct("driver_name").map((n) => n.split(/\s+/).slice(-1)[0]);
+  const venue = str(rows[0].circuit_short_name) || str(rows[0].location) || str(rows[0].country_name);
+  const cornerLabels = distinct("corner_label");
+  const cornerNums = cols.includes("corner_number")
+    ? [...new Set(rows.map((r) => Number(r.corner_number)).filter((n) => Number.isFinite(n)))]
+    : [];
+  const corner =
+    cornerLabels.length === 1
+      ? cornerLabels[0]
+      : cornerNums.length === 1
+        ? `Turn ${cornerNums[0]}`
+        : "";
+  const who = drivers.length ? drivers.slice(0, 2).join(" vs ") : "";
+  const head = corner || who;
+  if (!head && !venue) return undefined;
+  const tail = [corner && who ? who : "", venue].filter(Boolean).join(" · ");
+  const title = [head, tail].filter(Boolean).join(" — ") || venue;
+  return title || undefined;
+}
+
+/** Apply title fallback: replace a missing OR self-echoed title with a
+ *  deterministic one (from rows, else cleaned from the question). */
 export function applyQuestionTitle(insight: DraftInsight, question: string): DraftInsight {
-  if (insight.title && insight.title !== "Insight") return insight;
-  return { ...insight, title: titleFromQuestion(question) };
+  const current = insight.title;
+  const needsTitle = !current || current === "Insight" || isSelfTitle(current, question);
+  if (!needsTitle) return insight;
+  return { ...insight, title: titleFromRows(insight.rows) ?? titleFromQuestion(question) };
 }
 
 // Internal helpers re-exported for tests.

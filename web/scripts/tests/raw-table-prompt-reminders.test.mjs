@@ -70,6 +70,7 @@ export function _resetSchemaCatalogForTests() {}
     path.join(dir, "neutral.stub.mjs"),
     `// stubbed neutral exports for everything anthropic.ts imports from @/lib/*
 export const buildSynthesisPrompt = () => "";
+export const answerHedgesVerdict = () => false;
 export const synthesizeAnswerWithAnthropic = () => null;
 export const startSpan = () => ({ name: "stub", startedAt: 0, end: () => ({ name: "stub", startedAt: 0, elapsedMs: 0 }) });
 export class AnthropicCallCounter {}

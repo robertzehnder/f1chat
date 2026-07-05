@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { FollowUpChips } from "./suggestion-chips"
 import { ChartRenderer, MetricGridRenderer, HeroScalar, VerdictCard, CompositeCard, NoDataCard } from "./charts"
+import { ClarificationCard, type ClarificationOption } from "./charts/clarification-card"
+import { CornerMiniMap } from "./charts/corner-mini-map"
 import { ActivityLog } from "./activity-log"
 import type { ChartSpec, Metric } from "@/lib/chart-types"
 import { cn } from "@/lib/utils"
@@ -10,12 +12,23 @@ import { cn } from "@/lib/utils"
 interface InsightCardProps {
   title?: string
   subtitle?: string
+  /** vNext: promoted one-line answer shown ABOVE the tiles ("answer at a glance"). */
+  atAGlance?: string
+  /** A1: corner-metrics card → mini track-map highlighting one corner. */
+  cornerMap?: { circuit: string; corner_number?: number; corner_label?: string }
   body: string
   metrics?: Metric[]
   chart?: ChartSpec
   takeaways?: string[]
   relatedQuestions?: string[]
   onFollowUp?: (question: string) => void
+  /** B17: session-disambiguation choice card. When present, renders one-tap
+   *  option buttons; picking one calls onResolve with the resolved re-send. */
+  clarification?: {
+    prompt: string
+    options: ClarificationOption[]
+  }
+  onResolve?: (resolvedQuery: string) => void
   className?: string
   // New mock types
   hero?: {
@@ -57,12 +70,16 @@ interface InsightCardProps {
 export function InsightCard({
   title,
   subtitle,
+  atAGlance,
+  cornerMap,
   body,
   metrics,
   chart,
   takeaways,
   relatedQuestions,
   onFollowUp,
+  clarification,
+  onResolve,
   className,
   hero,
   verdict,
@@ -88,13 +105,21 @@ export function InsightCard({
       {(title || subtitle) && (
         <CardHeader className="pb-2 md:pb-3 px-3 md:px-6 pt-3 md:pt-6">
           {title && (
-            <div className="flex items-start gap-2">
-              <div className={cn("size-2 rounded-full mt-2 shrink-0", isMuted ? "bg-muted-foreground" : "bg-[#E10600]")} />
-              <h3 className="font-semibold text-foreground text-base md:text-lg leading-tight">{title}</h3>
+            <div className="flex items-start gap-2.5">
+              <div
+                className={cn(
+                  "size-2.5 rounded-full mt-1.5 shrink-0",
+                  isMuted
+                    ? "bg-muted-foreground"
+                    : "bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.65)]",
+                  !isMuted && streaming && "animate-live-pulse"
+                )}
+              />
+              <h3 className="font-semibold text-foreground text-base md:text-lg leading-tight tracking-tight">{title}</h3>
             </div>
           )}
           {subtitle && (
-            <p className="text-[10px] md:text-xs text-muted-foreground ml-4">{subtitle}</p>
+            <p className="font-mono text-[10px] md:text-[11px] text-muted-foreground ml-5 tracking-wide">{subtitle}</p>
           )}
         </CardHeader>
       )}
@@ -109,8 +134,15 @@ export function InsightCard({
         {/* Reasoning — collapsed disclosure under the activity log when present. */}
         {reasoning && !streaming && (
           <details className="mb-3 text-[11px] md:text-xs">
-            <summary className="cursor-pointer font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground/80">
-              Reasoning
+            <summary className="cursor-pointer font-mono uppercase tracking-[0.16em] text-section-label hover:text-foreground/80">
+              Reasoning &amp; query
+              {(rowCount != null || elapsedMs != null) && (
+                <span className="ml-2 normal-case tracking-normal text-muted-foreground/70">
+                  — {rowCount != null ? `${rowCount} rows` : ""}
+                  {rowCount != null && elapsedMs != null ? " · " : ""}
+                  {elapsedMs != null ? `${elapsedMs}ms` : ""}
+                </span>
+              )}
             </summary>
             <pre className="mt-2 max-h-[280px] overflow-auto whitespace-pre-wrap rounded-md bg-secondary/30 px-3 py-2 font-sans text-[12px] leading-relaxed text-foreground/70">
               {reasoning}
@@ -121,19 +153,42 @@ export function InsightCard({
         {/* Fallback "Working…" line when no activity log + no body content yet. */}
         {streaming && !hasContent && !activity?.length && (
           <div className="flex items-center gap-2 py-2">
-            <span className="size-2 rounded-full bg-[#E10600] animate-pulse" aria-hidden="true" />
+            <span className="size-2 rounded-full bg-primary animate-live-pulse" aria-hidden="true" />
             <span className="text-[12px] md:text-sm text-muted-foreground italic">Working…</span>
           </div>
         )}
 
+        {/* Clarification choice card (B17) — session disambiguation */}
+        {clarification && clarification.options.length > 0 && onResolve && (
+          <ClarificationCard
+            prompt={clarification.prompt}
+            options={clarification.options}
+            onResolve={onResolve}
+          />
+        )}
+
         {/* Hero Scalar (M01) */}
         {hero && <HeroScalar hero={hero} />}
-        
+
         {/* Yes/No Verdict (M02) */}
         {verdict && <VerdictCard verdict={verdict} />}
-        
+
+        {/* vNext: answer at a glance — promoted one-line answer above the tiles */}
+        {atAGlance && (
+          <div className={cn(hero || verdict ? "mt-4" : "")}>
+            <p className="font-mono text-[10px] md:text-[10.5px] uppercase tracking-[0.16em] text-section-label mb-1.5">
+              Answer at a glance
+            </p>
+            <p className="text-[15px] md:text-[19px] font-semibold leading-snug tracking-tight text-foreground">
+              {atAGlance}
+            </p>
+          </div>
+        )}
+
         {/* Narrative */}
-        <p className="text-[13px] md:text-sm text-foreground/90 leading-relaxed">{body}</p>
+        {body && (
+          <p className={cn("text-[13px] md:text-sm text-foreground/80 leading-relaxed", atAGlance && "mt-3")}>{body}</p>
+        )}
         
         {/* No-data card (M21) */}
         {what_we_have && <NoDataCard what_we_have={what_we_have} />}
@@ -142,6 +197,17 @@ export function InsightCard({
         {metrics && metrics.length > 0 && (
           <div className="mt-4 md:mt-5">
             <MetricGridRenderer metrics={metrics} />
+          </div>
+        )}
+
+        {/* A1: corner-on-map — the single corner pinned on the real outline. */}
+        {cornerMap?.circuit && (
+          <div className="mt-3">
+            <CornerMiniMap
+              circuit={cornerMap.circuit}
+              cornerNumber={cornerMap.corner_number}
+              cornerLabel={cornerMap.corner_label}
+            />
           </div>
         )}
         
@@ -162,11 +228,11 @@ export function InsightCard({
         {/* Key Takeaways */}
         {takeaways && takeaways.length > 0 && (
           <div className="mt-4 md:mt-5 pt-3 md:pt-4 border-t border-border/30">
-            <p className="text-[10px] md:text-xs font-medium text-muted-foreground mb-2 md:mb-3 uppercase tracking-wide">Key Takeaways</p>
+            <p className="font-mono text-[10px] md:text-[10.5px] text-section-label mb-2 md:mb-3 uppercase tracking-[0.16em]">Key Takeaways</p>
             <ul className="space-y-1.5 md:space-y-2">
               {takeaways.map((takeaway, index) => (
                 <li key={index} className="text-[13px] md:text-sm text-foreground/80 flex items-start gap-2">
-                  <span className="text-[#E10600] mt-0.5 font-bold">-</span>
+                  <span className="text-red-text mt-0.5 font-bold">–</span>
                   <span>{takeaway}</span>
                 </li>
               ))}
@@ -177,7 +243,7 @@ export function InsightCard({
         {/* SQL — collapsible (live chat only; fixtures leave sql undefined) */}
         {sql && (
           <details className="mt-4 md:mt-5 pt-3 md:pt-4 border-t border-border/30">
-            <summary className="cursor-pointer text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground/80">
+            <summary className="cursor-pointer font-mono text-[10px] md:text-[10.5px] text-section-label uppercase tracking-[0.16em] hover:text-foreground/80">
               SQL
             </summary>
             <pre className="mt-2 overflow-x-auto rounded-md bg-secondary/50 p-3 text-[11px] md:text-xs text-foreground/80 font-mono">
@@ -190,7 +256,7 @@ export function InsightCard({
         {rows && rows.length > 0 && (
           <div className="mt-4 md:mt-5 pt-3 md:pt-4 border-t border-border/30">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <p className="font-mono text-[10px] md:text-[10.5px] text-section-label uppercase tracking-[0.16em]">
                 Result {rowCount != null ? `(${rowCount} rows` : `(${rows.length} rows`}
                 {elapsedMs != null ? ` · ${elapsedMs}ms` : ""}
                 {")"}

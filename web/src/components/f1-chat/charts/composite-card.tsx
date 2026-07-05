@@ -31,15 +31,15 @@ interface CompositeCardProps {
 
 export function CompositeCard({ composite }: CompositeCardProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {composite.map((section, idx) => (
-        <div key={idx} className="space-y-2">
+        <div key={idx} className={idx > 0 ? "space-y-2 border-t border-border/30 pt-4" : "space-y-2"}>
           {section.title && (
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+            <p className="font-mono text-[10.5px] text-section-label uppercase tracking-[0.16em]">
               {section.title}
             </p>
           )}
-          
+
           {section.type === "line" && section.series && (
             <LineChart 
               chart={{

@@ -226,3 +226,104 @@ test("Phase 25.1 demonym alias expansion: hungarian/australian/italian/imola map
     );
   }
 });
+
+// ---------------------------------------------------------------------------
+// Same-weekend session-type tie-break (prefersRaceForSameMeetingTie).
+// A bare venue with no year ("Imola") resolves to one weekend's
+// Practice/Qualifying/Race trio (same meetingKey, close scores). For
+// non-session-type-sensitive questions we prefer the Race and skip
+// clarification; session-type-sensitive questions keep clarifying.
+// ---------------------------------------------------------------------------
+
+const IMOLA_2025_TIE = [
+  { sessionKey: 9987, meetingKey: 1260, sessionName: "Race", score: 12 },
+  { sessionKey: 9983, meetingKey: 1260, sessionName: "Qualifying", score: 12 },
+  { sessionKey: 9982, meetingKey: 1260, sessionName: "Practice 3", score: 11 }
+];
+
+test("same-meeting tie: prefers race when question is not session-type-sensitive", async () => {
+  await withHelper((mod) => {
+    assert.equal(mod.prefersRaceForSameMeetingTie(IMOLA_2025_TIE, false), true);
+  });
+});
+
+test("same-meeting tie: keeps clarifying when session-type-sensitive", async () => {
+  await withHelper((mod) => {
+    // e.g. "...pole lap at Imola" → isSessionTypeSensitive=true
+    assert.equal(mod.prefersRaceForSameMeetingTie(IMOLA_2025_TIE, true), false);
+  });
+});
+
+test("different meetings (year ambiguity) do NOT trigger the race tie-break", async () => {
+  await withHelper((mod) => {
+    const crossYear = [
+      { sessionKey: 9987, meetingKey: 1260, sessionName: "Race", score: 12 },
+      { sessionKey: 9515, meetingKey: 1230, sessionName: "Race", score: 12 }
+    ];
+    assert.equal(mod.prefersRaceForSameMeetingTie(crossYear, false), false);
+  });
+});
+
+test("single candidate / zero score do not trigger the tie-break", async () => {
+  await withHelper((mod) => {
+    assert.equal(
+      mod.prefersRaceForSameMeetingTie([{ sessionKey: 9987, meetingKey: 1260, sessionName: "Race", score: 12 }], false),
+      false
+    );
+    assert.equal(
+      mod.prefersRaceForSameMeetingTie(
+        [
+          { sessionKey: 9987, meetingKey: 1260, sessionName: "Race", score: 0 },
+          { sessionKey: 9983, meetingKey: 1260, sessionName: "Qualifying", score: 0 }
+        ],
+        false
+      ),
+      false
+    );
+  });
+});
+
+test("null meetingKey (un-pinned weekend) does not trigger the tie-break", async () => {
+  await withHelper((mod) => {
+    const nullMeeting = [
+      { sessionKey: 1, meetingKey: null, sessionName: "Race", score: 12 },
+      { sessionKey: 2, meetingKey: null, sessionName: "Qualifying", score: 12 }
+    ];
+    assert.equal(mod.prefersRaceForSameMeetingTie(nullMeeting, false), false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cross-year tie-break (latestYearForVenueTie). "Silverstone qualifying" with
+// no year → 2024 + 2025 Quali; default to the latest season instead of asking.
+// ---------------------------------------------------------------------------
+
+test("cross-year tie: no year → newest season's session wins", async () => {
+  await withHelper((mod) => {
+    const cands = [
+      { sessionKey: 9943, sessionName: "Qualifying", year: 2025, score: 12 },
+      { sessionKey: 9554, sessionName: "Qualifying", year: 2024, score: 12 }
+    ];
+    assert.equal(mod.latestYearForVenueTie(cands, false), 9943);
+  });
+});
+
+test("cross-year tie: explicit year present → no auto-default (null)", async () => {
+  await withHelper((mod) => {
+    const cands = [
+      { sessionKey: 9943, sessionName: "Qualifying", year: 2025, score: 12 },
+      { sessionKey: 9554, sessionName: "Qualifying", year: 2024, score: 12 }
+    ];
+    assert.equal(mod.latestYearForVenueTie(cands, true), null);
+  });
+});
+
+test("cross-year tie: different session types → genuine ambiguity, no default (null)", async () => {
+  await withHelper((mod) => {
+    const cands = [
+      { sessionKey: 1, sessionName: "Qualifying", year: 2025, score: 12 },
+      { sessionKey: 2, sessionName: "Race", year: 2025, score: 12 }
+    ];
+    assert.equal(mod.latestYearForVenueTie(cands, false), null);
+  });
+});

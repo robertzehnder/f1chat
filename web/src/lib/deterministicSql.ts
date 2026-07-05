@@ -3,10 +3,49 @@ export type { DeterministicSqlTemplate } from "./deterministicSql/types";
 import { buildPaceTemplate } from "./deterministicSql/pace";
 import { buildStrategyTemplate } from "./deterministicSql/strategy";
 export { buildStrategyTemplate } from "./deterministicSql/strategy";
+import { buildPitCycleTemplate } from "./deterministicSql/pitCycle";
+export { buildPitCycleTemplate } from "./deterministicSql/pitCycle";
+import { buildPaceCliffTemplate } from "./deterministicSql/paceCliff";
+export { buildPaceCliffTemplate } from "./deterministicSql/paceCliff";
+import { buildInferredOvertakesTemplate } from "./deterministicSql/inferredOvertakes";
+export { buildInferredOvertakesTemplate } from "./deterministicSql/inferredOvertakes";
+import { buildMinisectorDominanceTemplate } from "./deterministicSql/minisectorDominance";
+export { buildMinisectorDominanceTemplate } from "./deterministicSql/minisectorDominance";
+import { buildStintDeltaTemplate } from "./deterministicSql/stintDelta";
+export { buildStintDeltaTemplate } from "./deterministicSql/stintDelta";
+import { buildSectorDominanceTemplate } from "./deterministicSql/sectorDominance";
+export { buildSectorDominanceTemplate } from "./deterministicSql/sectorDominance";
+import { buildSpeedMapTemplate } from "./deterministicSql/speedMap";
+export { buildSpeedMapTemplate } from "./deterministicSql/speedMap";
+import { buildRaceTraceTemplate } from "./deterministicSql/raceTrace";
+export { buildRaceTraceTemplate } from "./deterministicSql/raceTrace";
+import { buildDegradationCurveTemplate } from "./deterministicSql/degradationCurve";
+export { buildDegradationCurveTemplate } from "./deterministicSql/degradationCurve";
+import { buildPositionChangesTemplate } from "./deterministicSql/positionChanges";
+export { buildPositionChangesTemplate } from "./deterministicSql/positionChanges";
+import { buildTelemetryOverlayTemplate } from "./deterministicSql/telemetryOverlay";
+export { buildTelemetryOverlayTemplate } from "./deterministicSql/telemetryOverlay";
+import { buildStrategySplitTemplate } from "./deterministicSql/strategySplit";
+export { buildStrategySplitTemplate } from "./deterministicSql/strategySplit";
+import { buildPerformanceRadarTemplate } from "./deterministicSql/performanceRadar";
+export { buildPerformanceRadarTemplate } from "./deterministicSql/performanceRadar";
+import { buildRaceControlIncidentsTemplate } from "./deterministicSql/raceControlIncidents";
+export { buildRaceControlIncidentsTemplate } from "./deterministicSql/raceControlIncidents";
+import { buildTelemetryWeatherGapTemplate } from "./deterministicSql/telemetryWeatherGap";
+export { buildTelemetryWeatherGapTemplate } from "./deterministicSql/telemetryWeatherGap";
+import { buildLap1PositionsTemplate } from "./deterministicSql/lap1Positions";
+export { buildLap1PositionsTemplate } from "./deterministicSql/lap1Positions";
+import { buildWetCrossoverTemplate } from "./deterministicSql/wetCrossover";
+export { buildWetCrossoverTemplate } from "./deterministicSql/wetCrossover";
+import { buildBrakeZonesTemplate } from "./deterministicSql/brakeZones";
+export { buildBrakeZonesTemplate } from "./deterministicSql/brakeZones";
+import { buildCornerDeltaTemplate } from "./deterministicSql/cornerDelta";
+export { buildCornerDeltaTemplate } from "./deterministicSql/cornerDelta";
 import { buildResultTemplate } from "./deterministicSql/result";
 export { buildResultTemplate } from "./deterministicSql/result";
 import { buildTelemetryTemplate } from "./deterministicSql/telemetry";
 import { buildDataHealthTemplate } from "./deterministicSql/dataHealth";
+import { buildSessionTypeShareTemplate } from "./deterministicSql/sessionTypeShare";
 
 type DeterministicContext = {
   sessionKey?: number;
@@ -114,9 +153,128 @@ function _buildDeterministicSqlTemplateRaw(
   const dataHealth = buildDataHealthTemplate({ lower, abuDhabi2025, includesAny });
   if (dataHealth) return dataHealth;
 
+  // Season-grain templates — no session pin needed, so they run BEFORE
+  // the session gate (like the data-health family above).
+  const performanceRadar = buildPerformanceRadarTemplate({
+    lower,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (performanceRadar) return performanceRadar;
+
+  const telemetryWeatherGap = buildTelemetryWeatherGapTemplate({ lower });
+  if (telemetryWeatherGap) return telemetryWeatherGap;
+
+  // Session-type composition donut (season-grain; no session pin).
+  const sessionTypeShare = buildSessionTypeShareTemplate({ lower });
+  if (sessionTypeShare) return sessionTypeShare;
+
   if (!targetSession) {
     return null;
   }
+
+  // Driver-pair stint/strategy cards run BEFORE the pace family: a topic-
+  // guard rejection of an earlier false-match short-circuits the whole
+  // router to null (LLM-gen), so the broad pace triggers would otherwise
+  // swallow stint-strategy questions these cards own ("compare the tyre
+  // stint strategies of A and B" matched a pace template, got rejected,
+  // and never reached the strategy-split card).
+  //
+  // Stint-by-stint lap-delta card (delta line + stint markers +
+  // deterministic reversal verdict). Pair order follows mention order in
+  // the question (delta sign = first-mentioned minus second-mentioned).
+  const stintDelta = buildStintDeltaTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (stintDelta) return stintDelta;
+
+  // Strategy-split card (stint gantt + deterministic split verdict +
+  // not-teammates premise check).
+  const strategySplit = buildStrategySplitTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (strategySplit) return strategySplit;
+
+  // Lap-1 launch positions card (diverging bar + verdict).
+  const lap1Positions = buildLap1PositionsTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (lap1Positions) return lap1Positions;
+
+  // Inter→slick crossover card (dual-axis lap-time × wet-track line).
+  const wetCrossover = buildWetCrossoverTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (wetCrossover) return wetCrossover;
+
+  // Heaviest-brake-zones card (grouped bar + foreshadow verdict).
+  const brakeZones = buildBrakeZonesTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (brakeZones) return brakeZones;
+
+  // All-corner entry/apex/exit delta card (per-corner tiles + track-map
+  // nodes + who-is-faster-where ladder). After brakeZones (which owns the
+  // 3-heaviest-zone + foreshadow narrative), before sectorDominance (which
+  // rejects corner-phase / named-turn asks and sends them to LLM).
+  const cornerDelta = buildCornerDeltaTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (cornerDelta) return cornerDelta;
+
+  // Steward / penalty incidents card (event timeline + penalty-points
+  // honesty). Session-scoped, no driver gate.
+  const raceControlIncidents = buildRaceControlIncidentsTemplate({ lower, targetSession });
+  if (raceControlIncidents) return raceControlIncidents;
+
+  // Race trace (gap evolution + deterministic over/under-cut verdict).
+  const raceTrace = buildRaceTraceTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (raceTrace) return raceTrace;
+
+  // Compound degradation curves (median delta vs tyre age).
+  const degradationCurve = buildDegradationCurveTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (degradationCurve) return degradationCurve;
+
+  // Full-field position changes (grid → flag).
+  const positionChanges = buildPositionChangesTemplate({ lower, targetSession });
+  if (positionChanges) return positionChanges;
+
+  // Fastest-lap telemetry overlay (speed/gear/pedals, 1-2 drivers).
+  const telemetryOverlay = buildTelemetryOverlayTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0] ?? (context.driverNumbers?.length === 1 ? normalizeInt(context.driverNumbers[0]) : undefined),
+    driverB: resolvedDriverPair[1]
+  });
+  if (telemetryOverlay) return telemetryOverlay;
 
   const pace = buildPaceTemplate({
     lower,
@@ -132,6 +290,64 @@ function _buildDeterministicSqlTemplateRaw(
     CHARLES_LECLERC,
   });
   if (pace) return pace;
+
+  // Single-driver pit-stop "cycle" card (pit_event_strip). Only fires when
+  // exactly one driver was resolved — pair comparisons fall through to the
+  // pair-gated strategy templates below.
+  const singleDriverNumber =
+    context.driverNumbers?.length === 1
+      ? normalizeInt(context.driverNumbers[0])
+      : undefined;
+  // Single-driver speed/traction gradient map (track ribbon colored from
+  // the fastest lap's telemetry).
+  const speedMap = buildSpeedMapTemplate({
+    lower,
+    targetSession,
+    driverNumber: singleDriverNumber
+  });
+  if (speedMap) return speedMap;
+
+  const pitCycle = buildPitCycleTemplate({
+    lower,
+    targetSession,
+    driverNumber: singleDriverNumber
+  });
+  if (pitCycle) return pitCycle;
+
+  // Single-driver pre-stop pace-cliff / graining card (deterministic verdict
+  // + lap-pace line). Same single-driver gate as the pit-cycle template.
+  const paceCliff = buildPaceCliffTemplate({
+    lower,
+    targetSession,
+    driverNumber: singleDriverNumber
+  });
+  if (paceCliff) return paceCliff;
+
+  // Inferred on-track overtakes (session-scoped, not single-driver). The
+  // official raw.overtakes feed is empty, so this reconstructs passes from
+  // the classified-position feed.
+  const inferredOvertakes = buildInferredOvertakesTemplate({ lower, targetSession });
+  if (inferredOvertakes) return inferredOvertakes;
+
+  // Driver-pair OFFICIAL-SECTOR dominance card (track map + S1/S2/S3
+  // timing deltas) — the default for corner/sector dominance questions.
+  const sectorDominance = buildSectorDominanceTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (sectorDominance) return sectorDominance;
+
+  // Driver-pair minisector dominance card (track_heatmap strip) — only on
+  // explicit "minisector" asks.
+  const minisector = buildMinisectorDominanceTemplate({
+    lower,
+    targetSession,
+    driverA: resolvedDriverPair[0],
+    driverB: resolvedDriverPair[1]
+  });
+  if (minisector) return minisector;
 
   if (lower.includes("who set the fastest lap")) {
     return {

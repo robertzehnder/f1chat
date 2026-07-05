@@ -4,6 +4,8 @@ import type { InsightMock } from "@/lib/chart-types"
 export const cornerAnalysisMock: InsightMock = {
   title: "Suzuka Esses Comparison",
   subtitle: "2025 Japanese GP - Race",
+  at_a_glance:
+    "Verstappen owns the esses entry — +5 km/h through Turns 7 & 8; Hamilton nicks back Turn 9.",
   body: "Across the Suzuka esses (Turns 7-9) at the 2025 Japanese GP, Verstappen (Red Bull) carried consistently higher entry and apex speeds at Turns 7 and 8, while Hamilton (Ferrari) was marginally quicker through Turn 9. At Turn 7, Verstappen averaged 232.6 km/h entry vs Hamilton's 227.3 km/h — a ~5 km/h entry advantage. At Turn 8 (Degner 1), Verstappen again led with 247.6 km/h entry vs 241.8 km/h. Turn 9 (Degner 2) flipped slightly in Hamilton's favour.",
   chart: {
     type: "grouped_bar",
@@ -31,6 +33,8 @@ export const cornerAnalysisMock: InsightMock = {
 export const lapPaceMock: InsightMock = {
   title: "First Stint Pace — Monza 2025",
   subtitle: "2025 Italian GP - Race",
+  at_a_glance:
+    "Hamilton controlled the opening stint — 0.36 s/lap clear of Russell on matched mediums.",
   body: "Across his first stint at Monza 2025 (laps 1-22 on the medium compound), Hamilton (Ferrari) averaged 83.95s per lap with a best of 82.88s, marginally quicker than Russell (Mercedes) who averaged 84.31s with a best of 83.41s. Hamilton's pace advantage of ~0.36s/lap reflects Ferrari's straight-line speed at Monza.",
   metrics: [
     { label: "Hamilton Avg", value: "83.95", unit: "sec/lap" },
@@ -95,6 +99,8 @@ export const tyreStrategyMock: InsightMock = {
 export const pitStrategyMock: InsightMock = {
   title: "Pit Loss — Spa-Francorchamps 2025",
   subtitle: "2025 Belgian GP - Race",
+  at_a_glance:
+    "Spa pit loss averaged 22.4 s — Verstappen's crew the cleanest at 21.2 s, Stroll the slowest at 26.3 s.",
   body: "At the 2025 Belgian GP, the average pit-loss across all stops was 22.4 seconds. Verstappen's stops were the cleanest (avg 21.2s), Hamilton's were slightly costlier (avg 23.1s) due to a slow rear-left changeover on his second stop. The fastest single stop was Norris's first at 20.9s; the slowest was Stroll's at 26.3s after a wheelnut hesitation.",
   metrics: [
     { label: "Avg Pit Loss", value: "22.4", unit: "sec" },
@@ -126,6 +132,8 @@ export const pitStrategyMock: InsightMock = {
 export const restartMock: InsightMock = {
   title: "Lap-1 Launch — Bahrain 2025",
   subtitle: "2025 Bahrain GP - Race",
+  at_a_glance:
+    "Sainz won the start — up 4 places (P14 → P10); Stroll lost the most, dropping 3.",
   body: "On the lap-1 launch at the 2025 Bahrain GP, Sainz (Williams) gained the most positions, advancing 4 places from P14 on the grid to P10 by the end of lap 1. Antonelli (Mercedes) and Hülkenberg (Sauber) each gained 3. The biggest losers were Stroll (lost 3 positions, P9 → P12) and Bortoleto (lost 2).",
   metrics: [
     { label: "Biggest Gainer", value: "+4", unit: "Sainz", emphasis: true },
@@ -195,7 +203,7 @@ export const incidentsMock: InsightMock = {
     { label: "Race Laps", value: "53" }
   ],
   chart: {
-    type: "timeline",
+    type: "event_timeline",
     events: [
       { lap: 12, driver: "Sainz", kind: "track_limits", team_color: "#64C4FF", message: "5 SECOND TIME PENALTY — TRACK LIMITS" },
       { lap: 28, driver: "Stroll", kind: "forcing_off", team_color: "#229971", message: "5 SECOND TIME PENALTY — FORCING ANOTHER DRIVER OFF" },
@@ -379,6 +387,7 @@ export const driverPerformanceMock: InsightMock = {
 export const brakingMock: InsightMock = {
   title: "Turn 22 Brake-Zone Performance — Saudi 2025",
   subtitle: "2025 Saudi Arabian GP - Race",
+  corner_map: { circuit: "Jeddah", corner_number: 22 },
   body: "Across 41 race laps, Verstappen approached Turn 22 at an average of 318 km/h and braked down to 92 km/h — a brake-zone speed drop of 226 km/h. Peak brake pressure averaged 92.4%. The drop was consistent across the stint (std-dev 4.2 km/h), suggesting Red Bull's brake balance held up well as fuel burned off.",
   metrics: [
     { label: "Approach Speed", value: "318", unit: "km/h" },

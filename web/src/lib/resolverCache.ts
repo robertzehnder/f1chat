@@ -135,7 +135,8 @@ export const getDriversForResolutionCached: CachedLookup<
   keyFn: (args) => {
     const a = args ?? {};
     return buildResolverCacheKey("drivers_for_resolution", null, a.sessionKey, {
-      limit: a.limit ?? null
+      limit: a.limit ?? null,
+      year: a.year ?? null
     });
   }
 });
@@ -163,7 +164,8 @@ export const getDriversFromIdentityLookupCached: CachedLookup<
   keyFn: (args) =>
     buildResolverCacheKey("drivers_from_identity_lookup", null, args.sessionKey, {
       aliases: [...(args.aliases ?? [])].map((a) => String(a ?? "").toLowerCase().trim()).sort(),
-      limit: args.limit ?? null
+      limit: args.limit ?? null,
+      year: args.year ?? null
     })
 });
 

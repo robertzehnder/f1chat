@@ -21,27 +21,22 @@ import { MinisectorStrip } from "./minisector-strip"
 import { NoDataCard } from "./no-data-card"
 import { LineWithStintMarkers } from "./line-with-stint-markers"
 import { CompositeCard } from "./composite-card"
-import { DeltaComparison } from "./delta-comparison"
+import { TrackCornerDelta } from "./track-corner-delta"
+import { CornerDeltaGrid } from "./corner-delta-grid"
+import { TrackSpeedMap } from "./track-speed-map"
+import { RaceTraceChart } from "./race-trace-chart"
+import { DegradationCurveChart } from "./degradation-curve-chart"
+import { PositionChangesChart } from "./position-changes-chart"
+import { TelemetryOverlayChart } from "./telemetry-overlay-chart"
 
 interface ChartRendererProps {
   chart: ChartSpec
   className?: string
 }
 
-// Check if a grouped_bar chart is actually a delta comparison (one series is all zeros)
-function isDeltaComparison(chart: ChartSpec): boolean {
-  if (chart.type !== "grouped_bar" || !chart.series || chart.series.length !== 2) return false
-  // Check if one series is all zeros (baseline)
-  return chart.series.some(s => s.values.every(v => Math.abs(v) < 0.001))
-}
-
 export function ChartRenderer({ chart, className }: ChartRendererProps) {
   switch (chart.type) {
     case "grouped_bar":
-      // Use DeltaComparison for baseline comparisons (e.g., delta to leader)
-      if (isDeltaComparison(chart)) {
-        return <DeltaComparison chart={chart} className={className} />
-      }
       return <GroupedBarChart chart={chart} className={className} />
     case "line":
       return <LineChart chart={chart} className={className} />
@@ -49,8 +44,6 @@ export function ChartRenderer({ chart, className }: ChartRendererProps) {
       return <HorizontalBarChart chart={chart} className={className} />
     case "horizontal_bar_diverging":
       return <DivergingBarChart chart={chart} className={className} />
-    case "timeline":
-      return <TimelineChart chart={chart} className={className} />
     case "radar":
       return <RadarChart chart={chart} className={className} />
     case "scatter_with_regression":
@@ -69,6 +62,20 @@ export function ChartRenderer({ chart, className }: ChartRendererProps) {
       return <PitEventStrip chart={chart as any} />
     case "track_heatmap":
       return <MinisectorStrip chart={chart as any} />
+    case "track_corner_delta":
+      return <TrackCornerDelta chart={chart} />
+    case "corner_delta_grid":
+      return <CornerDeltaGrid chart={chart} />
+    case "track_speed_map":
+      return <TrackSpeedMap chart={chart} />
+    case "race_trace":
+      return <RaceTraceChart chart={chart} />
+    case "degradation_curve":
+      return <DegradationCurveChart chart={chart} />
+    case "position_changes":
+      return <PositionChangesChart chart={chart} />
+    case "telemetry_overlay":
+      return <TelemetryOverlayChart chart={chart} />
     case "line_with_stint_markers":
       return <LineWithStintMarkers chart={chart as any} />
     case "event_timeline":
@@ -111,4 +118,4 @@ export { MinisectorStrip } from "./minisector-strip"
 export { NoDataCard } from "./no-data-card"
 export { LineWithStintMarkers } from "./line-with-stint-markers"
 export { CompositeCard } from "./composite-card"
-export { DeltaComparison } from "./delta-comparison"
+export { CornerDeltaGrid } from "./corner-delta-grid"

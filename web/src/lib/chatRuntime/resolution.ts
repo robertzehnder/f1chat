@@ -252,6 +252,30 @@ export function deriveResolutionStatus(confidence: number): ResolutionStatus {
   return "low_confidence";
 }
 
+// F16 (golden-set audit 2026-07-02): the warehouse team_name is the full
+// legal name ("red bull racing"), which a message saying "Red Bull" does
+// not contain, so team mentions never matched and comparisons like
+// "McLaren vs Red Bull" resolved only the substring-matching team. Match
+// the canonical name OR any word-boundary alias.
+const TEAM_ALIASES: Record<string, string[]> = {
+  "red bull racing": ["red bull", "redbull", "rbr"],
+  "racing bulls": ["rb", "vcarb", "visa cash app rb"],
+  "aston martin": ["aston"],
+  "kick sauber": ["sauber", "stake"],
+  "haas f1 team": ["haas"],
+  "alpine": ["alpine f1"]
+};
+
+function messageMentionsTeam(normalizedMessage: string, teamName: string): boolean {
+  const canon = teamName.toLowerCase();
+  if (normalizedMessage.includes(canon)) return true;
+  const aliases = TEAM_ALIASES[canon] ?? [];
+  // Word-boundary the aliases so "rb" doesn't match inside "verb"/"curb".
+  return aliases.some((a) =>
+    new RegExp(`\\b${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(normalizedMessage)
+  );
+}
+
 export function scoreDriverCandidate(row: DriverResolutionRow, normalizedMessage: string): {
   score: number;
   matchedOn: string[];
@@ -289,7 +313,7 @@ export function scoreDriverCandidate(row: DriverResolutionRow, normalizedMessage
     score += 2;
     matchedOn.push("broadcast_name");
   }
-  if (teamName && normalizedMessage.includes(teamName)) {
+  if (teamName && messageMentionsTeam(normalizedMessage, teamName)) {
     score += 2;
     matchedOn.push("team_name");
   }

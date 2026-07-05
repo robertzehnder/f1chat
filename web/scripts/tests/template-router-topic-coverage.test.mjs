@@ -19,9 +19,29 @@ const SCAN_FILES = [
   "src/lib/deterministicSql.ts",
   "src/lib/deterministicSql/pace.ts",
   "src/lib/deterministicSql/strategy.ts",
+  "src/lib/deterministicSql/pitCycle.ts",
+  "src/lib/deterministicSql/paceCliff.ts",
+  "src/lib/deterministicSql/inferredOvertakes.ts",
+  "src/lib/deterministicSql/minisectorDominance.ts",
+  "src/lib/deterministicSql/stintDelta.ts",
+  "src/lib/deterministicSql/strategySplit.ts",
+  "src/lib/deterministicSql/performanceRadar.ts",
+  "src/lib/deterministicSql/raceControlIncidents.ts",
+  "src/lib/deterministicSql/telemetryWeatherGap.ts",
+  "src/lib/deterministicSql/lap1Positions.ts",
+  "src/lib/deterministicSql/wetCrossover.ts",
+  "src/lib/deterministicSql/brakeZones.ts",
+  "src/lib/deterministicSql/cornerDelta.ts",
+  "src/lib/deterministicSql/sectorDominance.ts",
+  "src/lib/deterministicSql/speedMap.ts",
+  "src/lib/deterministicSql/raceTrace.ts",
+  "src/lib/deterministicSql/degradationCurve.ts",
+  "src/lib/deterministicSql/positionChanges.ts",
+  "src/lib/deterministicSql/telemetryOverlay.ts",
   "src/lib/deterministicSql/result.ts",
   "src/lib/deterministicSql/telemetry.ts",
-  "src/lib/deterministicSql/dataHealth.ts"
+  "src/lib/deterministicSql/dataHealth.ts",
+  "src/lib/deterministicSql/sessionTypeShare.ts"
 ];
 
 async function collectTemplateKeys() {

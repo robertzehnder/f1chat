@@ -23,6 +23,13 @@ export type DriverResolutionRow = {
   name_acronym: string | null;
   broadcast_name: string | null;
   team_name: string | null;
+  /** Year range this (driver_number, name) mapping was active, from the
+   *  identity lookup. Car numbers move between drivers across seasons
+   *  (Norris took #1 for 2026), so a question's year must pick the
+   *  mapping active THAT season. Only populated by the identity-lookup
+   *  path; other resolvers leave them unset. */
+  first_year?: number | null;
+  last_year?: number | null;
 };
 
 // Strips combining diacritic marks via NFKD + \p{Diacritic} regex,
@@ -109,8 +116,13 @@ export async function getSessionsForResolution(filters: {
 export async function getDriversForResolution(args: {
   sessionKey?: number;
   limit?: number;
+  /** Question year for the no-session branch: the "latest" session-driver
+   *  name for a car number must come from that season or earlier (the
+   *  unscoped latest labels #1 as 2026 Norris on a 2025 question). */
+  year?: number;
 } = {}): Promise<DriverResolutionRow[]> {
   const limit = safeLimit(args.limit, 400, 2000);
+  const year = Number.isFinite(Number(args.year)) ? Math.trunc(Number(args.year)) : null;
   if (args.sessionKey) {
     return sql<DriverResolutionRow>(
       `
@@ -165,14 +177,32 @@ export async function getDriversForResolution(args: {
   return sql<DriverResolutionRow>(
     `
     WITH identity AS (
+      -- Year-scoped against OBSERVED season data: the identity seed's
+      -- first/last_year is the driver's career range, not the
+      -- number-mapping range (#3 carries Verstappen 2023-2026 because he
+      -- ran #3 in 2026), so the only trustworthy check is "did this
+      -- (number, name) pair actually race that season".
       SELECT DISTINCT ON (di.driver_number)
         di.driver_number,
         di.canonical_full_name AS full_name,
         di.first_name,
         di.last_name,
         di.name_acronym,
-        di.broadcast_name
+        di.broadcast_name,
+        di.first_year,
+        di.last_year
       FROM core.driver_identity_lookup di
+      WHERE (
+        $2::int IS NULL
+        OR EXISTS (
+          SELECT 1
+          FROM core.session_drivers sd2
+          JOIN core.sessions s2 ON s2.session_key = sd2.session_key
+          WHERE sd2.driver_number = di.driver_number
+            AND s2.year = $2
+            AND LOWER(sd2.full_name) = LOWER(di.canonical_full_name)
+        )
+      )
       ORDER BY di.driver_number, di.alias_source DESC
     ),
     latest_session_driver AS (
@@ -186,6 +216,7 @@ export async function getDriversForResolution(args: {
       FROM core.session_drivers sd
       LEFT JOIN core.sessions s
         ON s.session_key = sd.session_key
+      WHERE ($2::int IS NULL OR s.year IS NULL OR s.year <= $2)
       ORDER BY sd.driver_number, COALESCE(s.year, 0) DESC, sd.session_key DESC
     )
     SELECT
@@ -218,7 +249,7 @@ export async function getDriversForResolution(args: {
     ORDER BY i.driver_number ASC NULLS LAST
     LIMIT $1
     `,
-    [limit]
+    [limit, year]
   );
 }
 
@@ -303,6 +334,12 @@ export async function getDriversFromIdentityLookup(args: {
   aliases: string[];
   sessionKey?: number;
   limit?: number;
+  /** Question/season year. Car numbers move between drivers across
+   *  seasons (Norris took #1 for 2026), so when the question names a
+   *  year only identity rows ACTIVE that year may match — otherwise
+   *  "Norris" on a 2025 question resolves to his 2026 number. Rows with
+   *  open-ended ranges always pass. */
+  year?: number;
 }): Promise<DriverResolutionRow[]> {
   const aliases = normalizeAliasList(args.aliases);
   if (aliases.length === 0) {
@@ -310,6 +347,7 @@ export async function getDriversFromIdentityLookup(args: {
   }
 
   const limit = safeLimit(args.limit, 60, 500);
+  const year = Number.isFinite(Number(args.year)) ? Math.trunc(Number(args.year)) : null;
   return sql<DriverResolutionRow>(
     `
     WITH matched AS (
@@ -320,12 +358,31 @@ export async function getDriversFromIdentityLookup(args: {
         MAX(di.last_name) AS last_name,
         MAX(di.name_acronym) AS name_acronym,
         MAX(di.broadcast_name) AS broadcast_name,
+        MIN(di.first_year)::int AS first_year,
+        MAX(di.last_year)::int AS last_year,
         COUNT(*)::int AS alias_hits
       FROM core.driver_identity_lookup di
       WHERE di.normalized_alias = ANY($1::text[])
+        AND (
+          $3::int IS NULL
+          OR EXISTS (
+            -- Observed-season check, not the seed's first/last_year —
+            -- those are career ranges, not number-mapping ranges.
+            SELECT 1
+            FROM core.session_drivers sd2
+            JOIN core.sessions s2 ON s2.session_key = sd2.session_key
+            WHERE sd2.driver_number = di.driver_number
+              AND s2.year = $3
+              AND LOWER(sd2.full_name) = LOWER(di.canonical_full_name)
+          )
+        )
       GROUP BY di.driver_number
     ),
     latest_driver_row AS (
+      -- Year-scoped: when the question names a year, the display name
+      -- for a car number must come from THAT season or earlier — the
+      -- unscoped latest row labels #1 as "Lando NORRIS" (2026) on a
+      -- 2025 question where #1 was Verstappen.
       SELECT DISTINCT ON (sd.driver_number)
         sd.session_key,
         sd.driver_number,
@@ -337,6 +394,7 @@ export async function getDriversFromIdentityLookup(args: {
       LEFT JOIN core.sessions s
         ON s.session_key = sd.session_key
       WHERE ($2::bigint IS NULL OR sd.session_key = $2)
+        AND ($3::int IS NULL OR s.year IS NULL OR s.year <= $3)
       ORDER BY sd.driver_number, COALESCE(s.year, 0) DESC, sd.session_key DESC
     )
     SELECT
@@ -347,7 +405,9 @@ export async function getDriversFromIdentityLookup(args: {
       m.last_name,
       m.name_acronym,
       COALESCE(ld.broadcast_name, m.broadcast_name) AS broadcast_name,
-      COALESCE(ti.canonical_team_name, ld.team_name) AS team_name
+      COALESCE(ti.canonical_team_name, ld.team_name) AS team_name,
+      m.first_year,
+      m.last_year
     FROM matched m
     LEFT JOIN latest_driver_row ld
       ON ld.driver_number = m.driver_number
@@ -367,9 +427,9 @@ export async function getDriversFromIdentityLookup(args: {
     ) ti
       ON TRUE
     ORDER BY m.alias_hits DESC, m.driver_number ASC
-    LIMIT $3
+    LIMIT $4
     `,
-    [aliases, args.sessionKey ?? null, limit]
+    [aliases, args.sessionKey ?? null, year, limit]
   );
 }
 

@@ -702,12 +702,12 @@ test("non-deterministic bypass via real route: requests with no templateKey neit
   });
 });
 
-test("failed-deterministic / heuristic-fallback bypass via real route: throwing runSql triggers the route's heuristic_after_template_failure branch; no cache write; subsequent identical request still misses; once the deterministic-success path completes, the cache populates and the next identical request hits", async () => {
+test("failed-deterministic / honest-failure bypass via real route: throwing runSql produces an honest structured failure (F05, no heuristic); no cache write; subsequent identical request still misses; once the deterministic-success path completes, the cache populates and the next identical request hits", async () => {
   await withRoute(async (loaded) => {
     resetAll(loaded);
     configureDeterministicHappyPath(loaded, { sessionKey: 9999, driverNumbers: [1, 16], year: 2025 });
 
-    // runSql throws on the first deterministic attempt, succeeds otherwise
+    // runSql throws (non-timeout) on the deterministic attempt, succeeds otherwise
     let runSqlCalls = 0;
     let runSqlMode = "throw_on_deterministic";
     loaded.answerCache.__answerCacheTestHooks.runSql = async (sql) => {
@@ -729,41 +729,42 @@ test("failed-deterministic / heuristic-fallback bypass via real route: throwing 
       return { answer: "real-or-fallback", reasoning: "r" };
     };
 
-    // 1) deterministic SQL fails → real route falls into heuristic_after_template_failure
+    // 1) deterministic SQL fails (non-timeout) → honest structured failure,
+    //    NO heuristic re-query (F01/F05).
     const fallbackResp = await postChat(loaded);
     assert.equal(
       fallbackResp.body.generationSource,
-      "heuristic_after_template_failure",
-      "real route must flip generationSource to heuristic_after_template_failure when deterministic SQL throws"
+      "sql_generation_failed",
+      "real route must return an honest structured failure when deterministic SQL throws"
     );
     assert.equal(fallbackResp.traceEntries.at(-1).cache_hit, false);
-    assert.equal(runSqlCalls, 2, "real route invokes runSql twice on the deterministic-failure → heuristic-success path");
+    assert.equal(runSqlCalls, 1, "only the throwing initial exec runs; no heuristic re-query");
 
-    // 2) follow-up identical request must still miss (no entry was written, because gate is generationSource === 'deterministic_template')
+    // 2) follow-up identical request must still miss (nothing written — gate is generationSource === 'deterministic_template')
     const followMiss = await postChat(loaded);
     assert.equal(
       followMiss.body.generationSource,
-      "heuristic_after_template_failure",
-      "follow-up identical request still flips to heuristic_after_template_failure (deterministic SQL still throws)"
+      "sql_generation_failed",
+      "follow-up identical request still returns honest failure (deterministic SQL still throws)"
     );
     assert.equal(
       followMiss.traceEntries.at(-1).cache_hit,
       false,
       "real route must re-emit cache_hit=false on the follow-up since no entry was written"
     );
-    assert.equal(runSqlCalls, 4, "SQL spy increments by two more (det-throw + heuristic-success) on the follow-up");
+    assert.equal(runSqlCalls, 2, "SQL spy increments by one more (single throwing exec) on the follow-up");
 
     // 3) Now make the deterministic SQL succeed; deterministic-success path populates the cache
     runSqlMode = "ok";
     const successResp = await postChat(loaded);
     assert.equal(successResp.body.generationSource, "deterministic_template");
-    assert.equal(runSqlCalls, 5, "deterministic-success run invokes the SQL spy exactly once more");
+    assert.equal(runSqlCalls, 3, "deterministic-success run invokes the SQL spy exactly once more");
     assert.equal(successResp.traceEntries.at(-1).cache_hit, false, "first deterministic-success is still a miss");
 
     // 4) follow-up identical → hit
     const finalHit = await postChat(loaded);
     assert.equal(finalHit.traceEntries.at(-1).cache_hit, true, "real route must emit cache_hit=true on the follow-up");
-    assert.equal(runSqlCalls, 5, "real route's cachedRunSql must NOT be re-invoked on the follow-up cache hit");
+    assert.equal(runSqlCalls, 3, "real route's cachedRunSql must NOT be re-invoked on the follow-up cache hit");
     const synthCallsAtFinalHit = synthCalls;
     void synthCallsAtFinalHit; // synth invocation parity with miss/hit is enforced by criterion-1 test above
   });

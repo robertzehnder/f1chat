@@ -14,6 +14,8 @@ import { useAuth } from "@/lib/auth-shim";
 import { consumeChatStream } from "@/lib/chat/consumeChatStream";
 import { mapChatApiResponseToParts } from "@/lib/mapChatResponse";
 import {
+  applyClarification,
+  applyCornerMap,
   applyInsightFields,
   applyQuestionTitle,
   applyResponseSemantics,
@@ -265,14 +267,16 @@ export default function F1InsightsChat() {
       let folded: DraftInsight = { body: liveBody };
       for (const p of parts) {
         if (skipTextParts && p.type === "text") continue;
-        folded = foldPartsIntoInsight(folded, p);
+        folded = foldPartsIntoInsight(folded, p, { question: text });
       }
       // Apply structured insight from the final payload — covers
       // non-SSE responses (where onInsight never fires) and re-merges
       // for SSE in case the insight frame was missed.
       folded = applyInsightFields(folded, finalPayload.insight ?? null);
       folded = applyResponseSemantics(folded, finalPayload);
+      folded = applyClarification(folded, finalPayload, text);
       folded = applyScalarHero(folded);
+      folded = applyCornerMap(folded);
       folded = applyVerdictSemantics(folded);
       folded = applyQuestionTitle(folded, text);
       // Carry reasoning through; flip streaming off so the card collapses
@@ -394,7 +398,7 @@ export default function F1InsightsChat() {
                   {message.type === "user" ? (
                     <MessageBubble content={message.content} />
                   ) : message.insight ? (
-                    <InsightCard {...toCardProps(message.insight)} onFollowUp={handleFollowUp} />
+                    <InsightCard {...toCardProps(message.insight)} onFollowUp={handleFollowUp} onResolve={(q) => void handleSend(q)} />
                   ) : (
                     <p className="text-sm text-foreground/90">{message.content}</p>
                   )}

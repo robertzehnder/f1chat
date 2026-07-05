@@ -50,8 +50,35 @@ const SESSION_TABLE_COUNT_TABLES: ReadonlyArray<string> = [
   "core.replay_lap_frames"
 ];
 
+// Coverage probes ask "is this relation populated for the session?" and
+// callers branch on > 0 only. Every core.* relation in the probe list is
+// an UNMATERIALIZED view (verified against pg_class 2026-06-10): EXISTS
+// still executes the view body, and the aggregating ones cost 3–8s per
+// probe on Neon (driver_session_summary ≈ 7.5s, laps_enriched ≈ 3.7s).
+// On a 5-candidate weekend the sequential probe loop blew the 150s
+// resolve deadline (seed-7 stint_delta Silverstone timeouts). Probe the
+// base table that FEEDS each view instead — presence of feed rows is the
+// same populated/empty signal at index-seek cost (10–16ms measured).
+const PROBE_PROXY: Record<string, string> = {
+  "core.sessions": "raw.sessions",
+  "core.session_drivers": "raw.drivers",
+  "core.laps_enriched": "raw.laps",
+  "core.lap_semantic_bridge": "raw.laps",
+  "core.driver_session_summary": "raw.laps",
+  "core.stint_summary": "raw.stints",
+  "core.strategy_summary": "raw.stints",
+  "core.strategy_evidence_summary": "raw.stints",
+  "core.pit_cycle_summary": "raw.pit",
+  "core.grid_vs_finish": "raw.session_result",
+  "core.race_progression_summary": "raw.position_history",
+  "core.lap_phase_summary": "raw.laps",
+  "core.lap_context_summary": "raw.laps",
+  "core.telemetry_lap_bridge": "raw.laps",
+  "core.replay_lap_frames": "raw.laps"
+};
+
 const SESSION_TABLE_COUNT_SQL: Record<string, string> = Object.fromEntries(
-  SESSION_TABLE_COUNT_TABLES.map((t) => [t, existsBySessionSql(t)])
+  SESSION_TABLE_COUNT_TABLES.map((t) => [t, existsBySessionSql(PROBE_PROXY[t] ?? t)])
 );
 
 function nullableLike(value?: string): string | null {

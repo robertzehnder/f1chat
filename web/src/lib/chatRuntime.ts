@@ -442,6 +442,35 @@ function selectComparisonDriverNumbers(driverCandidates: DriverCandidate[]): num
   return selected.slice(0, 2);
 }
 
+// "Hamilton's deltas to Leclerc" — Hamilton is the subject, so the pair
+// order should follow mention order, not candidate score order. Templates
+// use driver order for delta sign conventions (delta = first − second), so
+// a score-ordered pair flips the sign relative to how the question reads.
+// Drivers whose name doesn't appear in the message keep their score order
+// (Infinity sorts after every real mention; the sort is stable).
+function orderDriversByMentionPosition(
+  selectedDriverNumbers: number[],
+  driverCandidates: DriverCandidate[],
+  normalizedMessage: string
+): number[] {
+  if (selectedDriverNumbers.length < 2) {
+    return selectedDriverNumbers;
+  }
+  const nameByNumber = new Map(
+    driverCandidates.map((candidate) => [candidate.driverNumber, candidate.fullName ?? ""])
+  );
+  const mentionIndex = (driverNumber: number): number => {
+    const fullName = normalize(nameByNumber.get(driverNumber) ?? "");
+    if (!fullName) return Number.POSITIVE_INFINITY;
+    const candidates = [fullName, fullName.split(" ").pop() ?? ""].filter(Boolean);
+    const positions = candidates
+      .map((name) => normalizedMessage.indexOf(name))
+      .filter((idx) => idx >= 0);
+    return positions.length ? Math.min(...positions) : Number.POSITIVE_INFINITY;
+  };
+  return [...selectedDriverNumbers].sort((a, b) => mentionIndex(a) - mentionIndex(b));
+}
+
 // Phase 19 outcome-fix Fix 2 (codex audit pass 1-3): race-shaped intent
 // extractors. When a question names a venue + year AND contains a
 // race-shaped marker AND does NOT contain a session-type-sensitive
@@ -593,6 +622,66 @@ export function isRaceShapedVenueYearIntent(
   return containsRaceShapedMarker(normalizedText);
 }
 
+/**
+ * Same-weekend session-type tie-break. Returns true when the close-scored
+ * candidates (within 1 point of the top score) ALL share one meetingKey —
+ * i.e. they are the Practice / Qualifying / Race sessions of the same
+ * weekend (e.g. a bare "Imola" with no year resolves to the 2025 P3 /
+ * Quali / Race trio). The ambiguity is then "which session of this
+ * weekend", not "which event", so no year anchor is needed — the weekend
+ * is already pinned. Callers prefer the Race session and skip
+ * clarification UNLESS the question is session-type-sensitive (qualifying /
+ * pole / sprint / FP / practice / long-run), in which case it must keep
+ * clarifying. Exported for test fixtures.
+ */
+export function prefersRaceForSameMeetingTie(
+  candidates: ReadonlyArray<{ meetingKey: number | null; score: number }>,
+  isSessionTypeSensitive: boolean
+): boolean {
+  if (isSessionTypeSensitive) return false;
+  const topScore = candidates[0]?.score ?? 0;
+  if (topScore <= 0) return false;
+  // Window of 6, not 1: the data-coverage bonus spreads same-meeting
+  // candidates by up to ±2 per checked table (a quali with full
+  // raw.location vs a race without it lands 4 apart), and a coverage
+  // wobble must not override the race preference for a question that
+  // never asked about qualifying. The same-meeting requirement below
+  // keeps the wider window from mixing meetings.
+  const closeKeys = candidates
+    .filter((c) => topScore - c.score <= 6)
+    .map((c) => c.meetingKey);
+  return (
+    closeKeys.length > 1 &&
+    closeKeys[0] != null &&
+    closeKeys.every((k) => k === closeKeys[0])
+  );
+}
+
+/**
+ * Cross-year tie-break. When the question names NO year and the close-scored
+ * candidates are the SAME session type in DIFFERENT seasons (e.g. "Silverstone
+ * qualifying" → 2024 Quali + 2025 Quali), default to the latest year rather
+ * than asking. Returns the winning session_key, or null when it doesn't apply
+ * (explicit year, only one candidate, or candidates differ by session type —
+ * which is a genuine ambiguity that should still clarify). Exported for tests.
+ */
+export function latestYearForVenueTie(
+  candidates: ReadonlyArray<{ sessionKey: number; sessionName: string | null; year: number | null; score: number }>,
+  hasExplicitYear: boolean
+): number | null {
+  if (hasExplicitYear) return null;
+  const topScore = candidates[0]?.score ?? 0;
+  if (topScore <= 0) return null;
+  const close = candidates.filter((c) => topScore - c.score <= 1);
+  if (close.length < 2) return null;
+  const names = new Set(close.map((c) => (c.sessionName ?? "").toLowerCase()));
+  const years = close.map((c) => c.year).filter((y): y is number => y != null);
+  if (names.size !== 1 || new Set(years).size < 2 || years.length !== close.length) return null;
+  // Same session type, distinct years, no year given → newest season wins.
+  const winner = [...close].sort((a, b) => (b.year ?? 0) - (a.year ?? 0))[0];
+  return winner?.sessionKey ?? null;
+}
+
 function parseYear(text: string): number | undefined {
   const match = text.match(/\b(20\d{2})\b/);
   if (!match) {
@@ -621,10 +710,17 @@ function parseDriverNumberMentions(text: string): number[] {
 }
 
 function extractSessionNameHint(normalizedText: string): string | undefined {
-  if (normalizedText.includes("sprint qualifying")) {
+  if (normalizedText.includes("sprint qualifying") || normalizedText.includes("sprint shootout")) {
     return "Sprint Qualifying";
   }
-  if (normalizedText.includes("qualifying") || normalizedText.includes("quali")) {
+  // Pole / pole lap / pole position / Q1 / Q2 / Q3 imply Qualifying even
+  // when the user doesn't write the word "qualifying" itself.
+  if (
+    normalizedText.includes("qualifying") ||
+    normalizedText.includes("quali") ||
+    /\bpole(\s+(lap|position|time))?\b/.test(normalizedText) ||
+    /\bq[1-3]\b/.test(normalizedText)
+  ) {
     return "Qualifying";
   }
   if (normalizedText.includes("sprint")) {
@@ -686,6 +782,10 @@ const VENUE_DEMONYM_ALIASES: ReadonlyArray<{ trigger: string; aliases: string[] 
   { trigger: "qatari", aliases: ["qatar", "lusail"] },
   { trigger: "mexican", aliases: ["mexico", "mexico city"] },
   { trigger: "brazilian", aliases: ["brazil", "são paulo", "sao paulo", "interlagos"] },
+  // "São Paulo Grand Prix" — the venue itself is the alias the lookup
+  // misses (2026-06-10: resolved to Abu Dhabi via recency fallback).
+  { trigger: "sao paulo", aliases: ["brazil", "interlagos", "são paulo"] },
+  { trigger: "interlagos", aliases: ["brazil", "são paulo", "sao paulo"] },
   { trigger: "emirati", aliases: ["united arab emirates", "abu dhabi", "yas marina circuit"] },
   { trigger: "miami", aliases: ["united states", "miami gardens"] },
   { trigger: "las vegas", aliases: ["united states", "las vegas"] },
@@ -1569,53 +1669,102 @@ export async function buildChatRuntime(input: {
     const provisionalSecondScore = scored[1]?.score ?? 0;
     const provisionalCloseScores = provisionalTopScore > 0 && provisionalTopScore - provisionalSecondScore <= 1;
     const provisionalTopConfidence = scored[0] ? clampConfidence(0.45 + scored[0].score / 12) : 0;
+    // Close scores no longer SKIP the coverage check — they're exactly
+    // when it matters. A venue with no year ("at Bahrain") ties every
+    // season's sessions at the same score; recency then packs the top of
+    // the list with the newest (possibly data-empty) meeting, and the
+    // race-shaped tie-break resolves to it without clarifying. Coverage
+    // is the tiebreaker that picks the season that actually has rows
+    // (2026-06-10: brake-zone question resolved to the empty 2026
+    // Bahrain race with 2025 fully ingested one slot below).
     const likelyNeedsSessionClarification =
       shouldRequireSession &&
-      (!scored[0] || deriveResolutionStatus(provisionalTopConfidence) === "low_confidence" || provisionalCloseScores);
+      (!scored[0] || deriveResolutionStatus(provisionalTopConfidence) === "low_confidence");
 
     if (
       shouldRequireSession &&
       !explicitSessionKey &&
       scored.length > 1 &&
-      !runtimeFastPath &&
+      // Fast path still gets the coverage tiebreak when the top scores
+      // are tied — a venue-no-year telemetry question ("brake zones at
+      // Bahrain") ties every season at the same score, and skipping
+      // coverage resolves it to the newest (possibly empty) meeting.
+      (!runtimeFastPath || provisionalCloseScores) &&
       !forceSessionClarification &&
       !likelyNeedsSessionClarification
     ) {
-      const coverageTables = requiredTables.filter((tableName) => SESSION_SCOPED_TABLES.has(tableName));
+      // Probe only CHEAP tables. raw.car_data / raw.location are
+      // billions of rows — their count probes time out under the
+      // parallel fan-out, read as zero, and hand a -20 "no data" penalty
+      // to sessions that are fully ingested (2026-06-10: the 2025
+      // Bahrain race fell out of the candidate list entirely). The core
+      // matviews are the coverage signal anyway — telemetry_lap_bridge
+      // is only populated when car_data exists.
+      const EXPENSIVE_COVERAGE_TABLES = new Set(["raw.car_data", "raw.location"]);
+      const coverageTables = requiredTables.filter(
+        (tableName) => SESSION_SCOPED_TABLES.has(tableName) && !EXPENSIVE_COVERAGE_TABLES.has(tableName)
+      );
       if (coverageTables.length > 0) {
         // Phase 17 (post-deploy diagnostic 2026-05-02): was 30; on Neon this
         // fans out to 30 × N table EXISTS probes via Promise.all and
         // saturates the pool (max=10). Top 5 candidates is plenty — they're
         // already scored by alias hits + recency + venue match.
-        const candidatesToCheck = scored.slice(0, 5);
+        //
+        // Meeting diversification (2026-06-10): a venue with multiple
+        // seasons produces equal-scored candidates where recency packs
+        // the ENTIRE top-5 with the newest meeting's sessions — when
+        // that meeting has no data yet ("Bahrain" → five 2026 sessions),
+        // the seasons that DO have data never get coverage-checked and
+        // can never be promoted. Include the best candidate from each
+        // distinct meeting (newest first) alongside the raw top-5.
+        const topFive = scored.slice(0, 5);
+        const seenMeetings = new Set(topFive.map((item) => item.row.meeting_key));
+        const perMeetingBest: typeof topFive = [];
+        for (const item of scored) {
+          if (perMeetingBest.length + topFive.length >= 8) break;
+          if (seenMeetings.has(item.row.meeting_key)) continue;
+          seenMeetings.add(item.row.meeting_key);
+          perMeetingBest.push(item);
+        }
+        const candidatesToCheck = [...topFive, ...perMeetingBest];
         const coverageBonus = new Map<number, { bonus: number; allUsable: boolean }>();
 
-        await Promise.all(
-          candidatesToCheck.map(async (item) => {
-            try {
-              const counts = await traceQuery(
-                `resolve.coverage.${item.row.session_key}`,
-                () => getSessionTableCounts(item.row.session_key, coverageTables)
-              );
-              const usableCount = coverageTables.filter((tableName) => (counts[tableName] ?? 0) > 0).length;
-              const missingCount = coverageTables.length - usableCount;
-              const allUsable = usableCount === coverageTables.length;
-              let bonus = 0;
-
-              if (allUsable) {
-                bonus = 10;
-              } else if (usableCount === 0) {
-                bonus = -20;
-              } else {
-                bonus = usableCount * 2 - missingCount * 2;
-              }
-
-              coverageBonus.set(item.row.session_key, { bonus, allUsable });
-            } catch {
+        // SEQUENTIAL per candidate: a Promise.all over 8 candidates × N
+        // tables saturates the pool (max 10) and the starved probes ERROR
+        // — which the old math scored as "no data" (-20), nuking fully
+        // ingested sessions out of the candidate list. Each candidate's
+        // own probes still fan out inside getSessionTableCounts.
+        for (const item of candidatesToCheck) {
+          try {
+            const counts = await traceQuery(
+              `resolve.coverage.${item.row.session_key}`,
+              () => getSessionTableCounts(item.row.session_key, coverageTables)
+            );
+            // -1 = probe failed (error/unsupported), NOT "table empty".
+            // Unknown coverage must stay neutral — never a penalty.
+            const knownTables = coverageTables.filter((tableName) => (counts[tableName] ?? -1) >= 0);
+            if (knownTables.length === 0) {
               coverageBonus.set(item.row.session_key, { bonus: 0, allUsable: false });
+              continue;
             }
-          })
-        );
+            const usableCount = knownTables.filter((tableName) => (counts[tableName] ?? 0) > 0).length;
+            const missingCount = knownTables.length - usableCount;
+            const allUsable = usableCount === coverageTables.length;
+            let bonus = 0;
+
+            if (allUsable) {
+              bonus = 10;
+            } else if (usableCount === 0) {
+              bonus = -20;
+            } else {
+              bonus = usableCount * 2 - missingCount * 2;
+            }
+
+            coverageBonus.set(item.row.session_key, { bonus, allUsable });
+          } catch {
+            coverageBonus.set(item.row.session_key, { bonus: 0, allUsable: false });
+          }
+        }
 
         scored = scored
           .map((item) => {
@@ -1655,28 +1804,63 @@ export async function buildChatRuntime(input: {
 
   let driverRows = await traceQuery("resolve.getDriversForResolution", () =>
     getDriversForResolutionCached({
-      sessionKey: selectedSession?.sessionKey
+      sessionKey: selectedSession?.sessionKey,
+      // No-session branch only: scope the "latest" driver-name mapping to
+      // the question's season (car numbers move between drivers).
+      year: extractedYear ?? undefined
     })
   );
   const lookupDriverRows = await traceQuery("resolve.getDriversFromIdentityLookup", () =>
     getDriversFromIdentityLookupCached({
       aliases: lookupAliasCandidates,
       sessionKey: selectedSession?.sessionKey,
-      limit: 120
+      limit: 120,
+      // Year-scoped identity: car numbers move between drivers across
+      // seasons (Norris took #1 for 2026), so a question's year picks
+      // the (number, name) mapping active that season.
+      year: extractedYear ?? selectedSession?.year ?? undefined
     })
   );
   driverRows = mergeDriverRows(driverRows, lookupDriverRows);
-  const { scoredCandidates, ambiguousSurnames } = disambiguateDrivers(driverRows, normalizedMessage, selectedSession?.year ?? null);
+  // Season-scoped questions ("…in 2025") resolve no session, but the
+  // question's own year is just as good for surname disambiguation —
+  // without it, bare "Verstappen" on a season question forced a driver
+  // clarification (M17 incident).
+  const { scoredCandidates, ambiguousSurnames } = disambiguateDrivers(
+    driverRows,
+    normalizedMessage,
+    selectedSession?.year ?? extractedYear ?? null
+  );
   const forceDriverClarification = (asksSpecificDriverClarification || ambiguousSurnames.length > 0) && explicitDriverNumbers.length === 0;
   const scoredDrivers = scoredCandidates
     .map((item) => {
       const explicitHit = explicitDriverNumbers.includes(item.row.driver_number) ? 30 : 0;
+      // Car numbers move between drivers across seasons (Norris took #1
+      // for 2026, Verstappen's 2023-25 number). When the question names a
+      // year, prefer the (number, name) mapping active that season and
+      // demote mappings whose active range excludes it — otherwise a 2025
+      // question resolves "Norris" to his 2026 number and every
+      // driver-scoped query downstream returns the wrong car.
+      // PENALTY-only: a bonus for matching ranges would favor
+      // identity-lookup rows (which carry years) over session rows
+      // (which don't) — that asymmetry once promoted Arthur LECLERC
+      // over Charles on a "Leclerc" question.
+      const questionYear = extractedYear ?? selectedSession?.year ?? null;
+      const firstYear = item.row.first_year ?? null;
+      const lastYear = item.row.last_year ?? null;
+      const yearFit =
+        questionYear === null || firstYear === null || lastYear === null
+          ? 0
+          : questionYear >= firstYear && questionYear <= lastYear
+            ? 0
+            : -12;
       return {
         row: item.row,
-        score: item.score + explicitHit,
-        matchedOn: unique(
-          explicitHit > 0 ? [...item.matchedOn, "context/explicit driver number"] : item.matchedOn
-        )
+        score: item.score + explicitHit + yearFit,
+        matchedOn: unique([
+          ...(explicitHit > 0 ? [...item.matchedOn, "context/explicit driver number"] : item.matchedOn),
+          ...(yearFit < 0 ? ["year_range_mismatch"] : [])
+        ])
       };
     })
     .filter((item) => item.score > 0)
@@ -1691,12 +1875,57 @@ export async function buildChatRuntime(input: {
     matchedOn: item.matchedOn
   }));
 
-  const selectedDriverNumbers =
+  // A question that NAMES two drivers is a pair question regardless of how
+  // the classifier typed it ("Did Hamilton's stint-2 deltas to Leclerc
+  // reverse…" classifies as aggregate_analysis, but collapsing it to the
+  // top-1 candidate silently dropped Hamilton and broke every pair-gated
+  // template downstream). Name-based matchedOn flags only — team_name /
+  // acronym hits are too weak to promote a second driver on.
+  const nameMatchedCandidates = driverCandidates.filter((candidate) =>
+    candidate.matchedOn.some((flag) =>
+      flag === "full_name_exact" || flag === "full_name" || flag === "last_name"
+    )
+  );
+  const distinctNameMatchedCount = new Set(
+    nameMatchedCandidates.map((candidate) => normalize(candidate.fullName ?? String(candidate.driverNumber)))
+  ).size;
+  // "the McLarens" / "both Ferraris" — a plural team mention names that
+  // team's two cars even though no individual driver is named. Only
+  // fires when zero individual names matched, so "Mercedes split
+  // strategies between Russell and Hamilton" still resolves by name.
+  const teamPairNumbers = (() => {
+    if (distinctNameMatchedCount >= 1 || explicitDriverNumbers.length > 0) return [] as number[];
+    const byTeam = new Map<string, number[]>();
+    for (const item of scoredDrivers) {
+      const team = String(item.row.team_name ?? "");
+      if (!team || !item.matchedOn.includes("team_name")) continue;
+      const numbers = byTeam.get(team) ?? [];
+      if (!numbers.includes(item.row.driver_number)) numbers.push(item.row.driver_number);
+      byTeam.set(team, numbers);
+    }
+    for (const [team, numbers] of byTeam) {
+      if (numbers.length < 2) continue;
+      const teamToken = normalize(team).split(" ")[0];
+      if (!teamToken) continue;
+      if (normalizedMessage.includes(`${teamToken}s`) || normalizedMessage.includes(`both ${teamToken}`)) {
+        return numbers.slice(0, 2);
+      }
+    }
+    return [] as number[];
+  })();
+  const selectedDriverNumbers = orderDriversByMentionPosition(
     explicitDriverNumbers.length > 0
       ? explicitDriverNumbers
       : questionType === "comparison_analysis"
         ? selectComparisonDriverNumbers(driverCandidates)
-        : driverCandidates.slice(0, 1).map((d) => d.driverNumber);
+        : distinctNameMatchedCount >= 2
+          ? selectComparisonDriverNumbers(nameMatchedCandidates)
+          : teamPairNumbers.length === 2
+            ? teamPairNumbers
+            : driverCandidates.slice(0, 1).map((d) => d.driverNumber),
+    driverCandidates,
+    normalizedMessage
+  );
   const selectedDriverLabels = buildSelectedDriverLabels(selectedDriverNumbers, driverCandidates);
   const selectedDriverSummary = selectedDriverLabels.join(", ");
 
@@ -1739,13 +1968,29 @@ export async function buildChatRuntime(input: {
     normalizedMessage,
     Boolean(hasStrongVenueYearAnchor)
   );
+  // Same-weekend session-type tie: when the close-scored candidates all
+  // belong to ONE meeting (same meetingKey) they differ only by session
+  // type — Practice / Qualifying / Race of the same weekend (e.g. "Imola"
+  // with no year resolves to the 2025 P3 / Quali / Race trio). The
+  // ambiguity is "which session of this weekend", not "which event", so a
+  // year anchor isn't needed — the weekend is already pinned. For
+  // questions that aren't session-type-sensitive (no qualifying / pole /
+  // sprint / FP / practice marker), prefer the Race and skip clarification.
+  const preferRaceForSameMeetingTie = prefersRaceForSameMeetingTie(
+    sessionCandidates,
+    containsSessionTypeSensitiveMarker(normalizedMessage)
+  );
   // When race-shaped intent fires AND a race candidate exists in the
   // top candidate set, re-rank so the race candidate becomes
   // `selectedSession`. Two close-scored candidates (race + quali) get
   // the race tie-break; questions with explicit session-type markers
   // are filtered out earlier by the deny-list inside
-  // `isRaceShapedVenueYearIntent`.
-  if (hasRaceShapedIntentForVenueYear && sessionCandidates.length > 1) {
+  // `isRaceShapedVenueYearIntent`. The same-meeting tie-break applies the
+  // identical race preference for venue-only (no year) weekend ties.
+  if (
+    (hasRaceShapedIntentForVenueYear || preferRaceForSameMeetingTie) &&
+    sessionCandidates.length > 1
+  ) {
     const isRaceCandidate = (c: typeof sessionCandidates[number]): boolean => {
       const name = (c.sessionName ?? "").toLowerCase();
       // "Race" matches; "Sprint" / "Sprint Race" stay non-race so a
@@ -1761,11 +2006,21 @@ export async function buildChatRuntime(input: {
       }
     }
   }
+  // Cross-year tie-break: same session type in different seasons with no year
+  // named → default to the latest season instead of clarifying.
+  const latestYearKey = latestYearForVenueTie(sessionCandidates, Boolean(extractedYear));
+  const preferLatestYear = latestYearKey != null;
+  if (preferLatestYear) {
+    const latest = sessionCandidates.find((c) => c.sessionKey === latestYearKey);
+    if (latest) selectedSession = latest;
+  }
   const closeScoreNeedsClarification =
     closeScores &&
     !runtimeFastPath &&
     !hasStrongVenueYearAnchor &&
-    !hasRaceShapedIntentForVenueYear;
+    !hasRaceShapedIntentForVenueYear &&
+    !preferRaceForSameMeetingTie &&
+    !preferLatestYear;
   // Phase 25.2 loop tightening: not every "compare X" question is a
   // driver-pair comparison. Steward-decision / incident / strategy /
   // deg-curve / sequence comparisons compare structural objects, not
@@ -1843,7 +2098,12 @@ export async function buildChatRuntime(input: {
   const needsClarification =
     forceSessionClarification ||
     forceDriverClarification ||
+    // A same-meeting session-type tie is confidently re-ranked to the Race
+    // above, so don't let the close-tie's low per-candidate confidence drag
+    // it back into clarification.
     (requiresSession &&
+      !preferRaceForSameMeetingTie &&
+      !preferLatestYear &&
       (!selectedSession || resolutionStatus === "low_confidence" || closeScoreNeedsClarification)) ||
     needsDriverPair;
 
@@ -1870,10 +2130,17 @@ export async function buildChatRuntime(input: {
         clarificationPrompt += ` Driver context resolved so far: ${selectedDriverSummary}.`;
       }
     } else if (closeScoreNeedsClarification && sessionCandidates.length > 1) {
-      clarificationPrompt = `I found multiple close session matches. Can you confirm the session key (${sessionCandidates
+      // Show human-readable session labels, not just raw keys — a user can't tell
+      // "Sprint Qualifying" from "Qualifying" by session_key alone. Keep the key
+      // too so they can still disambiguate precisely.
+      const options = sessionCandidates
         .slice(0, 3)
-        .map((candidate) => candidate.sessionKey)
-        .join(", ")})?`;
+        .map((c) => {
+          const label = c.label || [c.sessionName, c.year].filter(Boolean).join(" ") || "session";
+          return `${label} (session ${c.sessionKey})`;
+        })
+        .join(", or ");
+      clarificationPrompt = `I found multiple close session matches — which did you mean: ${options}?`;
     } else {
       clarificationPrompt =
         "I need a bit more detail to resolve the correct session. Please include venue, year, and session type.";
