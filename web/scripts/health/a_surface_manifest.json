@@ -1,0 +1,837 @@
+{
+  "templateKeys": {
+    "abu_dhabi_weekend_smallest_spread_and_comparison": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "Abu Dhabi weekend smallest field spread with comparison"
+    },
+    "canonical_id_lookup_abu_dhabi_2025_race": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "resolves canonical session id for Abu Dhabi 2025 race"
+    },
+    "compound_degradation_curve": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "per-compound lap-time degradation curve over tire age"
+    },
+    "driver_pair_brake_zones": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "compares two drivers' braking points per corner"
+    },
+    "driver_pair_lap1_positions": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "lap-1 running-order positions for a driver pair"
+    },
+    "driver_pair_performance_radar": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "multi-metric performance radar comparing two drivers"
+    },
+    "driver_pair_sector_dominance": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "which driver is faster per sector, head-to-head"
+    },
+    "driver_pair_stint_delta": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "cumulative lap-time delta between two drivers per stint"
+    },
+    "driver_pair_strategy_split": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "compares pit/tire strategy split between two drivers"
+    },
+    "driver_pair_wet_crossover": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "wet-vs-dry pace crossover point for a driver pair"
+    },
+    "driver_telemetry_overlay": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "overlays lap telemetry traces for compared drivers"
+    },
+    "fastest_lap_by_driver": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "each driver's single fastest lap in a session"
+    },
+    "inferred_overtakes": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "on-track overtakes inferred from lap position changes"
+    },
+    "max_leclerc_avg_clean_lap_pace": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "Verstappen vs Leclerc average clean-lap pace"
+    },
+    "max_leclerc_common_lap_window_pace": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "pace over a common shared lap window"
+    },
+    "max_leclerc_compounds_used": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "tire compounds each driver ran in the race"
+    },
+    "max_leclerc_fastest_lap_per_driver": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "fastest lap for each of the two drivers"
+    },
+    "max_leclerc_fastest_lap_telemetry_window": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "telemetry window around each driver's fastest lap"
+    },
+    "max_leclerc_final_third_pace": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "pace over the final third of the race"
+    },
+    "max_leclerc_fresh_vs_used_tires": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "fresh-tire vs used-tire pace comparison"
+    },
+    "max_leclerc_lap_consistency": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "lap-time consistency (spread) for each driver"
+    },
+    "max_leclerc_lap_degradation_by_stint": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "per-stint lap-time degradation slope by driver"
+    },
+    "max_leclerc_lap_pace_summary": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "summary of lap pace metrics per driver"
+    },
+    "max_leclerc_opening_closing_stint_lengths": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "opening and closing stint lengths per driver"
+    },
+    "max_leclerc_pit_laps": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "the lap numbers on which each driver pitted"
+    },
+    "max_leclerc_pit_stop_count": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "count of pit stops made by each driver"
+    },
+    "max_leclerc_position_change_around_pit_cycle": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "position change across each driver's pit cycle"
+    },
+    "max_leclerc_positions_gained_or_lost": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "net positions gained or lost per driver"
+    },
+    "max_leclerc_post_pit_pace": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "pace on laps immediately after pitting"
+    },
+    "max_leclerc_pre_post_pit_pace": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "pace before versus after the pit stop"
+    },
+    "max_leclerc_qualifying_improvement": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "Leclerc's lap-time improvement across qualifying segments"
+    },
+    "max_leclerc_running_order_progression": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "running-order position progression lap by lap"
+    },
+    "max_leclerc_sector_comparison": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "sector-time comparison between the two drivers"
+    },
+    "max_leclerc_shortest_pit_stop": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "shortest pit-stop duration for each driver"
+    },
+    "max_leclerc_stint_lengths": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "length in laps of each driver's stints"
+    },
+    "max_leclerc_stint_pace_vs_tire_age": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "stint pace regressed against tire age"
+    },
+    "max_leclerc_strategy_type": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "classifies each driver's race strategy type"
+    },
+    "max_leclerc_top_speed": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "top speed recorded for each driver"
+    },
+    "max_leclerc_total_pit_time": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "total time each driver spent in pit lane"
+    },
+    "minisector_dominance": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "which driver owns each minisector, head-to-head"
+    },
+    "monaco_2025_sessions_most_complete_telemetry_coverage": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "Monaco 2025 sessions with most complete telemetry coverage"
+    },
+    "practice_laps_vs_race_pace_same_meeting": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "practice lap pace versus race pace, same meeting"
+    },
+    "race_position_changes": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "position changes across the race per driver"
+    },
+    "session_race_control_incidents": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "race-control incidents logged for the session"
+    },
+    "session_race_trace": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "gap-to-leader race trace for the session"
+    },
+    "sessions_most_complete_downstream_coverage": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "sessions ranked by downstream data coverage"
+    },
+    "sessions_telemetry_without_weather": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "sessions with telemetry but missing weather data"
+    },
+    "single_driver_pace_cliff": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "detects a single driver's pace-cliff lap"
+    },
+    "single_driver_pit_cycle": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "single driver's pit-cycle position and pace timeline"
+    },
+    "single_driver_speed_map": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "single driver's speed mapped onto track outline"
+    },
+    "top10_fastest_laps_overall": {
+      "class": "gated",
+      "truthTier": "hard-truth",
+      "note": "the ten fastest laps overall in a session"
+    }
+  },
+  "detectors": {
+    "brake_zone_delta": {
+      "class": "gated",
+      "note": "builds track_corner_delta spec; has fixtures in registry.ts"
+    },
+    "composite": {
+      "class": "gated",
+      "note": "builds composite spec; has fixtures in registry.ts"
+    },
+    "degradation_curve": {
+      "class": "gated",
+      "note": "builds degradation_curve spec; has fixtures in registry.ts"
+    },
+    "donut": {
+      "class": "gated",
+      "note": "builds donut spec; has fixtures in registry.ts"
+    },
+    "event_timeline": {
+      "class": "gated",
+      "note": "builds event_timeline spec; has fixtures in registry.ts"
+    },
+    "grouped_bar": {
+      "class": "gated",
+      "note": "builds grouped_bar spec; has fixtures in registry.ts"
+    },
+    "horizontal_bar": {
+      "class": "gated",
+      "note": "builds horizontal_bar spec; has fixtures in registry.ts"
+    },
+    "horizontal_bar_diverging": {
+      "class": "gated",
+      "note": "builds horizontal_bar_diverging spec; has fixtures in registry.ts"
+    },
+    "line": {
+      "class": "gated",
+      "note": "builds line spec; has fixtures in registry.ts"
+    },
+    "line_dual_axis": {
+      "class": "gated",
+      "note": "builds line_dual_axis spec; has fixtures in registry.ts"
+    },
+    "line_with_stint_markers": {
+      "class": "gated",
+      "note": "builds line_with_stint_markers spec; has fixtures in registry.ts"
+    },
+    "pit_event_strip": {
+      "class": "gated",
+      "note": "builds pit_event_strip spec; has fixtures in registry.ts"
+    },
+    "position_changes": {
+      "class": "gated",
+      "note": "builds position_changes spec; has fixtures in registry.ts"
+    },
+    "race_trace": {
+      "class": "gated",
+      "note": "builds race_trace spec; has fixtures in registry.ts"
+    },
+    "radar": {
+      "class": "gated",
+      "note": "builds radar spec; has fixtures in registry.ts"
+    },
+    "scatter_with_regression": {
+      "class": "gated",
+      "note": "builds scatter_with_regression spec; has fixtures in registry.ts"
+    },
+    "stacked_horizontal_bar": {
+      "class": "gated",
+      "note": "builds stacked_horizontal_bar spec; has fixtures in registry.ts"
+    },
+    "status_grid": {
+      "class": "gated",
+      "note": "builds status_grid spec; has fixtures in registry.ts"
+    },
+    "stint_delta_line": {
+      "class": "gated",
+      "note": "builds line (stint delta) spec; has fixtures in registry.ts"
+    },
+    "stint_gantt": {
+      "class": "gated",
+      "note": "builds stint_gantt spec; has fixtures in registry.ts"
+    },
+    "telemetry_overlay": {
+      "class": "gated",
+      "note": "builds telemetry_overlay spec; has fixtures in registry.ts"
+    },
+    "track_heatmap": {
+      "class": "gated",
+      "note": "builds track_heatmap spec; has fixtures in registry.ts"
+    },
+    "track_speed_map": {
+      "class": "gated",
+      "note": "builds track_speed_map spec; has fixtures in registry.ts"
+    }
+  },
+  "generationSources": {
+    "anthropic": {
+      "class": "gated",
+      "note": "LLM-synthesized answer; honest structured success outcome"
+    },
+    "anthropic_repaired": {
+      "class": "gated",
+      "note": "LLM answer after JSON repair; structured success outcome"
+    },
+    "deterministic_template": {
+      "class": "gated",
+      "note": "zero-LLM template answer; structured success outcome"
+    },
+    "heuristic_after_sql_timeout": {
+      "class": "gated",
+      "note": "heuristic answer after SQL timed out; structured degraded outcome"
+    },
+    "heuristic_fallback": {
+      "class": "gated",
+      "note": "heuristic fallback answer; structured degraded outcome"
+    },
+    "heuristic_unavailable": {
+      "class": "gated",
+      "note": "heuristic could not produce; honest structured unavailable outcome"
+    },
+    "initial": {
+      "class": "excluded",
+      "note": "not a generationSource value — regex neighbour literal on a generationSource/queryPath line"
+    },
+    "muted": {
+      "class": "excluded",
+      "note": "not a generationSource value — regex neighbour literal on a generationSource/queryPath line"
+    },
+    "no_data_refusal": {
+      "class": "gated",
+      "note": "honest structured no-data refusal outcome"
+    },
+    "proprietary_no_data": {
+      "class": "gated",
+      "note": "honest structured proprietary-no-data outcome"
+    },
+    "repair_retry": {
+      "class": "excluded",
+      "note": "not a generationSource value — regex neighbour literal on a generationSource/queryPath line"
+    },
+    "runtime_clarification": {
+      "class": "gated",
+      "note": "structured clarification-request outcome"
+    },
+    "runtime_failed_before_sql": {
+      "class": "gated",
+      "note": "runtime failed pre-SQL; honest structured failure outcome"
+    },
+    "runtime_transient_db_unavailable": {
+      "class": "gated",
+      "note": "transient DB outage; honest structured retryable outcome"
+    },
+    "runtime_unavailable": {
+      "class": "gated",
+      "note": "runtime unavailable; honest structured failure outcome"
+    },
+    "sql_generation_failed": {
+      "class": "gated",
+      "note": "SQL generation failed; honest structured failure outcome"
+    }
+  },
+  "failureSubStates": {
+    "chat_query_failed": {
+      "class": "gated",
+      "note": "chat query failed; yields honest structured error response"
+    },
+    "clarification_required": {
+      "class": "gated",
+      "note": "yields structured clarification-request response"
+    },
+    "column_validation_failed": {
+      "class": "gated",
+      "note": "SQL column validation failed; yields honest structured error response"
+    },
+    "completeness_blocked": {
+      "class": "gated",
+      "note": "blocked on incomplete data; yields honest structured refusal"
+    },
+    "error": {
+      "class": "gated",
+      "note": "generic error; yields honest structured error response"
+    },
+    "fallback_exec_failed": {
+      "class": "gated",
+      "note": "fallback execution failed; yields honest structured error response"
+    },
+    "heuristic_unavailable": {
+      "class": "gated",
+      "note": "heuristic unavailable; yields honest structured unavailable response"
+    },
+    "internal": {
+      "class": "gated",
+      "note": "internal error; yields honest structured error response"
+    },
+    "no_data_refusal": {
+      "class": "gated",
+      "note": "yields honest structured no-data refusal response"
+    },
+    "proprietary_no_data:*": {
+      "class": "gated",
+      "note": "yields honest structured proprietary-no-data response"
+    },
+    "resolve_db_timeout": {
+      "class": "gated",
+      "note": "resolver DB timeout; yields honest structured retryable response"
+    },
+    "sql_attempt": {
+      "class": "excluded",
+      "note": "normal-path status, not a failure"
+    },
+    "sql_generation_failed": {
+      "class": "gated",
+      "note": "SQL generation failed; yields honest structured error response"
+    },
+    "sql_pipeline_no_result": {
+      "class": "gated",
+      "note": "SQL pipeline returned nothing; yields honest structured no-result response"
+    },
+    "sql_repair_timeout": {
+      "class": "gated",
+      "note": "SQL repair timed out; yields honest structured error response"
+    },
+    "success": {
+      "class": "excluded",
+      "note": "normal-path status, not a failure"
+    },
+    "template_exec_failed": {
+      "class": "gated",
+      "note": "template execution failed; yields honest structured error response"
+    },
+    "template_exec_timeout": {
+      "class": "gated",
+      "note": "template execution timed out; yields honest structured error response"
+    },
+    "transient_db_unavailable": {
+      "class": "gated",
+      "note": "transient DB outage; yields honest structured retryable response"
+    }
+  },
+  "materializedLayers": {
+    "analytics.braking_performance_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.corner_analysis_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.driver_performance_score_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.drs_effectiveness_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.fuel_corrected_pace_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.minisector_dominance_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.overtake_events_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.pit_loss_per_circuit_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.race_control_incidents_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.restart_performance_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.sector_dominance_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.stint_degradation_curve_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.straight_line_dominance_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.telemetry_coverage_per_driver_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.traction_analysis_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.traffic_adjusted_pace_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.tyre_warmup_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.undercut_overcut_history_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "analytics.weather_impact_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "core.driver_session_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.grid_vs_finish_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.lap_context_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.lap_phase_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.laps_enriched_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.pit_cycle_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.race_progression_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.session_completeness_data [matview]": {
+      "class": "gated",
+      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+    },
+    "core.stint_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.strategy_evidence_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.strategy_summary_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    },
+    "core.telemetry_lap_bridge_mat [heap]": {
+      "class": "gated",
+      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+    }
+  },
+  "clientFetchEdges": {
+    "minisector-strip.tsx -> /api/track-outline": {
+      "class": "degraded-fallback",
+      "note": "renders strip without outline; track map only when outline present"
+    },
+    "telemetry-overlay-chart.tsx -> /api/lap-telemetry": {
+      "class": "required",
+      "note": "payload===null renders 'No lap telemetry'; no traces without fetch"
+    },
+    "track-corner-delta.tsx -> /api/track-outline": {
+      "class": "degraded-fallback",
+      "note": "renders corner list without outline; map only when outline+zones present"
+    },
+    "track-map.tsx -> /api/track-outline": {
+      "class": "required",
+      "note": "useTrackOutline hook definition; backs track_speed_map which is meaningless without outline"
+    },
+    "track-speed-map.tsx -> /api/track-outline": {
+      "class": "required",
+      "note": "outline===null renders 'No location telemetry'; no chart without fetch"
+    }
+  },
+  "rendererChartTypes": {
+    "degradation_curve": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "delta_comparison": {
+      "class": "excluded",
+      "note": "dead code — nothing in the live pipeline emits it (index.tsx)"
+    },
+    "donut": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "event_timeline": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "grouped_bar": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "horizontal_bar": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "horizontal_bar_diverging": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "line": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "line_dual_axis": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "line_with_stint_markers": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "metric_grid": {
+      "class": "pixel-gated",
+      "note": "rendered via MetricGridRenderer metrics slot, not a ChartRenderer case"
+    },
+    "pit_event_strip": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "position_changes": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "race_trace": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "radar": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "scatter_with_regression": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "stacked_horizontal_bar": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "status_grid": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "stint_gantt": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "telemetry_overlay": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "timeline": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "track_corner_delta": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "track_heatmap": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    },
+    "track_speed_map": {
+      "class": "pixel-gated",
+      "note": "rendered by ChartRenderer branch"
+    }
+  },
+  "rendererBranches": {
+    "degradation_curve": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "delta_comparison": {
+      "class": "excluded",
+      "note": "dead branch — no live emitter"
+    },
+    "donut": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "event_timeline": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "grouped_bar": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "horizontal_bar": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "horizontal_bar_diverging": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "line": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "line_dual_axis": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "line_with_stint_markers": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "pit_event_strip": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "position_changes": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "race_trace": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "radar": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "scatter_with_regression": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "stacked_horizontal_bar": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "status_grid": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "stint_gantt": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "telemetry_overlay": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "timeline": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "track_corner_delta": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "track_heatmap": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    },
+    "track_speed_map": {
+      "class": "pixel-gated",
+      "note": "ChartRenderer case -> component"
+    }
+  }
+}
