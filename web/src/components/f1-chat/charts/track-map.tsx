@@ -96,6 +96,25 @@ function pathFor(points: OutlinePoint[], f0: number, f1: number): string {
   return pts.map((p, idx) => `${idx === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ")
 }
 
+// Compact a track_segments corner label to a short on-map token so named
+// corners don't render as raw digits or clutter the ribbon on a ~448px map:
+//   "Turn 8 (Ascari)" / "Turn 1" → "8" / "1"     (turn number)
+//   "130R" / "T3"                → "130R" / "T3"  (keep alphanumeric tokens)
+//   "Casio Triangle (chicane)"   → "CT"           (multi-word name → initials)
+//   "Raidillon"                  → "Raid"         (single-word name → first 4)
+// Previously `label.match(/\d+/)?.[0]` turned "130R" into "130" (a nonexistent
+// corner) and left pure names as their full string.
+function shortCornerLabel(label: string): string {
+  const l = label.trim()
+  const turn = l.match(/^turns?\s+(\d+)/i)
+  if (turn) return turn[1]
+  const bare = l.replace(/\s*\(.*?\)\s*/g, " ").trim() // drop "(chicane)" etc.
+  if (/^\d+[A-Za-z]?$/.test(bare) || /^[A-Za-z]\d+$/.test(bare)) return bare // 130R, T3
+  const words = bare.split(/\s+/).filter(Boolean)
+  if (words.length >= 2) return words.map((w) => w[0]).join("").toUpperCase().slice(0, 4)
+  return bare.slice(0, 4)
+}
+
 export type TrackMapProps = {
   outline: Outline
   /** segments mode: contiguous owner-colored chunks. boundaries optional —
@@ -194,7 +213,7 @@ export function TrackMap({
       const dx = p.x - cx
       const dy = p.y - cy
       const len = Math.hypot(dx, dy) || 1
-      const num = c.label.match(/\d+/)?.[0] ?? c.label
+      const num = shortCornerLabel(c.label)
       return { num, x: p.x + (dx / len) * 34, y: p.y + (dy / len) * 34 }
     })
     .filter((c) => c.num)

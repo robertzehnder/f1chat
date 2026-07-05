@@ -137,10 +137,29 @@ async function computeDrsZones(circuit: string): Promise<Array<[number, number]>
   return [];
 }
 
+// core.sessions and f1.track_segments disagree on a couple of circuit names
+// (mirrors the circuit_alias CTE in migration 049). The location/DRS queries
+// need the core.sessions name; the corner query needs the track_segments name.
+// Only the differing pairs are listed — everything else resolves to itself, and
+// EITHER name of a pair resolves to the same {sessions, segments} (bidirectional)
+// so `?circuit=Monaco` and `?circuit=Monte Carlo` both work.
+const CIRCUIT_ALIASES: ReadonlyArray<{ sessions: string; segments: string }> = [
+  { sessions: "Monte Carlo", segments: "Monaco" },
+  { sessions: "Yas Marina Circuit", segments: "Yas Marina" }
+];
+function resolveCircuitAlias(input: string): { sessions: string; segments: string } {
+  const q = input.trim();
+  for (const a of CIRCUIT_ALIASES) {
+    if (q === a.sessions || q === a.segments) return a;
+  }
+  return { sessions: q, segments: q };
+}
+
 async function computeOutline(
   circuit: string,
   opts: { sessionKey?: number; driverNumber?: number; channels: boolean }
 ): Promise<OutlinePayload | null> {
+  const { sessions: sessName, segments: segName } = resolveCircuitAlias(circuit);
   const sessions = opts.sessionKey
     ? [{ session_key: opts.sessionKey }]
     : await sql<{ session_key: number }>(
@@ -149,7 +168,7 @@ async function computeOutline(
          WHERE circuit_short_name = $1 AND session_name = 'Race'
          ORDER BY date_start DESC
          LIMIT 4`,
-        [circuit]
+        [sessName]
       );
 
   for (const session of sessions) {
@@ -264,14 +283,14 @@ async function computeOutline(
     // use is free — every zone lights up on a push lap. Fractions from
     // the quali lap's own arc length map onto this outline because both
     // normalize from the same start/finish line.
-    const drsZones = await computeDrsZones(circuit);
+    const drsZones = await computeDrsZones(sessName);
 
     const cornerRows = await sql<{ segment_label: string; start_normalized: number | string }>(
       `SELECT segment_label, start_normalized
        FROM f1.track_segments
        WHERE circuit_short_name = $1 AND segment_kind = 'corner'
        ORDER BY start_normalized`,
-      [circuit]
+      [segName]
     );
     const corners = cornerRows
       .map((r) => ({ label: String(r.segment_label ?? ""), f: Number(r.start_normalized) }))
