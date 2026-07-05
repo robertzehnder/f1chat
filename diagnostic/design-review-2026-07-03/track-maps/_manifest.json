@@ -1,0 +1,170 @@
+[
+  {
+    "round": 1,
+    "display": "Melbourne · Australia",
+    "slug": "melbourne",
+    "ok": true,
+    "points": 322
+  },
+  {
+    "round": 2,
+    "display": "Shanghai · China",
+    "slug": "shanghai",
+    "ok": true,
+    "points": 352
+  },
+  {
+    "round": 3,
+    "display": "Suzuka · Japan",
+    "slug": "suzuka",
+    "ok": true,
+    "points": 351
+  },
+  {
+    "round": 4,
+    "display": "Sakhir · Bahrain",
+    "slug": "sakhir",
+    "ok": true,
+    "points": 360
+  },
+  {
+    "round": 5,
+    "display": "Jeddah · Saudi Arabia",
+    "slug": "jeddah",
+    "ok": true,
+    "points": 357
+  },
+  {
+    "round": 6,
+    "display": "Miami · USA",
+    "slug": "miami",
+    "ok": true,
+    "points": 347
+  },
+  {
+    "round": 7,
+    "display": "Imola · Italy",
+    "slug": "imola",
+    "ok": true,
+    "points": 291
+  },
+  {
+    "round": 8,
+    "display": "Monte Carlo · Monaco",
+    "slug": "monaco",
+    "ok": true,
+    "points": 282
+  },
+  {
+    "round": 9,
+    "display": "Barcelona · Spain",
+    "slug": "barcelona",
+    "ok": true,
+    "points": 300
+  },
+  {
+    "round": 10,
+    "display": "Montreal · Canada",
+    "slug": "montreal",
+    "ok": true,
+    "points": 284
+  },
+  {
+    "round": 11,
+    "display": "Red Bull Ring · Austria",
+    "slug": "red_bull_ring",
+    "ok": true,
+    "points": 265
+  },
+  {
+    "round": 12,
+    "display": "Silverstone · UK",
+    "slug": "silverstone",
+    "ok": true,
+    "points": 343
+  },
+  {
+    "round": 13,
+    "display": "Spa · Belgium",
+    "slug": "spa",
+    "ok": true,
+    "points": 390
+  },
+  {
+    "round": 14,
+    "display": "Hungaroring · Hungary",
+    "slug": "hungaroring",
+    "ok": true,
+    "points": 297
+  },
+  {
+    "round": 15,
+    "display": "Zandvoort · Netherlands",
+    "slug": "zandvoort",
+    "ok": true,
+    "points": 281
+  },
+  {
+    "round": 16,
+    "display": "Monza · Italy",
+    "slug": "monza",
+    "ok": true,
+    "points": 305
+  },
+  {
+    "round": 17,
+    "display": "Baku · Azerbaijan",
+    "slug": "baku",
+    "ok": true,
+    "points": 393
+  },
+  {
+    "round": 18,
+    "display": "Marina Bay · Singapore",
+    "slug": "singapore",
+    "ok": true,
+    "points": 352
+  },
+  {
+    "round": 19,
+    "display": "Austin · USA",
+    "slug": "austin",
+    "ok": true,
+    "points": 354
+  },
+  {
+    "round": 20,
+    "display": "Mexico City · Mexico",
+    "slug": "mexico",
+    "ok": true,
+    "points": 293
+  },
+  {
+    "round": 21,
+    "display": "Interlagos · Brazil",
+    "slug": "interlagos",
+    "ok": true,
+    "points": 266
+  },
+  {
+    "round": 22,
+    "display": "Las Vegas · USA",
+    "slug": "las_vegas",
+    "ok": true,
+    "points": 351
+  },
+  {
+    "round": 23,
+    "display": "Lusail · Qatar",
+    "slug": "lusail",
+    "ok": true,
+    "points": 319
+  },
+  {
+    "round": 24,
+    "display": "Yas Marina · UAE",
+    "slug": "yas_marina",
+    "ok": true,
+    "points": 337
+  }
+]

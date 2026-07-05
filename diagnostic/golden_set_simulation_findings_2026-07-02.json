@@ -1,0 +1,862 @@
+{
+  "confirmed": [
+    {
+      "dedupe_key": "honesty.heuristic-default-session-listing.false-absence-claims",
+      "title": "buildHeuristicSql default branch returns an unpinned recent-sessions listing and synthesis then fabricates 'data not in dataset' claims contradicting the app's own 0.99-confidence session resolution",
+      "category": "honesty",
+      "severity": "P0",
+      "prompts_affected": [
+        "M06",
+        "M08",
+        "M16",
+        "M19",
+        "s101:sector_dominance#1",
+        "s101_sector_dominance#1",
+        "s202:stint_delta#1",
+        "s202_stint_delta#1",
+        "s303:sector_dominance#1",
+        "s303_sector_dominance#1"
+      ],
+      "evidence": "All five captures share the identical fallback SQL 'SELECT session_key, session_name, date_start, year, country_name, location FROM core.sessions ORDER BY date_start DESC NULLS LAST LIMIT 25' (queries.ts:345-350), which ignores the session the resolver had already pinned at 0.99 confidence (M06=9987 Imola, M19=9896 Singapore, s101=10002 Suzuka, s202=9839 Abu Dhabi, s303=9892 Singapore \u2014 all in generationNotes). Rows are exclusively year=2026 (Mexico City, Yas Marina, Lusail, Las Vegas, S\u00e3o Paulo) vs manifest venues/year 2025. Answers then assert falsehoods: M06 'the session listing query did not return a 2025 Imola session... suggesting the data may not yet be ingested'; s202:stint_delta 'The available data does not contain Abu Dhabi 2025' \u2014 while M06's own runtime.completeness shows raw.position_history 'usable' for the session and fallbackOptions says 'infer position changes from raw.position_history'. The generationNotes pin check downgrades to 'session_pin_unverifiable_no_literal_session_key_predicate' because the fallback SQL has no session_key literal (orchestration.ts:281-288) but execution proceeds anyway.\n---\nbuildHeuristicSql's default branch (src/lib/queries.ts:345-350) returns 'SELECT session_key... FROM core.sessions ORDER BY date_start DESC LIMIT 25' \u2014 25 late-2026 sessions unrelated to the question. s202_stint_delta answer: 'The available data does not contain Abu Dhabi 2025 \u2014 the most recent Abu Dhabi race in the dataset is session_key 11436, dated December 2026' and insight card titled 'Abu Dhabi 2025 Stint Deltas \u2014 Data Not Found', while runtime.resolution.selectedSession = 9839 / 'Race / United Arab Emirates / Yas Island / 2025' at confidence 0.99. M06: 'the session listing query did not return a 2025 Imola session in its top 25 results, suggesting the data may not yet be ingested' (session 9987 was pinned). Both sector_dominance captures claim the venue's 2025 qualifying data is absent (re-fire proved it exists: 3 minisector rows, Russell/Leclerc sector times). generationNotes even records 'session_pin_unverifiable_no_literal_session_key_predicate(session_key=...)' \u2014 the guard detects the fallback SQL ignores the pinned session, but the response still ships as a normal graded-B answer instead of an honest failure. The Did-question s202_stint_delta also ships without insight.verdict.\n---\nM08.json and M16.json final SQL is 'SELECT session_key, session_name, date_start, year, country_name, location FROM core.sessions ORDER BY date_start DESC NULLS LAST LIMIT 25' - all 25 rows are year=2026 (Yas Marina etc.). M08 answer: 'The available data does not include a Spa 2025 session... no Belgian Grand Prix at Spa-Francorchamps for 2025 appears' even though entity_resolution had already pinned session_key=9939 (Spa 2025 Race) and the insight card title says 'Mercedes Split Strategy - Spa 2025 / Belgian GP - Race - 2025', directly contradicting the answer. M16 similarly claims 'no Silverstone 2025 session appears' with session_key=9947 pinned. generationNotes also degrade to session_pin_unverifiable_no_literal_session_key_predicate because the fallback SQL has no session_key literal (orchestration.ts:286).\n---\nM08.json answer: 'The available data does not include a Spa 2025 session. The most recent sessions in the dataset are from the 2026 season...' \u2014 yet runtime.resolution.selectedSession = {sessionKey 9939, 'Race / Belgium / Spa-Francorchamps / 2025', confidence 0.99}. M16.json answer: 'no Silverstone 2025 session appears in the results (the most recent data shown is from late 2026...)' \u2014 yet resolution pinned sessionKey 9947 'Race / United Kingdom / Silverstone / 2025' at 0.99. In both cases the executed SQL was the heuristic default 'SELECT session_key... FROM core.sessions ORDER BY date_start DESC NULLS LAST LIMIT 25' (25 most-recent = 2026 sessions only), and generationNotes flags 'session_pin_unverifiable_no_literal_session_key_predicate'. The synthesis layer inferred GLOBAL dataset absence from a recency-limited 25-row list, directly contradicting resolution state it had available. This is materially worse than an honest refusal: it tells the user real data does not exist.",
+      "suspected_root_cause": "orchestration.ts lines 1292-1305 unconditionally swap failed template SQL for buildHeuristicSql output; for sector/stint/overtake phrasings no heuristic branch matches, so the context-free session-listing catch-all runs. Phase 17-D gave the anthropic path an honest structured failure for non-timeout errors, but the deterministic_template branch has no equivalent guard, and nothing blocks executing fallback SQL that dropped the pinned session \u2014 producing confident false 'not ingested' refusals for sessions that exist.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/app/api/chat/orchestration.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/queries.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/buildSynthesisPrompt.ts",
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/queries.ts",
+        "web/src/lib/synthesis/buildSynthesisPrompt.ts"
+      ],
+      "member_titles": [
+        "Catch-all heuristic fallback returns a 25-row 2026 session listing and the LLM then falsely claims the resolved 2025 session is not in the dataset",
+        "Heuristic fallback's default session-listing SQL makes the answer fabricate 'data not in dataset' claims that contradict the app's own 0.99-confidence session resolution",
+        "Heuristic fallback default branch returns latest-25 sessions (2026 data), causing the answer to falsely claim the resolved 2025 session does not exist",
+        "Answer claims 'no Spa/Silverstone 2025 session exists' while the app's own resolver had pinned that exact session at 0.99 confidence"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced in all 7 cited captures (M06, M08, M16, M19, s101/s303 sector_dominance, s202 stint_delta): each shares the identical unpinned fallback SQL 'SELECT session_key... FROM core.sessions ORDER BY date_start DESC LIMIT 25', rows are exclusively late-2026 sessions, generationNotes record the resolver's 0.99-confidence pinned session (9987/9939/9947/9896/10002/9839/9892) plus 'session_pin_unverifiable_no_literal_session_key_predicate', and the answers assert the 2025 events are absent from the dataset ('The available data does not contain Abu Dhabi 2025', 'suggesting the data may not yet be ingested'). Code confirms: default branch of buildHeuristicSql at web/src/lib/queries.ts:345-350 returns the recent-sessions listing ignoring resolvedContext; enforcePinnedSessionKeyInSql at web/src/app/api/chat/orchestration.ts:281-288 only annotates when no session_key literal exists and execution proceeds. Design lens: heuristic-after-template-failure is a designed Phase 17-D path, and honest refusals are signed off ONLY when data is genuinely absent \u2014 here the sessions exist (resolver pinned them; M06 completeness shows usable fallback tables; sector data proven present on re-fire), so the 'not in dataset' claims are fabrications, not honest refusals. P0: confidently false statements about data availability that directly contradict the app's own resolution, shipped as graded answers across many prompts."
+    },
+    {
+      "dedupe_key": "data.grid_vs_finish.stale-finish-position-no-fallback",
+      "title": "core.grid_vs_finish finish_position stale/corrupt when raw.session_result is missing; insight builders trust it unconditionally with no final-lap-position fallback, so cards contradict their own trace",
+      "category": "data",
+      "severity": "P0",
+      "prompts_affected": [
+        "R03",
+        "s101:position_changes#1"
+      ],
+      "evidence": "R03 Silverstone 9947 (capture_0/R03.json): NO driver has finish_position=1 \u2014 insight metric Winner='n/a' and the answer omits the winner sentence entirely; Norris has grid=3, finish_position=3 (his real quali slot) while his own trace in the same rows holds P1 from lap 44 to the flag; duplicate finish positions: P3 (Norris+Hulkenberg), P4 (Albon+Hamilton), P12 (Sainz+Russell). s101 Sao Paulo 9869 (capture_0/s101_position_changes#1.json): Verstappen finish_position=16 (= his real quali position) vs his own trace at P3 on lap 63 held to the flag; answer says 'Verstappen was the biggest mover, climbing from P19 to P16' when the trace shows P19 to P3 (+16); Ocon finish=17 vs trace P12 at lap 70; duplicate finishes P17 (Tsunoda+Ocon) and P18 (Stroll+Hamilton). s303 Singapore 9896 is clean (zero mismatches). Overlaps the known raw.session_result ingestion gap, but the NEW aspects are: duplicated finish positions across drivers, quali values leaking into finish_position, the missing-winner symptom, and positionChangesInsight.ts (lines 39-57, 96-101) deriving climber/faller/winner solely from finish_position without cross-checking the final trace position it already holds in the same rows.\n---\nR03 (Silverstone 2025) insight metrics: {'label':'Winner','value':'n/a'} \u2014 yet the position_changes spec's final-lap values show Lando NORRIS = 1, and the climber/faller metrics in the same card are happily derived from the position feed (Hulkenberg P19\u2192P3). positionChangesInsight.ts:57 finds the winner only via finish_position (`classified.find((d) => d.finish === 1)`), which is null for this session (known raw.session_result ingestion gap), with no fallback to the last-lap position the card already renders. S\u00e3o Paulo and Singapore captures (s101/s303) fill the Winner tile fine because their finish_position is ingested. New consumer-side aspect of the known session_result gap.",
+      "suspected_root_cause": "core.grid_vs_finish falls back to a stale/qualifying classification when raw.session_result is missing for a session, producing duplicated and wrong finish positions; the race_position_changes template and insight builder trust finish_position unconditionally, so the card self-contradicts (chart traces end at the true position while labels/headline stats use the corrupt one).",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/positionChanges.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/positionChangesInsight.ts",
+        "web/src/lib/synthesis/positionChangesInsight.ts"
+      ],
+      "member_titles": [
+        "core.grid_vs_finish finish_position corrupt for multiple 2025 races \u2014 cards contradict their own position trace and cannot name the winner",
+        "Winner metric shows 'n/a' while the same card's chart shows Norris P1 at the flag"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced from capture_0/R03.json and capture_0/s101_position_changes#1.json. R03: duplicate finish_position values {3:2, 4:2, 12:2}, zero drivers with finish_position=1, Winner metric 'n/a', Norris grid=3/finish=3 while his own trace holds P1 from lap 44. s101: Verstappen finish_position=16 vs trace P3 at lap 63 (position feed logs changes only, so P3 held to flag); answer asserts 'Verstappen was the biggest mover, climbing from P19 to P16' - confidently wrong; duplicates {17:2, 18:2}. s303 clean as claimed. positionChangesInsight.ts:57 derives winner solely via classified.find(d => d.finish === 1) and lines 54-56 derive climber/faller from finish_position with no cross-check against the last-lap trace it already holds. Root cause nuance: sql/007_semantic_summary_contracts.sql:47-55 shows finish_fallback = last raw.position_history row per driver (not quali leak), which explains stale/duplicated values when session_result is missing - the fallback is deliberate, but the finding's new aspects (non-null WRONG values, self-contradicting card, no consumer-side fallback to final trace position) go beyond the ticketed raw.session_result ingestion gap and are not signed off anywhere. Severity adjusted P1->P0: the card states factually wrong race results (wrong biggest-mover destination, missing winner) in plausible-looking prose and metrics."
+    },
+    {
+      "dedupe_key": "data.traffic_adjusted_pace.dup-row-lap-count-inflation",
+      "title": "analytics.traffic_adjusted_pace aggregates lap counts over duplicated laps_enriched rows without dedup, producing physically impossible clean-air/traffic lap counts with no downstream plausibility check",
+      "category": "data",
+      "severity": "P0",
+      "prompts_affected": [
+        "M13"
+      ],
+      "evidence": "M13.json (session 9839, Mexico City GP 2025 race, Norris): the single row has clean_air_laps=\"84\", traffic_laps=\"24\" \u2014 sum 108 laps, but the 2025 Mexico City GP race distance is 71 laps, so 84 clean-air laps is impossible on its face. The answer states '84 laps in clean air ... 78% of his total laps' as a headline fact. 108 = 2 x 54 is consistent with the known 2x row duplication in the upstream lap views propagating un-deduplicated into the analytics.traffic_adjusted_pace counts. Pace averages (88.183s clean vs 90.039s traffic, delta 1.855s) are internally consistent with the row and plausibly unaffected (duplication cancels in means but doubles counts). Secondary: the prompt asked about laps 'during his winning stint' and the answer silently substitutes whole-race scope.\n---\nM13 row (analytics.traffic_adjusted_pace, session 9839, driver 4): clean_air_laps='84', traffic_laps='24' \u2014 108 total laps for Norris in the Mexico City GP (~71 laps; no F1 race exceeds 78). The stacked_horizontal_bar renders 84 vs 24 and the answer asserts '84 laps in clean air... 78% of his total laps was a key factor in his race victory' with no caveat. For comparison, the Zandvoort race trace in the same capture set spans 72 laps. This looks like the warehouse dup-row artifact (core matviews ship duplicate rows) propagating into analytics.traffic_adjusted_pace COUNTs \u2014 a new user-facing surface for it. Secondary: the question asked about 'his winning stint' but the matview is session-grain, and the answer silently reframes to the whole race.",
+      "suspected_root_cause": "analytics.traffic_adjusted_pace warehouse view counts laps over the duplicated laps_enriched rows without dedup, doubling clean_air_laps/traffic_laps; the LLM path (generationNotes: 'Using analytics.traffic_adjusted_pace ... clean_air_laps ... directly') and answer synthesis have no plausibility check against race distance. New aspect of the known dup-rows-in-core-matviews item: it extends to the analytics schema's counted columns and reaches user-facing answer text unchecked.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/answerSanity/pitStints.ts",
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts"
+      ],
+      "member_titles": [
+        "M13 answer claims 84 clean-air laps in a 71-lap race \u2014 analytics.traffic_adjusted_pace lap counts physically impossible",
+        "Clean-air card shows physically impossible lap counts: 108 laps (84 clean + 24 traffic) for one driver in a ~71-lap Mexico City race"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced from capture_3/M13.json: single row from analytics.traffic_adjusted_pace (session_key=9839, driver 4) with clean_air_laps='84', traffic_laps='24' (108 total); the answer headlines '84 laps in clean air... 78% of his total laps was a key factor in his race victory' and the insight says '84 of 108 total laps (78%)' with no caveat. One correction to the finding's framing: runtime.resolution.selectedSession labels 9839 as 'Race / United Arab Emirates / Yas Marina / 2025' (58-lap race), not Mexico City \u2014 the auditor echoed the app's own mistaken genNote venue; the physical impossibility holds regardless since no F1 race exceeds ~78 laps, and 108 = 2x54 is consistent with the known 2x duplication propagating into counted columns while means cancel (pace values are internally plausible). The secondary claim also verifies: the prompt asked about the winning stint and the answer silently reframes to whole-race scope. Design lens: dup rows in core matviews is a known open item, but this is a genuinely new aspect \u2014 propagation into analytics.traffic_adjusted_pace COUNT columns reaching user-facing answer text; grep shows no dedup handling, plausibility check, or ticket for this surface (schemaCatalog/anthropic prompt/health-check questions all use the view uncritically). Adjusted to P0: the headline number answering the user's exact question ('how many laps in clean air') is roughly double reality and physically impossible \u2014 a confidently wrong user-facing answer, not mere quality erosion."
+    },
+    {
+      "dedupe_key": "perf.deterministic-templates.statement-timeout-unmaterialized-views",
+      "title": "Deterministic template SQL exceeds the 15s Neon statement timeout on unmaterialized core.* views (multi-scan CTEs, telemetry joins) under cold cache/concurrency",
+      "category": "perf",
+      "severity": "P1",
+      "prompts_affected": [
+        "M04",
+        "M06",
+        "M08",
+        "M09",
+        "M10",
+        "M16",
+        "M19",
+        "M22",
+        "R04",
+        "s101:lap1_launch#1",
+        "s101:pit_stop#1",
+        "s101:sector_dominance#1",
+        "s101:speed_map#1",
+        "s101:stint_delta#1",
+        "s101:telemetry_overlay#1",
+        "s101_lap1_launch#1",
+        "s101_stint_delta#1",
+        "s202:pit_stop#1",
+        "s202:sector_dominance#1",
+        "s202:stint_delta#1",
+        "s202:telemetry_overlay#1",
+        "s202_sector_dominance#1",
+        "s202_telemetry_overlay#1",
+        "s303:lap1_launch#1",
+        "s303:pit_stop#1",
+        "s303:sector_dominance#1",
+        "s303:speed_map#1",
+        "s303:telemetry_overlay#1",
+        "s303_lap1_launch#1"
+      ],
+      "evidence": "single_driver_pit_cycle succeeded for Baku (capture_0/s202_pit_stop#1.json) at 13368ms total \u2014 near the ~15s statement budget known for un-materialized core.* views \u2014 but the identical template failed at exec for Canada 9963 (M22, 41635ms total = failed template attempt + heuristic + synthesis). driver_pair_stint_delta failed for Bahrain 10014 (M10, 66569ms total). pitCycle.ts builds TWO separate MATERIALIZED scans of core.laps_enriched (laps CTE lines 107-118 and venue CTE lines 119-127); stintDelta.ts scans laps_enriched twice (a_laps/b_laps CTEs, lines 76-98) plus raw.stints joins. The captures do not carry the exec error text, so a raw.stints schema mismatch in stintDelta is a secondary hypothesis; the timing pattern favors intermittent statement timeout.\n---\n8/17 captures have generationSource='heuristic_after_template_failure' (5 are randomized entries or R04 baseline which MUST be deterministic_template). /Users/robertzehnder/Documents/coding/f1/openf1/web/logs/chat_api.log shows chat_query_first_attempt_failed with error 'canceling statement due to statement timeout' for every one: 04:41:59.786Z R04 (driver_telemetry_overlay, session 10006), 04:42:36.180Z M06 (inferred_overtakes, 9987), 04:43:20.282Z M19 (inferred_overtakes, 9896), 04:43:59.215Z s101 telemetry (9888), 04:44:40.399Z s101 sector_dominance (10002), 04:45:13.529Z s202 stint_delta (9839), 04:45:55.055Z s303 telemetry (9869), 04:46:32.882Z s303 sector_dominance (9892). Timeout is SET LOCAL statement_timeout = OPENF1_QUERY_TIMEOUT_MS default 15000 in queries/execute.ts. Succeeding templates already run 7-12.9s (s101 race_trace result.elapsedMs=12008, M02=12896), i.e. within ~20% of the same budget.\n---\n6/17 captures show generationSource=heuristic_after_template_failure with the correct template named first (driver_pair_strategy_split, driver_pair_sector_dominance, single_driver_pit_cycle x2, single_driver_speed_map x2). Executor sets SET LOCAL statement_timeout=15000 (web/src/lib/queries/execute.ts, OPENF1_QUERY_TIMEOUT_MS=15000 in web/.env.local). Every template that SUCCEEDED in the run took 7.5-12.9s of SQL exec (response.result.elapsedMs: s101_strategy_split 12028ms, s202_position_changes 12447ms, R01 12895ms, M20 10629ms, M12 9375ms) - almost no headroom. pitCycle.ts scans core.laps_enriched in two separate CTEs (laps + venue) and speedMap.ts joins raw.car_data over a lap-timestamp window; both failed in BOTH s101 and s303 even after warm-up (captures at 00:44-00:47), and even the trivial single-scan heuristic replacement on laps_enriched took 10610ms (s101_pit_stop) / 5626ms (s303_pit_stop). strategy_split/sector_dominance failed only in the cold window (M08/M16 at 00:42-00:43, when R01 stage logs show entity_resolution=18549ms and completeness_check=17649ms) and the identical strategy_split SQL succeeded at 00:43+ for sessions 9877/9920. Elapsed totals of the failing captures (20.4s-44.5s with final SQL exec of only 0.06-12s) fit a 15s template timeout plus fallback plus synthesis. Known item 'core.* relations are all unmaterialized views' covered probes only; this is a new aspect: the shipped template SQL itself blows the same budget.\n---\nlogs/chat_api.log has 23 'canceling statement due to statement timeout' chat_query_first_attempt_failed entries on 2026-07-02 (04:41:57Z-04:46:34Z, exactly the capture_2 window; capture files mtime Jul 2 00:42-00:47 EDT). The failed SQL matches the template builders verbatim: 'WITH pits AS MATERIALIZED' (single_driver_pit_cycle, x3), 'WITH fastest AS' (single_driver_speed_map, x2), 'WITH stints AS SELECT DISTINCT' (driver_pair_strategy_split), 'WITH a AS (SELECT MIN(duration_sector_1)...' (driver_pair_sector_dominance, x5). All 6 affected captures carry generationNotes 'template=<key> | template_failed_heuristic_used'. Same templates succeeded seconds apart in the same run (s101:strategy_split#1 OK 12.6s Mexico City; s202:brake_zones#1 OK 8.9s Jeddah) \u2014 the timeouts are load/cold-compute dependent, not venue bugs. Pool statement_timeout defaults to 15000ms (OPENF1_QUERY_TIMEOUT_MS, db/driver.ts:51). Orchestration gives LLM-generated SQL a distinguished timeout path plus one repair (orchestration.ts:1264-1281 'heuristic_after_sql_timeout'), but a deterministic_template exec error of ANY kind goes straight to buildHeuristicSql with no single retry (orchestration.ts:1292-1307), even though a retry against the by-then-warm compute would almost certainly have succeeded. 28 deterministic_template timeout failures in the log all-time, 23 timeout failures across all sources on capture day alone.\n---\nAll six captures show generationSource=heuristic_after_template_failure. Correlated by requestId in web/logs/chat_api.log: every one logged WARN chat_query_first_attempt_failed with error 'canceling statement due to statement timeout', exactly ~15.15-15.2s after chat_runtime_ready (e.g. s101_lap1: runtime_ready 04:44:22.124, failed 04:44:37.297; M04: 04:41:44.593 -> 04:41:59.768). statement_timeout defaults t",
+      "suspected_root_cause": "Multiple full scans of the un-materialized laps_enriched view per query put these two templates right at the statement timeout on Neon; slower sessions intermittently fail, which is the direct trigger of the P1 heuristic-fallback finding. The venue CTE in pitCycle.ts could read core.sessions instead of re-scanning laps_enriched.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/app/api/chat/orchestration.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/db/driver.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/inferredOvertakes.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/pitCycle.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/sectorDominance.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/speedMap.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/stintDelta.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/strategySplit.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/telemetryOverlay.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/queries/execute.ts",
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/db/driver.ts",
+        "web/src/lib/deterministicSql.ts",
+        "web/src/lib/deterministicSql/degradationCurve.ts",
+        "web/src/lib/deterministicSql/pitCycle.ts",
+        "web/src/lib/deterministicSql/sectorDominance.ts",
+        "web/src/lib/deterministicSql/speedMap.ts",
+        "web/src/lib/deterministicSql/strategySplit.ts",
+        "web/src/lib/queries/execute.ts"
+      ],
+      "member_titles": [
+        "Pit-cycle and stint-delta templates multi-scan un-materialized core.laps_enriched, running at/over the Neon statement timeout",
+        "Four deterministic template families silently die on the 15s statement timeout and fall back to heuristic SQL",
+        "Deterministic templates run at/over the 15s statement timeout on unmaterialized core.* views, silently falling back to heuristic SQL",
+        "Deterministic template SQL hits 15s statement timeout and silently degrades to heuristic \u2014 6/17 captures lost their expected chart",
+        "15s statement_timeout kills deterministic template execution on 6/16 captures, silently degrading to heuristic fallback",
+        "Deterministic template and LLM SQL exceed the 15s Neon statement_timeout under ~4 concurrent chat requests"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced. web/logs/chat_api.log contains all 8 cited entries verbatim (04:41:59.786Z through 04:46:32.882Z on 2026-07-02) as generationSource=deterministic_template with 'canceling statement due to statement timeout'; 28 deterministic_template timeout entries exist overall. Captures confirm 17 runs with generationSource=heuristic_after_template_failure naming the failed template (single_driver_pit_cycle, driver_pair_stint_delta, inferred_overtakes, driver_telemetry_overlay, driver_pair_sector_dominance, single_driver_speed_map, driver_pair_lap1_positions), and the R04 baseline (must be deterministic) fell to heuristic. execute.ts:7,37 confirms SET LOCAL statement_timeout with OPENF1_QUERY_TIMEOUT_MS=15000 in web/.env.local. Successful templates ran 12.0-13.4s (s202_pit_stop 13108ms sql), i.e. near-zero headroom, supporting intermittent-timeout causation; failing captures totaled 20-66s. Design lens: the known-open-items note explicitly says query-time timeouts on unmaterialized core.* views remain fair findings, so not refuted. Severity adjusted P0->P1: the fallback path still returns answers (degraded card family, 20-66s latency) rather than factually wrong ones, so this is a broken/degraded feature, not wrong/misleading answers."
+    },
+    {
+      "dedupe_key": "routing.orchestration.blind-heuristic-fallback-on-template-failure",
+      "title": "orchestration.ts deterministic_template failure branch swaps in buildHeuristicSql for ANY exec error \u2014 no timeout/permanent distinction, no retry, no topical-relevance check, honest-refusal path unreachable",
+      "category": "routing",
+      "severity": "P1",
+      "prompts_affected": [
+        "M04",
+        "M06",
+        "M10",
+        "M19",
+        "M22",
+        "R04",
+        "s101_lap1_launch#1",
+        "s101_sector_dominance#1",
+        "s101_stint_delta#1",
+        "s101_telemetry_overlay#1",
+        "s202_sector_dominance#1",
+        "s202_stint_delta#1",
+        "s202_telemetry_overlay#1",
+        "s303_lap1_launch#1",
+        "s303_sector_dominance#1",
+        "s303_telemetry_overlay#1"
+      ],
+      "evidence": "M10 (capture_0/M10.json): generationSource=heuristic_after_template_failure, notes 'template=driver_pair_stint_delta | template_failed_heuristic_used | session_pin_unverifiable_no_literal_session_key_predicate(session_key=10014)'. Executed SQL is buildHeuristicSql's DEFAULT branch \u2014 'SELECT session_key, session_name, date_start, year, country_name, location FROM core.sessions ORDER BY date_start DESC LIMIT 25' \u2014 returning 25 rows with year=2026 and venues Las Vegas/Lusail/Mexico City/Sao Paulo/Yas Marina for a Bahrain-2025 Hamilton-vs-Leclerc stint question; the answer admits no stint data is available; requested drivers absent from rows; elapsed 66569ms; self-grader still gave adequacyGrade=B. M22 (capture_0/M22.json): 'template=single_driver_pit_cycle | template_failed_heuristic_used'; heuristic 'lap' branch returned 140 rows = 70 laps x exact 2x duplicates, no venue/year columns. orchestration.ts lines 1292-1305 call buildHeuristicSql on ANY deterministic-template exec failure with no error-class split, unlike the Phase 17-D anthropic path (lines 1264-1289: timeout keeps heuristic, other errors get honest structured failure); the comment at orchestration.ts:1075 says the 'recent sessions' heuristic was supposed to be retired.\n---\nM10 (expect stint_delta_line): generationNotes 'template=driver_pair_stint_delta | template_failed_heuristic_used'; fallback SQL is 'SELECT session_key... FROM core.sessions ORDER BY date_start DESC LIMIT 25' returning 25 rows of 2026 Yas Marina sessions for a Bahrain-2025 Hamilton/Leclerc question; no detector fires, no chart, and the insight is still titled 'Hamilton vs Leclerc Stint Deltas \u2014 Bahrain 2025' over a sessions list. M22 (expect pit_event_strip): 'template=single_driver_pit_cycle | template_failed_heuristic_used'; fallback dumps 140 lap-duration rows (session 9963, driver 1) with no pit columns, so no pit_event_strip is possible and the answer infers the stop lap from sector-3 inflation. Same template succeeded for Bearman/Baku (s202_pit_stop#1, 13.4s) \u2014 failure is per-request, elapsedMs 66569 (M10) / 41635 (M22) consistent with statement timeouts. orchestration.ts:1292-1305 routes ANY deterministic-template exec error to buildHeuristicSql, unlike the anthropic branch which distinguishes timeout vs column errors (lines 1264-1289).\n---\nAll 8 captures carry generationNotes 'template_failed_heuristic_used'. web/logs/chat_api.log chat_query_first_attempt_failed entries for their requestIds (9712bbaa, 5903843c, 4a18755c, d260c3be, 5562b9ab, 2bbc5028-adjacent set, 9ae131eb, 0068cc18) all show error 'canceling statement due to statement timeout' on the original template SQL (driver_pair_stint_delta, driver_pair_sector_dominance, driver_telemetry_overlay, inferred_overtakes). statement_timeout defaults to 15000ms (src/lib/db/driver.ts:51-55). Re-firing the identical s101_sector_dominance prompt against the warm server succeeded as deterministic_template (17.1s wall, 3 rows, track_heatmap spec emitted and verified) \u2014 the timeouts are transient, yet orchestration.ts:1292-1305 sends ANY deterministic-template exec error (including timeouts) straight to buildHeuristicSql with no retry, unlike the LLM path which gets one repair attempt. Result: expected charts (track_heatmap, telemetry_overlay, stint_delta_line, horizontal_bar) never render; detector registry returns none for all 8.\n---\nAll six captures carry generationSource=heuristic_after_template_failure; logs/chat_api.log shows 'canceling statement due to statement timeout' for every requestId (35fd405b, 5023aa9c, 2dd757e1, af6cfe30, 35a50083, 3e9ecd3c). The heuristic rows are unrelated to the question: s101_stint_delta#1 and s202_sector_dominance#1 got `SELECT session_key... FROM core.sessions ORDER BY date_start DESC LIMIT 25` returning rows[0]={session_key:11436, year:2026, location:'Yas Marina'} for Suzuka-2025 / Mexico-City-2025 questions; s101/s303_lap1_launch and s202_telemetry_overlay got single-driver `core.laps_enriched` lap durations (driver 27 / 63 / 87 only) for two-driver questions; M04 got 200 all-zero raw.car_data samples (speed/throttle/brake/rpm all 0). Detector registry run over these rows yields no detector (expected grouped_bar, horizontal_bar_diverging x2, stint_delta_line, track_heatmap, telemetry_overlay all never fire \u2014 6 of 16 capture prompts lose their chart). The anthropic path (orchestration.ts:1281-1289) fails honestly on non-timeout errors; the deterministic_template branch (orchestration.ts:1292-1305) ALWAYS runs buildHeuristicSql, whose final default branch is a bare sessions listing (src/lib/queries.ts:153+).",
+      "suspected_root_cause": "The deterministic_template failure branch in orchestration.ts never distinguishes timeout from permanent failure and never checks that the heuristic SQL is even topically related; buildHeuristicSql's default branch is a generic recent-sessions list, so any template exec failure on an analysis question degrades to unrelated 2026 data instead of an honest structured failure.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/app/api/chat/orchestration.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/queries.ts",
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/db/driver.ts",
+        "web/src/lib/deterministicSql/pitCycle.ts",
+        "web/src/lib/deterministicSql/stintDelta.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts",
+        "web/src/lib/queries.ts"
+      ],
+      "member_titles": [
+        "Deterministic-template exec failure silently falls back to keyword heuristic returning unrelated/corrupted rows",
+        "Deterministic template exec failure silently falls back to irrelevant heuristic SQL, losing the expected chart",
+        "15s statement timeouts silently demote deterministic cards to the heuristic fallback (8/17 captures) with no retry",
+        "Deterministic-template failure falls back to keyword heuristic that serves unrelated (even wrong-year) rows as the answer payload, killing the expected chart"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced in artifacts: capture_0/M10.json shows generationSource=heuristic_after_template_failure with buildHeuristicSql's DEFAULT branch ('SELECT session_key... FROM core.sessions ORDER BY date_start DESC LIMIT 25'), 25 rows of 2026 Yas Marina/Vegas sessions for a Bahrain-2025 Hamilton/Leclerc stint question, elapsed 66569ms, and an insight card still titled 'Hamilton vs Leclerc Stint Deltas \u2014 Bahrain 2025' over the sessions list. capture_0/M22.json confirms the 'lap' heuristic branch (140 rows = 70 laps x 2 duplicates, no pit columns) for a pit-stop question. Code confirms the mechanism: orchestration.ts:1292-1305 routes ANY deterministic_template exec error to buildHeuristicSql with no timeout/permanent error-class split, while the anthropic path (1264-1289, Phase 17-D) distinguishes timeouts from column errors and can reach the honest structured-failure path; the comment at :1075 documents 'no more recent sessions heuristic' intent for the LLM path only. Design lens: answer-cache.test.mjs:705 and skip-repair.test.mjs:350 assert the fallback mechanism fires, but those tests cover cache-bypass and synthesis wiring, not the quality of the fallback; no comment or ticket endorses serving an unrelated recent-sessions dump under a topical insight title. Severity adjusted P0 -> P1: the M10 answer and takeaways honestly state no stint data was retrieved (not a fabricated/wrong answer), and M22's fallback actually produced a plausibly correct inferred stop lap; the user impact is a broken/degraded feature (irrelevant rows, no chart, 66s latency, misleading card title) rather than a confidently wrong answer."
+    },
+    {
+      "dedupe_key": "sql.non-template-paths.laps-enriched-no-dedup-no-venue",
+      "title": "Non-template SQL paths (buildHeuristicSql laps branch, LLM SQL prompt) never got the template-standard laps_enriched GROUP BY/DISTINCT dedup or venue/year projection \u2014 exact 2x duplicate rows and unverifiable results",
+      "category": "sql",
+      "severity": "P1",
+      "prompts_affected": [
+        "M01",
+        "M03",
+        "M09",
+        "M22",
+        "R04",
+        "s101:lap1_launch#1",
+        "s101:pit_stop#1",
+        "s101:telemetry_overlay#1",
+        "s202:telemetry_overlay#1",
+        "s303:lap1_launch#1",
+        "s303:pit_stop#1",
+        "s303:telemetry_overlay#1"
+      ],
+      "evidence": "M22 heuristic SQL (queries.ts lines 318-325): 'SELECT lap_number, lap_duration, duration_sector_1, duration_sector_2, duration_sector_3 FROM core.laps_enriched WHERE session_key = 9963 AND driver_number = 1 ORDER BY lap_number ASC' \u2014 result is 140 rows for a 70-lap race, every lap present exactly twice with identical values (verified all 70 dup pairs byte-identical), and the final SELECT carries no venue/year columns so downstream venue verification is impossible. M01 (LLM path, capture_0/M01.json): 'FROM core.laps_enriched le WHERE le.session_key = 10002 ... ORDER BY le.lap_duration ASC LIMIT 1' with no DISTINCT/GROUP BY \u2014 benign here only because LIMIT 1 with no aggregate, but any COUNT/AVG/SUM would silently double. anthropic.ts's system prompt mentions core.laps_enriched as the default lap contract (lines 86, 114, 127) but contains zero duplicate-row/dedup guidance, while every deterministic template explicitly guards (e.g. stintDelta.ts lapsCte comment 'laps_enriched ships duplicate rows in the warehouse, so collapse to one row per lap').\n---\nM22's heuristic SQL 'SELECT lap_number, lap_duration, ... FROM core.laps_enriched WHERE session_key = 9963 AND driver_number = 1 ORDER BY lap_number ASC' returned 140 rows for a 70-lap race \u2014 every lap duplicated exactly 2x with identical values (verified programmatically: all lap_number counts == 2). pitCycle.ts:22-24 documents the gotcha ('core.laps_enriched carries duplicate rows per (session, driver, lap) in the deployed warehouse') and every deterministic template de-dupes with GROUP BY/DISTINCT, but buildHeuristicSql emits bare SELECTs. New aspect of the known dup-row gotcha: the fallback path re-exposes it, doubling row counts fed to the LLM/answer and to any downstream detector aggregation.\n---\nAll three share the fallback SQL 'SELECT lap_number, lap_duration, duration_sector_1, duration_sector_2, duration_sector_3 FROM core.laps_enriched WHERE session_key = <k> AND driver_number = <n> ORDER BY lap_number ASC' (queries.ts:319-323). (1) Single driver only: R04 driver_number=1 (Verstappen) with Norris absent; s101 =10 (Gasly) with Hulkenberg absent; s303 =31 (Ocon) with Gasly absent \u2014 each answer admits it ('Norris's data was not included in the SQL results'). (2) No GROUP BY/DISTINCT on core.laps_enriched, hitting the known Neon exact-2x duplication: 106 rows = 53 laps x2 (R04), 110 = 55x2 (s101), 142 = 71x2 (s303) \u2014 every lap_number appears twice with identical values. (3) Final SELECT carries no venue/year/driver columns, so downstream venue verification and the drivers-in-rows resolution check are impossible. Manifest expect=telemetry_overlay is never produced; insight has no chart.\n---\nFallback SQL: 'SELECT lap_number, lap_duration, duration_sector_1, duration_sector_2, duration_sector_3 FROM core.laps_enriched WHERE session_key = 9912 AND driver_number = 4 ORDER BY lap_number ASC' (web/src/lib/queries.ts ~line 317). s101_pit_stop returned 106 rows = 53 laps each duplicated exactly (lap 1 appears twice with identical values); s303 returned 100 rows = 50 laps x2 - the known Neon laps_enriched 2x duplication with no dedup. The final SELECT also carries no venue/year columns (venue verification impossible) and no driver_name (manifest drivers Norris/Piastri absent from rows). Consequence: the answer never states the first-stop lap - 'that information is present in the full 100-row result but not visible in the provided sample' - because duplication halves the row sample the synthesizer sees (it saw only laps 1-13). Norris's Monza stop lap IS derivable from the returned 53 laps.\n---\nM03.json (anthropic_repaired, allowed LLM baseline): final SELECT returns only corner_label/corner_number/braking metrics from analytics.braking_performance with no country_name/location/year despite the pinned session 10022 - the only capture in the set without venue/year columns on a successful path (all deterministic templates append them via a sess CTE). The single returned row therefore cannot be cross-checked against the manifest venue (Saudi Arabia), and downstream venue verification over rows has nothing to read. Answer content itself checks out against the row (311/53/258 kph, 88.3% avg pressure, 50 valid laps).\n---\ns101:lap1_launch#1 returned 88 rows = 44 laps x2 (44 exact-duplicate row groups, e.g. lap_number 1 twice with identical lap_duration 206.946); s303:lap1_launch#1 104 = 52x2; s202:telemetry_overlay#1 142 = 71x2 (Bearman answer even says 'the data covers 142 rows (with duplicates)'). SQL at queries.ts:318-323 has no GROUP BY/DISTINCT despite the documented Neon 2x-duplication in core.laps_enriched. M09's LLM-generated SQL has the same flaw in its stint_laps CTE (per-lap SELECT from laps_enriched with no dedup) \u2014 it never executed, but would have returned doubled rows. All deterministic templates dedup correctly (e.g. stintDelta.ts a_laps GROUP BY lap_number with the comment 'laps_enriched ships duplicate rows in the warehouse').",
+      "suspected_root_cause": "The documented Neon 2x-duplicate gotcha for core matviews is encoded only inside deterministic templates; buildHeuristicSql's laps branch predates it and the anthropic system prompt never states it, so both non-template paths emit un-deduped laps_enriched reads and venue-column-free SELECTs.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/anthropic.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/queries.ts",
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/anthropic.ts",
+        "web/src/lib/deterministicSql/pitCycle.ts",
+        "web/src/lib/queries.ts"
+      ],
+      "member_titles": [
+        "Non-template SQL paths (heuristic fallback, LLM prompt) query core.laps_enriched without GROUP BY/DISTINCT dedup and omit venue/year columns",
+        "Heuristic fallback SQL lacks the dup-row guard the templates have \u2014 every lap returned exactly twice",
+        "Telemetry-overlay heuristic fallback queries laps_enriched for only one of two requested drivers, without dedup (exact 2x duplicate rows) and without venue/year columns",
+        "Heuristic lap/pace branch selects core.laps_enriched with no GROUP BY/DISTINCT - exact 2x duplicate rows, no venue/year/driver columns, and the answer fails to answer the question",
+        "LLM-generated SQL (M03) omits venue/year columns from the final SELECT, so rows cannot be venue-verified",
+        "buildHeuristicSql lap branch reads core.laps_enriched without GROUP BY/DISTINCT \u2014 exact 2x duplicate rows returned"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced in artifacts: M22 (capture_0) returned 140 rows = 70 laps x2 with byte-identical dup pairs; R04 106=53x2; s101/s303 lap1_launch 88=44x2 and 104=52x2; s101/s303 pit_stop 106=53x2 and 100=50x2 \u2014 all from the bare heuristic SELECT at web/src/lib/queries.ts:316-332 with no DISTINCT/GROUP BY, single-driver-only, and no venue/year/driver_name columns. anthropic.ts references core.laps_enriched (lines 86/114/127) with zero duplicate-row guidance, while every deterministic template explicitly guards (pitCycle.ts:22, stintDelta.ts:78). Answers on this path visibly punt (\"Norris's data was not included\"). Design lens: the warehouse dup-row gotcha is known, but the templates' universal guarding shows the intended contract is dedup-at-query; the fallback path re-exposing it is an unhandled gap, not a documented decision. P1 stands: two-driver and pit-stop prompts on the fallback path fail to answer, and any aggregate on this path silently doubles."
+    },
+    {
+      "dedupe_key": "sql.buildHeuristicSql.context-blind-keyword-branches",
+      "title": "buildHeuristicSql is a keyword-first router that ignores resolved context \u2014 cannot express driver pairs, 'fastest' branch drops the asked driver, emitting degenerate off-topic canned queries",
+      "category": "sql",
+      "severity": "P1",
+      "prompts_affected": [
+        "M04",
+        "M08",
+        "M16",
+        "R04",
+        "s101:lap1_launch#1",
+        "s101:pit_stop#1",
+        "s101:speed_map#1",
+        "s101:stint_delta#1",
+        "s101_telemetry_overlay#1",
+        "s202:sector_dominance#1",
+        "s202:telemetry_overlay#1",
+        "s303:lap1_launch#1",
+        "s303:pit_stop#1",
+        "s303:speed_map#1",
+        "s303_telemetry_overlay#1"
+      ],
+      "evidence": "buildHeuristicSql's context parameter is singular ({sessionKey?, driverNumber?}, src/lib/queries.ts:153-156); the lap/pace branch (queries.ts:316-324) emits 'WHERE session_key = X AND driver_number = N' for exactly one driver even though runtime resolution selected both (R04: session 10006 drivers 1+4 resolved, SQL has only driver_number = 1; s101: 9888 drivers 10+27, SQL only 10; s303: 9869 drivers 31+10, SQL only 31). Answers admit it: 'Norris's data was not included in the SQL results' / 'Hulkenberg's data was not included'. Rows carry no driver identity columns (lap_number, lap_duration, 3 sector durations), so the detector registry emits NO spec \u2014 expected telemetry_overlay never renders, and insight metrics describe only one driver of a two-driver comparison. The backing /api/lap-telemetry endpoint works fine for these exact params (curled sessionKey=10006&drivers=1,4 \u2192 200, both drivers, 346/342 samples; 9888&drivers=10,27 \u2192 200; 9869&drivers=31,10 \u2192 200).\n---\nBoth speed_map fallbacks ran the 'fastest' branch (web/src/lib/queries.ts ~line 163): top-5 best_lap_duration per session with LIMIT 5, no driver_number predicate even though context.driverNumber was resolved (stage logs: Ocon #31 for 9904, Sainz #55 for 9971). Rows contain Verstappen/Russell/Hadjar... - manifest drivers Ocon and Sainz are absent, failing the resolution check. Answers punt: 'he does not appear among the five fastest drivers... a dedicated telemetry or car-data query filtered to Ocon's driver number would' [be needed]. Expected chart track_speed_map is lost entirely.\n---\n(a) Speed-map prompts contain 'fastest', so they hit the first branch (queries.ts:163-181) which builds a session-wide top-5 best-lap leaderboard and IGNORES the resolved driverNumber entirely \u2014 Ocon (#31, resolved 0.85 confidence) absent from s101:speed_map rows, Sainz (#55) absent from s303:speed_map rows; the detector then renders a horizontal_bar of five OTHER drivers' best laps under a 'show Ocon's speed map' ask (render degradation: expected track_speed_map, got horizontal_bar of wrong entities). (b) Pit-stop prompts hit the lap/pace branch (queries.ts:317-323): raw per-lap durations from core.laps_enriched with no pit columns and no dedup \u2014 s101:pit_stop returned 106 rows for 53 unique laps, every lap duplicated x2 (known warehouse dup-row gotcha, unguarded here), and no detector fires (expected pit_event_strip, got none). (c) Strategy-split/sector-dominance wording matches no keyword branch and falls to the default (queries.ts:345-350): 'FROM core.sessions ORDER BY date_start DESC LIMIT 25' with no session_key predicate despite context.sessionKey being available \u2014 flagged by the app itself as session_pin_unverifiable_no_literal_session_key_predicate.\n---\nThree degenerate shapes, all from buildHeuristicSql (queries.ts:153-351): (1) s101:stint_delta#1 and s202:sector_dominance#1 fell to the final catch-all 'SELECT ... FROM core.sessions ORDER BY date_start DESC LIMIT 25' \u2014 25 rows, ALL year=2026 Yas Marina sessions vs manifest venues Suzuka/Mexico City; zero prompt-named drivers in rows; no session_key predicate (generationNotes: session_pin_unverifiable_no_literal_session_key_predicate). (2) s101/s303 lap1_launch and s202:telemetry_overlay matched the 'lap|pace' branch (queries.ts:316-323) \u2014 single-driver lap dump: only Hulkenberg for a Hulkenberg-vs-Russell positions question, only Russell for Russell-vs-Leclerc, only Bearman for Bearman-vs-Piastri; no position/grid columns for a positions-gained question; no venue/year columns in the SELECT (breaks downstream venue verification). (3) M04 matched the telemetry branch via the substring 'speed' inside 'high-speed' \u2014 raw.car_data ORDER BY date ASC LIMIT 2000 returned the first 200 samples (exact preview-cap truncation, rowCount===200) of pre-session garage telemetry: every speed/throttle/brake/rpm value is 0. Orchestration's own comment (orchestration.ts:1282-1284) states failures should be 'honest structured failure, NOT a heuristic that returns unrelated rows', but that policy is only applied on the anthropic path.",
+      "suspected_root_cause": "orchestration passes only the first resolved driver into buildHeuristicSql; the fallback cannot express a driver pair, so pair questions silently lose the comparison subject and any chart.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/app/api/chat/orchestration.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/mapInsight/detectors/registry.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/queries.ts",
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/queries.ts"
+      ],
+      "member_titles": [
+        "Heuristic fallback threads only one driverNumber \u2014 two-driver telemetry comparisons return one driver's laps and render no chart",
+        "Heuristic 'fastest' branch ignores the resolved driver - returns session top-5 that excludes the driver the user asked about",
+        "buildHeuristicSql fallback emits question-irrelevant SQL: unpinned session lists, a top-5 leaderboard that drops the asked driver, and un-deduped lap dumps",
+        "Heuristic fallback SQL returns unrelated or single-driver data presented as a normal card response"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced end-to-end. Code: queries.ts:153-156 takes a singular {sessionKey?, driverNumber?} context and orchestration.ts:777-785 passes only runtime.resolution.selectedDriverNumbers[0]; the 'fastest' branch (queries.ts:163-181) has no driver_number predicate; the lap/pace branch (316-323) is single-driver with no dedup/venue columns; the catch-all (345-350) is the unpinned recent-25-sessions listing. Captures confirm every cited degenerate shape: capture_1/R04.json ran the single-driver laps SQL (driver 1 only, all 53 laps exactly 2x duplicated, answer admits 'Norris's data was not included'); capture_2/s101_speed_map#1 and s303_speed_map#1 ran the top-5 'fastest' branch and the asked drivers (Ocon, Sainz) are absent from rows; capture_3/M04.json ran the telemetry branch via the 'speed' substring and returned 200 all-zero raw.car_data rows (verified sum of speed+throttle+rpm+brake = 0); s101_stint_delta#1 and s202_sector_dominance#1 fell to the 2026 Yas Marina sessions listing. Design lens: orchestration's own comments (line 1075 'no more recent sessions heuristic', lines 1282-1284 'honest structured failure, NOT a heuristic that returns unrelated rows') show this pattern was meant to be retired, not blessed. Severity stays P1: the outputs are degraded/off-target cards and lost charts, while the flatly false 'data not in dataset' claims are carved into the separate P0 finding; M04's synthesis honestly punts on the zeroed telemetry rather than fabricating."
+    },
+    {
+      "dedupe_key": "perf.pre-sql-stages.cold-unmaterialized-view-probes",
+      "title": "Resolution and completeness_check stages issue probes against cold unmaterialized core.* strategy views with no warm-up, cache, or latency bound \u2014 35-40s before any SQL generation",
+      "category": "perf",
+      "severity": "P1",
+      "prompts_affected": [
+        "M02",
+        "M09",
+        "M10",
+        "R01",
+        "R02"
+      ],
+      "evidence": "M10 runtime.stageLogs: completeness_check durationMs=38646 with requiredTables ['core.strategy_summary','core.stint_summary','core.pit_cycle_summary','core.strategy_evidence_summary','core.session_drivers']; total request 66569ms. M22's completeness_check on the laps family (core.laps_enriched etc.) took 0ms in the same capture run. This is a NEW aspect of the known 'core.* relations are all unmaterialized views' item: the shipped probe fix covers the resolution-time coverage probes (chatRuntime.ts:1696-1758 sequentializes and skips expensive tables) but the completeness-check probe set for strategy questions still counts the ~15s pit_cycle_summary/strategy views. The 38.6s probe also precedes and plausibly cascades into the driver_pair_stint_delta template's own exec timeout (finding orchestration.template-exec-failure...).\n---\nM02 elapsedMs=53607 with generationSource='deterministic_template' (threshold 20000). Its SQL itself ran 12896ms (result.elapsedMs). /Users/robertzehnder/Documents/coding/f1/openf1/web/logs/chat_api.log for requestId 933f2b2c-d44e-4e09-84ef-1d97383e4b3d: chat_request_received 04:40:51.104Z -> chat_runtime_ready 04:41:31.016Z (39.9s) -> chat_query_success 04:41:43.918Z. Comparable race_trace prompts resolved in <1s of runtime (s101 total 12947ms, s303 total 7034ms with SQL 12008/6945ms), so the 40s resolution stage on M02 ('Did Russell's covering stop on the lap after Verstappen in Canada 2025...') is an outlier, likely resolver search_lookup/LLM-assist latency on the paraphrased venue reference.\n---\nR01.json: elapsedMs=53361 for generationSource=deterministic_template (threshold 20000). Stage logs: entity_resolution 18549ms + completeness_check 17649ms (runtime.durationMs 36202ms) + SQL exec 12895ms. Every warm capture in the same run resolved in 105-1207ms with completeness at 0-17ms, so this is first-request/cold Neon compute cost. The same cold window (00:41-00:43) is when the M08/M16 template execs blew the 15s statement timeout (see deterministic_template.exec.statement-timeout-unmaterialized-views), so the cold start also converts deterministic answers into heuristic fallbacks.\n---\nR02.json: elapsedMs=53,469 on generationSource=deterministic_template (audit threshold 20,000ms). Log: chat_request_received 04:40:51.104 -> chat_runtime_ready 04:41:31.015 (39.9s in resolution) -> chat_query_success 04:41:43.781 (SQL itself 12,757ms on the unmaterialized view). Two sibling requests logged success within the same second (totalRequestMs 52,813/52,814), showing concurrent capture-start contention. The same ~41s resolution latency on M09 (04:42:13.649 -> 04:42:54.969) directly caused the P1 budget exhaustion. Warm-path controls: s101:deg_curve#1 resolved+ran in 14.3s; cache hits (s303:deg_curve#1 45ms, s202:race_trace#1 26ms) confirm the answer cache works as designed.",
+      "suspected_root_cause": "Session-scoped row-count probes (getSessionTableCounts) still run against core.pit_cycle_summary / strategy_* which are un-materialized aggregating views (~15s each on Neon); the probe fix that shipped for resolution coverage was not applied to the completeness_check stage's strategy-family table set.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/app/api/chat/orchestration.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/chatRuntime.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/queries/resolver.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/resolverCache.ts",
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/chatRuntime.ts",
+        "web/src/lib/queries.ts",
+        "web/src/lib/queries/resolver.ts",
+        "web/src/lib/resolverCache.ts"
+      ],
+      "member_titles": [
+        "completeness_check stage takes 38.6s when required tables are the strategy-family core.* views",
+        "M02 deterministic request took 53.6s total \u2014 40s of it in the pre-SQL runtime/resolution stage",
+        "Cold-start entity resolution + completeness probes add 36s before SQL generation (R01 total 53.4s on the deterministic path)",
+        "Runtime resolution takes ~40s under cold/concurrent start \u2014 R02 deterministic answer at 53.5s (>20s budget)"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced from stage logs in the captures: M10 completeness_check=38646ms with requiredTables [core.strategy_summary, core.stint_summary, core.pit_cycle_summary, core.strategy_evidence_summary, core.session_drivers] (total 66569ms); M02 entity_resolution=22289ms + completeness_check=17612ms (total 53607ms); R01 18549+17649ms; R02 22256+17646ms; M22's laps-family completeness was 0ms in the same run, confirming the strategy-view probe set is the cost. Code confirms the gap: chatRuntime.ts:2229-2237 probes global+session counts for ALL required tables with no expensive-view exclusion, while the shipped resolution-side fix (chatRuntime.ts:1696-1741) only sequentializes coverage probes and skips raw.car_data/raw.location \u2014 core.pit_cycle_summary (~15s un-materialized view per known gotchas) is probed un-skipped. One inaccuracy in the finding: 'no cache' is wrong \u2014 getGlobalTableCounts (queries.ts:118-148) and getSessionTableCounts (queries/sessions.ts:504-533) are module-scope memoized, which is exactly why repeat probes read 0ms; but there is no warm-up and no latency bound on first touch, so the 35-40s pre-SQL stall per cold process/session is real. This is a NEW aspect of the known 'core.* unmaterialized views' item: neither the shipped resolver-probe fix nor the 'query-time timeouts' framing covers completeness-check probe latency. P1 confirmed: the stall alone would be P2, but it demonstrably eats the 60s SQL pipeline budget and cascades into template exec timeouts that convert deterministic answers into heuristic fallbacks."
+    },
+    {
+      "dedupe_key": "routing.pipeline-budget.resolution-latency-starves-sql-repair-path",
+      "title": "Budget accounting charges pre-SQL resolution latency against the SQL pipeline deadline, leaving zero budget for the designed repair/fallback path; raw error surfaces with a double-concatenated sentence",
+      "category": "routing",
+      "severity": "P1",
+      "prompts_affected": [
+        "M09"
+      ],
+      "evidence": "M09.json: generationSource=sql_generation_failed, sqlError 'I couldn't construct a valid SQL query for this question within the time budget' (code sql_repair_timeout), no result rows, elapsedMs=69,837. Log timeline (requestId 35fd405b...): chat_request_received 04:42:13.649 -> chat_runtime_ready 04:42:54.969 (41.3s resolution) -> chat_query_first_attempt_failed 04:43:23.458 with 'canceling statement due to statement timeout' -> chat_query_sql_pipeline_exhausted 1ms later. Because sqlPipelineDeadline had already passed, orchestration.ts:1247-1252 gave up before the repair attempt AND before the heuristic_after_sql_timeout branch (lines 1264-1280) that is specifically designed for this timeout class. The final answer duplicates itself \u2014 'I couldn't construct a valid SQL query for this question. I couldn't construct a valid SQL query for this question within the time budget.' \u2014 because line 1337 prepends the generic prefix to a sqlErrorDetail that already contains the same sentence. The generated SQL itself was plausible (first-stint pace comparison) but scans core.laps_enriched per-lap without dedup and joins core.stint_summary, and hit the same 15s statement_timeout as the template failures.",
+      "suspected_root_cause": "Budget accounting charges the 41s runtime-resolution latency against the SQL pipeline deadline, so a single 15s statement timeout leaves zero budget for the designed repair/heuristic timeout path; error message composition double-concatenates the generic sentence.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/app/api/chat/orchestration.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/db/driver.ts"
+      ],
+      "member_titles": [
+        "M09 hard failure: 41s resolution + 15s SQL timeout exhausts pipeline budget \u2014 raw error surfaces to user with duplicated sentence, no repair or fallback attempted"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced from capture_3/M09.json: generationSource=sql_generation_failed, sqlError 'I couldn't construct a valid SQL query for this question within the time budget', no rows, elapsedMs=69837, and the exact double-concatenated answer 'I couldn't construct a valid SQL query for this question. I couldn't construct a valid SQL query for this question within the time budget.' Code confirms every mechanism: orchestration.ts:361 sets startedAt at request start, :1076-1077 sets sqlPipelineDeadline = startedAt + OPENF1_SQL_REPAIR_BUDGET_MS (60s), so the ~41s runtime-resolution latency is charged against the SQL budget; the deadline checks at :1211 and :1247 set sqlPipelineError before the single allowed repair, and the Phase 17-D heuristic_after_sql_timeout branch is nested inside the repair catch so it can never run once the deadline passed; the failure-message composition concatenates the generic prefix onto a sqlErrorDetail that already contains the same sentence. Minor caveat: the finding's log timeline cites requestId 35fd405b while the capture is 6701bcf0 (evidently a different run of the same prompt), but the capture plus code fully establish the failure mode independently. Design lens: code comments show the timeout-to-heuristic fallback was deliberately designed for exactly this timeout class ('Phase 17-D: timeouts keep the heuristic fallback'), so the budget anchoring that defeats it is not intended behavior; the duplicated sentence is plainly a bug. P1: hard feature failure with a raw duplicated error surfaced to the user and the designed fallback unreachable."
+    },
+    {
+      "dedupe_key": "visual.line-dual-axis.zero-fill-missing-laps",
+      "title": "lineDualAxisDetector fills missing lap matches with 0 instead of NaN, fabricating 0-second lap times for retired drivers that the renderer plots",
+      "category": "visual",
+      "severity": "P1",
+      "prompts_affected": [
+        "s101_wet_crossover#1",
+        "s303_wet_crossover#1"
+      ],
+      "evidence": "registry.ts:868 in the lineDualAxisDetector build: `return toNumber(match?.[lapTimeCol] ?? 0);` \u2014 missing (driver,lap) rows become literal 0. s101 (Melbourne): Alonso has rows for laps 1-32 only, but his 57-value series carries 25 zeros at laps 33-57. s303 (Silverstone): Antonelli has rows for laps 1-23, series has 29 zeros at laps 24-52. line-dual-axis-chart.tsx:58 includes any value !== undefined in the data (0 passes) while its y1 domain is computed from values > 0 (line 41), so the retired driver's line dives from ~140s to 0 below the axis floor instead of ending. The generic line detector in the same registry correctly uses valueOrNaN (registry.ts:455) \u2014 the dual-axis builder is the inconsistent one. The weather series uses the same `?? 0` pattern (line 877).",
+      "suspected_root_cause": "lineDualAxisDetector fills missing lap matches with 0 instead of NaN (valueOrNaN), fabricating 0-second lap times for laps after a retirement; renderer then plots them because only undefined is skipped.",
+      "files": [
+        "web/src/components/f1-chat/charts/line-dual-axis-chart.tsx",
+        "web/src/lib/mapInsight/detectors/registry.ts"
+      ],
+      "member_titles": [
+        "line_dual_axis builder zero-fills laps a driver never ran \u2014 retired driver's lap-time line plunges to 0s"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Code confirmed: lineDualAxisDetector build returns toNumber(match?.[lapTimeCol] ?? 0) for driver series (and ?? 0 for weather) in web/src/lib/mapInsight/detectors/registry.ts, while the generic line detector in the same file uses valueOrNaN (lines 404/426/455) \u2014 the dual-axis builder is the inconsistent one. Captures confirm the trigger: s101 wet_crossover has Alonso rows for laps 1-32 vs Stroll 1-57 (25 fabricated zeros), s303 has Antonelli 1-23 vs Russell 1-52 (29 zeros). line-dual-axis-chart.tsx builds data entries for any value !== undefined (0 passes) and computes the y1 domain only from values > 0, so the retired driver's line plunges from ~140s to 0 below the axis floor instead of terminating. No test or comment blesses zero-fill (no dual-axis coverage in scripts/tests); the signed-off wet-crossover design decisions cover model-inference disclaimers, not fabricated 0-second laps. P1: visibly broken chart on the wet-crossover card whenever a driver retires."
+    },
+    {
+      "dedupe_key": "routing.template-triggers.overbroad-keyword-intercepts-llm-path",
+      "title": "Template trigger keyword regexes (deg-curve 'deg curves', SECTOR/GAIN triggers) lack negative guards for team-comparison and corner-phase phrasing, hijacking designated LLM-path questions into templates that cannot answer them",
+      "category": "routing",
+      "severity": "P1",
+      "prompts_affected": [
+        "M04",
+        "M11"
+      ],
+      "evidence": "Prompt: 'Compare medium-compound deg curves between McLaren and Red Bull in stint 2 at Jeddah 2025 \u2014 was the gap aero-driven?' (baseline, expect=scatter_with_regression, listed as an LLM-path prompt). Capture shows generationSource='deterministic_template', template=compound_degradation_curve. Result columns (compound_name, tyre_age, deg_delta_s, lap_count) carry no team, driver, or stint dimension; medium rows pool exactly lap_count=2 laps per age across ALL teams. The answer never mentions McLaren, Red Bull, stint 2, or aero \u2014 it describes venue-wide Hard vs Medium fuel-effect slopes. DEG_TRIGGER regex 'deg(?:radation)? curves?' (degradationCurve.ts:24-25) matched 'deg curves'; the builder's own docstring says 'the scatter+regression card fits per-driver slopes \u2014 different question', and its only narrowing filter is driver numbers (driverFilter, lines 39-44) \u2014 team names are invisible to it.\n---\nM04 generationNotes: 'template=driver_pair_sector_dominance | template_failed_heuristic_used'. The prompt \u2014 'Across Turns 7, 8, 9 (Sector 2 high-speed esses) at Suzuka 2025, where did Verstappen lose time to Norris on entry vs apex?' \u2014 matched SECTOR_TRIGGER (sectorDominance.ts:32, '\\bsectors?\\b' via the literal 'Sector 2') and GAIN_TRIGGER ('lose', line 33). The template returns exactly 3 best-S1/S2/S3-delta rows and structurally cannot answer per-corner entry-vs-apex time loss (M04 expects grouped_bar over corner phases). M04 is on the known-LLM-path baseline list, so even a successful template run would have been the wrong generation source; here it also added a 15s timeout before the heuristic fallback. The file's own comment claims sector-level timing is 'the default for corner/sector dominance questions', but an entry/apex phase question is not a sector-dominance question.",
+      "suspected_root_cause": "The degradation-curve trigger fires on the phrase 'deg curves' with no guard for team-comparison or stint-scoped phrasing, so a known-LLM-path question is captured by a template that structurally cannot answer it; the topic guard for compound_degradation_curve (topicGuards.ts:447) owns 'stint'/'pace' and does not reject team-entity questions.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/degradationCurve.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/sectorDominance.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/topicGuards.ts"
+      ],
+      "member_titles": [
+        "M11 team-vs-team deg question hijacked by compound_degradation_curve template, which answers a different question with no team or stint dimension",
+        "driver_pair_sector_dominance template intercepts M04's corner entry-vs-apex question, which is a designated LLM-path baseline"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Confirmed both hijacks. M11 (baselines.json expect=scatter_with_regression): capture_1/M11.json shows generationSource=deterministic_template, template=compound_degradation_curve; DEG_TRIGGER (degradationCurve.ts:24-25) matches the literal phrase 'deg curves'; result columns carry no team/driver/stint dimension and the answer contains zero mentions of McLaren, Red Bull, stint 2, or aero (grep count 0) \u2014 the user's question is never addressed. The template's own docstring says the scatter+regression card 'fits per-driver slopes \u2014 different question', and topicGuards.ts:447 rejects only 'telemetry', so no team-comparison guard exists. M04 (expect=grouped_bar): capture_3/M04.json generationNotes 'template=driver_pair_sector_dominance'; SECTOR_TRIGGER '\\bsectors?\\b' matches 'Sector 2' and GAIN_TRIGGER matches 'lose' (sectorDominance.ts:32-33), intercepting a corner entry-vs-apex question the 3-row S1/S2/S3 template structurally cannot answer. One evidence error in a member: M11's executed SQL actually carried 'driver_number IN (4, 81)' (McLaren-only via team resolution), so 'pools across ALL teams' is wrong \u2014 but that detail belongs to the separate team-resolution finding and does not affect the routing-hijack claim. No test or sign-off blesses these intercepts. P1 fits: designated LLM-path questions get non-answers, one compounded by a 15s template timeout."
+    },
+    {
+      "dedupe_key": "data.deg-curve-sql.sc-neutralized-and-lap1-contamination",
+      "title": "compound_degradation_curve template SQL has no SC/VSC/red-flag or standing-start exclusion, so fresh-tyre baselines and per-age medians are contaminated at disrupted races, inverting curves and blowing out axes",
+      "category": "data",
+      "severity": "P1",
+      "prompts_affected": [
+        "M11",
+        "R02",
+        "s101_deg_curve#1",
+        "s202_deg_curve#1",
+        "s303_deg_curve#1"
+      ],
+      "evidence": "M11 medium rows: age 1 delta +2.788s, age 2 +8.204s, then ages 3-15 all ~ -32.2 to -32.8s, with lap_count=2 at every age \u2014 i.e. the age<=2 'fresh baseline' laps were ~32s slower than genuine pace (SC/opening-lap running at Jeddah), so every later lap reads 32s 'faster'. The answer states 'Medium crosses the cliff threshold around age 1 and stays high (-32.23s by age 15)' \u2014 literally contradictory: a compound that is 32s under its baseline did not stay high. Cliff logic in degradationCurveInsight.ts:66-73 declares a sustained cliff if a point exceeds 0.6s AND only the SINGLE next point exceeds 0.4s (age1=2.788, age2=8.204 qualify), never re-checking the remaining 13 points; the template SQL (degradationCurve.ts:50-60) filters is_valid/is_pit_lap/is_pit_out_lap but not neutralized laps (unlike raceTrace, which computes is_neutralized), and there is no minimum-sample guard (n=2 laps per point here). The s202 Mexico City capture shows the same code behaving sensibly when baselines are clean, confirming the defect is baseline/detector robustness, not arithmetic.\n---\nM11 (Jeddah, session 10022) rows: HARD compound_baseline_s = 136.412 while deltas from age 3 onward sit at -41.3..-43.8s (i.e. real race pace ~93s \u2014 the age<=2 baseline laps ran ~44s slow, consistent with an early SC/standing start); MEDIUM baseline 125.462 with -32s deltas. The emitted degradation_curve spec plots these as the y-series, and the answer states 'Hard nets out 1.511s/lap FASTER with age (-43.82s by age 30) \u2014 fuel burn-off outweighs tyre wear here', a physically impossible claim delivered without hedging. s202 (Mexico City) shows the milder form: tyre_age 0 buckets at +11.66/+9.23/+11.11s (standing-start lap 1 included) dominating the chart's y-scale. Template SQL (degradationCurve.ts) filters is_pit_lap/is_pit_out_lap/is_valid but has no neutralized-lap or lap_number>1 exclusion in either the baselines CTE (WHERE tyre_age <= 2) or the per-age buckets, and lap_count>=2 admits 2-lap buckets.\n---\nBahrain (R02 / s303, session 10014): rows MEDIUM tyre_age=0 deg_delta_s=+8.002 (5 laps) and SOFT age=0 +6.616 (7 laps) vs a real signal inside \u00b13s \u2014 the age-0 laps are race-start laps (tyre_age 0, not pit-out), so the rendered line starts at +8s and the auto-scaled y-domain squashes the actual deg trend. Monaco (s101, session 9979): detector series Hard=[-4.696, 12.786, 8.707, -21.05, -21.952, ...], Medium=[-5.906, 13.381, -14.849, ...] \u2014 swings of 35s because the fresh (age<=2) baseline itself was set under a disruption; the chart renders a +/-22s 'tyre cliff' curve that is pure race-disruption noise. The template (degradationCurve.ts:52-60) filters is_valid/is_pit_lap/is_pit_out_lap only; raceTrace.ts:97 already infers is_neutralized from synchronized lap-time spikes but that technique is not reused here, and lap 1 is never excluded.",
+      "suspected_root_cause": "Two compounding gaps: (1) the compound baseline (median of age<=2 laps) includes safety-car-paced laps because the template has no is_neutralized/outlier filter and no minimum lap-count threshold; (2) the cliff detector confirms 'sustained' with only one look-ahead point and the takeaway template prints 'stays high' alongside a negative endpoint without a sign check.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/degradationCurve.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/degradationCurveInsight.ts",
+        "web/src/lib/deterministicSql/degradationCurve.ts",
+        "web/src/lib/deterministicSql/raceTrace.ts"
+      ],
+      "member_titles": [
+        "Deg-curve fresh-tyre baseline is polluted by neutralized/SC laps and the cliff detector then emits a self-contradictory claim ('crosses the cliff... stays high (-32.23s)')",
+        "Compound-deg fresh-tyre baseline (tyre_age<=2 median) has no SC/standing-start exclusion \u2014 Jeddah curves show compounds 'improving' 32-43s and prose claims 1.5s/lap fuel gain",
+        "Degradation-curve template medians are contaminated by lap-1 standing starts and SC/red-flag laps, blowing out the y-axis and inverting the curve at disrupted races"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced across all five captures. M11 (Jeddah 10022): medium age1 +2.788/age2 +8.204 then ages 3-15 at ~-32.2..-32.8 with lap_count=2 at every age; hard baseline 136.412 with -41..-43.8 deltas; answer asserts 'Hard nets out 1.511s/lap FASTER with age (-43.82s by age 30) - fuel burn-off outweighs tyre wear here' and 'Medium crosses the cliff threshold around age 1 and stays high (-32.23s by age 15)' - internally contradictory. R02/s303 Sakhir age-0 buckets +6.616/+8.002; s202 Mexico age-0 +11.66/+9.23/+11.11; s101 Monaco swings (12.786 to -21.95) all match. Code confirms: degradationCurve.ts filters only is_valid/is_pit_lap/is_pit_out_lap with no neutralized-lap or lap-1 exclusion, baselines CTE is median of age<=2 laps with no sample-size guard, HAVING lap_count>=2 admits 2-lap buckets; degradationCurveInsight.ts:69 confirms cliff with a single look-ahead point; raceTrace.ts:97 computes is_neutralized but the technique is unreused here. One overstatement: the M11 answer DOES carry a hedge ('curves are NOT fuel-corrected... net slopes understate (or invert) true compound deg'), so 'delivered without hedging' is not strictly accurate - though attributing a 43s delta to fuel burn remains wrong. Design lens: the signed-off 'SC windows inferred from lap-time spikes' decision covers the race-trace card's stated model, not deg-curve baseline contamination; no test or RUBRIC entry sanctions this. P1 stands (borderline P0): wrong analysis at disrupted races, partially mitigated by the printed caveat and visually self-evident chart breakage; clean races behave correctly."
+    },
+    {
+      "dedupe_key": "visual.radar.season-year-identifier-denylist-gap",
+      "title": "radarDetector builds axes from all numeric non-identifier columns and IDENTIFIER_COLS misses season_year, so 2025 is plotted as an axis on a 0-100 radar and axis counts contradict the card text",
+      "category": "visual",
+      "severity": "P1",
+      "prompts_affected": [
+        "M17",
+        "s101_radar#1",
+        "s202_radar#1",
+        "s303_radar#1"
+      ],
+      "evidence": "Both emitted specs: axes ['Season year','Restart','Traffic','Consistency'], series values [2025, 75, 18.4, 0] / [2025, 100, 0, 80], max_value 100, total_axes 8, partial_data_axes 4. The renderer (radar-chart.tsx:38-42) uses PolarRadiusAxis domain=[0,100] with no clamping, so the 'Season year' vertex is drawn at ~20x the grid radius, destroying the polygon; the caption reads '4 of 8 axes not yet populated' though the driver_performance_score matview has 7 axes. Root: IDENTIFIER_COLS (registry.ts:18-26) contains 'year' but not 'season_year', and radarDetector.build() (registry.ts:618-620) includes every numeric non-identifier column as an axis. The signed-off zero-axis dropping works as designed; this is a distinct leak of a non-score column.\n---\nDetector output for both radar captures: {axes:[\"Season year\",\"Restart\",\"Traffic\",\"Consistency\"], max_value:100, series:[{name:\"Max VERSTAPPEN\", values:[2025,75,80.1,30]},{name:\"Lando NORRIS\", values:[2025,100,0,60]}], partial_data_axes:4, total_axes:8}. Rows carry season_year:2025 (numeric) from the driver_pair_performance_radar template SQL. radar-chart.tsx pins PolarRadiusAxis domain=[0,100] (line 40), so 2025 spikes both polygons off-scale on the bogus 'Season year' axis. The renderer caption will read '4 of 8 axes not yet populated' while the server card (performanceRadarInsight.ts:120) says 'Season 2025 \u00b7 7-axis model \u00b7 1 axes populated' and takeaway '6 of 7 axes not yet populated' \u2014 chart and card contradict each other.",
+      "suspected_root_cause": "radarDetector.build() axis selection is 'all numeric non-identifier columns' and the identifier denylist misses season_year, so the matview's season_year column becomes a 2025-valued axis on a 100-max radar.",
+      "files": [
+        "web/src/components/f1-chat/charts/radar-chart.tsx",
+        "web/src/lib/deterministicSql/performanceRadar.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts",
+        "web/src/lib/synthesis/performanceRadarInsight.ts"
+      ],
+      "member_titles": [
+        "Radar detector leaks season_year as a polygon axis \u2014 value 2025 plotted on a 0-100 polar scale and axis-count caption inflated to 8",
+        "Radar detector charts season_year as a performance axis \u2014 value 2025 on a fixed 0-100 radius scale \u2014 and its axis counts contradict the card text"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Verified from rows + code (the chart spec is built client-side by mapInsight detectChart, so it is not in the captured response, but its production is deterministic from the captured rows). All four radar captures (M17, s101/s202/s303_radar) carry numeric season_year:2025 in every row alongside string-numeric *_axis columns. registry.ts IDENTIFIER_COLS (lines 18-26) contains 'year' but not 'season_year'; radarDetector.build() (lines 617-655) takes every numeric-like non-identifier column as an axis (isNumericLike accepts pg numeric strings), so for M17 cols = season_year + 7 axis columns = total_axes 8, zero-across-both axes dropped = 4, leaving axes ['Season year','Restart','Traffic','Consistency'] with values [2025,75,80.1,30]/[2025,100,0,60] \u2014 exactly the spec the finding quotes. radar-chart.tsx:38-43 pins PolarRadiusAxis domain [0,100] with no clamping, so the 2025 vertex renders ~20x off-scale. performanceRadarInsight.ts:93/120 counts only the 7 real axes ('7-axis model', 'N of 7 not yet populated'), contradicting the chart's 8/'4 of 8'. Design lens: the zero-axis dropping is the signed-off behavior and the finding correctly treats it as such; the season_year leak is a distinct oversight \u2014 'year' being in the denylist shows the intent was to exclude identifier years, and no test or comment references season_year (grep of mapInsight/, mapInsight.test.ts finds nothing). P1 confirmed: the polygon is visually destroyed on a shipped chart shape and the chart contradicts the card text, though the textual card/answer remain correct."
+    },
+    {
+      "dedupe_key": "data.weather_impact.stint-boundary-lap-duplicate-rows",
+      "title": "analytics.weather_impact lap-range stint join emits duplicate (driver, lap) rows at tyre-change boundary laps with contradictory compound/wet flags; consumers have no per-(driver,lap) de-dupe",
+      "category": "data",
+      "severity": "P1",
+      "prompts_affected": [
+        "M14",
+        "s101:wet_crossover#1",
+        "s101_wet_crossover#1"
+      ],
+      "evidence": "M14 Melbourne 9693 (capture_0/M14.json): laps 34 and 44 appear TWICE per driver \u2014 identical lap_time_s (e.g. Norris lap 34: 122.273 in both) but one row (wet_track=0, HARD) and one (wet_track=1, INTERMEDIATE); the same lap is flagged both wet and dry. s101 (same session, Alonso/Stroll): Stroll laps 33 and 44 duplicated the same way. User-visible corruption: (a) 'laps flagged wet' differs between the two cards for the SAME race \u2014 M14 answer says 48, s101 answer says 47; (b) s101 takeaway renders phantom one-lap stints: 'Stroll tyres: Int 1-32 -> Hard 33-33 -> Int 33-33 -> Hard 34-44 -> Int 44-57 (each switch = a pit stop, marked on the chart)' \u2014 implying two pit stops on lap 33; (c) the line_dual_axis chart receives two points per duplicated lap. The template's SELECT DISTINCT (wetCrossover.ts) cannot dedup because compound_name and wet_track genuinely differ between the pair.\n---\nM14 rows contain TWO rows for Norris lap 34 (identical lap_time_s 122.273) \u2014 one {wet_track:0, compound:HARD}, one {wet_track:1, compound:INTERMEDIATE}; same for Piastri lap 34 and Stroll lap 33 in s101. The wetCrossover.ts template header promises 'one row per (driver, lap)' but its SELECT DISTINCT keeps both compound/wet states on the stint-boundary lap. The registry marker builder (registry.ts:888-908) treats every compound change in row order as a pit stop, producing M14 vertical_markers: ['Norris \u2192 Hard (x=34)', 'Norris \u2192 Int (x=34)', 'Norris \u2192 Hard (x=35)', ...] \u2014 a phantom Hard\u2192Int\u2192Hard flip-flop rendered as three red ReferenceLines with overlapping labels; identical quadruple for Piastri and for Stroll in s101. The genuine markers (lap 34 crossover, lap 44 return to inters) are real.",
+      "suspected_root_cause": "The warehouse view analytics.weather_impact joins laps to stints on a lap-range condition where a pit lap falls inside BOTH the outgoing and incoming stint windows, emitting one row per (lap x stint) at every tyre change; the wetCrossover template and insight builder consume rows raw without collapsing to one row per (driver, lap).",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/wetCrossover.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/wetCrossoverInsight.ts",
+        "web/src/lib/deterministicSql/wetCrossover.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts"
+      ],
+      "member_titles": [
+        "analytics.weather_impact emits duplicate (driver, lap) rows at stint-boundary laps with contradictory wet_track/compound; SELECT DISTINCT cannot collapse them",
+        "Crossover-lap duplicate rows create phantom pit markers (driver appears to pit 3 times in 2 laps)"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced in both captures: M14 has Norris and Piastri laps 34 and 44 each twice with identical lap_time_s but contradictory {wet_track:0, HARD} vs {wet_track:1, INTERMEDIATE}; s101 has Stroll laps 33/44 duplicated the same way. wetCrossover.ts's header promises one row per (driver, lap) but its SELECT DISTINCT cannot collapse rows whose compound/wet genuinely differ \u2014 contract violated. User-visible: key_takeaways assert phantom stints (\"Norris tyres: Int 1\u201333 \u2192 Hard 34\u201334 \u2192 Int 34\u201334 \u2192 Hard 35\u201344 ... each switch = a pit stop\"), i.e. two pit stops that never happened per driver, and the same-race wet-lap count differs across cards (48 vs 47). The registry's compound-transition marker builder will also render the phantom Hard\u2192Int\u2192Hard flip-flop as extra reference lines. The signed-off \"wet-crossover model-inferred, stated on cards\" decision covers inference disclaimers, not contradictory duplicate rows or fabricated pit stops. Upgraded P2\u2192P1: affirmatively false pit-stop claims and phantom chart markers on a deterministic hero card, though the headline crossover-lap answer remains correct and the card carries an inference disclaimer."
+    },
+    {
+      "dedupe_key": "honesty.strategy-split.dnf-not-checked-in-verdict",
+      "title": "Strategy-split verdict derives from pit-lap counts alone, never checking stint coverage of race distance or retirement, so DNFs masquerade as deliberate strategy choices",
+      "category": "honesty",
+      "severity": "P1",
+      "prompts_affected": [
+        "s303:strategy_split#1"
+      ],
+      "evidence": "Zandvoort 2025 (session 9920, ~72-lap race): rows show Hamilton with a single MEDIUM stint ending at lap 22 and finish_position 20, Leclerc's last stint ending at lap 53 with finish_position 19 (a 1-lap SOFT stint 3 with avg_valid_lap NULL) - both Ferraris retired. The card answers 'Hamilton ran Med (no stops). That is a genuine strategy split: Leclerc made 2 stops to Hamilton's 0.' Framing a crash-shortened race as a deliberate 0-stop strategy is factually wrong. web/src/lib/synthesis/strategySplitInsight.ts line 229 emits the verdict purely from stop-count difference; finish_position and stint-coverage-vs-race-length are available in the rows (line 98 already parses finish_position) but unused for a DNF guard.\n---\nZandvoort 2025 (Ferrari Leclerc/Hamilton): rows show Hamilton's ONLY stint ends at lap 22 of total_laps 53 (stint_gantt spec: Hamilton bar 1-22 of 53; finish_position 20 = classified last after retirement). Answer: 'Hamilton ran Med (no stops). That is a genuine strategy split: Leclerc made 2 stops to Hamilton's 0.' Verdict YES. strategySplitInsight.ts:133 derives 'no stops' purely from pit-lap count and :229 declares the split; grep for retire/dnf in the file returns nothing \u2014 there is no coverage/retirement check. The builder even has a micro-stint safety-car caveat for Leclerc's 1-lap stint 3 but says nothing about the comparison driver's race ending at 42% distance, which invalidates a stop-count comparison. The gantt chart itself honestly shows the short bar, contradicting the prose.",
+      "suspected_root_cause": "buildStrategySplitInsight derives the split verdict from pit-lap counts alone; it never checks whether either driver's stints cover the race distance or whether finish_position indicates retirement, so early DNFs masquerade as aggressive strategy choices.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/strategySplit.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/strategySplitInsight.ts",
+        "web/src/lib/deterministicSql/strategySplit.ts",
+        "web/src/lib/synthesis/strategySplitInsight.ts"
+      ],
+      "member_titles": [
+        "Strategy-split verdict counts stops without checking retirements - declares a 'genuine strategy split' when both drivers DNF'd",
+        "Strategy-split card presents a mid-race retirement as a deliberate 'no stops' strategy and returns verdict YES 'genuine strategy split'"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced from capture_2/s303_strategy_split#1.json: rows show Hamilton with a single MEDIUM stint laps 1-22, finish_position 20, and Leclerc's stints ending lap 53 (1-lap SOFT stint 3, avg_valid_lap null), finish_position 19 \u2014 both Ferraris retired at Zandvoort 2025 (~72-lap race). The answer states 'Hamilton ran Med (no stops). That is a genuine strategy split: Leclerc made 2 stops to Hamilton's 0' with verdict YES. Code confirms: web/src/lib/synthesis/strategySplitInsight.ts derives isSplit purely from stopCountsDiffer||sequencesDiffer and emits the verdict from that alone; grep for retire/dnf/coverage in the file returns nothing; finishPosition is parsed (~line 98) but only displayed as a metric tile, never used as a guard. Design lens: the test file (strategy-split-insight.test.mjs) has no DNF case and RUBRIC.md doesn't cover retirements \u2014 not designed or ticketed; the builder even added a micro-stint safety-car caveat, showing this class of caution was in scope but the DNF guard was missed. Both drivers ran identical Med openers, so the split is purely an artifact of Hamilton's retirement and the YES verdict is factually wrong, though the gantt bars and finish tiles on the same card honestly show the short stint. Adjusted to P1 (from P2): a deterministic card returns a confidently wrong verdict on the direct yes/no question whenever a compared driver retires \u2014 a common scenario \u2014 tempered below P0 by the honest contradicting data visible on the same card."
+    },
+    {
+      "dedupe_key": "routing.resolver.one-directional-team-substring-match",
+      "title": "Team resolution requires the message to contain the full canonical team_name ('Red Bull' never matches 'Red Bull Racing'), silently collapsing team-vs-team comparisons to one team",
+      "category": "routing",
+      "severity": "P1",
+      "prompts_affected": [
+        "M11"
+      ],
+      "evidence": "M11 'Compare medium-compound deg curves between McLaren and Red Bull in stint 2 at Jeddah 2025' resolved driverCandidates = Norris (#4) + Piastri (#81) only, both matchedOn ['team_name']; no Red Bull driver was resolved. scoreDriverCandidate uses normalizedMessage.includes(teamName) (src/lib/chatRuntime/resolution.ts:292) \u2014 'mclaren' is a substring of the message but the canonical 'red bull racing' is not ('red bull' alone doesn't satisfy the containment direction). The degradation template then ran with driver_number IN (4, 81) (both McLaren), the chart aggregates per-compound with McLaren-only laps presented as venue-wide 'Compound degradation at Jeddah 2025', 'stint 2' is ignored, and neither team is ever compared or mentioned \u2014 while the mock expected a scatter_with_regression team comparison (detector emitted degradation_curve instead).",
+      "suspected_root_cause": "One-directional substring team match drops any team whose canonical name is longer than its colloquial mention; downstream the deg template's driver filter silently narrows a two-team comparison to a single team with no caveat.",
+      "files": [
+        "web/src/lib/chatRuntime/resolution.ts",
+        "web/src/lib/deterministicSql/degradationCurve.ts"
+      ],
+      "member_titles": [
+        "Team matching requires the message to contain the full canonical team_name \u2014 'Red Bull' never matches 'Red Bull Racing', so team-vs-team prompts silently collapse to one team"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced. chatRuntime/resolution.ts scoreDriverCandidate uses one-directional normalizedMessage.includes(teamName). capture_1/M11.json runtime.resolution shows driverCandidates = Norris #4 and Piastri #81 only, both matchedOn ['team_name'], selectedDriverNumbers [4,81]; the executed SQL contains driver_number IN (4, 81); no Red Bull driver resolved despite the prompt naming Red Bull. The failure itself proves the canonical team string is longer than 'red bull' (the message contains 'red bull', so team_name='red bull' would have matched), and the resolver-disambiguation.test.mjs fixture confirms canonical team_name 'Red Bull Racing'. The answer then presents McLaren-only laps as venue-wide compound degradation, never comparing or mentioning either team, and 'stint 2' is dropped - no caveat anywhere. Design lens: no test, comment, or rubric documents partial-team-mention as unsupported; the silent collapse is not a decision. Severity adjusted P2->P1: team-vs-team comparison prompts using common colloquial names (Red Bull, and any team whose canonical name exceeds its mention) silently misresolve into a single-team answer that misrepresents its scope - a broken feature for a frequent F1 query class, though only one audited prompt hit it."
+    },
+    {
+      "dedupe_key": "data.wet-crossover.first-transition-definition-no-wet-phase-context",
+      "title": "inter_to_slick_crossover computed as the FIRST inter-to-slick transition with no wet-phase context, conflating early tyre gambles with the drying-phase crossover and fabricating gamble narratives",
+      "category": "data",
+      "severity": "P2",
+      "prompts_affected": [
+        "s303:wet_crossover#1",
+        "s303_wet_crossover#1"
+      ],
+      "evidence": "capture_0/s303_wet_crossover#1.json (Silverstone 9947): Antonelli metric 'crossover: Lap 3' (emphasis=true) and answer 'came on Russell lap 39, Antonelli lap 3'. But Antonelli's compound sequence is Int 1-2 -> Hard 3-9 -> Int 10-23 and his wet-flagged laps are 1-2 and 10-23: the lap-3 switch happened BEFORE the wet phase (Russell's wet laps are 11-38), and Antonelli retired on lap 23 still on inters \u2014 he never made a drying-phase crossover at all. The takeaway asserts 'Crossover laps differ by 36 laps \u2014 one car gambled on the dry line earlier', a fabricated strategy narrative. wetCrossoverInsight.ts line 107 emits the 'gambled' line whenever the spread exceeds 2 laps with no sanity check that the crossover follows the wet phase.\n---\ns303 (Silverstone 2025): answer states 'crossover came on Russell lap 39, Antonelli lap 3'. Rows show the wet phase ran ~laps 10-38 (wet_track=0 for laps 1-9; markers 'Russell \u2192 Int' x=11, 'Antonelli \u2192 Int' x=10; 'Russell \u2192 Hard' x=39). Antonelli's inter_to_slick_crossover_lap=3 comes from his opening gamble (INTERMEDIATE laps 1-2 on a dry track \u2192 HARD lap 3) \u2014 he retired at lap 23 and never made the actual drying-phase crossover. Presenting lap 3 and lap 39 as the same kind of event in one sentence is misleading; the two laps are different phenomena.",
+      "suspected_root_cause": "The warehouse computation behind inter_to_slick_crossover_lap takes the first INTERMEDIATE-to-slick compound transition in the session rather than the transition that ends the final wet phase; the insight builder then narrates any spread as an early dry-line gamble without validating crossover_lap > first wet-flagged lap.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/wetCrossover.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/wetCrossoverInsight.ts",
+        "web/src/lib/deterministicSql/wetCrossover.ts",
+        "web/src/lib/synthesis/wetCrossoverInsight.ts"
+      ],
+      "member_titles": [
+        "inter_to_slick_crossover_lap picks the FIRST inter-to-slick switch ever, not the drying-phase crossover \u2014 fabricates a 36-lap 'gamble' narrative",
+        "Per-driver 'inter-to-slick crossover' picks any first inter\u2192slick transition, conflating a lap-3 tyre gamble with the lap-39 drying-phase crossover"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Verified against capture_0/s303_wet_crossover#1.json. Antonelli's 23 rows all carry inter_to_slick_crossover_lap=3; his compound sequence is Int 1-2 -> Hard 3-9 -> Int 10-23 and he retired lap 23 still on inters, while the main wet phase (Russell's wet-flagged laps) ran 11-38 with Russell's crossover at 39 \u2014 so the lap-3 value is an opening-phase tyre call, not the drying-phase crossover, and Antonelli never made one. The card nevertheless emits 'Antonelli crossover: Lap 3' with emphasis and the takeaway 'Crossover laps differ by 36 laps \u2014 one car gambled on the dry line earlier'; wetCrossoverInsight.ts confirms the gamble line fires purely on crossoverSpread > 2 with no check that the crossover follows the wet phase, and the value is consumed precomputed from analytics.weather_impact (wetCrossover.ts:49). Design lens: the signed-off 'wet-crossover model-inferred, stated on the card' decision covers provenance (the card does carry that caveat) but not this semantic conflation or the fabricated gamble narrative \u2014 a genuinely new aspect. Severity kept at P2: the headline framing is misleading for the exact question asked, but the same card's tyre-sequence takeaways expose the true sequences, the scenario is narrow (wet race + early gamble + retirement), and one nuance softens it further \u2014 laps 1-2 were damp, so the lap-3 switch was itself a real inter->slick transition, making this a mislabel/conflation rather than fabricated data."
+    },
+    {
+      "dedupe_key": "data.corner_analysis.corrupt-brake-zone-samples-inconsistent-filter",
+      "title": "analytics.corner_analysis misplaced/sparse entry-apex sampling yields phantom brake zones; the plausibility filter lives only in the answer builder, not the chart detector, so chart and text diverge",
+      "category": "data",
+      "severity": "P2",
+      "prompts_affected": [
+        "M05",
+        "s101:brake_zones#1",
+        "s101_brake_zones#1",
+        "s303:brake_zones#1"
+      ],
+      "evidence": "Sakhir (M05 and s303, session 10014): zones picked by 'AVG(entry_speed_kph - apex_min_speed_kph) DESC LIMIT 3' (brakeZones.ts lines 43-56) are Turn 8 (avg drop 150.1/128.4 kph), Turn 10 (145.8/125.1) and Turn 1 (5.8/10.4). Real Sakhir Turn 1 is the track's heaviest stop (~330 to ~65 kph); the sampled rows show entry==apex (M05: Norris entry 105.0 apex 105.0 drop 0.0; s303: Russell 105.0/105.0 drop 0.0, Leclerc 114/102 drop 12) \u2014 the entry sample is taken after braking is complete. A corner with a 5.8 kph field-average drop ranking third-heaviest also means the genuine remaining brake zones (T4, T11, T13/14) are missing or NULL-filtered in corner_analysis. Spa (s101, session 9939): picked Stavelot (95.5), Pouhon (32.0), Eau Rouge (12.6) \u2014 La Source, Les Combes and the Bus Stop, Spa's actual heaviest brake zones, are absent, and Eau Rouge is near flat-out. Downstream, the corrupted zone feeds the headline: M05's '8.0 km/h average across the zones' includes Turn 1's -10 kph delta because brakeZonesInsight.ts's plausibility filter (lines 71-94) only rejects apex<40 kph or entry-ratio<0.6 with apex divergence>8 \u2014 a symmetric drop~0 zone passes; s101's Eau Rouge only got caveated because Russell's apex read 0.\n---\ns101 rows for Eau Rouge: Russell entry_speed_kph 5.0 / apex_min_speed_kph 0.0 and Piastri entry 41.0 / apex 37.0 (lap-1 sample corruption). buildBrakeZonesInsight (synthesis/brakeZonesInsight.ts:75,153,165,176) flags it: metric 'Eau Rouge \u26a0 +37.0 km/h \u2014 implausible lap-1 sample \u2014 excluded from the average', and answer/verdict compute +16.5 km/h from only the 2 usable zones. But the brake_zone_delta detector spec plots series values [-41, 8, 37]: Eau Rouge is the LARGEST bar ('Piastri faster' +37) and the track-map corner window is highlighted in Piastri's color with leader 'Oscar PIASTRI' \u2014 visually contradicting the card's own exclusion.",
+      "suspected_root_cause": "analytics.corner_analysis has misplaced sampling windows for some corners (entry sampled at/after the apex, giving drop~0) and sparse/NULL coverage for others, so ranking by observed avg drop selects phantom 'heaviest brake zones'; the insight-layer plausibility filter checks apex speed and entry ratio but never validates that a selected zone shows a plausible braking event at all (e.g. zone_avg_drop above a floor).",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/brakeZones.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/brakeZonesInsight.ts",
+        "web/src/lib/deterministicSql/brakeZones.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts",
+        "web/src/lib/synthesis/brakeZonesInsight.ts"
+      ],
+      "member_titles": [
+        "'Three heaviest brake zones' selection returns non-brake-zones due to corrupted/sparse analytics.corner_analysis entry/apex samples",
+        "Brake-zone chart plots a corrupted lap-1 sample as the biggest bar while the card text excludes it"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced. zone_avg_drop_kph values match exactly: M05 Sakhir Turn 8=150.1/Turn 10=145.8/Turn 1=5.8; s303 128.4/125.1/10.4; s101 Spa Stavelot 95.5/Pouhon 32.0/Eau Rouge 12.6. Turn 1 rows show entry==apex (Norris 105/105 drop 0; Russell 105/105) yet it ranks third-heaviest, and M05's '8.0 km/h average' headline includes Turn 1's -10 delta because the brakeZonesInsight.ts filter (apex<40 OR entry-ratio<0.6 with apex divergence>8) passes a symmetric drop~0 zone - all confirmed in code. s101 Eau Rouge rows (Russell 5/0, Piastri 41/37) confirmed, with real heavy zones (La Source etc.) absent. brakeZoneDeltaDetector (registry.ts:1248+) plots every zone with no plausibility filter, so the chart bars/corner-zone leader coloring include the zone the text excludes. Design lens nuance: brakeZonesInsight.ts explicitly documents that suspect zones are 'flagged and kept on the chart but excluded from the average' - so the chart/text split for FLAGGED zones is deliberate, materially weakening the second member. But the primary member - phantom zone selection from corrupted/sparse corner_analysis sampling (drop~0 corner ranked heaviest, genuine zones missing) passing the plausibility filter unflagged into the headline average - is real, unticketed, and not covered by the M05 diverging-encoding sign-off. P2 stands: quality erosion; the pace verdict on each card remains correct."
+    },
+    {
+      "dedupe_key": "data.stint_summary.fragmented-same-compound-stints-inflate-stop-counts",
+      "title": "core.stint_summary passes through fragmented same-compound stint rows; all consumers equate stint boundaries with pit stops (verdict computed before micro-stint classification), inflating stop counts",
+      "category": "data",
+      "severity": "P2",
+      "prompts_affected": [
+        "s202:strategy_split#1",
+        "s202_strategy_split#1"
+      ],
+      "evidence": "capture_0/s202_strategy_split#1.json (Montreal 9963, Albon vs Sainz): Sainz rows include stint 3 (lap 66-66, MEDIUM, avg_valid_lap NULL), stint 4 (lap 67-67, MEDIUM, NULL) and stint 5 (lap 68-69, MEDIUM, NULL) \u2014 three consecutive same-compound 1-2-lap 'stints' implying pit stops on laps 65, 66 and 67 in a row, which is stint-record fragmentation, not strategy. strategySplitInsight.ts itself detects this (lines 206-218) and the captured takeaway says 'Late micro-stints \u2014 Sainz stint 3 (1 lap), Sainz stint 4 (1 lap), Sainz stint 5 (2 laps) \u2014 point to safety-car or red-flag tyre changes rather than planned strategy'. Yet stops are still computed as stints.length-1 (line 111), so the verdict is YES with summary \"Albon ran 1 stop against Sainz's 4\", metrics show 'Sainz stops: 4', and the answer asserts 'That is a genuine strategy split: Albon made 1 stop to Sainz's 4.' Excluding the micro-stints both drivers made 1 stop \u2014 the real split is compound-order only, so the headline verdict is contradicted by the builder's own classification.\n---\ns202_strategy_split rows (session 9963, Montreal 2025) show Sainz stints: 1 HARD laps 1-56, 2 MEDIUM 57-65, then three fragments all MEDIUM \u2014 stint 3 laps 66-66, stint 4 laps 67-67, stint 5 laps 68-69 \u2014 each with avg_valid_lap null. The verdict states as fact: 'Albon made 1 stop to Sainz's 4... stops lap 56, 65, 66, 67' and the stint_gantt draws three 1-2-lap slivers. Three pit stops in laps 65-67 onto the same compound with zero valid laps is the classic raw.stints fragmentation artifact (end-of-race SC), not real strategy. Neither the template SQL (SELECT DISTINCT straight from core.stint_summary), the answerSanity module (pitStints.ts summarize* helpers count every stint row), nor the gantt detector merges consecutive same-compound stints or cross-checks against raw.pit event count.",
+      "suspected_root_cause": "core.stint_summary passes through fragmented raw.stints records (repeated same-compound stint rows late in SC-ended races), and strategySplitInsight.ts computes the stop count and verdict BEFORE applying its micro-stint classification, so the disclaimer lands in a takeaway while the verdict, metrics and answer keep the inflated count.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/strategySplit.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/strategySplitInsight.ts",
+        "web/src/lib/answerSanity/pitStints.ts",
+        "web/src/lib/deterministicSql/strategySplit.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts",
+        "web/src/lib/synthesis/strategySplitInsight.ts"
+      ],
+      "member_titles": [
+        "Strategy-split verdict counts SC-era micro-stints as strategy stops and declares a 'genuine strategy split' its own takeaway disclaims",
+        "1-lap same-compound stint fragments in core.stint_summary counted as real pit stops ('Sainz's 4 stops')"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced in capture_0/s202_strategy_split#1.json (Montreal 9963): Sainz stint 3 (lap 66-66, MEDIUM, avg_valid_lap null), stint 4 (67-67, MEDIUM, null), stint 5 (68-69, MEDIUM, null) \u2014 three consecutive same-compound 1-2-lap fragments implying pit stops on laps 65/66/67; verdict 'YES \u2014 Albon ran 1 stop against Sainz's 4', metric tile 'Sainz stops: 4 ... stops lap 56, 65, 66, 67', answer 'That is a genuine strategy split: Albon made 1 stop to Sainz's 4', while takeaway 4 simultaneously says the micro-stints 'point to safety-car or red-flag tyre changes rather than planned strategy'. Code confirms the mechanism: strategySplitInsight.ts:111 computes stops = stints.length - 1 unconditionally, and the micro-stint classifier (lines 206-218) runs after the verdict/metrics are built and only emits a takeaway. Design lens: the comment at 206-208 ('counting them as stops without a note overstates the strategic split') documents a deliberate note-based mitigation, but it does not sign off the self-contradiction of asserting the inflated count as fact in verdict, metrics, and answer; strategy-split-insight.test.mjs has no micro-stint coverage, and nothing in RUBRIC.md or known open items covers this. P2 confirmed: the YES verdict direction survives (Albon Med->Hard vs Sainz Hard->Med is a real compound split either way) and the corrective takeaway is on the card, so this is quality erosion / internal contradiction rather than a fully wrong answer, but the '4 stops' and '3 stops difference' claims are stated as fact and are artifacts."
+    },
+    {
+      "dedupe_key": "visual.hbar.duration-substring-mispick-single-bar-fallback",
+      "title": "duration_s/duration_sec substring matching captures duration_sector_N ahead of the lap-time column, and the fallback bar detector has no min-bars guard, producing a mislabeled one-bar chart on hero cards",
+      "category": "visual",
+      "severity": "P2",
+      "prompts_affected": [
+        "M01"
+      ],
+      "evidence": "M01 ('Verstappen's pole lap at Suzuka 2025', expect=null card-only hero) returns 1 row; the server insight correctly emits hero {value:'1:26.983'}. Re-running the registry on the same rows fires horizontal_bar with spec {y_axis:['Verstappen'], x_label:'Duration sector 1', series:[{name:'Duration sector 1', values:[30.387]}]} \u2014 a single bar of the SECTOR-1 time for a lap-time question. Root: HBAR_PREFERRED_COL_PATTERNS[0] (registry.ts:475) is /pit_loss|stationary_seconds|stationary_s|duration_sec|duration_s|.../ and 'duration_sec' substring-matches 'duration_sector_1', winning over the lap_time pattern ('lap_duration' matches no preferred pattern). horizontalBarDetector has no minimum-entry guard (1 row \u2192 1 bar). Client pipeline attaches it: mapInsight.ts:30 sets next.chart on every table part; applyInsightFields merges the server hero independently; applyResponseSemantics only suppresses charts for N/A heroes; insight-card.tsx renders hero (line 130) AND chart (line 149-152) together.",
+      "suspected_root_cause": "duration_s/duration_sec substring patterns capture duration_sector_N columns ahead of the true lap-time column, and the fallback bar detector fires on single-row scalar answers with no min-bars guard, so hero cards gain a mislabeled one-bar chart.",
+      "files": [
+        "web/src/components/f1-chat/insight-card.tsx",
+        "web/src/lib/mapInsight.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts"
+      ],
+      "member_titles": [
+        "Hero-answer card also renders a meaningless one-bar chart of the WRONG column (sector 1, not lap time)"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced live: running runDetectorRegistry on M01's captured rows (via tsx against web/src/lib/mapInsight/detectors/registry.ts) yields detector horizontal_bar with spec {y_axis:['Verstappen'], x_label:'Duration sector 1', series:[{values:[30.387]}]} \u2014 a single mislabeled sector-1 bar for a pole-lap-time question. Root cause confirmed in code: HBAR_PREFERRED_COL_PATTERNS[0] is /pit_loss|stationary_seconds|stationary_s|duration_sec|duration_s|duration_ms|.../i and 'duration_sec' substring-matches 'duration_sector_1', beating lap_duration (which matches no preferred pattern); horizontalBarDetector has no minimum-entry guard. Pipeline claims verified: mapInsight.ts:30 attaches detectChart output on every table part, insight-card.tsx renders hero (line 130) and chart (lines 149-151) together, and applyResponseSemantics suppresses charts only on N/A-hero/data-unavailable answers, so the correct hero '1:26.983' ships alongside the wrong-column one-bar chart. hbar's role as a low-priority fallback is intentional, but nothing blesses picking a sector column over the lap time or rendering single-bar charts on scalar hero cards. P2 stands: correct answer, meaningless and mislabeled companion visual."
+    },
+    {
+      "dedupe_key": "honesty.deg-curve-insight.cliff-narrative-and-sign-formatting",
+      "title": "degradationCurveInsight cliff detection lacks sustained-elevation/plausibility bounds and the takeaway hardcodes a '+' prefix, producing self-contradictory cliff verdicts and malformed '+-22.87s' output",
+      "category": "honesty",
+      "severity": "P2",
+      "prompts_affected": [
+        "s101:deg_curve#1",
+        "s101_deg_curve#1"
+      ],
+      "evidence": "s101_deg_curve#1.json HARD curve: age0 -4.696s, age1 +12.786s, age2 +8.707s, then a wall of -20s to -22.9s from age 3 through 67. Answer: 'Hard crosses the cliff threshold around age 1 and stays high (-22.87s by age 67)' \u2014 the endpoint it cites is 22.9s BELOW baseline, i.e. it did not stay high. Takeaway renders 'Hard: degrades ~-0.341s/lap with a cliff around tyre age 1 (median +-22.87s by age 67)' \u2014 negative rate labelled 'degrades' and unconditional '+' prefix producing '+-22.87s' (degradationCurveInsight.ts:93). Cliff detector (lines 66-73) fires on the age-1 spike because it only checks the single next point (>0.4s), never that the curve stays elevated. Root data cause: the fresh-tyre baseline (age<=2 median, degradationCurve.ts:69-74) has no neutralization/SC filter, and Monaco 2025 hard-starters' opening laps were ~20s slow (traffic/SC), poisoning every later delta. Bahrain (R02/s303) numbers check out fine, so this is venue-conditional. The signed-off 'not fuel-corrected' caveat does not cover a 20s SC artifact presented as a tyre cliff at age 1.\n---\nMonaco card takeaway: 'Hard: degrades ~-0.341s/lap with a cliff around tyre age 1 (median +-22.87s by age 67)' \u2014 degradationCurveInsight.ts:96 formats the endpoint as `median +${s.lastDelta.toFixed(2)}s`, hardcoding '+' so negative deltas render '+-22.87s'. Answer text: 'Hard crosses the cliff threshold around age 1 and stays high (-22.87s by age 67)' \u2014 'stays high' paired with a 22.87s-FASTER endpoint. The cliff detector (line 65-74) fires on the first age above +0.6s (Monaco age-1 was +12.8s of SC noise) and never re-checks that the curve stays elevated beyond the next point, and there is no |delta| magnitude guard (anything beyond ~5s is physically not tyre degradation) to trigger a disrupted-race caveat or suppress the cliff claim.",
+      "suspected_root_cause": "Cliff detection lacks a sustained-elevation check across the remaining curve, the 'stays high'/'+' text templates assume positive endpoints, and the template SQL's fresh baseline includes neutralized laps at SC-heavy venues.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/deterministicSql/degradationCurve.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/degradationCurveInsight.ts",
+        "web/src/lib/synthesis/degradationCurveInsight.ts"
+      ],
+      "member_titles": [
+        "Monaco deg curve: 'crosses the cliff at age 1 and stays high (-22.87s by age 67)' \u2014 self-contradictory cliff narrative from SC-contaminated baseline, plus '+-22.87s' malformed sign",
+        "Degradation insight asserts a 'cliff' with a negative endpoint and prints '+-22.87s' (hardcoded + prefix), with no sanity guard for pathological delta magnitudes"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced in capture_3/s101_deg_curve#1.json (Monaco 9979): HARD rows show age0 -4.696s, age1 +12.786s, age2 +8.707s, then -21.05 to -22.873s from age 3 through 67 against a 98.365s baseline (~22s slower than genuine race pace, consistent with a neutralized opening). Answer: 'Hard crosses the cliff threshold around age 1 and stays high (-22.87s by age 67)' \u2014 self-contradictory as claimed. Takeaway renders 'degrades ~-0.341s/lap with a cliff around tyre age 1 (median +-22.87s by age 67)' \u2014 malformed '+-' confirmed. Code confirms all three mechanisms: degradationCurveInsight.ts:69 fires the cliff when a point exceeds CLIFF_THRESHOLD_S=0.6 and only the SINGLE next sampled point stays above 2/3 of the threshold (age1 12.786 / age2 8.707 both qualify; the subsequent -21s wall is never checked); line 93 hardcodes `median +${s.lastDelta.toFixed(2)}s`; line 119 hardcodes 'stays high (${endpoint})'; and the cliff branch takes precedence over the fuel-dominated branch, so a negative slope is still labelled 'degrades'. degradationCurve.ts baseline (age<=2 median) has no neutralization/SC filter. Design lens: the 'NOT fuel-corrected' caveat and heavy-fuel-baseline note are on the card and partially soften the damage, and the sustained-check plus fuel-dominated branch show the failure class was considered \u2014 but no test, comment, or signed-off decision covers a +12.8s spike being reported as a tyre cliff or the '+-' formatting. Venue-conditional (Bahrain captures are clean). P2 confirmed: self-contradictory narrative and malformed text on one venue, mitigated by extensive in-answer caveats."
+    },
+    {
+      "dedupe_key": "honesty.radar.either-zero-exclusion-misstated-in-lede",
+      "title": "Radar drops axes when EITHER driver is zero (sign-off was BOTH) and the lede claims those axes 'read 0.0' while one driver has a real score, with delta sign attributed regardless of named driver",
+      "category": "honesty",
+      "severity": "P2",
+      "prompts_affected": [
+        "M17",
+        "s101:radar#1",
+        "s202:radar#1",
+        "s303:radar#1"
+      ],
+      "evidence": "s303 rows: Verstappen traffic_handling_axis=80.1 (Leclerc 0.0) \u2014 axis dropped and the lede claims 'the... traffic... axes read 0.0 in the 2025 score model (not yet populated)', which is false for Verstappen. s101 rows: Piastri traffic=18.4 and Leclerc error_rate=80.0 both dropped the same way ('...traffic and overtaking and consistency axes read 0.0'), leaving 'Among the 1 populated axes'. performanceRadarInsight.ts:64 sets unpopulated when 'a === 0 || b === 0'; the signed-off design decision is drop only when the axis reads 0.0 for BOTH drivers. The key_takeaways caveat (line 91: 'not yet populated for at least one driver') is accurate, but the answer lede (lines 104-105) omits the 'for at least one driver' qualifier and asserts the axes read 0.0 outright.\n---\nM17 rows: Verstappen traffic_handling_axis=80.1 vs Norris 0.0, yet the answer says 'the qualifying and race pace and tyre management and traffic and overtaking axes read 0.0 in the 2025 score model (not yet populated)' \u2014 flatly contradicted by the 80.1 in the same payload. s202:radar#1: Russell error_rate_axis=60.0 vs Piastri 0.0, answer claims the 'consistency' axis 'reads 0.0' and counts only 1 populated axis. The signed-off design only drops axes reading 0.0 for BOTH drivers; performanceRadarInsight.ts:64 excludes on `a === 0 || b === 0` (the exclusion may be defensible, and the takeaway wording 'not yet populated for at least one driver' is accurate) but the answer lede at line 105 asserts the axis value is 0.0. Additionally M17's answer reads 'biggest gap ... is Consistency: 30.0 vs 60.0 (-30.0 to Norris)' \u2014 line 111 emits signed(delta) with the B-driver's name without flipping sign, so the driver who is AHEAD gets a negative number.",
+      "suspected_root_cause": "The either-zero exclusion may be a defensible comparison rule, but it deviates from the documented both-zero sign-off and the lede template drops the 'for at least one driver' qualifier, producing a factually false statement about populated matview data (80.1, 18.4, 80.0 all called 0.0).",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/performanceRadarInsight.ts"
+      ],
+      "member_titles": [
+        "Radar drops axes when EITHER driver reads 0.0 (sign-off was BOTH) and the answer lede falsely says those axes 'read 0.0' when one driver has a real score",
+        "Radar answer text claims axes 'read 0.0' when only ONE driver is zero, and attributes a negative-signed delta to the leading driver"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced in all four captures: M17 shows Verstappen traffic_handling_axis=80.1 vs Norris 0.0 yet the lede claims the traffic axis 'read 0.0... (not yet populated)'; s101 drops traffic (Piastri 18.4) and consistency (Leclerc 80.0) the same way leaving 'Among the 1 populated axes'; s202 drops consistency despite Russell 60.0; s303 drops traffic despite Verstappen 80.1. Code confirms every element: performanceRadarInsight.ts sets unpopulated on 'a === 0 || b === 0' (~line 64); the takeaway correctly says 'not yet populated for at least one driver' while the answer lede omits the qualifier and flatly asserts the axes 'read 0.0' \u2014 false when one driver has a real score. The delta-sign claim also verifies: the answer emits signed(delta) with the ahead driver's name without flipping when delta is negative, producing M17's 'Consistency: 30.0 vs 60.0 (-30.0 to Norris)' and s101's '(-25.0 to Leclerc)' \u2014 the leading driver gets a negative number (the bEdges takeaway flips sign correctly; the lede and the Largest-single-gap takeaway do not). Design lens: the signed-off decision is drop-when-BOTH-zero with accurate explanatory text; the shipped either-zero rule plus factually false lede deviates from it, and no radar test file exists. P2 stands: real quality erosion via false wording and a confusing sign, but the exclusion rule itself is defensible and the adjacent 'X is ahead on...' sentences state the correct conclusion, so users are unlikely to take away a materially wrong comparison."
+    },
+    {
+      "dedupe_key": "data.synthesis.head-25-row-truncation-bias",
+      "title": "Synthesis prompt samples only the first 25 rows of lap-ordered results, so answers whose evidence lives beyond row 25 (pit laps, late-race events) punt despite the answer being in the result set",
+      "category": "data",
+      "severity": "P2",
+      "prompts_affected": [
+        "s101:pit_stop#1",
+        "s303:pit_stop#1"
+      ],
+      "evidence": "buildSynthesisPrompt.ts:374: 'const rowsForPrompt = contract.rows.slice(0, 25)'. s101:pit_stop rowset contains the pit outlier (lap 47, 104.986s vs ~84s pace) but rows are ordered by lap_number and duplicated x2, so the head-25 sample covers only laps 1-13; the answer explicitly punts: 'the sample rows only show laps 1-13... that information is present in the full 106-row result but not visible in the provided sample'. s303:pit_stop identical: 'sample rows only cover laps 1-13'. The project's own sweep judge harness already uses strided+final-lap sampling for exactly this failure class (randomized_sweep.mjs judgeSample comment), but the production synthesis prompt does not.",
+      "suspected_root_cause": "Head-of-rowset truncation biases the LLM's evidence to the first laps of any lap-ordered result; combined with warehouse row duplication the effective coverage halves. Any question whose answer lives beyond row 25 (pit laps, late-race events) becomes unanswerable on the LLM/heuristic synthesis path.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/buildSynthesisPrompt.ts"
+      ],
+      "member_titles": [
+        "Synthesis prompt samples only the FIRST 25 rows, so outlier-seeking answers punt even though the answer-bearing row is in the result set"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Confirmed: buildSynthesisPrompt.ts:374 is 'const rowsForPrompt = contract.rows.slice(0, 25)' \u2014 head-only sampling. s101:pit_stop reproduces cleanly: the pit outlier is at lap 47 (104.986s vs 82.998s median) but the head-25 sample covers only laps 1-13 (2x duplication halves effective coverage), and the answer explicitly punts citing exactly this. s303's answer punts identically, though its largest-duration lap (lap 3, 175.2s) actually falls inside the window \u2014 the mechanism claim still holds since the model states the sample stops at lap 13. The repo's own judge harness (scripts/health/randomized_sweep.mjs judgeSample, lines 556/582) uses evenly-strided plus final-lap sampling for precisely this failure class, so head-bias is a recognized, better-solved problem in-repo, not a blessed design; the 25-row cap is a prompt-budget choice but nothing documents head-only as intended. P2: honest punts (not wrong answers) on the LLM/heuristic synthesis path for any question whose evidence lives past row 25; compounds the P1 fallback-SQL finding rather than independently breaking the feature."
+    },
+    {
+      "dedupe_key": "honesty.quality-assessor.rowcount-gt-zero-auto-grade-b",
+      "title": "assessChatQuality grades any rowCount>0 response 'B' with no generationSource check, so heuristic-fallback answers serving wrong-year unrelated rows pass as addressing the question",
+      "category": "honesty",
+      "severity": "P2",
+      "prompts_affected": [
+        "M04",
+        "s101_lap1_launch#1",
+        "s101_stint_delta#1",
+        "s202_sector_dominance#1",
+        "s202_telemetry_overlay#1",
+        "s303_lap1_launch#1"
+      ],
+      "evidence": "All six heuristic_after_template_failure captures carry adequacyGrade:'B', adequacyReason:'Answer appears to address the question.' even though the answers themselves state the data cannot answer the question (e.g. s101_stint_delta: 'which only show late-2026 sessions... not possible to determine'). chatQuality.ts:104-110 returns grade B for any rowCount>0 answer without warnings; it never inspects generationSource, so heuristic fallbacks and template successes are graded identically. This makes the P0 fallback failure invisible to grade-based monitoring/regression gates.",
+      "suspected_root_cause": "assessChatQuality's rowCount>0 branch has no generationSource check \u2014 heuristic_after_template_failure / heuristic_after_sql_timeout should cap the grade (the answer is by construction off-target), and answers that self-declare inability to answer should not read as 'appears to address the question'.",
+      "files": [
+        "web/src/app/api/chat/orchestration.ts",
+        "web/src/lib/chatQuality.ts"
+      ],
+      "member_titles": [
+        "Quality assessor grades any rowCount>0 response 'B \u2014 Answer appears to address the question', including heuristic fallbacks serving wrong-year unrelated rows"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced. chatQuality.ts's rowCount>0 branch returns grade B / 'Answer appears to address the question.' with no inspection of generationSource \u2014 the field is even declared in GradeInput but never read anywhere in assessChatQuality, strongly suggesting incomplete wiring rather than intent. All four spot-checked heuristic_after_template_failure captures (M04, s101_stint_delta#1, s202_sector_dominance#1, s101_lap1_launch#1) carry adequacyGrade B with that exact reason, including s101_stint_delta whose answer text explicitly states the returned 2026 sessions list cannot answer the Suzuka 2025 question \u2014 a self-declared non-answer graded as addressing the question. No test or doc blesses the rowCount>0=B rule as covering fallback sources (no dedicated chatQuality test exists in scripts/tests). Design lens: the grader is plainly a lightweight heuristic, but nothing marks the fallback-blindness as intended, and it makes the P0 fallback failures invisible to grade-based monitoring/regression gates. P2 is right: impact is indirect (monitoring/observability, adequacyGrade in the response payload) rather than a broken user-facing feature, but blinding gates to P0-class regressions is more than polish."
+    },
+    {
+      "dedupe_key": "data.db-pools.numeric-parsers-only-in-driver-ts",
+      "title": "Two parallel pg Pool modules share the global pool key but NUMERIC/BIGINT type parsers are registered only in db/driver.ts, which the chat route never imports \u2014 chat SQL returns numbers as JSON strings",
+      "category": "data",
+      "severity": "P3",
+      "prompts_affected": [
+        "M02",
+        "M03",
+        "M06",
+        "M08",
+        "M11",
+        "M15",
+        "M16",
+        "M19",
+        "M20",
+        "R01",
+        "s101:over_cut#1",
+        "s101:race_trace#1",
+        "s101:radar#1",
+        "s101:sector_dominance#1",
+        "s101:speed_map#1",
+        "s101:strategy_split#1",
+        "s202:brake_zones#1",
+        "s202:deg_curve#1",
+        "s202:stint_delta#1",
+        "s202:wet_crossover#1",
+        "s303:over_cut#1",
+        "s303:race_trace#1",
+        "s303:radar#1",
+        "s303:sector_dominance#1",
+        "s303:speed_map#1",
+        "s303:strategy_split#1"
+      ],
+      "evidence": "Captured rows carry numeric strings in chart-bearing columns: gap_to_leader_s all-string in every race_trace (698/720/710 rows), deg_delta_s + lap_count + compound_baseline_s all-string in both deg curves, all seven radar axis columns string ('75.0', '18.4'), penalty_seconds string in M15, session_key string in the session listings. pgTypes.setTypeParser(1700/20) lives only in src/lib/db/driver.ts:10-11 (whose own comment warns 'without these parsers... bars render as zero'), but runReadOnlySql (src/lib/queries/execute.ts:1) imports pool from src/lib/db.ts, which never registers parsers; grep shows only /api/track-outline and /api/lap-telemetry import db/driver. mapInsight detectors were hardened with parseFiniteNumber (registry.ts:46-58) precisely because of this, but chart components and synthesis builders outside the detector registry get no such guarantee.\n---\nCaptured rows carry chart-critical numerics as strings: race_trace gap_to_leader_s '5.058' (R01, both over_cut captures), wet_crossover lap_time_s, strategy_split avg_valid_lap '83.151', pace-cliff lap_duration/rolling_avg_prev3/delta_vs_rolling_avg (M20), all brake-zone speeds/fractions (s202_brake_zones), all M03 metrics, and session_key as string in heuristic rows. web/src/lib/db/driver.ts registers pgTypes.setTypeParser(1700/20) with the comment 'chart detectors key off typeof v === number - without these parsers... bars render as zero', but that module is imported ONLY by /api/track-outline and /api/lap-telemetry; runReadOnlySql (web/src/lib/queries/execute.ts) imports pool from web/src/lib/db.ts, which has zero setTypeParser calls. Downstream is only partially hardened: mapInsight/detectors/registry.ts coerces via parseFiniteNumber, and synthesis builders coerce, but legacy builders in web/src/lib/mapInsight.ts lines 298 and 420 still do 'typeof v === \"number\" ? v : 0', zeroing every string value (grouped_bar corner speeds, line-chart lap-time values).",
+      "suspected_root_cause": "Split pool modules: the numeric type-parser fix was applied to src/lib/db/driver.ts but the chat execution path uses the older src/lib/db.ts pool, so oid 1700 (NUMERIC, e.g. every ROUND(x::numeric,3) projection) and oid 20 (BIGINT/COUNT) are serialized as strings on the chat route; consumers that key off typeof v === 'number' silently drop or zero these values.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/db.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/db/driver.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/mapInsight/detectors/registry.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/queries/execute.ts",
+        "web/src/lib/db.ts",
+        "web/src/lib/db/driver.ts",
+        "web/src/lib/mapInsight.ts",
+        "web/src/lib/queries/execute.ts"
+      ],
+      "member_titles": [
+        "Chat SQL path returns NUMERIC/BIGINT columns as JSON strings \u2014 pg type parsers are registered only in db/driver.ts, which the chat route never imports",
+        "Chat SQL path returns NUMERIC/BIGINT as strings - pg type parsers are registered only in db/driver.ts, not in the db.ts pool that runReadOnlySql uses"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Core facts verified: pgTypes.setTypeParser(1700/20) exists only in src/lib/db/driver.ts (lines 10-11, with the 'bars render as zero' comment); grep confirms only /api/track-outline and /api/lap-telemetry import it, while runReadOnlySql (queries/execute.ts:1) imports pool from src/lib/db.ts which registers no parsers; captures empirically confirm chat-path NUMERIC/BIGINT arriving as strings (R01 gap_to_leader_s '5.058', all seven radar axes '75.0'/'18.4' strings in s101_radar#1, session_key '11436' string in heuristic listings). However the claimed live blast radius is overstated: the string-zeroing consumers cited (mapInsight.ts:298 and :420 'typeof v === \"number\" ? v : 0') sit in legacy builders that are module-private and unreachable \u2014 detectChart (mapInsight.ts:262-267) delegates entirely to the detector registry, which is deliberately hardened with parseFiniteNumber (registry.ts:46-58) whose comment explicitly documents this exact string-form hazard, and synthesis builders coerce via num() helpers. Chart components receive registry-normalized numbers. So no capture shows user-visible zeroed/dropped values from this gap today. Design lens: the registry comment is a documented mitigation of the phenomenon, though nothing blesses the pool split itself, so not fully design-refuted. Downgrading P2 -> P3: real architectural inconsistency and latent hazard for any new non-registry consumer, but present user impact is effectively nil."
+    },
+    {
+      "dedupe_key": "honesty.wet-crossover.headline-omits-noncrossing-driver",
+      "title": "Wet-crossover answer text collapses to a single lap without checking for requested drivers with crossover=null, dropping the per-driver caveat present in the metrics",
+      "category": "honesty",
+      "severity": "P3",
+      "prompts_affected": [
+        "s101:wet_crossover#1"
+      ],
+      "evidence": "capture_0/s101_wet_crossover#1.json: prompt asks 'On which lap did Alonso and Stroll make the inters-to-slicks crossover at Melbourne 2025?'. Alonso retired on lap 32 with every lap on INTERMEDIATE and inter_to_slick_crossover_lap NULL on all 32 of his rows. The answer states flatly 'The inter-to-slick crossover at Melbourne 2025 came on lap 33.' \u2014 implying both drivers crossed on 33 \u2014 with no mention of Alonso anywhere in the prose. The metrics tile does say 'Alonso crossover: n/a \u2014 no crossover recorded', so answer and metrics disagree. wetCrossoverInsight.ts lines 76-82: crossoverText is built only from withCrossover drivers and drops driver names when the surviving subset trivially agrees, and the answer template (lines ~116-120) adds no sentence for non-crossing drivers.",
+      "suspected_root_cause": "crossoverText in wetCrossoverInsight.ts reduces to 'lap N' whenever all drivers WITH a crossover share the lap, without checking that some requested drivers have crossover=null; the honest per-driver caveat exists in the metrics but is never propagated into the headline answer.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/wetCrossoverInsight.ts"
+      ],
+      "member_titles": [
+        "Wet-crossover answer text collapses to a single lap and silently drops the requested driver who never crossed"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Fully reproduced from capture_0/s101_wet_crossover#1.json. Prompt asks for Alonso AND Stroll; rows show Alonso 32 laps all INTERMEDIATE with inter_to_slick_crossover_lap NULL throughout, Stroll crossover 33; the answer states 'The inter-to-slick crossover at Melbourne 2025 came on lap 33.' with zero mention of Alonso, while the metrics tile honestly shows 'Alonso crossover: n/a - no crossover recorded'. Code confirms the mechanism: wetCrossoverInsight.ts lines 77-83 build crossoverText only from withCrossover drivers, collapsing to 'lap N' whenever the surviving subset trivially agrees (here n=1), and the answer template adds no sentence for null-crossover drivers (the 'for both drivers' suffix correctly requires sameLap>=2, so the answer doesn't affirmatively claim both crossed, but by omission it implies it). Design lens: the signed-off 'wet-crossover model-inferred, stated on the cards' decision covers the inference caveat (present in the answer), not this omission; the honest per-driver handling in the metrics shows the omission is an oversight, not intent. P3 stands: the same card's metric tile corrects the impression, so impact is prose-polish level."
+    },
+    {
+      "dedupe_key": "honesty.brake-zones.hardcoded-three-zone-answer-template",
+      "title": "Brake-zones answer template hardcodes 'the three heaviest brake zones' instead of corners.length, and the signed-mean neutrality threshold masks offsetting opposing deltas",
+      "category": "honesty",
+      "severity": "P3",
+      "prompts_affected": [
+        "s202:brake_zones#1"
+      ],
+      "evidence": "Answer: 'Across the three heaviest brake zones (Turn 1, Turn 22) on lap 1 at Jeddah 2025...' - only 2 zones are listed and rows contain 4 rows = 2 corners x 2 drivers (the template's zones CTE has LIMIT 3 but the lap-1 inner join dropped the third zone, or analytics.corner_analysis only has 2 qualifying corners for 10022). web/src/lib/synthesis/brakeZonesInsight.ts line 191 hardcodes 'the three heaviest brake zones' in the answer text while line 208's subtitle correctly uses `${corners.length} heaviest zones`.\n---\nJeddah 2025 has only 2 corner_analysis zones (spec corner_zones = Turn 1, Turn 22; card subtitle correctly says '2 heaviest zones'), yet the answer opens 'Across the three heaviest brake zones (Turn 1, Turn 22)...' \u2014 brakeZonesInsight.ts:191 interpolates the corner list into a hardcoded 'three heaviest' string. Same answer states drivers 'were essentially even on apex speed (1.0 km/h average across the zones)' \u2014 that 1.0 is the SIGNED mean of -8.0 (Verstappen faster T1) and +6.0 (Russell faster T22); the card's own metric tiles show the \u00b18/\u00b16 splits, so the 'essentially even' prose visibly contradicts the tiles for a reader. The NO verdict itself (no consistent brake-zone deficit) remains defensible.",
+      "suspected_root_cause": "The answer template string in brakeZonesInsight.ts assumes exactly three zones instead of using corners.length, so any session where fewer zones survive the lap-1 join produces a numerically self-contradicting sentence.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/synthesis/brakeZonesInsight.ts",
+        "web/src/lib/deterministicSql/brakeZones.ts",
+        "web/src/lib/synthesis/brakeZonesInsight.ts"
+      ],
+      "member_titles": [
+        "Brake-zones answer hardcodes 'the three heaviest brake zones' while the data contains only two",
+        "Brake-zone answer hardcodes 'the three heaviest brake zones' when only 2 exist, and calls -8/+6 km/h opposing deltas 'essentially even (1.0 km/h average)'"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced in capture_2/s202_brake_zones#1.json (Jeddah 10022): rows contain exactly 2 corners x 2 drivers (Turn 1, Turn 22); the answer opens 'Across the three heaviest brake zones (Turn 1, Turn 22)...' while the card subtitle correctly reads '2 heaviest zones'. Code confirms both claims: brakeZonesInsight.ts:191 hardcodes 'the three heaviest brake zones (${corners.join(...)})' while line 208 uses `${corners.length} heaviest zones`, and the template SQL (deterministicSql/brakeZones.ts zones CTE, LIMIT 3 at line 56) can legitimately yield fewer corners after the lap-1 join. The second claim also verifies: apex deltas are Russell-Verstappen -8.0 (T1: 128 vs 136) and +6.0 (T22: 67 vs 61); meanZoneDelta (line 104) is the signed mean (-1.0), brakeSignalNeutral (|mean|<2, line 107) triggers the 'essentially even on apex speed (1.0 km/h average)' prose \u2014 and the mixedPicture/split-zone text (lines 110-118) is only interpolated in the NON-neutral branches, so opposing per-zone deltas visible in the metric tiles (-8.0 / +6.0) are contradicted by the neutral prose. Design lens: the M05 sign-off covers the diverging brake-zone chart, not this answer template; the header comment ('at the three heaviest brake zones') shows a baked-in assumption, not a decision that fewer zones should still read 'three'; no tests cover the <3-zone case. P3 confirmed: the NO verdict itself remains defensible and the tiles carry the true per-zone numbers, so this is polish-level self-contradiction in prose."
+    },
+    {
+      "dedupe_key": "visual.team-colors.order-dependent-teammate-shade-assignment",
+      "title": "getDistinctTeamColors assigns base/shade by row-encounter order instead of a stable per-driver key, so teammate color identity flips between cards",
+      "category": "visual",
+      "severity": "P3",
+      "prompts_affected": [
+        "M05",
+        "M14",
+        "R03",
+        "s303_position_changes#1",
+        "s303_wet_crossover#1"
+      ],
+      "evidence": "No two series in any spec share an identical color (the teammate-collision class does NOT reproduce), but the assignment is unstable: getDistinctTeamColors (f1-team-colors.ts:107-118) gives the base team color to the FIRST driver encountered and a lightened shade to the second. M05 brake zones (rows ordered Piastri first): Piastri=#FF8000 (base papaya), Norris=#FFAC59; M14 wet crossover and R03 position chart (Norris first): Norris=#FF8000, Piastri=#FFAC59 \u2014 the same pair swaps colors between cards in one session. Mercedes flips too: R03/s303 position charts have Antonelli=#27F4D2 (base) / Russell=#73F8E2, while s303_wet_crossover has Russell=#27F4D2 / Antonelli=#73F8E2.",
+      "suspected_root_cause": "getDistinctTeamColors assigns base/shade by first-encounter order in the result rows instead of a stable per-driver key (e.g. driver number or alphabetical within team), so cross-card color identity for teammates is nondeterministic.",
+      "files": [
+        "web/src/lib/f1-team-colors.ts",
+        "web/src/lib/mapInsight/detectors/registry.ts"
+      ],
+      "member_titles": [
+        "Teammate base-vs-shade color assignment flips between cards depending on row order"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Core claim verified, with one evidence-location caveat: the capture_*/ payloads contain no hex colors, but the audit_out/*.json spec artifacts in the same scratchpad reproduce the instability exactly \u2014 Mercedes: R03, s101_position_changes and s303_position_changes assign Antonelli=#27F4D2 (base) / Russell=#73F8E2 (shade), while s303_wet_crossover assigns Russell=#27F4D2 / Antonelli=#73F8E2, a flip between two cards of the same s303 session; McLaren: M14 gives Norris=#FF8000 / Piastri=#FFAC59 while the detector_report records Piastri=#FF8000 / Norris=#FFAC59 elsewhere. The finding's M05 phrasing is slightly loose (M05's spec is a single diverging 'Piastri \u2212 Norris' series using #FF8000/#FFAC59 as positive/negative rather than two per-driver series), but the cross-card flip class is unambiguous, and the finding correctly notes the color-collision class does NOT reproduce. Code confirms the mechanism at web/src/lib/f1-team-colors.ts:107-118: the first driver encountered per team keeps the base color and subsequent teammates get lightened variants, keyed purely on pass order. Design lens: the docstring says 'Order-stable: colors are assigned in the order names are passed' \u2014 documenting within-call determinism, not endorsing nondeterministic cross-card teammate identity; no sign-off or test covers cross-card stability. P3: cosmetic cross-card inconsistency with no wrong data."
+    },
+    {
+      "dedupe_key": "api.track-outline.cold-derivation-near-statement-timeout",
+      "title": "/api/track-outline derives outlines from location telemetry in ~14.5s cold against the shared 15s statement timeout, with only an in-process cache \u2014 zero headroom on first hit per circuit",
+      "category": "api",
+      "severity": "P3",
+      "prompts_affected": [
+        "s202:brake_zones#1"
+      ],
+      "evidence": "Exact params from the only client-fetch spec in the capture (track_corner_delta, circuit='Jeddah', no sessionKey \u2014 matching useTrackOutline(chart.circuit) in track-corner-delta.tsx): curl 'http://localhost:3000/api/track-outline?circuit=Jeddah' returned HTTP 200 in 14.535s cold with a complete payload (358 points, corners, sectors [0.3302,0.6634], 4 drsZones \u2014 every field TrackMap dereferences), then 0.008s warm from cache. The response contract is healthy; the margin is not: the outline derivation query runs on the same pool whose statement_timeout is 15000ms (db/driver.ts:51), so on the exact DB-slow days documented in finding template_exec.perf... the client fetch would return null and TrackCornerDelta/TrackSpeedMap/MinisectorStrip silently drop the track ribbon (useTrackOutline maps any non-ok/failed fetch to null, track-map.tsx:61-68). No track_speed_map/telemetry_overlay specs were emitted in this capture to test their exact params \u2014 all three producers fell to the timeout fallback \u2014 which itself narrows client-fetch audit coverage.",
+      "suspected_root_cause": "Track-outline derivation from location telemetry is a ~14-15s cold query with only an in-process cache; it shares the 15s statement timeout with the chat pipeline, leaving effectively zero headroom on first hit per circuit per server process.",
+      "files": [
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/app/api/track-outline/route.ts",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/components/f1-chat/charts/track-map.tsx",
+        "/Users/robertzehnder/Documents/coding/f1/openf1/web/src/lib/db/driver.ts"
+      ],
+      "member_titles": [
+        "/api/track-outline cold fetch takes 14.5s against the same pool's 15s statement timeout \u2014 first render of any track-ribbon chart is one hiccup from failing"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Reproduced live during verification: curl 'http://localhost:3000/api/track-outline?circuit=Jeddah' returned HTTP 200 in 14.96s cold and 0.007s on the immediate warm repeat \u2014 matching the audit's 14.5s/0.008s measurement almost exactly. Code confirms the mechanics: route.ts:45 uses an in-process Map cache (outlineCache) keyed per circuit/session/driver/channels with only a browser-side Cache-Control header, so every fresh server process pays the full derivation; the derivation runs on the db/driver.ts pool whose statement_timeout defaults to 15000ms (OPENF1_QUERY_TIMEOUT_MS); useTrackOutline (track-map.tsx:61-68) maps any non-ok/failed fetch to null so the track ribbon silently disappears on failure. One nuance the finding slightly overstates: the ~15s wall time spans several sequential statements (core.laps_enriched refLap scan, raw.location window, raw.car_data window, DRS/corner queries), so no single statement is literally at 14.5s \u2014 but the laps_enriched scan is the same unmaterialized-view query class that blew the identical 15s budget on the chat path the same day, so the one-hiccup-from-null risk is real. Design lens: the client-side-fetch spec design is signed off and the null fallback is intentional graceful degradation, but the near-timeout cold path is neither documented nor ticketed. P3 (perf/polish) is the right level: degradation is silent but graceful, and only first-hit-per-circuit-per-process is exposed."
+    }
+  ],
+  "probable": [],
+  "refuted": [
+    {
+      "dedupe_key": "data.track_segments.sparse-corner-population",
+      "title": "f1.track_segments is populated only with corner_analysis-covered corners for a subset of circuits; outline/telemetry APIs and TrackMap treat it as the complete corner catalog, serving empty or near-empty corner sets",
+      "category": "data",
+      "severity": "P3",
+      "prompts_affected": [
+        "M05",
+        "R04",
+        "s101_brake_zones#1",
+        "s101_telemetry_overlay#1",
+        "s202_speed_map#1",
+        "s202_stint_delta#1",
+        "s303_brake_zones#1",
+        "s303_sector_dominance#1",
+        "s303_telemetry_overlay#1"
+      ],
+      "evidence": "GET /api/track-outline?circuit=Sakhir&sessionKey=10014&driver=1&channels=1 \u2192 200, 361 points all with speed/throttle/brake, sectors [0.3194,0.721], 4 DRS zones, zero malformed points (endpoint healthy) \u2014 but corners = only [Turn 1, Turn 8, Turn 10] for a 15-corner circuit; Spa returns 4 (Eau Rouge, Raidillon, Pouhon, Stavelot) of 19. route.ts:269-278 reads corners from f1.track_segments WHERE segment_kind='corner'. The full-track speed map (M04-class card) renders with only 3 corner labels; also TrackMap's corner-number extraction (track-map.tsx:173 `c.label.match(/\\d+/)?.[0] ?? c.label`) falls back to the FULL NAME for named corners, drawing 26px 'Eau Rouge'/'Stavelot' strings where single digits are expected.\n---\nSequential curls against the running dev server: /api/lap-telemetry?sessionKey=9888&drivers=10,27 \u2192 200 with both drivers' full channel arrays but corners: 0; sessionKey=9869&drivers=31,10 \u2192 200, corners: 0; /api/track-outline?circuit=Austin|Interlagos|Singapore|Yas%20Marina%20Circuit \u2192 200 with healthy points (277-371) and sectors fractions but corners: 0; circuit=Suzuka \u2192 corners: 7. Both routes read corner labels from f1.track_segments WHERE circuit_short_name=$1 AND segment_kind='corner' (track-outline/route.ts:269-274, lap-telemetry/route.ts:138). telemetry-overlay-chart.tsx falls back to percent ticks when cornerTicks is empty, so degradation is graceful \u2014 but the corner-anchored x-axis the overlay was designed around is missing at most venues. New aspect vs the known corner_analysis coverage note: this is the f1.track_segments table feeding the client-fetch chart APIs, not analytics.corner_analysis.",
+      "suspected_root_cause": "f1.track_segments is populated only with the corners that corner_analysis covers, not full circuit corner sets; the outline API and TrackMap treat it as the complete corner catalog.",
+      "files": [
+        "web/src/app/api/lap-telemetry/route.ts",
+        "web/src/app/api/track-outline/route.ts",
+        "web/src/components/f1-chat/charts/telemetry-overlay-chart.tsx",
+        "web/src/components/f1-chat/charts/track-map.tsx"
+      ],
+      "member_titles": [
+        "f1.track_segments carries only the analyzed corners (3 at Sakhir, 4 at Spa) so track maps label a handful of corners",
+        "f1.track_segments has no corner rows for most circuits \u2014 /api/track-outline and /api/lap-telemetry return corners: [] (Austin, Interlagos, Singapore, Yas Marina), dropping corner tick labels"
+      ],
+      "status": "unverified",
+      "verdict_reasoning": "Evidence is real: saved artifacts show corners:[] for Interlagos/Mexico outlines and lap-telemetry session 9869, and only 7 corners for Suzuka; both routes read f1.track_segments WHERE segment_kind='corner' (track-outline/route.ts:271-272, lap-telemetry/route.ts:138-139) as claimed. But the sparse population is a documented scoping decision, not an unnoticed defect: diagnostic/phase_19_analytics_capability_plan_2026-05-02.md defines slice 20-track-segments-corners as 'Hand-curated FIA corner zones bolted into f1.track_segments; one-row update per corner', and diagnostic/phase25_target_grades.json already records the partial seed with explicit expansion escapes ('Expand the f1.track_segments ... seed to cover Zandvoort/Las Vegas'). Consumers deliberately degrade gracefully \u2014 telemetry-overlay-chart.tsx falls back to default percent ticks when cornerTicks is empty, which the finding itself concedes. The one genuinely new nugget is track-map.tsx:173's label fallback (c.label.match(/\\d+/)?.[0] ?? c.label) drawing full names like 'Eau Rouge' where single-digit labels are expected \u2014 a rendering polish nit worth a one-line fix, which keeps this at P3 rather than a data defect.",
+      "refuted_by_lens": "design"
+    }
+  ],
+  "unverified": []
+}
