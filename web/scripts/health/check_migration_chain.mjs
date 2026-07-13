@@ -111,26 +111,30 @@ if (!parityOnly) {
     try {
       resetSandboxDb();
 
+      // Head is DERIVED from sqitch.plan (never hand-pinned) so adding a
+      // migration can't fail the gate while the chain itself is green.
+      const head = changes[changes.length - 1];
+
       const d1 = sqitchSafe(["deploy", "--verify", "--target", TARGET]);
       if (d1.code !== 0 || /not ok|Deploy failed/.test(d1.out)) fail(`fresh deploy --verify failed\n${tail(d1.out)}`);
-      else ok("fresh deploy --verify 001..051");
+      else ok(`fresh deploy --verify 001..${head.slice(0, 3)}`);
 
       const s1 = sqitchSafe(["status", TARGET]);
-      if (!/051_analytics_traction_braking/.test(s1.out) || !/up-to-date/.test(s1.out))
-        fail(`status after deploy is not at head 051\n${tail(s1.out)}`);
-      else ok("status == head (051)");
+      if (!new RegExp(head).test(s1.out) || !/up-to-date/.test(s1.out))
+        fail(`status after deploy is not at head ${head}\n${tail(s1.out)}`);
+      else ok(`status == head (${head.slice(0, 3)})`);
 
       const r1 = sqitchSafe(["revert", "--to", "027_user_feedback", "-y", "--target", TARGET]);
       if (r1.code !== 0 || /not ok|ERROR/.test(r1.out)) fail(`segment revert --to 027 failed\n${tail(r1.out)}`);
-      else ok("revert --to 027 (028..051 segment rolled back)");
+      else ok("revert --to 027 (028..head segment rolled back)");
 
       const s2 = sqitchSafe(["status", TARGET]);
       if (!/027_user_feedback/.test(s2.out)) fail(`status after revert is not at 027\n${tail(s2.out)}`);
       else ok("status == 027");
 
       const d2 = sqitchSafe(["deploy", "--verify", "--target", TARGET]);
-      if (d2.code !== 0 || /not ok|Deploy failed/.test(d2.out)) fail(`re-deploy --verify 028..051 failed\n${tail(d2.out)}`);
-      else ok("re-deploy --verify 028..051");
+      if (d2.code !== 0 || /not ok|Deploy failed/.test(d2.out)) fail(`re-deploy --verify 028..head failed\n${tail(d2.out)}`);
+      else ok("re-deploy --verify 028..head");
 
       const v = sqitchSafe(["verify", TARGET]);
       if (v.code !== 0 || !/Verify successful/.test(v.out)) fail(`full verify failed\n${tail(v.out)}`);

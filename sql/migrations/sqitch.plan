@@ -52,3 +52,4 @@
 049_analytics_corner_analysis_alias_fix [048_analytics_corner_analysis] 2026-05-03T00:01:17Z System Administrator <root@Roberts-MacBook-Pro.local> # analytics.corner_analysis alias fix — rebuild corner_analysis_data with corrected aliases
 050_analytics_minisector_dominance [049_analytics_corner_analysis_alias_fix] 2026-05-03T00:01:18Z System Administrator <root@Roberts-MacBook-Pro.local> # analytics.minisector_dominance — per-minisector fastest-driver matview + facade
 051_analytics_traction_braking [050_analytics_minisector_dominance] 2026-05-03T00:01:19Z System Administrator <root@Roberts-MacBook-Pro.local> # analytics.traction_analysis + analytics.braking_performance matviews + facades
+052_analytics_year_unlock [051_analytics_traction_braking] 2026-07-13T02:19:07Z System Administrator <root@Roberts-MacBook-Pro.local> # unlock 5 telemetry matviews from year=2025 to year>=2025 (2026 backfill)
