@@ -30,6 +30,11 @@ type SqlGenerationInput = {
     queryPlan?: Record<string, unknown>;
     requiredTables?: string[];
     completenessWarnings?: string[];
+    /** Authoritative driver_number -> "Name (Team)" mapping for the
+     *  resolved session. Car numbers move between seasons (#1 = the
+     *  reigning champion — Norris in 2026); prompts must use this,
+     *  never memorized numbers. */
+    sessionDrivers?: Record<string, string>;
   };
 };
 
@@ -44,6 +49,9 @@ export type AnswerSynthesisInput = {
   question: string;
   /** Compact prior-turn transcript — see SqlGenerationInput.history. */
   history?: string;
+  /** Authoritative driver_number → "Name (Team)" roster for the resolved
+   *  session — prevents cross-season number/name mislabeling in prose. */
+  sessionDrivers?: Record<string, string>;
   sql: string;
   contract: FactContract;
   /** Phase 3: optional shape selector — drives which prompt template
@@ -126,6 +134,10 @@ Charting contract (the UI auto-charts your rows — row shape decides the chart)
   (they become pit markers, tyre-colored stints, SC/VSC shading).
 - For position/overtake/recovery questions prefer position_end_of_lap
   (core.race_progression_summary) as the per-lap metric — it charts as a position trace.
+- Runtime.sessionDrivers (when present) is the AUTHORITATIVE driver_number → driver
+  mapping for the resolved session. Car numbers CHANGE between seasons (#1 is the
+  reigning champion's number). Use it for WHERE driver_number filters and for naming
+  drivers — never a number remembered from another season.
 
 Guidance:
 - core.laps_enriched is the default lap analysis contract for pace/sector/clean-lap questions.
@@ -1214,6 +1226,11 @@ export async function repairSqlWithAnthropic(input: {
     queryPlan?: Record<string, unknown>;
     requiredTables?: string[];
     completenessWarnings?: string[];
+    /** Authoritative driver_number -> "Name (Team)" mapping for the
+     *  resolved session. Car numbers move between seasons (#1 = the
+     *  reigning champion — Norris in 2026); prompts must use this,
+     *  never memorized numbers. */
+    sessionDrivers?: Record<string, string>;
   };
 }): Promise<SqlGenerationOutput> {
   const apiKey = process.env.ANTHROPIC_API_KEY;

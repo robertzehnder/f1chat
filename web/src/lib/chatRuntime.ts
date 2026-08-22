@@ -121,6 +121,12 @@ export type ChatRuntimeProceed = {
     driverCandidates: DriverCandidate[];
     selectedDriverNumbers: number[];
     selectedDriverLabels: string[];
+    /** The resolved session's full driver roster (number → name/team).
+     *  Car numbers move between drivers across seasons (#1 is the
+     *  reigning champion's number — Norris in 2026, Verstappen before),
+     *  so downstream LLM prompts must use THIS mapping, never memory.
+     *  Empty when no session was resolved. */
+    sessionDriverRoster?: Array<{ driverNumber: number; name: string; team?: string }>;
     extracted: {
       year?: number;
       sessionKeyMention?: number;
@@ -2515,6 +2521,23 @@ export async function buildChatRuntime(input: {
       driverCandidates,
       selectedDriverNumbers,
       selectedDriverLabels,
+      // Strictly session-scoped rows only — merged identity-lookup rows
+      // can carry other-season number mappings, which is the exact
+      // confusion this roster exists to prevent.
+      sessionDriverRoster: selectedSession
+        ? driverRows
+            .filter(
+              (r) =>
+                r.session_key === selectedSession.sessionKey &&
+                r.driver_number != null &&
+                (r.full_name || r.broadcast_name)
+            )
+            .map((r) => ({
+              driverNumber: r.driver_number,
+              name: (r.full_name ?? r.broadcast_name) as string,
+              team: r.team_name ?? undefined
+            }))
+        : [],
       extracted: {
         year: extractedYear,
         sessionKeyMention,

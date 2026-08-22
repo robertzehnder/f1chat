@@ -913,6 +913,19 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
         runtime.resolution.requiresSession && Number.isFinite(Number(resolvedContext.sessionKey))
           ? Math.trunc(Number(resolvedContext.sessionKey))
           : undefined;
+      // Authoritative number → "Name (Team)" roster for the resolved
+      // session, injected into SQL-gen / repair / synthesis prompts. Car
+      // numbers move between seasons (#1 = Norris in 2026, Verstappen
+      // before) — without this the LLM filters and labels from memory.
+      const sessionDriversMap: Record<string, string> | undefined =
+        runtime.resolution.sessionDriverRoster && runtime.resolution.sessionDriverRoster.length > 0
+          ? Object.fromEntries(
+              runtime.resolution.sessionDriverRoster.map((d) => [
+                String(d.driverNumber),
+                d.team ? `${d.name} (${d.team})` : d.name
+              ])
+            )
+          : undefined;
       sessionPinKeyForTrace = pinnedSessionKey ?? null;
 
       let generatedSql: string;
@@ -958,7 +971,8 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
               resolvedEntities: runtime.queryPlan.resolved_entities,
               queryPlan: runtime.queryPlan as unknown as Record<string, unknown>,
               requiredTables: runtime.completeness.requiredTables,
-              completenessWarnings: runtime.completeness.warnings
+              completenessWarnings: runtime.completeness.warnings,
+              sessionDrivers: sessionDriversMap
             }
           });
           generatedSql = llm.sql;
@@ -1329,7 +1343,8 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
               resolvedEntities: runtimeNarrow.queryPlan.resolved_entities,
               queryPlan: runtimeNarrow.queryPlan as unknown as Record<string, unknown>,
               requiredTables: runtimeNarrow.completeness.requiredTables,
-              completenessWarnings: runtimeNarrow.completeness.warnings
+              completenessWarnings: runtimeNarrow.completeness.warnings,
+              sessionDrivers: sessionDriversMap
             }
           });
         } finally {
@@ -1815,6 +1830,7 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
                 for await (const chunk of synthesizeAnswerStream({
                   question: message,
                   history: conversationHistory ?? undefined,
+                  sessionDrivers: sessionDriversMap,
                   sql: result.sql,
                   contract,
                   shape: insightShape,
@@ -1840,6 +1856,7 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
                 const synthesis = await cachedSynthesize({
                   question: message,
                   history: conversationHistory ?? undefined,
+                  sessionDrivers: sessionDriversMap,
                   sql: result.sql,
                   contract,
                   shape: insightShape,

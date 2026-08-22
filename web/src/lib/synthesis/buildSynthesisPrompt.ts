@@ -7,6 +7,10 @@ export type BuildSynthesisPromptInput = {
    *  (never the cached static prefix) so multi-turn context can inform
    *  the prose without hurting prompt-cache hit rates. */
   history?: string;
+  /** Authoritative driver_number → "Name (Team)" roster for the resolved
+   *  session. Car numbers move between seasons; when rows carry only
+   *  driver_number, names must come from here, never from memory. */
+  sessionDrivers?: Record<string, string>;
   sql: string;
   contract: FactContract;
   /** Phase 3: shape picked by the classifier. When omitted, the
@@ -404,10 +408,17 @@ Prior conversation (the question may reference these earlier turns):
 ${input.history}
 `
     : "";
+  const rosterBlock =
+    input.sessionDrivers && Object.keys(input.sessionDrivers).length > 0
+      ? `
+Session driver roster (AUTHORITATIVE driver_number → driver; car numbers change between seasons — use this, never memory):
+${JSON.stringify(input.sessionDrivers)}
+`
+      : "";
   const dynamicSuffix = `
 Question:
 ${input.question}
-${historyBlock}${resolvedSessionBlock}
+${historyBlock}${rosterBlock}${resolvedSessionBlock}
 SQL:
 ${input.sql}
 

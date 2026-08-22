@@ -231,9 +231,12 @@ test("Fix 4: prompt-size impact within ±100 tokens of pre-fix baseline", async 
     // Chart-quality pass (2026-08): 6000 -> 6500 for the charting
     // contract block (no lap sampling / pit-compound-flag columns /
     // position-trace preference) — deliberate, ~430 chars.
+    // Driver-roster rule (2026-08): 6500 -> 6800 for the
+    // Runtime.sessionDrivers authority rule (car numbers change between
+    // seasons; #1 = Norris in 2026) — deliberate, ~290 chars.
     assert.ok(
-      prompt.length < 6500,
-      `prompt size ${prompt.length} chars exceeds 6500-char budget`
+      prompt.length < 6800,
+      `prompt size ${prompt.length} chars exceeds 6800-char budget`
     );
   });
 });
