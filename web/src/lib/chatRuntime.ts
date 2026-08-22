@@ -46,6 +46,12 @@ type ChatContext = {
    *  ("now Monza 2025?") always re-resolves from scratch. Callers
    *  outside chat conversations never set this. */
   priorSessionKey?: number;
+  /** Refusal memory: recent user questions (oldest-first). When NO turn
+   *  ever resolved a session (e.g. the conversation opened with a refused
+   *  out-of-coverage year), the venue survives only in this text — the
+   *  tiebreak mines it for venue/session-type scope. Weak like
+   *  priorSessionKey; never set outside chat conversations. */
+  priorQuestions?: string;
 };
 
 type RowVolume = "small" | "medium" | "large";
@@ -1874,22 +1880,49 @@ export async function buildChatRuntime(input: {
   const topHasVenueEvidence = (sessionCandidates[0]?.matchedOn ?? []).some(
     (m) => m === "search_lookup" || m.startsWith("venue:")
   );
+  const priorQuestionsText =
+    typeof input.context?.priorQuestions === "string" && input.context.priorQuestions.trim()
+      ? input.context.priorQuestions
+      : undefined;
   if (
-    priorSessionKeyHint &&
+    (priorSessionKeyHint || priorQuestionsText) &&
     !explicitSessionKey &&
     shouldRequireSession &&
     (!selectedSession || !topHasVenueEvidence)
   ) {
-    const priorRow = (await traceQuery("resolve.getSessionByKey", () =>
-      getSessionByKey(priorSessionKeyHint)
-    )) as SessionResolutionRow | null;
-    const priorCircuit =
+    const priorRow = priorSessionKeyHint
+      ? ((await traceQuery("resolve.getSessionByKey", () =>
+          getSessionByKey(priorSessionKeyHint)
+        )) as SessionResolutionRow | null)
+      : null;
+    let priorCircuit =
       typeof (priorRow as Record<string, unknown> | null)?.circuit_short_name === "string"
         ? String((priorRow as Record<string, unknown>).circuit_short_name)
         : null;
-    if (priorRow && priorCircuit) {
-      const targetYear = extractedYear ?? priorRow.year ?? undefined;
-      const targetType = sessionNameHint ?? priorRow.session_name ?? "Race";
+    let priorTextTypeHint: string | undefined;
+    // Refusal memory: no turn ever resolved a session (a refused
+    // out-of-coverage ask stores none), so mine the previous user
+    // questions for the venue and session type they named.
+    if (!priorCircuit && priorQuestionsText) {
+      const priorNorm = normalize(priorQuestionsText);
+      const priorAliases = unique([
+        ...extractVenueHints(priorNorm),
+        ...buildLookupAliasCandidates(priorNorm)
+      ]);
+      if (priorAliases.length > 0) {
+        const priorVenueRows = (await traceQuery("resolve.getSessionsFromSearchLookup.priorScope", () =>
+          getSessionsFromSearchLookupCached({ aliases: priorAliases, limit: 3 })
+        )) as SessionResolutionRow[];
+        const hit = priorVenueRows?.[0] as Record<string, unknown> | undefined;
+        if (typeof hit?.circuit_short_name === "string") {
+          priorCircuit = String(hit.circuit_short_name);
+          priorTextTypeHint = extractSessionNameHint(priorNorm);
+        }
+      }
+    }
+    if (priorCircuit) {
+      const targetYear = extractedYear ?? priorRow?.year ?? undefined;
+      const targetType = sessionNameHint ?? priorRow?.session_name ?? priorTextTypeHint ?? "Race";
       if (targetYear !== undefined) {
         const scoped = (await traceQuery("resolve.getSessionByVenueYearType", () =>
           getSessionByVenueYearType({

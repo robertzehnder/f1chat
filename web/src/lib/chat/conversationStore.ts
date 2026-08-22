@@ -246,6 +246,33 @@ export async function loadPriorSessionKey(
   return Number.isFinite(key) && key > 0 ? Math.trunc(key) : null;
 }
 
+/**
+ * Recent user questions, oldest-first — the resolver's refusal-memory
+ * scope source. A refused ask ("1998 Monaco qualifying?") resolves NO
+ * session, so the conversation's venue survives only in the question
+ * text; the resolver mines these for venue/session-type hints when a
+ * follow-up ("fine — show 2025 then") carries no scope of its own.
+ */
+export async function loadPriorUserQuestions(
+  conversationId: string,
+  limit = 2
+): Promise<string | null> {
+  const rows = await sql<{ content: string }>(
+    `SELECT content FROM core.chat_message
+     WHERE conversation_id = $1 AND role = 'user'
+     ORDER BY seq DESC
+     LIMIT $2`,
+    [conversationId, limit]
+  );
+  if (rows.length === 0) {
+    return null;
+  }
+  return rows
+    .reverse()
+    .map((r) => r.content)
+    .join("\n");
+}
+
 /** Compaction budget for the history block fed back into the LLM. */
 const HISTORY_MAX_TURNS = 6;
 const HISTORY_MAX_ANSWER_CHARS = 280;

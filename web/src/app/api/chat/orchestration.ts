@@ -26,7 +26,8 @@ import {
   appendTurn,
   isConversationId,
   loadCompactHistory,
-  loadPriorSessionKey
+  loadPriorSessionKey,
+  loadPriorUserQuestions
 } from "@/lib/chat/conversationStore";
 import { startSpan, flushTrace, type Span, type SpanRecord } from "@/lib/perfTrace";
 import {
@@ -512,11 +513,13 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
     // Best-effort — a store failure degrades to single-turn behavior.
     let conversationHistory: string | null = null;
     let priorSessionKey: number | null = null;
+    let priorQuestions: string | null = null;
     if (isConversationId(body.conversationId)) {
       try {
-        [conversationHistory, priorSessionKey] = await Promise.all([
+        [conversationHistory, priorSessionKey, priorQuestions] = await Promise.all([
           loadCompactHistory(body.conversationId),
-          loadPriorSessionKey(body.conversationId)
+          loadPriorSessionKey(body.conversationId),
+          loadPriorUserQuestions(body.conversationId)
         ]);
       } catch (error) {
         await logServer("WARN", "chat_history_load_failed", {
@@ -566,8 +569,12 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
       const resolvePromise = buildChatRuntime({
         message,
         context:
-          priorSessionKey != null
-            ? { ...body.context, priorSessionKey }
+          priorSessionKey != null || priorQuestions != null
+            ? {
+                ...body.context,
+                ...(priorSessionKey != null ? { priorSessionKey } : {}),
+                ...(priorQuestions != null ? { priorQuestions } : {})
+              }
             : body.context,
         recordSpan: (record) => {
           traceRecords.push(record);
