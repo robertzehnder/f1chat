@@ -241,6 +241,11 @@ const LOOKUP_ALIAS_STOPWORDS = new Set([
   "have",
   "session",
   "sessions",
+  // "grand"/"prix" appear in EVERY meeting_name — as lookup aliases they
+  // hand an equal hit to all ~24 meetings per season and inflate ties
+  // between the asked venue and everything else. Zero information.
+  "grand",
+  "prix",
   "race",
   "qualifying",
   "weekend",
@@ -969,7 +974,7 @@ function scoreSessionCandidate(args: {
   venueHints: string[];
   explicitSessionKey?: number;
   matchedByLookup?: boolean;
-}): { score: number; matchedOn: string[] } {
+}): { score: number; matchedOn: string[]; demoted: boolean } {
   const matchedOn: string[] = [];
   let score = 0;
 
@@ -1014,7 +1019,23 @@ function scoreSessionCandidate(args: {
     matchedOn.push("search_lookup");
   }
 
-  return { score, matchedOn: unique(matchedOn) };
+  // Hard demotion for future/placeholder sessions (2026-08): once a season
+  // is underway, the FULL calendar sits in the warehouse and every
+  // "<venue> <current-year>" question would otherwise tie its data-bearing
+  // rounds against months of empty placeholders ("Who won Melbourne 2026?"
+  // once resolved the SINGAPORE sprint). -50 dwarfs every positive signal
+  // (~17 max), so a placeholder can never tie or beat real data — but when
+  // placeholders are the ONLY venue match (an explicitly-asked future
+  // race), relative order is preserved and the honest completeness-gate
+  // answer still works.
+  let demoted = false;
+  if (args.row.is_future_session === true || args.row.is_placeholder === true) {
+    score -= 50;
+    demoted = true;
+    matchedOn.push("future/placeholder demoted");
+  }
+
+  return { score, matchedOn: unique(matchedOn), demoted };
 }
 
 function grainForQuestion(questionType: QuestionType): {
@@ -1674,7 +1695,7 @@ export async function buildChatRuntime(input: {
     }
     let scored = sessionRows
       .map((row) => {
-        const { score, matchedOn } = scoreSessionCandidate({
+        const { score, matchedOn, demoted } = scoreSessionCandidate({
           row,
           normalizedMessage,
           year: extractedYear,
@@ -1683,15 +1704,24 @@ export async function buildChatRuntime(input: {
           explicitSessionKey,
           matchedByLookup: lookupSessionKeys.has(row.session_key)
         });
-        return { row, score, matchedOn };
+        return { row, score, matchedOn, demoted };
       })
-      .filter((item) => item.score > 0)
+      // Survive on PRE-demotion signal: a demoted future/placeholder row
+      // that had positive matches must stay in the pool (it may be the
+      // only match for an explicitly-asked future race), while junk that
+      // never matched anything stays filtered.
+      .filter((item) => (item.demoted ? item.score + 50 : item.score) > 0)
       .sort(compareScoredSessions);
 
+    // Effective score for confidence/tie math = pre-demotion signal, so a
+    // lone future-race resolution keeps its real confidence and proceeds
+    // to the honest completeness-gate answer instead of clarifying.
+    const effectiveScore = (item: { score: number; demoted: boolean }): number =>
+      item.demoted ? item.score + 50 : item.score;
     const provisionalTopScore = scored[0]?.score ?? 0;
     const provisionalSecondScore = scored[1]?.score ?? 0;
     const provisionalCloseScores = provisionalTopScore > 0 && provisionalTopScore - provisionalSecondScore <= 1;
-    const provisionalTopConfidence = scored[0] ? clampConfidence(0.45 + scored[0].score / 12) : 0;
+    const provisionalTopConfidence = scored[0] ? clampConfidence(0.45 + effectiveScore(scored[0]) / 12) : 0;
     // Close scores no longer SKIP the coverage check — they're exactly
     // when it matters. A venue with no year ("at Bahrain") ties every
     // season's sessions at the same score; recency then packs the top of
@@ -1812,7 +1842,11 @@ export async function buildChatRuntime(input: {
         meetingKey: item.row.meeting_key,
         sessionName: item.row.session_name,
         year: item.row.year ?? null,
-        confidence: clampConfidence(0.45 + item.score / 12),
+        // Confidence from the PRE-demotion signal: the demotion exists to
+        // order placeholders below data, not to make a lone future-race
+        // match look unconfident (that would clarify instead of giving
+        // the honest completeness-gate answer).
+        confidence: clampConfidence(0.45 + effectiveScore(item) / 12),
         score: item.score,
         label: buildSessionLabel(item.row),
         matchedOn: item.matchedOn

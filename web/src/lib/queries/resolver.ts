@@ -12,6 +12,12 @@ export type SessionResolutionRow = {
   circuit_short_name: string | null;
   meeting_name: string | null;
   date_start: string | null;
+  /** From core.session_completeness — lets the resolver hard-demote
+   *  future/placeholder sessions in scoring so they can never tie or
+   *  beat a data-bearing candidate (they still resolve when they're the
+   *  ONLY match, keeping honest "not yet ingested" answers working). */
+  is_future_session?: boolean | null;
+  is_placeholder?: boolean | null;
 };
 
 export type DriverResolutionRow = {
@@ -91,7 +97,9 @@ export async function getSessionsForResolution(filters: {
       s.location,
       s.circuit_short_name,
       s.meeting_name,
-      s.date_start
+      s.date_start,
+      COALESCE(sc.is_future_session, false) AS is_future_session,
+      COALESCE(sc.is_placeholder, false) AS is_placeholder
     FROM core.sessions s
     LEFT JOIN core.session_completeness sc
       ON sc.session_key = s.session_key
@@ -283,6 +291,8 @@ export async function getSessionsFromSearchLookup(filters: {
         ssl.circuit_short_name,
         ssl.meeting_name,
         ssl.date_start,
+        COALESCE(sc.is_future_session, false) AS is_future_session,
+        COALESCE(sc.is_placeholder, false) AS is_placeholder,
         COUNT(*)::int AS alias_hits
       FROM core.session_search_lookup ssl
       LEFT JOIN core.session_completeness sc
@@ -302,7 +312,9 @@ export async function getSessionsFromSearchLookup(filters: {
         ssl.location,
         ssl.circuit_short_name,
         ssl.meeting_name,
-        ssl.date_start
+        ssl.date_start,
+        COALESCE(sc.is_future_session, false),
+        COALESCE(sc.is_placeholder, false)
     )
     SELECT
       session_key,
@@ -314,7 +326,9 @@ export async function getSessionsFromSearchLookup(filters: {
       location,
       circuit_short_name,
       meeting_name,
-      date_start
+      date_start,
+      is_future_session,
+      is_placeholder
     FROM matched
     ORDER BY alias_hits DESC, date_start DESC NULLS LAST, session_key DESC
     LIMIT $6
