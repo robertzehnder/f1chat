@@ -689,7 +689,10 @@ export function latestYearForVenueTie(
 }
 
 function parseYear(text: string): number | undefined {
-  const match = text.match(/\b(20\d{2})\b/);
+  // 19xx matters too: "1998 Monaco" must extract a year so the
+  // out-of-range-year guard can refuse honestly instead of silently
+  // substituting a modern season (a_gate gap-old-year).
+  const match = text.match(/\b((?:19|20)\d{2})\b/);
   if (!match) {
     return undefined;
   }
@@ -2066,6 +2069,23 @@ export async function buildChatRuntime(input: {
     const latest = sessionCandidates.find((c) => c.sessionKey === latestYearKey);
     if (latest) selectedSession = latest;
   }
+  // Honest out-of-range-year refusal (a_gate gap-old-year, 2026-08): when
+  // the question names a year the dataset has NO candidate session for
+  // ("1998 Monaco"), venue scoring still surfaces the venue's OTHER
+  // seasons and the pipeline would silently answer with a substituted
+  // year — which reads as fabrication even with a disclosure line. Drop
+  // the substitution and clarify with the actually-available seasons.
+  const namedYearHasNoData =
+    extractedYear !== undefined &&
+    !explicitSessionKey &&
+    ((sessionCandidates.length > 0 && !sessionCandidates.some((c) => c.year === extractedYear)) ||
+      // Pre-coverage years produce ZERO candidates (the lookup is
+      // year-filtered), so the venue branch above can't fire — the floor
+      // is a stable data fact: OpenF1 ingestion here starts in 2023.
+      (extractedYear < 2023 && shouldRequireSession));
+  if (namedYearHasNoData) {
+    selectedSession = undefined;
+  }
   const closeScoreNeedsClarification =
     closeScores &&
     !runtimeFastPath &&
@@ -2148,6 +2168,7 @@ export async function buildChatRuntime(input: {
     selectedDriverNumbers.length < 2 &&
     !isStructuralComparison;
   const needsClarification =
+    namedYearHasNoData ||
     forceSessionClarification ||
     forceDriverClarification ||
     // A same-meeting session-type tie is confidently re-ranked to the Race
@@ -2161,7 +2182,22 @@ export async function buildChatRuntime(input: {
 
   let clarificationPrompt: string | undefined;
   if (needsClarification) {
-    if (forceSessionClarification) {
+    if (namedYearHasNoData) {
+      const availableYears = [
+        ...new Set(
+          sessionCandidates
+            .map((c) => c.year)
+            .filter((y): y is number => y !== null && Number.isFinite(y))
+        )
+      ].sort((a, b) => a - b);
+      const coverage =
+        availableYears.length > 1
+          ? `${availableYears[0]}–${availableYears[availableYears.length - 1]}`
+          : availableYears.length === 1
+            ? String(availableYears[0])
+            : "2023 onward";
+      clarificationPrompt = `This dataset has no ${extractedYear} sessions for that event — coverage here is ${coverage}. Ask about a covered season instead.`;
+    } else if (forceSessionClarification) {
       clarificationPrompt = buildSessionClarificationPrompt(normalizedMessage);
     } else if (forceDriverClarification) {
       clarificationPrompt = buildDriverClarificationPrompt(normalizedMessage);
