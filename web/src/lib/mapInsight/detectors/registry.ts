@@ -1062,6 +1062,92 @@ const lineDualAxisDetector: ChartDetector = {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Lap-axis chart helpers (chart-quality pass, 2026-08): caution bands from
+// track_flag, pit boundaries from compound changes, and honesty notes for
+// sparse/trimmed series. Shared by line_with_stint_markers + position_changes.
+// ---------------------------------------------------------------------------
+
+/** Normalize a raw track_flag into a short caution label, or null when the
+ *  flag isn't a caution (BLUE/CLEAR/CHEQUERED are not cautions). */
+function cautionLabelForFlag(flag: unknown): string | null {
+  const f = String(flag ?? "").toUpperCase();
+  if (!f) return null;
+  // Non-caution flags first — note "CHEQUERED" contains the substring
+  // "RED", so these must bail before the red-flag check.
+  if (f.includes("CHEQUER") || f.includes("CLEAR") || f.includes("GREEN") || f.includes("BLUE")) {
+    return null;
+  }
+  if (f.includes("VSC") || f.includes("VIRTUAL")) return "VSC";
+  if (f.includes("SAFETY") || f === "SC") return "SC";
+  if (f.includes("RED")) return "Red flag";
+  if (f.includes("YELLOW")) return "Yellow";
+  return null;
+}
+
+/** Contiguous caution bands from per-lap track_flag rows. Sampled rows give
+ *  single-lap bands; adjacent (gap <= 1) same-label laps merge. */
+function buildCautionBands(
+  rows: Record<string, unknown>[]
+): Array<{ from: number; to: number; label: string }> {
+  const flagged = rows
+    .map((r) => ({ lap: toNumber(r.lap_number ?? 0), label: cautionLabelForFlag(r.track_flag) }))
+    .filter((x): x is { lap: number; label: string } => x.lap > 0 && x.label !== null)
+    .sort((a, b) => a.lap - b.lap);
+  const bands: Array<{ from: number; to: number; label: string }> = [];
+  for (const f of flagged) {
+    const last = bands[bands.length - 1];
+    if (last && last.label === f.label && f.lap - last.to <= 1) {
+      last.to = f.lap;
+    } else {
+      bands.push({ from: f.lap, to: f.lap, label: f.label });
+    }
+  }
+  return bands;
+}
+
+/** Pit-stop laps derived from compound changes between consecutive laps —
+ *  a stronger signal than sampled is_pit_lap flags (a missing row hides the
+ *  flag, but the compound is still different on the next sampled lap). */
+function compoundChangeLaps(rows: Record<string, unknown>[]): number[] {
+  const byLap = rows
+    .filter((r) => toNumber(r.lap_number ?? 0) > 0 && typeof r.compound_name === "string" && r.compound_name)
+    .sort((a, b) => toNumber(a.lap_number) - toNumber(b.lap_number));
+  const laps: number[] = [];
+  for (let i = 1; i < byLap.length; i += 1) {
+    const prev = String(byLap[i - 1].compound_name).toUpperCase();
+    const curr = String(byLap[i].compound_name).toUpperCase();
+    const lapGap = toNumber(byLap[i].lap_number) - toNumber(byLap[i - 1].lap_number);
+    // Only mark when the two laps are adjacent-ish: on sparse sampled rows
+    // a compound change first observed 10+ laps after the previous sample
+    // could have happened anywhere in the gap — a marker there would point
+    // at the wrong lap with confidence.
+    if (prev && curr && prev !== curr && lapGap <= 2) {
+      laps.push(toNumber(byLap[i].lap_number));
+    }
+  }
+  return laps;
+}
+
+/** Honesty caption for a lap-axis chart: reports hidden outliers and sparse
+ *  coverage so a partial line never silently reads as complete. */
+function buildLapChartNote(args: {
+  hiddenOutliers: number;
+  presentLaps: number;
+  maxLap: number;
+}): string | undefined {
+  const parts: string[] = [];
+  if (args.hiddenOutliers > 0) {
+    parts.push(
+      `${args.hiddenOutliers} pit/outlier lap${args.hiddenOutliers === 1 ? "" : "s"} off-scale (hover shows all data)`
+    );
+  }
+  if (args.maxLap > 0 && args.presentLaps / args.maxLap < 0.8) {
+    parts.push(`data covers ${args.presentLaps} of ${args.maxLap} laps`);
+  }
+  return parts.length ? parts.join(" · ") : undefined;
+}
+
 const lineWithStintMarkersDetector: ChartDetector = {
   id: "line_with_stint_markers",
   priority: 83,
@@ -1130,18 +1216,48 @@ const lineWithStintMarkersDetector: ChartDetector = {
       const lo = median * 0.85;
       return values.map((v) => (Number.isFinite(v) && (v < lo || v > hi) ? NaN : v));
     };
+    // Raw per-lap value ignoring the pit exclusion — used only to count how
+    // many data-bearing laps end up hidden, for the honesty caption.
+    const rawAt = (lap: number): number => {
+      const match = rows.find((r) => toNumber(r.lap_number) === lap);
+      if (!match) return NaN;
+      const n = isNumericLike(match[valueCol]) ? toNumber(match[valueCol]) : NaN;
+      return Math.abs(n) >= 1e6 ? NaN : n;
+    };
+    const rawValues = laps.map(rawAt);
     // Single-driver result sets frequently omit a driver_name column (one
     // row per lap). Without this fallback `drivers` is empty, `series` has
     // length 0, and the chart renders as a blank box. Build one series
-    // keyed on the lap rows instead.
+    // keyed on the lap rows instead. When compound_name is present with
+    // more than one compound, split the line into per-compound series so
+    // stints render in tyre colors (tooltip names the compound).
+    const compoundCol = cols.includes("compound_name") ? "compound_name" : undefined;
+    const singleValues = trim(laps.map((lap) => valueAt((r) => toNumber(r.lap_number) === lap)));
+    const compoundOfLap = new Map<number, string>();
+    if (compoundCol) {
+      for (const r of rows) {
+        const c = String(r[compoundCol] ?? "").toLowerCase();
+        if (c) compoundOfLap.set(toNumber(r.lap_number ?? 0), c);
+      }
+    }
+    const distinctCompounds = [...new Set(compoundOfLap.values())];
+    const titleCaseCompound = (c: string): string => (c ? c[0].toUpperCase() + c.slice(1) : c);
     const series = isSingleDriver
-      ? [
-          {
-            name: humanize(valueCol),
-            color: "#E10600",
-            values: trim(laps.map((lap) => valueAt((r) => toNumber(r.lap_number) === lap)))
-          }
-        ]
+      ? compoundCol && distinctCompounds.length > 1
+        ? distinctCompounds.map((compound) => ({
+            name: titleCaseCompound(compound),
+            color: COMPOUND_HEX[compound] ?? COMPOUND_HEX[compound.replace("intermediate", "inter")] ?? "#E10600",
+            values: laps.map((lap, i) =>
+              compoundOfLap.get(lap) === compound ? singleValues[i] : NaN
+            )
+          }))
+        : [
+            {
+              name: humanize(valueCol),
+              color: "#E10600",
+              values: singleValues
+            }
+          ]
       : (() => {
           const driverColors = getDistinctTeamColors(drivers);
           return drivers.map((driver) => ({
@@ -1173,6 +1289,15 @@ const lineWithStintMarkersDetector: ChartDetector = {
         addBoundary(lap, String(r.stint_boundary_label ?? r.pit_label ?? "Pit"));
       }
     }
+    // Compound changes are a stronger pit signal than sampled is_pit_lap
+    // flags: when the pit lap's row was sampled out, the tyre still changed
+    // on the next present lap. Skip laps that already have a marker within
+    // ±1 lap (the flag-derived marker sits on the pit lap; the compound
+    // change appears one lap later).
+    for (const lap of compoundChangeLaps(rows)) {
+      const near = boundaries.some((b) => Math.abs(b.lap - lap) <= 1);
+      if (!near) addBoundary(lap, "Pit");
+    }
     // Tell the renderer how to format the y-axis: lap times as M:SS.mmm,
     // deltas as signed seconds. Otherwise an 81.7s lap shows as a raw
     // "81.7706" tick instead of "1:21.8".
@@ -1181,13 +1306,27 @@ const lineWithStintMarkersDetector: ChartDetector = {
       : /delta|gap/i.test(valueCol)
         ? "decimal_seconds"
         : undefined;
+    // Honesty caption: how many data-bearing laps ended up hidden (pit
+    // exclusion + median trim), and whether the lap coverage is sparse.
+    const finiteCount = (vals: number[]): number => vals.filter((v) => Number.isFinite(v)).length;
+    const presentLaps = finiteCount(rawValues);
+    const visibleLaps = finiteCount(
+      laps.map((_, i) => (series.some((s) => Number.isFinite(s.values[i])) ? 1 : NaN))
+    );
+    const chartNote = buildLapChartNote({
+      hiddenOutliers: Math.max(0, presentLaps - visibleLaps),
+      presentLaps,
+      maxLap
+    });
     return {
       type: "line_with_stint_markers",
       x_label: "Lap",
       y_label: isAbsolutePace ? "Lap time" : humanize(valueCol),
       y_value_format: yFmt,
       series,
-      stint_boundaries: boundaries
+      stint_boundaries: boundaries,
+      caution_bands: buildCautionBands(rows),
+      chart_note: chartNote
     };
   }
 };
@@ -1282,6 +1421,50 @@ const degradationCurveDetector: ChartDetector = {
   }
 };
 
+/** Single-driver position-by-lap chart from race-progression rows
+ *  (position_end_of_lap). Lap 0 = grid when grid_position is present.
+ *  Pit markers come from is_pit_lap flags + compound changes; caution
+ *  bands from track_flag; sparse coverage is disclosed in chart_note. */
+function buildSingleDriverProgression(rows: Record<string, unknown>[]): ChartSpec {
+  const lapRows = rows
+    .filter((r) => toNumber(r.lap_number ?? 0) > 0 && isNumericLike(r.position_end_of_lap))
+    .sort((a, b) => toNumber(a.lap_number) - toNumber(b.lap_number));
+  const maxLap = Math.max(0, ...lapRows.map((r) => toNumber(r.lap_number)));
+  const posAt = new Map<number, number>();
+  for (const r of lapRows) posAt.set(toNumber(r.lap_number), toNumber(r.position_end_of_lap));
+  const grid = parseFiniteNumber(
+    rows.find((r) => isNumericLike(r.grid_position))?.grid_position ??
+      rows.find((r) => isNumericLike(r.opening_position))?.opening_position
+  );
+  // Index 0 = grid slot (renderer labels it "Grid"), index i = lap i.
+  const values = [grid ?? NaN, ...Array.from({ length: maxLap }, (_, i) => posAt.get(i + 1) ?? NaN)];
+  const driverName =
+    typeof rows.find((r) => typeof r.driver_name === "string")?.driver_name === "string"
+      ? String(rows.find((r) => typeof r.driver_name === "string")?.driver_name)
+      : "Position";
+
+  const boundaries: Array<{ lap: number; label: string }> = [];
+  const isFlag = (v: unknown): boolean => v === true || v === "true" || v === "t";
+  for (const r of lapRows) {
+    if (isFlag(r.is_pit_lap)) boundaries.push({ lap: toNumber(r.lap_number), label: "Pit" });
+  }
+  for (const lap of compoundChangeLaps(rows)) {
+    if (!boundaries.some((b) => Math.abs(b.lap - lap) <= 1)) boundaries.push({ lap, label: "Pit" });
+  }
+  boundaries.sort((a, b) => a.lap - b.lap);
+
+  const presentLaps = posAt.size;
+  return {
+    type: "position_changes",
+    x_label: "Lap",
+    y_label: "Position",
+    series: [{ name: driverName, color: "#E10600", values }],
+    stint_boundaries: boundaries,
+    caution_bands: buildCautionBands(rows),
+    chart_note: buildLapChartNote({ hiddenOutliers: 0, presentLaps, maxLap })
+  };
+}
+
 const positionChangesDetector: ChartDetector = {
   id: "position_changes",
   priority: 106,
@@ -1289,9 +1472,24 @@ const positionChangesDetector: ChartDetector = {
   benchmarkQids: [],
   matches(rows) {
     const cols = Object.keys(rows[0]);
-    return cols.includes("position") && cols.includes("total_laps") && cols.includes("grid_position");
+    if (cols.includes("position") && cols.includes("total_laps") && cols.includes("grid_position")) {
+      return true;
+    }
+    // Single-driver race-progression shape (core.race_progression_summary):
+    // per-lap position rows. When present, the position story IS the chart —
+    // outranks the lap-time line (priority 83) for overtake/recovery
+    // questions, where lap time is only a proxy the reader must interpret.
+    return (
+      cols.includes("position_end_of_lap") &&
+      cols.includes("lap_number") &&
+      rows.some((r) => isNumericLike(r.position_end_of_lap))
+    );
   },
   build(rows) {
+    const buildCols = Object.keys(rows[0]);
+    if (buildCols.includes("position_end_of_lap") && !buildCols.includes("total_laps")) {
+      return buildSingleDriverProgression(rows);
+    }
     const totalLaps = Math.max(1, toNumber(rows[0]?.total_laps ?? 0));
     type Sparse = { name: string; finish: number | null; grid: number | null; updates: Map<number, number> };
     const byDriver = new Map<string, Sparse>();

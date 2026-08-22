@@ -119,6 +119,14 @@ respective (session_key, driver_number, lap_number) bins separately.
 Important column reminders (core.* — introspected from information_schema):
 ${coreSection}
 
+Charting contract (the UI auto-charts your rows — row shape decides the chart):
+- Per-lap rows MUST cover EVERY lap of the range, never a sampled subset — sparse
+  lap series render as a broken line. Highlight notable laps in reasoning instead.
+- With per-lap rows include is_pit_lap, compound_name, track_flag when available
+  (they become pit markers, tyre-colored stints, SC/VSC shading).
+- For position/overtake/recovery questions prefer position_end_of_lap
+  (core.race_progression_summary) as the per-lap metric — it charts as a position trace.
+
 Guidance:
 - core.laps_enriched is the default lap analysis contract for pace/sector/clean-lap questions.
 - core.driver_session_summary, core.stint_summary, core.strategy_summary, core.grid_vs_finish,

@@ -11,6 +11,12 @@ import {
   ReferenceLine,
 } from "recharts"
 import { formatChartValue } from "@/lib/f1-formatters"
+import {
+  ChartNote,
+  hasInteriorGap,
+  makeGapAwareDot,
+  renderCautionBands,
+} from "./line-hardening"
 
 interface LineWithStintMarkersProps {
   chart: {
@@ -27,6 +33,8 @@ interface LineWithStintMarkersProps {
       lap: number
       label: string
     }>
+    caution_bands?: Array<{ from: number; to: number; label?: string }>
+    chart_note?: string
     horizontal_marker?: {
       value: number
       label: string
@@ -35,7 +43,7 @@ interface LineWithStintMarkersProps {
 }
 
 export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
-  const { x_label, y_label, y_value_format, series, stint_boundaries, horizontal_marker } = chart
+  const { x_label, y_label, y_value_format, series, stint_boundaries, caution_bands, chart_note, horizontal_marker } = chart
   const isLapTime = y_value_format === "lap_time_s"
   // Axis ticks: lap times as M:SS.s (one decimal keeps them short — e.g.
   // "1:21.7"); everything else via the shared formatter; fall back to 1dp.
@@ -87,7 +95,8 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
   const yDomain: [number, number] = [yLo, yHi]
 
   return (
-    <div className="h-64 w-full">
+    <div className="w-full">
+      <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <RechartsLineChart
           data={data}
@@ -173,6 +182,28 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
             />
           )}
 
+          {/* Caution shading first so bands sit under lines. */}
+          {renderCautionBands(caution_bands)}
+
+          {/* Dashed gap bridges: connectNulls underlay so sparse series
+              still read as one trend; excluded from tooltip/legend. */}
+          {series.filter((s) => hasInteriorGap(s.values)).map((s) => (
+            <Line
+              key={`${s.name}-bridge`}
+              type="monotone"
+              dataKey={s.name}
+              stroke={s.color}
+              strokeWidth={1.5}
+              strokeOpacity={0.35}
+              strokeDasharray="3 5"
+              connectNulls
+              dot={false}
+              activeDot={false}
+              tooltipType="none"
+              legendType="none"
+            />
+          ))}
+
           {series.map((s) => (
             <Line
               key={s.name}
@@ -180,12 +211,14 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
               dataKey={s.name}
               stroke={s.color}
               strokeWidth={2}
-              dot={false}
+              dot={makeGapAwareDot(s.values, s.color)}
               activeDot={{ r: 4, fill: s.color }}
             />
           ))}
         </RechartsLineChart>
       </ResponsiveContainer>
+      </div>
+      <ChartNote note={chart_note} />
     </div>
   )
 }

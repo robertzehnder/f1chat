@@ -5,6 +5,7 @@ import type { ChartSpec } from "@/lib/chart-types"
 import { cn } from "@/lib/utils"
 import { ChartTooltip } from "./chart-tooltip"
 import { formatChartValue } from "@/lib/f1-formatters"
+import { ChartNote, hasInteriorGap, makeGapAwareDot } from "./line-hardening"
 
 interface LineChartProps {
   chart: ChartSpec
@@ -94,6 +95,24 @@ export function LineChart({ chart, className }: LineChartProps) {
               />}
               cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeOpacity: 0.3 }}
             />
+            {/* Dashed gap bridges for sparse series (excluded from tooltip).
+                Skip for series that already dash (bridge would be invisible). */}
+            {chart.series?.filter((s) => !s.strokeDasharray && hasInteriorGap(s.values)).map((series) => (
+              <Line
+                key={`${series.name}-bridge`}
+                type="monotone"
+                dataKey={series.name}
+                stroke={series.color}
+                strokeWidth={1.5}
+                strokeOpacity={0.35}
+                strokeDasharray="3 5"
+                connectNulls
+                dot={false}
+                activeDot={false}
+                tooltipType="none"
+                legendType="none"
+              />
+            ))}
             {chart.series?.map((series) => (
               <Line
                 key={series.name}
@@ -103,7 +122,7 @@ export function LineChart({ chart, className }: LineChartProps) {
                 strokeWidth={series.strokeWidth ?? 2}
                 strokeDasharray={series.strokeDasharray}
                 strokeOpacity={series.opacity ?? 1}
-                dot={false}
+                dot={makeGapAwareDot(series.values, series.color)}
                 activeDot={{ r: 4, strokeWidth: 0 }}
               />
             ))}
@@ -166,6 +185,7 @@ export function LineChart({ chart, className }: LineChartProps) {
       {chart.y_label && (
         <p className="text-[10px] text-muted-foreground text-center mt-2">{chart.y_label}</p>
       )}
+      <ChartNote note={chart.chart_note} />
     </div>
   )
 }

@@ -228,9 +228,12 @@ test("Fix 4: prompt-size impact within ±100 tokens of pre-fix baseline", async 
     // telemetry-coverage caveat). Each new Phase 21 slice that needs a
     // synthesis hint adds ~150-200 chars. Re-budget when it next blows
     // past 6000.
+    // Chart-quality pass (2026-08): 6000 -> 6500 for the charting
+    // contract block (no lap sampling / pit-compound-flag columns /
+    // position-trace preference) — deliberate, ~430 chars.
     assert.ok(
-      prompt.length < 6000,
-      `prompt size ${prompt.length} chars exceeds 6000-char budget`
+      prompt.length < 6500,
+      `prompt size ${prompt.length} chars exceeds 6500-char budget`
     );
   });
 });

@@ -221,6 +221,17 @@ export interface ChartSpec {
   // line_with_stint_markers
   stint_boundaries?: Array<{ lap: number; label: string }>;
 
+  // Lap-axis charts (line_with_stint_markers, position_changes): shaded
+  // x-ranges for caution periods derived from per-lap track_flag values.
+  // Inclusive lap bounds; label like "SC" / "VSC" / "Yellow".
+  caution_bands?: Array<{ from: number; to: number; label?: string }>;
+
+  // One-line honesty caption rendered subdued under the chart — e.g.
+  // "7 pit/outlier laps hidden" or "data covers 16 of 52 laps". Set by
+  // detectors whenever points are excluded or the series is sparse, so a
+  // partial chart never silently reads as complete.
+  chart_note?: string;
+
   // track_heatmap — explicit legend so BOTH compared drivers show even when one
   // wins zero segments (deriving the legend from segment leaders drops them).
   dominance_legend?: Array<{ name: string; color: string; count: number }>;

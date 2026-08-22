@@ -7,9 +7,16 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceLine,
   ResponsiveContainer
 } from "recharts"
 import type { ChartSpec } from "@/lib/chart-types"
+import {
+  ChartNote,
+  hasInteriorGap,
+  makeGapAwareDot,
+  renderCautionBands,
+} from "./line-hardening"
 
 /** Position changes: every driver's position per lap, grid (lap 0) to
  *  flag. Inverted y (P1 on top); unclassified cars' lines stop at their
@@ -32,7 +39,7 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
     <div className="space-y-2">
       <div className="h-96 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <RechartsLineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 16 }}>
+          <RechartsLineChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 16 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
             <XAxis
               dataKey="lap"
@@ -58,6 +65,37 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
               labelStyle={{ color: "hsl(var(--foreground))" }}
               itemStyle={{ color: "hsl(var(--muted-foreground))" }}
             />
+            {/* Caution shading + pit markers (single-driver progression). */}
+            {renderCautionBands(chart.caution_bands)}
+            {chart.stint_boundaries?.map((boundary, idx) => (
+              <ReferenceLine
+                key={`pit-${idx}`}
+                x={boundary.lap}
+                stroke="#E10600"
+                strokeDasharray="4 4"
+                strokeWidth={1.5}
+                label={{ value: boundary.label, position: "top", fill: "#E10600", fontSize: 9 }}
+              />
+            ))}
+
+            {/* Dashed gap bridges for sparse series (excluded from tooltip). */}
+            {series.filter((s) => hasInteriorGap(s.values)).map((s) => (
+              <Line
+                key={`${s.name}-bridge`}
+                type="stepAfter"
+                dataKey={s.name}
+                stroke={s.color}
+                strokeWidth={1.2}
+                strokeOpacity={0.35}
+                strokeDasharray="3 5"
+                connectNulls
+                dot={false}
+                activeDot={false}
+                tooltipType="none"
+                legendType="none"
+              />
+            ))}
+
             {series.map((s) => {
               // emphasis: true → the story drivers (winner / biggest mover / faller)
               // render bold; false → the rest of the field is dimmed so the eye
@@ -71,13 +109,14 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
                   stroke={s.color}
                   strokeWidth={s.emphasis === true ? 2.6 : 1.6}
                   strokeOpacity={dimmed ? 0.28 : 1}
-                  dot={false}
+                  dot={dimmed ? false : makeGapAwareDot(s.values, s.color)}
                 />
               )
             })}
           </RechartsLineChart>
         </ResponsiveContainer>
       </div>
+      <ChartNote note={chart.chart_note} />
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
         {series.map((s) => (
           <span
