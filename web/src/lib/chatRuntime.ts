@@ -1820,17 +1820,19 @@ export async function buildChatRuntime(input: {
   const priorSessionKeyHint = Number.isFinite(Number(input.context?.priorSessionKey))
     ? Math.trunc(Number(input.context?.priorSessionKey))
     : undefined;
-  // "in THAT session" / "in THE SAME race" produce demonstrative venue
-  // "hints" ("that", "same") — those are anaphora pointing AT the prior
-  // turn, not new venues, so they must not block the inheritance.
-  const DEMONSTRATIVE_HINTS = new Set(["that", "this", "it", "same", "that same", "this same"]);
-  const meaningfulVenueHints = venueHints.filter((h) => !DEMONSTRATIVE_HINTS.has(h));
+  // NOTE deliberately no venueHints guard here: extractVenueHints turns
+  // preposition phrases into "venues" ("in that session" → "that",
+  // "at the end" → "end"), which are anaphora/noise, not scope. If the
+  // text named a REAL venue in the data, the lookup above produced
+  // candidates and the `length === 0` guard already blocks inheritance;
+  // zero candidates means whatever hints were extracted matched nothing.
+  // The explicit-year guard stays: "in 2019" with no candidates means
+  // the year is outside the data — inherit nothing, fail honestly.
   if (
     !selectedSession &&
     sessionCandidates.length === 0 &&
     shouldRequireSession &&
     priorSessionKeyHint &&
-    meaningfulVenueHints.length === 0 &&
     extractedYear === undefined
   ) {
     const session = await traceQuery("resolve.getSessionByKey", () =>
