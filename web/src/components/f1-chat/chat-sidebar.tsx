@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { PanelLeftClose, PanelLeft, Plus, MessageSquare, X } from "lucide-react"
+import { PanelLeftClose, PanelLeft, Plus, MessageSquare, Trash2, X } from "lucide-react"
 import { UserProfile, type UserData } from "./user-profile"
 
 export interface ChatSession {
@@ -19,6 +19,7 @@ interface ChatSidebarProps {
   sessions: ChatSession[]
   activeSessionId: string | null
   onSelectSession: (id: string) => void
+  onDeleteSession?: (id: string) => void
   onNewChat: () => void
   isCollapsed?: boolean
   onToggleCollapse?: () => void
@@ -50,6 +51,7 @@ export function ChatSidebar({
   sessions,
   activeSessionId,
   onSelectSession,
+  onDeleteSession,
   onNewChat,
   isCollapsed = false,
   onToggleCollapse,
@@ -166,14 +168,23 @@ export function ChatSidebar({
         <ScrollArea className="flex-1 px-2">
           <div className="space-y-1 py-2">
             {sessions.map((session) => (
-              <button
+              <div
                 key={session.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => isMobileOpen ? handleSelectSession(session.id) : onSelectSession(session.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    if (isMobileOpen) handleSelectSession(session.id)
+                    else onSelectSession(session.id)
+                  }
+                }}
                 className={cn(
-                  "w-full text-left rounded-lg transition-colors group",
+                  "relative w-full text-left rounded-lg transition-colors group cursor-pointer",
                   (isCollapsed && !isMobileOpen) ? "p-2 flex justify-center" : "px-3 py-2.5",
-                  activeSessionId === session.id 
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                  activeSessionId === session.id
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "hover:bg-sidebar-accent/50 text-sidebar-foreground/80"
                 )}
               >
@@ -185,16 +196,28 @@ export function ChatSidebar({
                       <p className="text-sm font-medium truncate">
                         {session.title}
                       </p>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
+                      <span className="text-[10px] text-muted-foreground shrink-0 group-hover:opacity-0 transition-opacity">
                         {mounted ? formatRelativeTime(session.timestamp) : ""}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
                       {session.preview}
                     </p>
+                    {onDeleteSession && (
+                      <button
+                        aria-label={`Delete conversation: ${session.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDeleteSession(session.id)
+                        }}
+                        className="absolute right-2 top-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-sidebar-accent"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
                   </div>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         </ScrollArea>

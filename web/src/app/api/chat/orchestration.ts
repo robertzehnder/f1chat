@@ -22,6 +22,12 @@ import { assessChatQuality } from "@/lib/chatQuality";
 import { applyAnswerSanityGuards } from "@/lib/answerSanity";
 import { buildStructuredSummaryFromRows } from "@/lib/answerSanity/countList";
 import { appendJsonLog, logServer } from "@/lib/serverLog";
+import {
+  appendTurn,
+  isConversationId,
+  loadCompactHistory,
+  loadPriorSessionKey
+} from "@/lib/chat/conversationStore";
 import { startSpan, flushTrace, type Span, type SpanRecord } from "@/lib/perfTrace";
 import {
   buildAnswerCacheKey,
@@ -147,6 +153,10 @@ export const dynamic = "force-dynamic";
 // generic handler emit `error`.
 // ---------------------------------------------------------------------------
 
+// Intake guardrail: generous for real questions, blocks accidental
+// paste-bombs from reaching the resolver/LLM.
+const MAX_MESSAGE_CHARS = 4000;
+
 const SSE_RESPONSE_HEADERS = {
   "Content-Type": "text/event-stream",
   "Cache-Control": "no-cache, no-transform",
@@ -212,6 +222,13 @@ type RouteOutcome = {
 
 type ChatBody = {
   message?: string;
+  /** Existing conversation to append this turn to (and to feed compact
+   *  prior-turn history into SQL-gen + synthesis). */
+  conversationId?: string;
+  /** Opt-in persistence for the FIRST turn (no conversationId yet).
+   *  Benchmarks/sweeps never set this, so harness traffic can't spam
+   *  the sidebar with one-message conversations. */
+  persist?: boolean;
   context?: {
     sessionKey?: number;
     driverNumber?: number;
@@ -318,18 +335,69 @@ function enforcePinnedSessionKeyInSql(sql: string, pinnedSessionKey?: number): {
   };
 }
 
+/**
+ * Best-effort persistence of a completed turn. Runs AFTER the outcome is
+ * computed and mutates outcome.payload to carry the conversation identity
+ * back to the client. Never throws — a persistence failure must not break
+ * an already-successful answer.
+ */
+async function persistTurnIfRequested(
+  body: ChatBody | null,
+  outcome: RouteOutcome
+): Promise<void> {
+  if (!body?.message || outcome.asError || outcome.status !== 200) {
+    return;
+  }
+  const wantsPersistence =
+    isConversationId(body.conversationId) || body.persist === true;
+  if (!wantsPersistence) {
+    return;
+  }
+  try {
+    const payload = outcome.payload;
+    const answerText =
+      typeof payload.answer === "string" && payload.answer.length > 0
+        ? payload.answer
+        : "(no answer text)";
+    const saved = await appendTurn({
+      conversationId: isConversationId(body.conversationId) ? body.conversationId : null,
+      userId: "guest",
+      question: body.message,
+      answerText,
+      payload,
+      requestId: typeof payload.requestId === "string" ? payload.requestId : undefined
+    });
+    payload.conversation = { id: saved.id, title: saved.title, created: saved.created };
+  } catch (error) {
+    await logServer("WARN", "chat_persist_failed", {
+      conversationId: body.conversationId ?? null,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
 export async function POST(request: Request): Promise<Response> {
   const sseRequested = wantsSse(request);
+
+  // Body is parsed here (once) so the persistence hook can see it after
+  // runChatRoute returns. null = unparseable JSON; runChatRoute answers 400.
+  let parsedBody: ChatBody | null = null;
+  try {
+    parsedBody = (await request.json()) as ChatBody;
+  } catch {
+    parsedBody = null;
+  }
 
   // Non-SSE callers (the benchmark runner, other server-to-server calls)
   // get a no-op stage emitter — staging only makes sense over SSE.
   if (!sseRequested) {
-    const outcome = await runChatRoute(request, {
+    const outcome = await runChatRoute(parsedBody, {
       sseRequested: false,
       emitDelta: () => {},
       emitStage: () => {},
       emitInsight: () => {}
     });
+    await persistTurnIfRequested(parsedBody, outcome);
     return NextResponse.json(outcome.payload, { status: outcome.status });
   }
 
@@ -342,7 +410,7 @@ export async function POST(request: Request): Promise<Response> {
         );
       };
       try {
-        const outcome = await runChatRoute(request, {
+        const outcome = await runChatRoute(parsedBody, {
           sseRequested: true,
           emitDelta: (kind, text) => writeFrame(kind, { text }),
           emitStage: (payload) => writeFrame("stage", payload),
@@ -351,6 +419,7 @@ export async function POST(request: Request): Promise<Response> {
         if (outcome.asError) {
           writeFrame("error", outcome.asError);
         } else {
+          await persistTurnIfRequested(parsedBody, outcome);
           writeFrame("final", outcome.payload);
         }
       } catch (err) {
@@ -366,7 +435,7 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, { headers: SSE_RESPONSE_HEADERS });
 }
 
-async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutcome> {
+async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise<RouteOutcome> {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
 
@@ -410,15 +479,14 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
 
     const intakeSpan = startTrackedSpan(startSpan("request_intake"));
 
-    try {
-      body = await request.json();
-    } catch {
+    if (parsedBody === null) {
       await logServer("WARN", "chat_invalid_json", { requestId });
       return {
         payload: { error: "Invalid JSON body", requestId },
         status: 400
       };
     }
+    body = parsedBody;
 
     const message = body.message?.trim();
     if (!message) {
@@ -427,6 +495,36 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         payload: { error: "message is required", requestId },
         status: 400
       };
+    }
+    if (message.length > MAX_MESSAGE_CHARS) {
+      await logServer("WARN", "chat_message_too_long", { requestId, length: message.length });
+      return {
+        payload: {
+          error: `message exceeds ${MAX_MESSAGE_CHARS} characters`,
+          requestId
+        },
+        status: 400
+      };
+    }
+
+    // Multi-turn context: compact transcript + the prior turn's resolved
+    // session (weak resolver fallback for scope-less follow-ups).
+    // Best-effort — a store failure degrades to single-turn behavior.
+    let conversationHistory: string | null = null;
+    let priorSessionKey: number | null = null;
+    if (isConversationId(body.conversationId)) {
+      try {
+        [conversationHistory, priorSessionKey] = await Promise.all([
+          loadCompactHistory(body.conversationId),
+          loadPriorSessionKey(body.conversationId)
+        ]);
+      } catch (error) {
+        await logServer("WARN", "chat_history_load_failed", {
+          requestId,
+          conversationId: body.conversationId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
     }
 
     endTrackedSpan(intakeSpan);
@@ -467,7 +565,10 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
       let resolveTimer: ReturnType<typeof setTimeout> | undefined;
       const resolvePromise = buildChatRuntime({
         message,
-        context: body.context,
+        context:
+          priorSessionKey != null
+            ? { ...body.context, priorSessionKey }
+            : body.context,
         recordSpan: (record) => {
           traceRecords.push(record);
         }
@@ -842,6 +943,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
         try {
           const llm = await generateSqlWithAnthropic({
             question: message,
+            history: conversationHistory ?? undefined,
             context: resolvedContext,
             runtime: {
               questionType: runtime.questionType,
@@ -1705,6 +1807,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
                 let streamedInsight: import("@/lib/chatTypes").InsightFields | null = null;
                 for await (const chunk of synthesizeAnswerStream({
                   question: message,
+                  history: conversationHistory ?? undefined,
                   sql: result.sql,
                   contract,
                   shape: insightShape,
@@ -1729,6 +1832,7 @@ async function runChatRoute(request: Request, ctx: RouteCtx): Promise<RouteOutco
               } else {
                 const synthesis = await cachedSynthesize({
                   question: message,
+                  history: conversationHistory ?? undefined,
                   sql: result.sql,
                   contract,
                   shape: insightShape,

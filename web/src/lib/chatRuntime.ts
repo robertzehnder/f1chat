@@ -39,6 +39,12 @@ export type { ChatRuntimeStageLog };
 type ChatContext = {
   sessionKey?: number;
   driverNumber?: number;
+  /** Multi-turn fallback: the session the conversation's previous turn
+   *  resolved. WEAK hint — consulted only when the question text itself
+   *  carries no venue/year/session anchors, so an explicit new scope
+   *  ("now Monza 2025?") always re-resolves from scratch. Callers
+   *  outside chat conversations never set this. */
+  priorSessionKey?: number;
 };
 
 type RowVolume = "small" | "medium" | "large";
@@ -1615,6 +1621,7 @@ export async function buildChatRuntime(input: {
     }
   }
 
+
   if (!selectedSession) {
     // Phase 17 (post-deploy diagnostic 2026-05-02): the alias-based lookup
     // (`getSessionsFromSearchLookup`) is fast — it goes through the GIN
@@ -1799,6 +1806,49 @@ export async function buildChatRuntime(input: {
     selectedSession = sessionCandidates[0];
     if (!shouldRequireSession && !explicitSessionKey) {
       selectedSession = undefined;
+    }
+  }
+
+  // Multi-turn conversation fallback (chat persistence, 2026-07): the text
+  // lookup found NO session candidates, a session is required, and the
+  // caller supplied the previous turn's resolved session — inherit it
+  // instead of dead-ending in a clarification. Fires only for scope-less
+  // follow-ups ("and Norris in that same session?"): any venue hint or
+  // explicit year in the text re-resolves normally, and non-chat callers
+  // never set priorSessionKey so existing behavior is untouched.
+  // Confidence 0.92 (high) — the prior turn's resolution earned it.
+  const priorSessionKeyHint = Number.isFinite(Number(input.context?.priorSessionKey))
+    ? Math.trunc(Number(input.context?.priorSessionKey))
+    : undefined;
+  // "in THAT session" / "in THE SAME race" produce demonstrative venue
+  // "hints" ("that", "same") — those are anaphora pointing AT the prior
+  // turn, not new venues, so they must not block the inheritance.
+  const DEMONSTRATIVE_HINTS = new Set(["that", "this", "it", "same", "that same", "this same"]);
+  const meaningfulVenueHints = venueHints.filter((h) => !DEMONSTRATIVE_HINTS.has(h));
+  if (
+    !selectedSession &&
+    sessionCandidates.length === 0 &&
+    shouldRequireSession &&
+    priorSessionKeyHint &&
+    meaningfulVenueHints.length === 0 &&
+    extractedYear === undefined
+  ) {
+    const session = await traceQuery("resolve.getSessionByKey", () =>
+      getSessionByKey(priorSessionKeyHint)
+    );
+    if (session) {
+      const row = session as SessionResolutionRow;
+      selectedSession = {
+        sessionKey: row.session_key,
+        meetingKey: row.meeting_key,
+        sessionName: row.session_name,
+        year: row.year ?? null,
+        confidence: 0.92,
+        score: 90,
+        label: buildSessionLabel(row),
+        matchedOn: ["conversation/prior-turn session"]
+      };
+      sessionCandidates.push(selectedSession);
     }
   }
 

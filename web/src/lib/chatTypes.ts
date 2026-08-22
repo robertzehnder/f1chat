@@ -114,6 +114,10 @@ export type InsightFields = {
 /** API response shape from POST /api/chat (subset used by UI). */
 export type ChatApiResponse = {
   requestId?: string;
+  /** Persistence receipt: set when the turn was saved to a conversation
+   *  (lazily created on the first persisted turn). The client adopts the
+   *  id for follow-up requests and sidebar refresh. */
+  conversation?: { id: string; title: string; created?: boolean };
   answer: string;
   sql: string;
   generationSource?: string;

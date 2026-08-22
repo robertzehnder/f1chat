@@ -14,6 +14,11 @@ const SQL_MAX_TOKENS = Number(process.env.ANTHROPIC_MAX_TOKENS_SQL ?? "4096");
 
 type SqlGenerationInput = {
   question: string;
+  /** Compact prior-turn transcript (conversationStore.loadCompactHistory).
+   *  Lets follow-ups ("what about Hamilton?") generate SQL that inherits
+   *  the session/driver scope of earlier turns. Rides in the per-request
+   *  user prompt, never the cached system prompt. */
+  history?: string;
   context?: {
     sessionKey?: number;
     driverNumber?: number;
@@ -37,6 +42,8 @@ type SqlGenerationOutput = {
 
 export type AnswerSynthesisInput = {
   question: string;
+  /** Compact prior-turn transcript — see SqlGenerationInput.history. */
+  history?: string;
   sql: string;
   contract: FactContract;
   /** Phase 3: optional shape selector — drives which prompt template
@@ -1099,10 +1106,16 @@ export async function generateSqlWithAnthropic(
   const contextText = JSON.stringify(input.context ?? {});
   const runtimeText = JSON.stringify(input.runtime ?? {});
   const matviewHint = buildMatviewHint(input.question);
+  const historyBlock = input.history
+    ? `
+Prior conversation (the question may be a follow-up — inherit session/driver/venue scope from these turns unless the new question overrides it):
+${input.history}
+`
+    : "";
   const userPrompt = `
 Question:
 ${input.question}
-${matviewHint}
+${historyBlock}${matviewHint}
 Context:
 ${contextText}
 

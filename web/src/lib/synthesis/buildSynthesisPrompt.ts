@@ -3,6 +3,10 @@ import type { InsightShape } from "@/lib/chatRuntime/insightShape";
 
 export type BuildSynthesisPromptInput = {
   question: string;
+  /** Compact prior-turn transcript. Injected into the dynamic suffix
+   *  (never the cached static prefix) so multi-turn context can inform
+   *  the prose without hurting prompt-cache hit rates. */
+  history?: string;
   sql: string;
   contract: FactContract;
   /** Phase 3: shape picked by the classifier. When omitted, the
@@ -394,10 +398,16 @@ This session EXISTS in the dataset. Never claim it, its event, or its year is mi
 If the returned rows do not cover it, say the query failed to target it — not that the data is absent.
 `
     : "";
+  const historyBlock = input.history
+    ? `
+Prior conversation (the question may reference these earlier turns):
+${input.history}
+`
+    : "";
   const dynamicSuffix = `
 Question:
 ${input.question}
-${resolvedSessionBlock}
+${historyBlock}${resolvedSessionBlock}
 SQL:
 ${input.sql}
 

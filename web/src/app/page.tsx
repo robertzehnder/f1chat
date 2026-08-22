@@ -47,11 +47,63 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const ACTIVE_CONVERSATION_KEY = "openf1.activeConversationId";
+
+type ConversationListRow = {
+  id: string;
+  title: string;
+  preview: string;
+  updated_at: string;
+  message_count: number;
+};
+
+type StoredConversationMessage = {
+  role: "user" | "assistant";
+  content: string;
+  payload: ChatApiResponse | null;
+};
+
+/**
+ * Fold a final ChatApiResponse into a DraftInsight. Shared by the live
+ * streaming path (which passes the accumulated deltas) and the restore
+ * path (which replays the stored payload with no live state) so a
+ * restored card is pixel-identical to the one rendered live.
+ */
+function buildInsightFromFinalPayload(
+  finalPayload: ChatApiResponse,
+  questionText: string,
+  live?: { body: string; reasoning: string; deltaCount: number }
+): DraftInsight {
+  const parts = mapChatApiResponseToParts(finalPayload);
+  const skipTextParts = (live?.deltaCount ?? 0) > 0;
+  let folded: DraftInsight = { body: live?.body ?? "" };
+  for (const p of parts) {
+    if (skipTextParts && p.type === "text") continue;
+    folded = foldPartsIntoInsight(folded, p, { question: questionText });
+  }
+  folded = applyInsightFields(folded, finalPayload.insight ?? null);
+  folded = applyResponseSemantics(folded, finalPayload);
+  folded = applyClarification(folded, finalPayload, questionText);
+  folded = applyScalarHero(folded);
+  folded = applyCornerMap(folded);
+  folded = applyVerdictSemantics(folded);
+  folded = applyQuestionTitle(folded, questionText);
+  if (live?.reasoning) {
+    folded.reasoning = live.reasoning;
+  }
+  folded.streaming = false;
+  folded.activity = buildActivityLog(finalPayload);
+  return folded;
+}
+
 export default function F1InsightsChat() {
   const { user } = useAuth();
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("current");
+  // Server-side conversation this thread is persisted under. null until
+  // the first persisted turn returns a `conversation` receipt.
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,6 +113,76 @@ export default function F1InsightsChat() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const refreshConversations = async () => {
+    try {
+      const res = await fetch("/api/conversations");
+      if (!res.ok) return;
+      const data: { rows?: ConversationListRow[] } = await res.json();
+      setSessions(
+        (data.rows ?? []).map((row) => ({
+          id: row.id,
+          title: row.title,
+          preview: row.preview,
+          timestamp: new Date(row.updated_at),
+          messageCount: row.message_count
+        }))
+      );
+    } catch {
+      // Sidebar list is non-critical; leave whatever we have.
+    }
+  };
+
+  const loadConversation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}`);
+      if (!res.ok) {
+        if (res.status === 404 && typeof window !== "undefined") {
+          window.localStorage.removeItem(ACTIVE_CONVERSATION_KEY);
+        }
+        return;
+      }
+      const data: { id: string; messages: StoredConversationMessage[] } = await res.json();
+      const restored: UiMessage[] = [];
+      let lastQuestion = "";
+      for (const msg of data.messages) {
+        if (msg.role === "user") {
+          lastQuestion = msg.content;
+          restored.push({ id: makeId(), type: "user", content: msg.content });
+        } else {
+          restored.push({
+            id: makeId(),
+            type: "assistant",
+            content: msg.content,
+            insight: msg.payload
+              ? buildInsightFromFinalPayload(msg.payload, lastQuestion)
+              : { body: msg.content, streaming: false }
+          });
+        }
+      }
+      setMessages(restored);
+      setConversationId(data.id);
+      setActiveSessionId(data.id);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(ACTIVE_CONVERSATION_KEY, data.id);
+      }
+    } catch {
+      // Restore failure leaves the current view untouched.
+    }
+  };
+
+  // Mount: populate the sidebar and reopen the last active conversation.
+  useEffect(() => {
+    void refreshConversations();
+    const stored =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(ACTIVE_CONVERSATION_KEY)
+        : null;
+    if (stored) {
+      void loadConversation(stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auth-shim returns a guest user; build a static profile from it.
   const userData: UserData | null = user
@@ -205,7 +327,12 @@ export default function F1InsightsChat() {
           "content-type": "application/json",
           Accept: "text/event-stream"
         },
-        body: JSON.stringify({ message: text, context: {} })
+        body: JSON.stringify({
+          message: text,
+          conversationId: conversationId ?? undefined,
+          persist: true,
+          context: {}
+        })
       });
 
       // Live streaming: keep CUMULATIVE strings on the page handler scope
@@ -262,33 +389,24 @@ export default function F1InsightsChat() {
       // Stream closed — stop synthetic phase cycle.
       clearInterval(phaseTimer);
 
-      const parts = mapChatApiResponseToParts(finalPayload);
-      const skipTextParts = deltaCount > 0;
-      let folded: DraftInsight = { body: liveBody };
-      for (const p of parts) {
-        if (skipTextParts && p.type === "text") continue;
-        folded = foldPartsIntoInsight(folded, p, { question: text });
-      }
-      // Apply structured insight from the final payload — covers
-      // non-SSE responses (where onInsight never fires) and re-merges
-      // for SSE in case the insight frame was missed.
-      folded = applyInsightFields(folded, finalPayload.insight ?? null);
-      folded = applyResponseSemantics(folded, finalPayload);
-      folded = applyClarification(folded, finalPayload, text);
-      folded = applyScalarHero(folded);
-      folded = applyCornerMap(folded);
-      folded = applyVerdictSemantics(folded);
-      folded = applyQuestionTitle(folded, text);
-      // Carry reasoning through; flip streaming off so the card collapses
-      // it into the <details> disclosure.
-      if (liveReasoning) folded.reasoning = liveReasoning;
-      folded.streaming = false;
-      // Replace synthetic phases with the real activity log built from
-      // response.runtime — the moment of truth where vague stages become
-      // concrete (resolved session, tables hit, rows + ms, generation
-      // source, coverage warnings).
-      folded.activity = buildActivityLog(finalPayload);
+      // Shared fold pipeline (also used verbatim by conversation restore).
+      const folded = buildInsightFromFinalPayload(finalPayload, text, {
+        body: liveBody,
+        reasoning: liveReasoning,
+        deltaCount
+      });
       updateAssistantInsight(assistantId, folded);
+
+      // Persistence receipt: adopt the conversation id (lazily created on
+      // the first persisted turn) and refresh the sidebar list.
+      if (finalPayload.conversation?.id) {
+        setConversationId(finalPayload.conversation.id);
+        setActiveSessionId(finalPayload.conversation.id);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(ACTIVE_CONVERSATION_KEY, finalPayload.conversation.id);
+        }
+        void refreshConversations();
+      }
     } catch {
       clearInterval(phaseTimer);
       updateAssistantInsight(assistantId, {
@@ -304,13 +422,28 @@ export default function F1InsightsChat() {
   };
 
   const handleNewChat = () => {
-    setActiveSessionId(`session-${Date.now()}`);
+    setActiveSessionId("current");
+    setConversationId(null);
     setMessages([]);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(ACTIVE_CONVERSATION_KEY);
+    }
   };
 
   const handleSelectSession = (id: string) => {
-    setActiveSessionId(id);
-    setMessages([]); // No persisted history yet — follow-up PR adds localStorage.
+    void loadConversation(id);
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    try {
+      await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+    } catch {
+      return;
+    }
+    if (conversationId === id) {
+      handleNewChat();
+    }
+    void refreshConversations();
   };
 
   const handleSignOut = () => {
@@ -329,6 +462,7 @@ export default function F1InsightsChat() {
         sessions={sessions}
         activeSessionId={activeSessionId}
         onSelectSession={handleSelectSession}
+        onDeleteSession={(id) => void handleDeleteSession(id)}
         onNewChat={handleNewChat}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
