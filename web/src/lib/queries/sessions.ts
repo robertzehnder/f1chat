@@ -162,6 +162,33 @@ export async function getSessionByKey(sessionKey: number): Promise<Record<string
   return rows[0] ?? null;
 }
 
+/**
+ * Conversation-scope tiebreak lookup (multi-turn resolver, 2026-08): find
+ * the session at a given circuit for a given year + session type. Used when
+ * a follow-up's text resolves no venue of its own ("show it for the race
+ * instead", "same but for 2025") — the circuit comes from the conversation's
+ * prior turn, the year/type from the follow-up text.
+ */
+export async function getSessionByVenueYearType(args: {
+  circuitShortName: string;
+  year: number;
+  sessionName: string;
+}): Promise<Record<string, unknown> | null> {
+  const rows = await sql<Record<string, unknown>>(
+    `
+    SELECT *
+    FROM core.sessions
+    WHERE circuit_short_name = $1
+      AND year = $2
+      AND session_name = $3
+    ORDER BY date_start DESC NULLS LAST
+    LIMIT 1
+    `,
+    [args.circuitShortName, args.year, args.sessionName]
+  );
+  return rows[0] ?? null;
+}
+
 export async function getSessionDrivers(sessionKey: number): Promise<Record<string, unknown>[]> {
   return sql<Record<string, unknown>>(
     `

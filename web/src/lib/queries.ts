@@ -13,6 +13,7 @@ export type { DriverResolutionRow, SessionResolutionRow } from "./queries/resolv
 export {
   getSessions,
   getSessionByKey,
+  getSessionByVenueYearType,
   getSessionDrivers,
   getSessionLaps,
   getSessionWeather,

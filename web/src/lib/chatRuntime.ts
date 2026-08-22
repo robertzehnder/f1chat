@@ -1,6 +1,7 @@
 import {
   getGlobalTableCounts,
   getSessionByKey,
+  getSessionByVenueYearType,
   getSessionTableCounts,
   type DriverResolutionRow,
   type SessionResolutionRow
@@ -1854,6 +1855,63 @@ export async function buildChatRuntime(input: {
         matchedOn: ["conversation/prior-turn session"]
       };
       sessionCandidates.push(selectedSession);
+    }
+  }
+
+  // Conversation venue-scope tiebreak (follow-up sweep, 2026-08): a
+  // follow-up like "show it for the race instead" / "same but for 2025"
+  // resolves WEAKLY — its generic tokens (session type, bare year) match
+  // many sessions at low confidence, and the close-tie clarification then
+  // lists arbitrary latest-season sessions, ignoring that the conversation
+  // already has a venue. When the top match carries NO real venue evidence
+  // (no search_lookup / venue:* in matchedOn — "And at Spa?" DOES carry it
+  // and is never touched), re-target the lookup to the prior turn's
+  // circuit, honoring the follow-up's session-type and year overrides.
+  // NOTE: per-candidate `confidence` is useless as a gate here — a
+  // session-type-only match scores 0.45 + score/12 ≈ 0.99, so a garbage
+  // "race"-token match looks maximally confident. Venue evidence in
+  // matchedOn is the real signal of an intentional new scope.
+  const topHasVenueEvidence = (sessionCandidates[0]?.matchedOn ?? []).some(
+    (m) => m === "search_lookup" || m.startsWith("venue:")
+  );
+  if (
+    priorSessionKeyHint &&
+    !explicitSessionKey &&
+    shouldRequireSession &&
+    (!selectedSession || !topHasVenueEvidence)
+  ) {
+    const priorRow = (await traceQuery("resolve.getSessionByKey", () =>
+      getSessionByKey(priorSessionKeyHint)
+    )) as SessionResolutionRow | null;
+    const priorCircuit =
+      typeof (priorRow as Record<string, unknown> | null)?.circuit_short_name === "string"
+        ? String((priorRow as Record<string, unknown>).circuit_short_name)
+        : null;
+    if (priorRow && priorCircuit) {
+      const targetYear = extractedYear ?? priorRow.year ?? undefined;
+      const targetType = sessionNameHint ?? priorRow.session_name ?? "Race";
+      if (targetYear !== undefined) {
+        const scoped = (await traceQuery("resolve.getSessionByVenueYearType", () =>
+          getSessionByVenueYearType({
+            circuitShortName: priorCircuit,
+            year: targetYear,
+            sessionName: targetType
+          })
+        )) as SessionResolutionRow | null;
+        if (scoped) {
+          selectedSession = {
+            sessionKey: scoped.session_key,
+            meetingKey: scoped.meeting_key,
+            sessionName: scoped.session_name,
+            year: scoped.year ?? null,
+            confidence: 0.91,
+            score: 88,
+            label: buildSessionLabel(scoped),
+            matchedOn: ["conversation/prior-venue scope"]
+          };
+          sessionCandidates.unshift(selectedSession);
+        }
+      }
     }
   }
 

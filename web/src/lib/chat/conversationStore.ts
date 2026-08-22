@@ -225,14 +225,19 @@ export async function appendTurn(args: {
 export async function loadPriorSessionKey(
   conversationId: string
 ): Promise<number | null> {
-  // Filter to non-null in SQL: intervening clarification turns (which
-  // resolve no session) must not shadow the last successfully-resolved
-  // one, no matter how many stack up.
+  // Filter to non-null in SQL: intervening clarification turns must not
+  // shadow the last successfully-resolved session, no matter how many
+  // stack up. Clarification/failure turns are excluded EXPLICITLY too —
+  // a close-tie clarification stores its (arbitrary) top candidate as
+  // selectedSession, and trusting it would let one bad turn poison the
+  // conversation's scope for every following turn.
   const rows = await sql<{ session_key: string | number | null }>(
     `SELECT payload #>> '{runtime,resolution,selectedSession,sessionKey}' AS session_key
      FROM core.chat_message
      WHERE conversation_id = $1 AND role = 'assistant'
        AND payload #>> '{runtime,resolution,selectedSession,sessionKey}' IS NOT NULL
+       AND COALESCE(payload ->> 'generationSource', '') NOT IN
+         ('runtime_clarification', 'sql_generation_failed', 'runtime_transient_db_unavailable')
      ORDER BY seq DESC
      LIMIT 1`,
     [conversationId]
