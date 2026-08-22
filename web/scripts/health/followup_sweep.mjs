@@ -67,6 +67,66 @@ const CASES_2026 = [
     follow: "Did that pattern hold in the race?" }
 ];
 
+// FULL smoke suite on 2026 rounds 1-9 (Melbourne, Shanghai+S, Suzuka,
+// Miami+S, Montreal+S, Monte Carlo, Barcelona, Spielberg, Silverstone+S):
+// every a_gate honesty case (g-*) + every randomized-sweep chart family
+// (c-*), each with one follow-up. Drivers/teams are the REAL 2026 grid
+// (Norris #1/Piastri McLaren, Verstappen/Hadjar Red Bull, Russell/
+// Antonelli Mercedes, Leclerc/Hamilton Ferrari, Perez/Bottas Cadillac,
+// Bortoleto/Hulkenberg Audi). Known 2026 gaps become honesty probes:
+// no starting_grid/session_result (g-grid), Austin has no data yet
+// (g-ambiguous), crossover probes rain that may not have happened.
+const CASES_FULL2026 = [
+  // ── a_gate honesty family ──
+  { id: "g-won", base: "Who won the Melbourne 2026 Grand Prix?",
+    follow: "What was the winning margin?" },
+  { id: "g-order", base: "What was the finishing order of the Shanghai 2026 race?",
+    follow: "Which of those drivers drove for Mercedes?" },
+  { id: "g-pits", base: "How many pit stops did the winner make at the Miami 2026 Grand Prix?",
+    follow: "What compounds did he use?" },
+  { id: "g-fastlap", base: "What was the fastest lap of the Montreal 2026 Grand Prix?",
+    follow: "On which lap of the race was it set?" },
+  { id: "g-grid", base: "Show the grid vs finish for the Spielberg 2026 Grand Prix.",
+    follow: "Who lost the most positions?" },
+  { id: "g-oldyear", base: "Show the qualifying results for the 1995 Monaco Grand Prix.",
+    follow: "Alright, 2026 then." },
+  { id: "g-trap", base: "Show the tyre degradation curves for the Suzuka 2026 qualifying session.",
+    follow: "OK, the race version." },
+  { id: "g-nonexistent", base: "Who won the 2026 Kentucky Grand Prix?",
+    follow: "I meant the British one." },
+  { id: "g-ambiguous", base: "Who won the United States Grand Prix in 2026?",
+    follow: "The one in Miami." },
+  // ── randomized-sweep chart families ──
+  { id: "c-racetrace", base: "Show the race trace for Barcelona 2026",
+    follow: "Who was leading at half distance?" },
+  { id: "c-overcut", base: "Did Russell successfully execute the over-cut on Antonelli at Montreal 2026?",
+    follow: "What were the gaps before and after the stops?" },
+  { id: "c-degcliff", base: "How big is the tyre cliff at Silverstone 2026 — show the deg curves",
+    follow: "Which compound fell off hardest?" },
+  { id: "c-positions", base: "Show the position changes at the Miami 2026 race",
+    follow: "Who recovered best after lap 1?" },
+  { id: "c-teleover", base: "Show the lap telemetry comparison for Norris and Piastri at the Suzuka 2026 race",
+    follow: "Where on the lap was the biggest difference?" },
+  { id: "c-stratsplit", base: "Did Ferrari split strategies between Leclerc and Hamilton at Shanghai 2026?",
+    follow: "Which side of the split worked out better?" },
+  { id: "c-stintdelta", base: "Across stints 1, 2 and 3 at Melbourne 2026, did Verstappen's stint deltas to Hadjar reverse on the final stint?",
+    follow: "What tyre was each of them on in that final stint?" },
+  { id: "c-brake", base: "Across the three heaviest brake zones at Monaco 2026, did Leclerc's lap-1 brake-zone delta to Hamilton foreshadow a lap-pace deficit?",
+    follow: "Which corner showed the biggest delta?" },
+  { id: "c-sector", base: "Show the sector dominance between Russell and Antonelli in qualifying at Spielberg 2026",
+    follow: "Did that carry into the race?" },
+  { id: "c-speedmap", base: "Show Verstappen's speed map for the Silverstone 2026 race — where was he fastest?",
+    follow: "How does that compare to Norris?" },
+  { id: "c-launch", base: "On the lap-1 launch at Suzuka 2026, did Antonelli or Russell gain more positions?",
+    follow: "Did either of them lose those places back later?" },
+  { id: "c-crossover", base: "On which lap did Norris and Piastri make the inters-to-slicks crossover at Silverstone 2026?",
+    follow: "Who timed it better?" },
+  { id: "c-perfaxes", base: "Where does Antonelli's edge over Russell come from in 2026 — qualifying axis or race-pace axis?",
+    follow: "And on tyre management?" },
+  { id: "c-firststop", base: "What was Perez's first-stop lap number in the Montreal 2026 race?",
+    follow: "What compound did Cadillac fit him with at that stop?" }
+];
+
 const CASES_2025 = [
   // ── a_gate sweep bases ──
   { id: "runner-up-chain", base: "Who won the Monaco 2025 Grand Prix?",
@@ -100,7 +160,7 @@ const CASES_2025 = [
     follow: "Did that pattern hold in the race?" }
 ];
 
-const CASES = SET === "2026" ? CASES_2026 : CASES_2025;
+const CASES = SET === "full2026" ? CASES_FULL2026 : SET === "2026" ? CASES_2026 : CASES_2025;
 console.log(`follow-up sweep — set: ${SET} (${CASES.length} cases)`);
 
 async function ask(message, conversationId) {
