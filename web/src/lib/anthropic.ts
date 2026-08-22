@@ -851,6 +851,33 @@ function recoverSqlFromTruncatedJsonPayload(payload: string): string | null {
   return sql;
 }
 
+/**
+ * Strip trailing statement terminators and tail comments from LLM SQL.
+ *
+ * querySafety rejects ANY `;` as "Only a single SQL statement is allowed",
+ * and the model intermittently ends its (single, valid) statement with
+ * `;`, `; -- explanation`, or a trailing comment block. One bad roll used
+ * to hard-fail the whole turn — and when the repair model rolled the same
+ * habit, the user saw "I couldn't construct a valid SQL query". Peeling
+ * the tail here makes both generate and repair immune. GENUINE
+ * multi-statement output keeps its interior `;` and is still rejected.
+ * Exported for scripts/tests/sql-terminator-strip.test.mjs.
+ */
+export function stripTrailingSqlTerminators(sql: string): string {
+  let out = sql.trim();
+  let prev: string;
+  do {
+    prev = out;
+    // Tail line comment ("... ; -- ranked by pass count").
+    out = out.replace(/\s*--[^\n]*$/, "").trimEnd();
+    // Tail block comment.
+    out = out.replace(/\/\*[\s\S]*?\*\/\s*$/, "").trimEnd();
+    // Statement terminator(s).
+    out = out.replace(/;+\s*$/, "").trimEnd();
+  } while (out !== prev);
+  return out;
+}
+
 function parseSqlJsonPayload(jsonText: string, rawText: string): { sql: string; reasoning?: string } {
   let parsed: { sql?: string; reasoning?: string };
   try {
@@ -858,7 +885,7 @@ function parseSqlJsonPayload(jsonText: string, rawText: string): { sql: string; 
   } catch {
     const recovered = recoverSqlFromTruncatedJsonPayload(jsonText);
     if (recovered) {
-      return { sql: recovered, reasoning: undefined };
+      return { sql: stripTrailingSqlTerminators(recovered), reasoning: undefined };
     }
     throw new Error(`Could not parse JSON from model output: ${rawText.slice(0, 4000)}`);
   }
@@ -866,7 +893,9 @@ function parseSqlJsonPayload(jsonText: string, rawText: string): { sql: string; 
   if (!parsed.sql || typeof parsed.sql !== "string") {
     throw new Error("Model output did not include a valid 'sql' field.");
   }
-  let sql = stripSqlEchoArtifacts(stripModelTraceNoise(parsed.sql).trim());
+  const sql = stripTrailingSqlTerminators(
+    stripSqlEchoArtifacts(stripModelTraceNoise(parsed.sql).trim())
+  );
   if (!sql) {
     throw new Error("Model output did not include a valid 'sql' field.");
   }
