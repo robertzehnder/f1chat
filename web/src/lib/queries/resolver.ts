@@ -134,17 +134,6 @@ export async function getDriversForResolution(args: {
   if (args.sessionKey) {
     return sql<DriverResolutionRow>(
       `
-      WITH identity AS (
-        SELECT DISTINCT ON (di.driver_number)
-          di.driver_number,
-          di.canonical_full_name AS full_name,
-          di.first_name,
-          di.last_name,
-          di.name_acronym,
-          di.broadcast_name
-        FROM core.driver_identity_lookup di
-        ORDER BY di.driver_number, di.alias_source DESC
-      )
       SELECT
         sd.session_key,
         sd.driver_number,
@@ -157,8 +146,26 @@ export async function getDriversForResolution(args: {
       FROM core.session_drivers sd
       LEFT JOIN core.sessions s
         ON s.session_key = sd.session_key
-      LEFT JOIN identity id
-        ON id.driver_number = sd.driver_number
+      -- Identity is per (number, name) PAIR (migration 055): pick the pair
+      -- matching THIS session's roster name, so #1 enriches as Norris in a
+      -- 2026 session and as Verstappen in a 2025 one. Newest pair is only
+      -- a fallback for roster rows with no name.
+      LEFT JOIN LATERAL (
+        SELECT
+          di.canonical_full_name AS full_name,
+          di.first_name,
+          di.last_name,
+          di.name_acronym,
+          di.broadcast_name
+        FROM core.driver_identity_lookup di
+        WHERE di.driver_number = sd.driver_number
+        ORDER BY
+          (LOWER(BTRIM(di.canonical_full_name)) = LOWER(BTRIM(COALESCE(sd.full_name, '')))) DESC,
+          di.last_year DESC NULLS LAST,
+          di.alias_source DESC
+        LIMIT 1
+      ) id
+        ON TRUE
       LEFT JOIN LATERAL (
         SELECT
           til.canonical_team_name
@@ -185,11 +192,11 @@ export async function getDriversForResolution(args: {
   return sql<DriverResolutionRow>(
     `
     WITH identity AS (
-      -- Year-scoped against OBSERVED season data: the identity seed's
-      -- first/last_year is the driver's career range, not the
-      -- number-mapping range (#3 carries Verstappen 2023-2026 because he
-      -- ran #3 in 2026), so the only trustworthy check is "did this
-      -- (number, name) pair actually race that season".
+      -- Identity rows are per (number, name) pair (migration 055). With a
+      -- year, keep only the pair that actually raced that season (the
+      -- observed-data check also covers seed-only rows, whose ranges can
+      -- be NULL); without one, the newest pair wins — a year-less "#1"
+      -- means the current mapping.
       SELECT DISTINCT ON (di.driver_number)
         di.driver_number,
         di.canonical_full_name AS full_name,
@@ -211,7 +218,7 @@ export async function getDriversForResolution(args: {
             AND LOWER(sd2.full_name) = LOWER(di.canonical_full_name)
         )
       )
-      ORDER BY di.driver_number, di.alias_source DESC
+      ORDER BY di.driver_number, di.last_year DESC NULLS LAST, di.alias_source DESC
     ),
     latest_session_driver AS (
       SELECT DISTINCT ON (sd.driver_number)
@@ -380,8 +387,10 @@ export async function getDriversFromIdentityLookup(args: {
         AND (
           $3::int IS NULL
           OR EXISTS (
-            -- Observed-season check, not the seed's first/last_year —
-            -- those are career ranges, not number-mapping ranges.
+            -- Observed-season check rather than first/last_year: since
+            -- migration 055 those are pair-scoped mapping ranges, but
+            -- seed-only rows can carry NULLs — raced-that-season is the
+            -- one check that always holds.
             SELECT 1
             FROM core.session_drivers sd2
             JOIN core.sessions s2 ON s2.session_key = sd2.session_key

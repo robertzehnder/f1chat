@@ -317,7 +317,15 @@ export function scoreDriverCandidate(row: DriverResolutionRow, normalizedMessage
     score += 2;
     matchedOn.push("team_name");
   }
-  if (containsWholePhrase(normalizedMessage, "max verstappen") && row.driver_number === 1) {
+  // Name-anchored, NOT number-anchored: car numbers move between drivers
+  // across seasons (#1 was Verstappen 2023-25, Norris from 2026), so a
+  // hard-coded driver_number check boosts the wrong driver the season the
+  // number changes hands.
+  if (
+    containsWholePhrase(normalizedMessage, "max verstappen") &&
+    fullName.includes("verstappen") &&
+    fullName.includes("max")
+  ) {
     score += 100;
     matchedOn.push("canonical_full_name_match");
   }
@@ -348,10 +356,20 @@ export function disambiguateDrivers(
 
   if (bareVerstappen) {
     if (sessionYear !== null && sessionYear >= 2024) {
-      const maxItem = scored.find((item) => item.row.driver_number === 1);
-      if (maxItem) {
-        maxItem.score += 5;
-        maxItem.matchedOn.push("bare_verstappen_2024_default");
+      // From 2024 on, bare "Verstappen" means MAX Verstappen — matched by
+      // name, not car number. (This was `driver_number === 1`, which
+      // silently became a Norris boost when #1 moved to him for 2026.)
+      const maxItems = scored.filter((item) => {
+        const last = (item.row.last_name ?? "").toLowerCase();
+        const full = (item.row.full_name ?? "").toLowerCase();
+        const first = (item.row.first_name ?? "").toLowerCase();
+        const isVerstappen = last === "verstappen" || full.includes("verstappen");
+        const isMax = first === "max" || full.includes("max");
+        return isVerstappen && isMax;
+      });
+      for (const item of maxItems) {
+        item.score += 5;
+        item.matchedOn.push("bare_verstappen_2024_default");
       }
     } else {
       const verstappenRows = rows.filter(
