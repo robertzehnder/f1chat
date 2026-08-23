@@ -26,6 +26,7 @@ import {
   appendTurn,
   isConversationId,
   loadCompactHistory,
+  loadPriorDriverNumbers,
   loadPriorSessionKey,
   loadPriorUserQuestions
 } from "@/lib/chat/conversationStore";
@@ -514,12 +515,14 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
     let conversationHistory: string | null = null;
     let priorSessionKey: number | null = null;
     let priorQuestions: string | null = null;
+    let priorDriverNumbers: number[] = [];
     if (isConversationId(body.conversationId)) {
       try {
-        [conversationHistory, priorSessionKey, priorQuestions] = await Promise.all([
+        [conversationHistory, priorSessionKey, priorQuestions, priorDriverNumbers] = await Promise.all([
           loadCompactHistory(body.conversationId),
           loadPriorSessionKey(body.conversationId),
-          loadPriorUserQuestions(body.conversationId)
+          loadPriorUserQuestions(body.conversationId),
+          loadPriorDriverNumbers(body.conversationId)
         ]);
       } catch (error) {
         await logServer("WARN", "chat_history_load_failed", {
@@ -569,11 +572,12 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
       const resolvePromise = buildChatRuntime({
         message,
         context:
-          priorSessionKey != null || priorQuestions != null
+          priorSessionKey != null || priorQuestions != null || priorDriverNumbers.length > 0
             ? {
                 ...body.context,
                 ...(priorSessionKey != null ? { priorSessionKey } : {}),
-                ...(priorQuestions != null ? { priorQuestions } : {})
+                ...(priorQuestions != null ? { priorQuestions } : {}),
+                ...(priorDriverNumbers.length > 0 ? { priorDriverNumbers } : {})
               }
             : body.context,
         recordSpan: (record) => {

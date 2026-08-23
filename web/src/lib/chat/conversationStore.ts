@@ -247,6 +247,35 @@ export async function loadPriorSessionKey(
 }
 
 /**
+ * The drivers the conversation most recently resolved — fed to the
+ * resolver as a WEAK top-up (context.priorDriverNumbers) so comparison
+ * follow-ups that name only one driver ("how does that compare to
+ * Norris?") inherit the missing half of the pair, and pronoun follow-ups
+ * ("what was HIS best lap?") inherit their subject. Clarification/failure
+ * turns are excluded for the same reason as loadPriorSessionKey.
+ */
+export async function loadPriorDriverNumbers(
+  conversationId: string
+): Promise<number[]> {
+  const rows = await sql<{ nums: unknown }>(
+    `SELECT payload #> '{runtime,resolution,selectedDriverNumbers}' AS nums
+     FROM core.chat_message
+     WHERE conversation_id = $1 AND role = 'assistant'
+       AND jsonb_array_length(COALESCE(payload #> '{runtime,resolution,selectedDriverNumbers}', '[]'::jsonb)) > 0
+       AND COALESCE(payload ->> 'generationSource', '') NOT IN
+         ('runtime_clarification', 'sql_generation_failed', 'runtime_transient_db_unavailable')
+     ORDER BY seq DESC
+     LIMIT 1`,
+    [conversationId]
+  );
+  const nums = rows[0]?.nums;
+  if (!Array.isArray(nums)) {
+    return [];
+  }
+  return nums.map(Number).filter((n) => Number.isFinite(n) && n > 0);
+}
+
+/**
  * Recent user questions, oldest-first — the resolver's refusal-memory
  * scope source. A refused ask ("1998 Monaco qualifying?") resolves NO
  * session, so the conversation's venue survives only in the question

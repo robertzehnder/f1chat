@@ -52,6 +52,13 @@ type ChatContext = {
    *  tiebreak mines it for venue/session-type scope. Weak like
    *  priorSessionKey; never set outside chat conversations. */
   priorQuestions?: string;
+  /** Prior-driver memory: the drivers the conversation's previous turn
+   *  resolved. WEAK top-up only — explicit driver mentions in the text
+   *  always come first and are never overridden; these fill the missing
+   *  half of a comparison pair ("how does that compare to Norris?") or a
+   *  pronoun's subject ("what was HIS best lap?"). Never set outside
+   *  chat conversations. */
+  priorDriverNumbers?: number[];
 };
 
 type RowVolume = "small" | "medium" | "large";
@@ -2112,7 +2119,46 @@ export async function buildChatRuntime(input: {
     driverCandidates,
     normalizedMessage
   );
+  // Prior-driver memory (2026-08): a comparison follow-up naming only one
+  // driver ("how does that compare to Norris?") used to dead-end in the
+  // driver-pair clarification even though the conversation's subject
+  // (Verstappen) was obvious. Top up the selection from the previous
+  // turn's resolved drivers — text-resolved drivers stay first and are
+  // never overridden. Also covers pronoun follow-ups that resolved no
+  // driver at all ("what was HIS best lap?").
+  const priorDriverNumbersHint = Array.isArray(input.context?.priorDriverNumbers)
+    ? input.context.priorDriverNumbers
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    : [];
+  const mentionsDriverPronoun = /\b(he|him|his|she|her|they|their|them|both)\b/.test(normalizedMessage);
+  if (
+    priorDriverNumbersHint.length > 0 &&
+    ((questionType === "comparison_analysis" && selectedDriverNumbers.length === 1) ||
+      (selectedDriverNumbers.length === 0 && mentionsDriverPronoun))
+  ) {
+    for (const n of priorDriverNumbersHint) {
+      if (selectedDriverNumbers.length >= 2) break;
+      if (selectedDriverNumbers.includes(n)) continue;
+      selectedDriverNumbers.push(n);
+    }
+  }
   const selectedDriverLabels = buildSelectedDriverLabels(selectedDriverNumbers, driverCandidates);
+  // Inherited drivers aren't in this question's candidates — resolve their
+  // labels from the session roster so prompts and clarifications name them.
+  for (let i = 0; i < selectedDriverLabels.length; i += 1) {
+    if (/^driver #\d+$/.test(selectedDriverLabels[i])) {
+      const rosterRow = driverRows.find(
+        (r) =>
+          r.driver_number === selectedDriverNumbers[i] &&
+          (r.full_name || r.broadcast_name) &&
+          (!selectedSession || r.session_key == null || r.session_key === selectedSession.sessionKey)
+      );
+      if (rosterRow) {
+        selectedDriverLabels[i] = `${rosterRow.full_name ?? rosterRow.broadcast_name} (#${selectedDriverNumbers[i]})`;
+      }
+    }
+  }
   const selectedDriverSummary = selectedDriverLabels.join(", ");
 
   stageLogs.push({
