@@ -7,7 +7,7 @@ import { InsightCard } from "@/components/f1-chat/insight-card";
 import { toCardProps } from "@/lib/toCardProps";
 
 export const metadata = {
-  title: "F1 Insights — Mock Fixtures"
+  title: "F1 Chat — Mock Fixtures"
 };
 
 export default function MockPage() {

@@ -29,10 +29,10 @@ import type { DraftInsight } from "@/lib/chart-types";
 import type { ChatApiResponse } from "@/lib/chatTypes";
 
 const INITIAL_SUGGESTIONS = [
-  "What was Verstappen's pole lap time at Suzuka 2025?",
-  "Compare Verstappen vs Hamilton through the Suzuka esses",
-  "How many on-track overtakes happened at Singapore 2025?",
-  "On which lap did the McLarens make the inters-to-slicks crossover at Silverstone 2025?"
+  "Who won the Melbourne 2026 Grand Prix?",
+  "Compare Verstappen vs Hamilton through the esses at Suzuka 2026",
+  "Show the grid vs finish for the Spielberg 2026 Grand Prix",
+  "Where was Verstappen fastest around Silverstone in the 2026 race?"
 ];
 
 type UiMessage =
@@ -489,7 +489,7 @@ export default function F1InsightsChat() {
                 <span className="text-white font-bold text-sm">F1</span>
               </div>
               <div>
-                <h1 className="font-semibold text-foreground">F1 Insights</h1>
+                <h1 className="font-semibold text-foreground">F1 Chat</h1>
                 <p className="text-xs text-muted-foreground hidden sm:block">Powered by OpenF1</p>
               </div>
             </div>

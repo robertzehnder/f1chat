@@ -116,7 +116,7 @@ export function ChatSidebar({
                 <div className="size-9 rounded-xl bg-[#E10600] flex items-center justify-center shadow-lg shadow-[#E10600]/20">
                   <span className="text-white font-bold text-sm">F1</span>
                 </div>
-                <span className="font-semibold text-sidebar-foreground text-sm">OpenF1</span>
+                <span className="font-semibold text-sidebar-foreground text-sm">F1 Chat</span>
               </div>
             )}
             {/* Mobile: show close button, Desktop: show collapse button */}

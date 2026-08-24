@@ -7,9 +7,9 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "F1 Insights — OpenF1 Data Analysis",
+  title: "F1 Chat",
   description:
-    "Ask questions about F1 lap times, driver comparisons, corner speeds, and race strategy. Powered by OpenF1 data."
+    "Chat with F1 data: lap times, driver comparisons, corner speeds, and race strategy. Powered by OpenF1 data."
 };
 
 export default function RootLayout({
