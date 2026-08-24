@@ -263,6 +263,31 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
   },
   {
     triggers: [
+      "winning margin", "margin of victory", "victory margin", "won by",
+      "win by", "how far ahead", "how far behind", "gap at the flag",
+      "final gap", "gap to the winner", "by how much", "closest finish",
+      "how close was the finish"
+    ],
+    hint: [
+      "MATVIEW HINT (winning margin / race gaps at the flag):",
+      "  NEVER compute race margins or gaps by differencing SUM(lap_duration) — the final",
+      "  lap's lap_duration is routinely NULL and missing laps corrupt the sum (this once",
+      "  produced a phantom ~83s 'margin' for a 6.459s race win).",
+      "  Correct source: raw.intervals (gap_to_leader / interval — TEXT columns).",
+      "  Each driver's FINAL sample is the flag gap; the post-race classification rows",
+      "  carry date IS NULL, so take:",
+      "    SELECT DISTINCT ON (i.driver_number) i.driver_number, i.gap_to_leader",
+      "    FROM raw.intervals i",
+      "    WHERE i.session_key = :s",
+      "    ORDER BY i.driver_number, i.date DESC NULLS FIRST",
+      "  The runner-up's gap_to_leader IS the winning margin. Values can be non-numeric",
+      "  for lapped cars ('+1 LAP', '+12 LAPS') — report those verbatim; any numeric",
+      "  cast needs a regexp guard (gap_to_leader ~ '^[0-9.]+$').",
+      "  JOIN raw.session_result for finishing positions and core.session_drivers for names."
+    ].join("\n")
+  },
+  {
+    triggers: [
       "half distance", "halfway", "midpoint", "mid-race", "mid race",
       "who was leading", "who led at", "leading at lap", "leading on lap",
       "led at lap", "position at lap", "position on lap", "positions at lap",
