@@ -446,16 +446,9 @@ export default function F1InsightsChat() {
     void refreshConversations();
   };
 
-  const handleSignOut = () => {
-    // No-op: auth-shim is guest-only. Hook here later if real auth lands.
-  };
-
-  const handleNavigate = (path: string) => {
-    if (typeof window !== "undefined") {
-      window.location.href = path;
-    }
-  };
-
+  // Auth is a guest-only shim: no onSignOut/onNavigate are wired, which
+  // makes UserProfile render a display-only chip (no menu of dead ends).
+  // Pass real handlers here if auth ever lands.
   return (
     <div className="flex h-screen bg-background">
       <ChatSidebar
@@ -469,8 +462,6 @@ export default function F1InsightsChat() {
         isMobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
         user={userData}
-        onSignOut={handleSignOut}
-        onNavigate={handleNavigate}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -497,8 +488,6 @@ export default function F1InsightsChat() {
               <UserProfile
                 user={userData}
                 variant="compact"
-                onSignOut={handleSignOut}
-                onNavigate={handleNavigate}
               />
             )}
           </div>

@@ -37,8 +37,8 @@ interface UserProfileProps {
   onNavigate?: (path: string) => void
 }
 
-export function UserProfile({ 
-  user, 
+export function UserProfile({
+  user,
   variant = "full",
   className,
   onSignOut,
@@ -49,17 +49,60 @@ export function UserProfile({
     pro: "Pro",
     team: "Team"
   }
-  
+
   const planColor = {
     free: "text-muted-foreground",
     pro: "text-[#E10600]",
     team: "text-[#E10600]"
   }
-  
+
+  const profileRow = (
+    <>
+      <Avatar className={cn(
+        "border-2 border-border/50",
+        variant === "avatar-only" ? "size-8" : "size-9"
+      )}>
+        {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
+        <AvatarFallback className="bg-[#E10600]/10 text-[#E10600] font-semibold text-sm">
+          {user.initials}
+        </AvatarFallback>
+      </Avatar>
+
+      {variant === "full" && (
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-sidebar-foreground truncate">
+            {user.name}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">
+            {user.email}
+          </p>
+        </div>
+      )}
+    </>
+  )
+
+  // No wired actions (guest-only auth shim): render a display-only chip
+  // instead of a menu of dead ends — a "Sign out" that does nothing and
+  // nav items that 404 are worse than no menu.
+  if (!onSignOut && !onNavigate) {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-lg",
+          variant === "full" && "w-full p-2 text-left",
+          variant === "compact" && "p-1.5",
+          className
+        )}
+      >
+        {profileRow}
+      </div>
+    )
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button 
+        <button
           className={cn(
             "flex items-center gap-3 rounded-lg transition-colors outline-none",
             variant === "full" && "w-full p-2 hover:bg-sidebar-accent text-left",
@@ -68,26 +111,7 @@ export function UserProfile({
             className
           )}
         >
-          <Avatar className={cn(
-            "border-2 border-border/50",
-            variant === "avatar-only" ? "size-8" : "size-9"
-          )}>
-            {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-            <AvatarFallback className="bg-[#E10600]/10 text-[#E10600] font-semibold text-sm">
-              {user.initials}
-            </AvatarFallback>
-          </Avatar>
-          
-          {variant === "full" && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {user.name}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user.email}
-              </p>
-            </div>
-          )}
+          {profileRow}
         </button>
       </DropdownMenuTrigger>
       
@@ -124,59 +148,65 @@ export function UserProfile({
           )}
         </div>
         
-        <DropdownMenuGroup className="py-1">
-          <DropdownMenuItem 
-            onClick={() => onNavigate?.("/profile")}
+        {onNavigate && (
+          <>
+            <DropdownMenuGroup className="py-1">
+              <DropdownMenuItem
+                onClick={() => onNavigate("/profile")}
+                className="cursor-pointer"
+              >
+                <User className="size-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onNavigate("/settings")}
+                className="cursor-pointer"
+              >
+                <Settings className="size-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onNavigate("/notifications")}
+                className="cursor-pointer"
+              >
+                <Bell className="size-4" />
+                <span>Notifications</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuGroup className="py-1">
+              <DropdownMenuItem
+                onClick={() => onNavigate("/billing")}
+                className="cursor-pointer"
+              >
+                <CreditCard className="size-4" />
+                <span>Billing</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onNavigate("/help")}
+                className="cursor-pointer"
+              >
+                <HelpCircle className="size-4" />
+                <span>Help & Support</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        {onSignOut && (
+          <DropdownMenuItem
+            onClick={onSignOut}
+            variant="destructive"
             className="cursor-pointer"
           >
-            <User className="size-4" />
-            <span>Profile</span>
+            <LogOut className="size-4" />
+            <span>Sign out</span>
           </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => onNavigate?.("/settings")}
-            className="cursor-pointer"
-          >
-            <Settings className="size-4" />
-            <span>Settings</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => onNavigate?.("/notifications")}
-            className="cursor-pointer"
-          >
-            <Bell className="size-4" />
-            <span>Notifications</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        
-        <DropdownMenuSeparator />
-        
-        <DropdownMenuGroup className="py-1">
-          <DropdownMenuItem 
-            onClick={() => onNavigate?.("/billing")}
-            className="cursor-pointer"
-          >
-            <CreditCard className="size-4" />
-            <span>Billing</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => onNavigate?.("/help")}
-            className="cursor-pointer"
-          >
-            <HelpCircle className="size-4" />
-            <span>Help & Support</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        
-        <DropdownMenuSeparator />
-        
-        <DropdownMenuItem 
-          onClick={onSignOut}
-          variant="destructive"
-          className="cursor-pointer"
-        >
-          <LogOut className="size-4" />
-          <span>Sign out</span>
-        </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
