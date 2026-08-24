@@ -2334,7 +2334,23 @@ export async function buildChatRuntime(input: {
     "medium vs hard",
     "hard vs medium",
     "soft vs medium",
-    "medium vs soft"
+    "medium vs soft",
+    // Grid-position vs finishing-position questions compare two metrics
+    // across the WHOLE field ("show the grid vs finish for Spielberg
+    // 2026"), not two drivers — demanding a driver pair here was the
+    // g-grid sweep-family clarification wobble.
+    "grid vs finish",
+    "grid vs finishing",
+    "grid vs final",
+    "finish vs grid",
+    "start vs finish",
+    "grid to finish",
+    "grid position vs",
+    "grid positions vs",
+    "starting position vs",
+    "start position vs",
+    "vs finishing position",
+    "qualifying vs finishing"
   ];
   const isStructuralComparison =
     questionType === "comparison_analysis" &&
