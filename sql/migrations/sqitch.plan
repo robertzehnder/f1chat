@@ -56,3 +56,4 @@
 053_chat_persistence [052_analytics_year_unlock] 2026-08-22T13:42:03Z System Administrator <root@Roberts-MacBook-Pro.local> # core.chat_conversation + core.chat_message — chat session persistence
 054_driver_score_grid_source [053_chat_persistence] 2026-08-23T20:27:12Z System Administrator <root@Roberts-MacBook-Pro.local> # qual axis reads grid from Qualifying sessions (OpenF1 attaches grid there)
 055_driver_identity_pairs [054_driver_score_grid_source] 2026-08-23T21:07:52Z System Administrator <root@Roberts-MacBook-Pro.local> # per-(number,name) driver identity pairs — 2026 number swaps resolve correctly
+056_grid_vs_finish_dsq_honesty [055_driver_identity_pairs] 2026-08-24T13:50:47Z System Administrator <root@Roberts-MacBook-Pro.local> # DSQ'd drivers keep NULL finish when official results exist (INV3 dup-finish fix)
