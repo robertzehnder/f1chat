@@ -61,6 +61,8 @@ export type AnswerSynthesisInput = {
   shape?: import("@/lib/chatRuntime/insightShape").InsightShape;
   /** F01 honesty clamp — see BuildSynthesisPromptInput.resolvedSession. */
   resolvedSession?: { sessionKey: number; label: string };
+  /** Zero-row honesty — see BuildSynthesisPromptInput.zeroRows. */
+  zeroRows?: boolean;
 };
 
 type AnswerSynthesisOutput = {

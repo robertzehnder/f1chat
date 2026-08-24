@@ -23,6 +23,11 @@ export type BuildSynthesisPromptInput = {
    *  that session/event is absent from the dataset — fallback SQL that
    *  missed it is a query failure, not a data gap. */
   resolvedSession?: { sessionKey: number; label: string };
+  /** The SQL ran fine and matched nothing. Only set on multi-turn
+   *  follow-ups: the model explains the empty result from the SQL's
+   *  visible filters + conversation history instead of the route
+   *  shipping a canned "no rows matched" string. */
+  zeroRows?: boolean;
 };
 
 const COMMON_RULES = `
@@ -415,10 +420,22 @@ Session driver roster (AUTHORITATIVE driver_number → driver; car numbers chang
 ${JSON.stringify(input.sessionDrivers)}
 `
       : "";
+  const zeroRowBlock = input.zeroRows
+    ? `
+ZERO-ROW RESULT: the SQL executed successfully and matched NOTHING. Do not invent
+numbers, laps, or events. Explain honestly what the empty result means for the
+question, reasoning from the SQL's visible filters and the prior conversation —
+for example, a filter on INTERMEDIATE stints matching nothing means no intermediate
+stints exist in this session, so a question about inters timing has no subject.
+If the filters and conversation do not explain it, say plainly that no matching
+data exists for this question in the resolved session. Keep it to one short
+paragraph; never present it as an error.
+`
+    : "";
   const dynamicSuffix = `
 Question:
 ${input.question}
-${historyBlock}${rosterBlock}${resolvedSessionBlock}
+${historyBlock}${rosterBlock}${resolvedSessionBlock}${zeroRowBlock}
 SQL:
 ${input.sql}
 

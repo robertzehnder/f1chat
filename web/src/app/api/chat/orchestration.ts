@@ -1732,7 +1732,20 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
       // failures — body-only fallback in the UI.
       let synthesisInsight: import("@/lib/chatTypes").InsightFields | null = null;
 
-      if (result.rowCount > 0) {
+      // Zero-row honesty (2026-08): on multi-turn follow-ups an honestly
+      // empty LLM-SQL result still deserves an explanation — the query's
+      // filters plus the conversation usually SAY why it's empty ("no
+      // intermediate stints exist" after a dry race). Synthesis runs with
+      // zero rows under a strict no-fabrication block; single-turn and
+      // deterministic-template zero-row paths keep the canned message
+      // (no context to explain from — that's where fabricated-absence
+      // answers come from).
+      const zeroRowSynthesisEligible =
+        result.rowCount === 0 &&
+        generationSource !== "deterministic_template" &&
+        Boolean(conversationHistory);
+
+      if (result.rowCount > 0 || zeroRowSynthesisEligible) {
         if (generationSource === "deterministic_template") {
           // Some deterministic templates build a full insight (title /
           // verdict / metric tiles / takeaways / chips) deterministically —
@@ -1838,7 +1851,8 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
                   sql: result.sql,
                   contract,
                   shape: insightShape,
-                  resolvedSession: resolvedSessionForSynthesis
+                  resolvedSession: resolvedSessionForSynthesis,
+                  zeroRows: zeroRowSynthesisEligible
                 })) {
                   if (chunk.kind === "answer_delta") {
                     ctx.emitDelta("answer_delta", chunk.text);
@@ -1864,7 +1878,8 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
                   sql: result.sql,
                   contract,
                   shape: insightShape,
-                  resolvedSession: resolvedSessionForSynthesis
+                  resolvedSession: resolvedSessionForSynthesis,
+                  zeroRows: zeroRowSynthesisEligible
                 });
                 synthAnswer = synthesis.answer;
                 synthReasoning = synthesis.reasoning;
@@ -1951,20 +1966,24 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
         },
         runtime
       });
-      const pitStintsValidation: PitStintsValidationResult | null = synthesisContract
-        ? validatePitStints(answer, synthesisContract)
+      // Zero-row synthesized answers ground their claims in the SQL filters
+      // and conversation history, not rows — validators that check "answer
+      // derives from rows" would false-flag them, so they only run with rows.
+      const contractForValidators = result.rowCount > 0 ? synthesisContract : null;
+      const pitStintsValidation: PitStintsValidationResult | null = contractForValidators
+        ? validatePitStints(answer, contractForValidators)
         : null;
-      const sectorConsistencyValidation: SectorConsistencyValidationResult | null = synthesisContract
-        ? validateSectorConsistency(answer, synthesisContract)
+      const sectorConsistencyValidation: SectorConsistencyValidationResult | null = contractForValidators
+        ? validateSectorConsistency(answer, contractForValidators)
         : null;
-      const gridFinishValidation: GridFinishValidationResult | null = synthesisContract
-        ? validateGridFinish(answer, synthesisContract)
+      const gridFinishValidation: GridFinishValidationResult | null = contractForValidators
+        ? validateGridFinish(answer, contractForValidators)
         : null;
-      const strategyEvidenceValidation: StrategyEvidenceValidationResult | null = synthesisContract
-        ? validateStrategyEvidence(answer, synthesisContract)
+      const strategyEvidenceValidation: StrategyEvidenceValidationResult | null = contractForValidators
+        ? validateStrategyEvidence(answer, contractForValidators)
         : null;
-      const countListParityValidation: CountListParityValidationResult | null = synthesisContract
-        ? validateCountListParity(answer, synthesisContract)
+      const countListParityValidation: CountListParityValidationResult | null = contractForValidators
+        ? validateCountListParity(answer, contractForValidators)
         : null;
 
       // Phase 4 (roadmap_to_A_grade): answer-consistency validators GATE the
