@@ -167,6 +167,7 @@ Rules:
 - Do not rely on meeting_name alone for venue matching because it may be null/empty.
 - Prefer semantic/core contracts over raw tables for analytical questions; use raw.* only when a required semantic view is missing.
 - Only reference columns documented above; if a column you want is not listed, pick a different contract that has it.
+- Timing/telemetry metric columns (lap_duration, sector durations, speed, throttle, gaps) are double precision: two-argument ROUND() requires numeric, so write ROUND(col::numeric, 3). Never subtract or compare them against text values.
 - Put only executable SQL in "sql". Never append trace lines, notes, or text like session_pin_* inside the JSON or the query string.
 `.trim();
 }
@@ -260,6 +261,31 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
   },
   {
     triggers: [
+      "half distance", "halfway", "midpoint", "mid-race", "mid race",
+      "who was leading", "who led at", "leading at lap", "leading on lap",
+      "led at lap", "position at lap", "position on lap", "positions at lap",
+      "out front", "leader at lap", "leader on lap", "running order at",
+      "running order on"
+    ],
+    hint: [
+      "MATVIEW HINT (position / leader at a specific lap):",
+      "  core.race_progression_summary is EVENT-SAMPLED — a driver has a row ONLY on laps",
+      "  where their position CHANGED. Filtering lap_number = N returns (almost) no rows;",
+      "  the leader appears only on laps where the lead changed hands.",
+      "  Correct shape — carry each driver's LAST KNOWN position forward to lap N",
+      "  (for half distance derive N first: FLOOR(MAX(lap_number) / 2.0) FROM core.laps_enriched):",
+      "    SELECT DISTINCT ON (rps.driver_number)",
+      "           rps.driver_number, rps.driver_name, rps.team_name,",
+      "           rps.lap_number AS last_position_update_lap, rps.position_end_of_lap",
+      "    FROM core.race_progression_summary rps",
+      "    WHERE rps.session_key = :s AND rps.lap_number <= :n",
+      "    ORDER BY rps.driver_number, rps.lap_number DESC",
+      "  Wrap that as a CTE and ORDER BY position_end_of_lap ASC in the outer query (leader = 1).",
+      "  Keep last_position_update_lap in the output so synthesis can say how fresh the reading is."
+    ].join("\n")
+  },
+  {
+    triggers: [
       "steward", "fia stewards", "incident involv", "penalty point",
       "time penalty", "drive-through", "drive through penalty",
       "track limits", "leaving the track", "forcing-off", "forcing off",
@@ -274,7 +300,7 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
       "  action_status values: time_penalty / drive_through / no_further_action / under_investigation / investigation_deferred / reprimand / grid_penalty / other",
       "  penalty_points is ALWAYS NULL — note in synthesis that OpenF1 does not ingest FIA penalty-point assignments.",
       "  recommended shape: SELECT ... FROM analytics.race_control_incidents WHERE session_key = :s [AND driver_number = :d] [AND incident_kind = :k] ORDER BY lap_number, date",
-      "  for 'who led at lap N after SC restart' questions: JOIN core.race_progression_summary ON (session_key, lap_number) for position_end_of_lap context."
+      "  for position context: core.race_progression_summary is event-sampled — take each driver's latest row with lap_number <= N (DISTINCT ON driver_number ... ORDER BY lap_number DESC), never an exact lap_number join."
     ].join("\n")
   },
   {

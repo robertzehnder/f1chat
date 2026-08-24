@@ -234,9 +234,13 @@ test("Fix 4: prompt-size impact within ±100 tokens of pre-fix baseline", async 
     // Driver-roster rule (2026-08): 6500 -> 6800 for the
     // Runtime.sessionDrivers authority rule (car numbers change between
     // seasons; #1 = Norris in 2026) — deliberate, ~290 chars.
+    // ROUND/double-precision rule (2026-08-23): 6800 -> 7100 — metric
+    // columns are double precision and two-arg ROUND() needs ::numeric;
+    // this was a recurring first-attempt SQL failure the repair pass
+    // didn't always fix (full2026 sweep c-speedmap) — deliberate, ~230 chars.
     assert.ok(
-      prompt.length < 6800,
-      `prompt size ${prompt.length} chars exceeds 6800-char budget`
+      prompt.length < 7100,
+      `prompt size ${prompt.length} chars exceeds 7100-char budget`
     );
   });
 });
