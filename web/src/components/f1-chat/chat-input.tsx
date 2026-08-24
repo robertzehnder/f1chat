@@ -53,7 +53,10 @@ export function ChatInput({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none min-h-[36px] py-2"
+          // text-base on phones: iOS Safari auto-zooms (and stays zoomed)
+          // when a focused input's font-size is under 16px, cropping the
+          // whole page. md:text-sm keeps the desktop look.
+          className="flex-1 bg-transparent text-base md:text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none min-h-[36px] py-2"
         />
         <Button
           size="icon"

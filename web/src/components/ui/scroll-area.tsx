@@ -18,7 +18,12 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
+        // Radix renders the viewport's child as `display:table; min-width:100%`,
+        // which sizes to the content's MIN-CONTENT width — a result table or
+        // chart svg then inflates the whole chat column past the phone
+        // viewport and everything clips. We only scroll vertically, so force
+        // block layout and let inner overflow-x regions scroll themselves.
+        className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&>div]:!block [&>div]:!min-w-0"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
