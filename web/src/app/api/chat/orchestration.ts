@@ -22,6 +22,7 @@ import { assessChatQuality } from "@/lib/chatQuality";
 import { applyAnswerSanityGuards } from "@/lib/answerSanity";
 import { buildStructuredSummaryFromRows } from "@/lib/answerSanity/countList";
 import { appendJsonLog, logServer } from "@/lib/serverLog";
+import { getSessionUserId } from "@/lib/auth/server";
 import {
   appendTurn,
   isConversationId,
@@ -345,7 +346,8 @@ function enforcePinnedSessionKeyInSql(sql: string, pinnedSessionKey?: number): {
  */
 async function persistTurnIfRequested(
   body: ChatBody | null,
-  outcome: RouteOutcome
+  outcome: RouteOutcome,
+  sessionUserId: string
 ): Promise<void> {
   if (!body?.message || outcome.asError || outcome.status !== 200) {
     return;
@@ -363,7 +365,7 @@ async function persistTurnIfRequested(
         : "(no answer text)";
     const saved = await appendTurn({
       conversationId: isConversationId(body.conversationId) ? body.conversationId : null,
-      userId: "guest",
+      userId: sessionUserId,
       question: body.message,
       answerText,
       payload,
@@ -390,6 +392,12 @@ export async function POST(request: Request): Promise<Response> {
     parsedBody = null;
   }
 
+  // Resolved ONCE per request (cookie-less callers — sweeps, benchmarks —
+  // resolve to the legacy 'guest' pool). Threaded explicitly because the
+  // SSE branch runs inside a ReadableStream callback where request-scoped
+  // header access is no longer safe.
+  const sessionUserId = await getSessionUserId();
+
   // Non-SSE callers (the benchmark runner, other server-to-server calls)
   // get a no-op stage emitter — staging only makes sense over SSE.
   if (!sseRequested) {
@@ -398,8 +406,8 @@ export async function POST(request: Request): Promise<Response> {
       emitDelta: () => {},
       emitStage: () => {},
       emitInsight: () => {}
-    });
-    await persistTurnIfRequested(parsedBody, outcome);
+    }, sessionUserId);
+    await persistTurnIfRequested(parsedBody, outcome, sessionUserId);
     return NextResponse.json(outcome.payload, { status: outcome.status });
   }
 
@@ -417,11 +425,11 @@ export async function POST(request: Request): Promise<Response> {
           emitDelta: (kind, text) => writeFrame(kind, { text }),
           emitStage: (payload) => writeFrame("stage", payload),
           emitInsight: (fields) => writeFrame("insight", { insight: fields })
-        });
+        }, sessionUserId);
         if (outcome.asError) {
           writeFrame("error", outcome.asError);
         } else {
-          await persistTurnIfRequested(parsedBody, outcome);
+          await persistTurnIfRequested(parsedBody, outcome, sessionUserId);
           writeFrame("final", outcome.payload);
         }
       } catch (err) {
@@ -437,7 +445,7 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(stream, { headers: SSE_RESPONSE_HEADERS });
 }
 
-async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise<RouteOutcome> {
+async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx, sessionUserId: string): Promise<RouteOutcome> {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
 
@@ -519,10 +527,10 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx): Promise
     if (isConversationId(body.conversationId)) {
       try {
         [conversationHistory, priorSessionKey, priorQuestions, priorDriverNumbers] = await Promise.all([
-          loadCompactHistory(body.conversationId),
-          loadPriorSessionKey(body.conversationId),
-          loadPriorUserQuestions(body.conversationId),
-          loadPriorDriverNumbers(body.conversationId)
+          loadCompactHistory(body.conversationId, sessionUserId),
+          loadPriorSessionKey(body.conversationId, sessionUserId),
+          loadPriorUserQuestions(body.conversationId, sessionUserId),
+          loadPriorDriverNumbers(body.conversationId, sessionUserId)
         ]);
       } catch (error) {
         await logServer("WARN", "chat_history_load_failed", {

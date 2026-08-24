@@ -97,7 +97,7 @@ function buildInsightFromFinalPayload(
 }
 
 export default function F1InsightsChat() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("current");
@@ -184,13 +184,13 @@ export default function F1InsightsChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auth-shim returns a guest user; build a static profile from it.
+  // Neon Auth session → profile chip. Null while signed out (the header
+  // shows a Sign in link instead).
   const userData: UserData | null = user
     ? {
         name: user.name,
         email: user.email ?? "",
-        initials: user.name.slice(0, 1).toUpperCase(),
-        plan: "free"
+        initials: user.name.slice(0, 1).toUpperCase()
       }
     : null;
 
@@ -446,9 +446,6 @@ export default function F1InsightsChat() {
     void refreshConversations();
   };
 
-  // Auth is a guest-only shim: no onSignOut/onNavigate are wired, which
-  // makes UserProfile render a display-only chip (no menu of dead ends).
-  // Pass real handlers here if auth ever lands.
   return (
     <div className="flex h-screen bg-background">
       <ChatSidebar
@@ -462,6 +459,7 @@ export default function F1InsightsChat() {
         isMobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
         user={userData}
+        onSignOut={signOut}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -484,11 +482,19 @@ export default function F1InsightsChat() {
                 <p className="text-xs text-muted-foreground hidden sm:block">Powered by OpenF1</p>
               </div>
             </div>
-            {userData && (
+            {userData ? (
               <UserProfile
                 user={userData}
                 variant="compact"
+                onSignOut={signOut}
               />
+            ) : (
+              <a
+                href="/auth/sign-in"
+                className="text-sm font-medium text-foreground bg-secondary/60 hover:bg-secondary border border-border/50 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                Sign in
+              </a>
             )}
           </div>
         </header>

@@ -68,11 +68,12 @@ export async function listConversations(
 }
 
 export async function getConversationMessages(
-  conversationId: string
+  conversationId: string,
+  userId: string
 ): Promise<{ id: string; title: string; messages: StoredMessage[] } | null> {
   const convo = await sql<{ id: string; title: string }>(
-    "SELECT id, title FROM core.chat_conversation WHERE id = $1",
-    [conversationId]
+    "SELECT id, title FROM core.chat_conversation WHERE id = $1 AND user_id = $2",
+    [conversationId, userId]
   );
   if (convo.length === 0) {
     return null;
@@ -85,21 +86,25 @@ export async function getConversationMessages(
   return { id: convo[0].id, title: convo[0].title, messages };
 }
 
-export async function deleteConversation(conversationId: string): Promise<boolean> {
+export async function deleteConversation(
+  conversationId: string,
+  userId: string
+): Promise<boolean> {
   const rows = await sql<{ id: string }>(
-    "DELETE FROM core.chat_conversation WHERE id = $1 RETURNING id",
-    [conversationId]
+    "DELETE FROM core.chat_conversation WHERE id = $1 AND user_id = $2 RETURNING id",
+    [conversationId, userId]
   );
   return rows.length > 0;
 }
 
 export async function renameConversation(
   conversationId: string,
-  title: string
+  title: string,
+  userId: string
 ): Promise<boolean> {
   const rows = await sql<{ id: string }>(
-    "UPDATE core.chat_conversation SET title = $2, updated_at = NOW() WHERE id = $1 RETURNING id",
-    [conversationId, title]
+    "UPDATE core.chat_conversation SET title = $2, updated_at = NOW() WHERE id = $1 AND user_id = $3 RETURNING id",
+    [conversationId, title, userId]
   );
   return rows.length > 0;
 }
@@ -149,8 +154,8 @@ export async function appendTurn(args: {
     let title: string;
     let created = false;
     if (id) {
-      const existing = await client.query<{ title: string }>(
-        "SELECT title FROM core.chat_conversation WHERE id = $1 FOR UPDATE",
+      const existing = await client.query<{ title: string; user_id: string }>(
+        "SELECT title, user_id FROM core.chat_conversation WHERE id = $1 FOR UPDATE",
         [id]
       );
       if (existing.rows.length === 0) {
@@ -161,6 +166,17 @@ export async function appendTurn(args: {
           "INSERT INTO core.chat_conversation (id, user_id, title) VALUES ($1, $2, $3)",
           [id, args.userId, title]
         );
+        created = true;
+      } else if (existing.rows[0].user_id !== args.userId) {
+        // The id belongs to ANOTHER user (stale localStorage after a
+        // sign-in/out switch, or a guessed id). Never append across
+        // owners — fork into a fresh conversation for this user.
+        title = deriveTitle(args.question);
+        const forked = await client.query<{ id: string }>(
+          "INSERT INTO core.chat_conversation (user_id, title) VALUES ($1, $2) RETURNING id",
+          [args.userId, title]
+        );
+        id = forked.rows[0].id;
         created = true;
       } else {
         title = existing.rows[0].title;
@@ -223,7 +239,8 @@ export async function appendTurn(args: {
  * assistant payload that carries a resolved session.
  */
 export async function loadPriorSessionKey(
-  conversationId: string
+  conversationId: string,
+  userId: string
 ): Promise<number | null> {
   // Filter to non-null in SQL: intervening clarification turns must not
   // shadow the last successfully-resolved session, no matter how many
@@ -235,12 +252,13 @@ export async function loadPriorSessionKey(
     `SELECT payload #>> '{runtime,resolution,selectedSession,sessionKey}' AS session_key
      FROM core.chat_message
      WHERE conversation_id = $1 AND role = 'assistant'
+       AND EXISTS (SELECT 1 FROM core.chat_conversation c WHERE c.id = $1 AND c.user_id = $2)
        AND payload #>> '{runtime,resolution,selectedSession,sessionKey}' IS NOT NULL
        AND COALESCE(payload ->> 'generationSource', '') NOT IN
          ('runtime_clarification', 'sql_generation_failed', 'runtime_transient_db_unavailable')
      ORDER BY seq DESC
      LIMIT 1`,
-    [conversationId]
+    [conversationId, userId]
   );
   const key = Number(rows[0]?.session_key);
   return Number.isFinite(key) && key > 0 ? Math.trunc(key) : null;
@@ -255,18 +273,20 @@ export async function loadPriorSessionKey(
  * turns are excluded for the same reason as loadPriorSessionKey.
  */
 export async function loadPriorDriverNumbers(
-  conversationId: string
+  conversationId: string,
+  userId: string
 ): Promise<number[]> {
   const rows = await sql<{ nums: unknown }>(
     `SELECT payload #> '{runtime,resolution,selectedDriverNumbers}' AS nums
      FROM core.chat_message
      WHERE conversation_id = $1 AND role = 'assistant'
+       AND EXISTS (SELECT 1 FROM core.chat_conversation c WHERE c.id = $1 AND c.user_id = $2)
        AND jsonb_array_length(COALESCE(payload #> '{runtime,resolution,selectedDriverNumbers}', '[]'::jsonb)) > 0
        AND COALESCE(payload ->> 'generationSource', '') NOT IN
          ('runtime_clarification', 'sql_generation_failed', 'runtime_transient_db_unavailable')
      ORDER BY seq DESC
      LIMIT 1`,
-    [conversationId]
+    [conversationId, userId]
   );
   const nums = rows[0]?.nums;
   if (!Array.isArray(nums)) {
@@ -284,14 +304,16 @@ export async function loadPriorDriverNumbers(
  */
 export async function loadPriorUserQuestions(
   conversationId: string,
+  userId: string,
   limit = 2
 ): Promise<string | null> {
   const rows = await sql<{ content: string }>(
     `SELECT content FROM core.chat_message
      WHERE conversation_id = $1 AND role = 'user'
+       AND EXISTS (SELECT 1 FROM core.chat_conversation c WHERE c.id = $1 AND c.user_id = $2)
      ORDER BY seq DESC
-     LIMIT $2`,
-    [conversationId, limit]
+     LIMIT $3`,
+    [conversationId, userId, limit]
   );
   if (rows.length === 0) {
     return null;
@@ -315,14 +337,16 @@ const HISTORY_MAX_TOTAL_CHARS = 2400;
  * cache hit rate (it rides in the dynamic prompt section only).
  */
 export async function loadCompactHistory(
-  conversationId: string
+  conversationId: string,
+  userId: string
 ): Promise<string | null> {
   const rows = await sql<{ role: string; content: string }>(
     `SELECT role, content FROM core.chat_message
      WHERE conversation_id = $1
+       AND EXISTS (SELECT 1 FROM core.chat_conversation c WHERE c.id = $1 AND c.user_id = $2)
      ORDER BY seq DESC
-     LIMIT $2`,
-    [conversationId, HISTORY_MAX_TURNS * 2]
+     LIMIT $3`,
+    [conversationId, userId, HISTORY_MAX_TURNS * 2]
   );
   if (rows.length === 0) {
     return null;

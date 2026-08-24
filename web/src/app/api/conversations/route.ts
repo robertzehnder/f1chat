@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clampInt } from "@/lib/querySafety";
 import { listConversations } from "@/lib/chat/conversationStore";
+import { getSessionUserId } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
-// Auth-shim is guest-only today; every conversation belongs to 'guest'.
-// When real auth lands, derive this from the session instead.
-const USER_ID = "guest";
+
 
 export async function GET(req: NextRequest) {
   const limit = clampInt(
@@ -14,6 +13,8 @@ export async function GET(req: NextRequest) {
     1,
     200
   );
-  const rows = await listConversations(USER_ID, limit);
+  // Signed-in users see their own conversations; anonymous visitors see
+  // the legacy shared 'guest' pool (also what cookie-less harnesses use).
+  const rows = await listConversations(await getSessionUserId(), limit);
   return NextResponse.json({ rows, count: rows.length });
 }

@@ -18,7 +18,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${geist.variable} ${geistMono.variable}`}>
+    <html
+      lang="en"
+      className={`dark ${geist.variable} ${geistMono.variable}`}
+      // next-themes (inside the auth UI provider) mutates the html class
+      // on hydration — expected, not a bug.
+      suppressHydrationWarning
+    >
       <body className="font-sans antialiased bg-background text-foreground">
         <AuthProvider>{children}</AuthProvider>
       </body>
