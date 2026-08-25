@@ -22,10 +22,11 @@ import { assessChatQuality } from "@/lib/chatQuality";
 import { applyAnswerSanityGuards } from "@/lib/answerSanity";
 import { buildStructuredSummaryFromRows } from "@/lib/answerSanity/countList";
 import { appendJsonLog, logServer } from "@/lib/serverLog";
-import { getSessionUserId } from "@/lib/auth/server";
+import { resolveEffectiveUserId } from "@/lib/auth/server";
 import {
   appendTurn,
   isConversationId,
+  purgeStaleGuestConversations,
   loadCompactHistory,
   loadPriorDriverNumbers,
   loadPriorSessionKey,
@@ -372,6 +373,11 @@ async function persistTurnIfRequested(
       requestId: typeof payload.requestId === "string" ? payload.requestId : undefined
     });
     payload.conversation = { id: saved.id, title: saved.title, created: saved.created };
+    if (sessionUserId.startsWith("guest")) {
+      // Session-scoped guest data: sweep >24h-old anonymous conversations
+      // opportunistically (fire-and-forget; purge itself never throws).
+      void purgeStaleGuestConversations();
+    }
   } catch (error) {
     await logServer("WARN", "chat_persist_failed", {
       conversationId: body.conversationId ?? null,
@@ -396,7 +402,7 @@ export async function POST(request: Request): Promise<Response> {
   // resolve to the legacy 'guest' pool). Threaded explicitly because the
   // SSE branch runs inside a ReadableStream callback where request-scoped
   // header access is no longer safe.
-  const sessionUserId = await getSessionUserId();
+  const sessionUserId = await resolveEffectiveUserId(request);
 
   // Non-SSE callers (the benchmark runner, other server-to-server calls)
   // get a no-op stage emitter — staging only makes sense over SSE.

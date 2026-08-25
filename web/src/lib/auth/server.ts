@@ -41,3 +41,30 @@ export async function getSessionUserId(): Promise<string> {
     return "guest";
   }
 }
+
+const GUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Browser-session guest identity from the x-guest-id header, as the
+ *  namespaced user id it maps to — or null when absent/malformed. The
+ *  'guest:' prefix is the security boundary: a header can never collide
+ *  with a real account id. */
+export function guestUserIdFromRequest(request: Request): string | null {
+  const raw = request.headers.get("x-guest-id");
+  return raw && GUEST_ID_RE.test(raw) ? `guest:${raw.toLowerCase()}` : null;
+}
+
+/**
+ * The identity a request's chat data belongs to, in precedence order:
+ *   1. signed-in account (session cookie)
+ *   2. browser-session guest (x-guest-id header, sessionStorage-backed —
+ *      chats live exactly as long as the visitor's web session)
+ *   3. legacy shared 'guest' pool (cookie-less, header-less callers:
+ *      sweeps, benchmarks, grading harnesses)
+ */
+export async function resolveEffectiveUserId(request: Request): Promise<string> {
+  const sessionUserId = await getSessionUserId();
+  if (sessionUserId !== "guest") {
+    return sessionUserId;
+  }
+  return guestUserIdFromRequest(request) ?? "guest";
+}

@@ -48,6 +48,26 @@ function makeId(): string {
 }
 
 const ACTIVE_CONVERSATION_KEY = "openf1.activeConversationId";
+const GUEST_ID_KEY = "openf1.guestSessionId";
+
+/** Browser-session guest identity (sessionStorage: survives reloads,
+ *  gone when the web session ends — guest chats are scoped to it by
+ *  design). Created lazily; never created for signed-in users. */
+function getGuestId(create = false): string | null {
+  if (typeof window === "undefined") return null;
+  let id = window.sessionStorage.getItem(GUEST_ID_KEY);
+  if (!id && create) {
+    id = crypto.randomUUID();
+    window.sessionStorage.setItem(GUEST_ID_KEY, id);
+  }
+  return id;
+}
+
+/** Headers carrying the guest identity to the API (no-op when absent). */
+function guestHeaders(): Record<string, string> {
+  const id = getGuestId();
+  return id ? { "x-guest-id": id } : {};
+}
 
 type ConversationListRow = {
   id: string;
@@ -116,7 +136,7 @@ export default function F1InsightsChat() {
 
   const refreshConversations = async () => {
     try {
-      const res = await fetch("/api/conversations");
+      const res = await fetch("/api/conversations", { headers: guestHeaders() });
       if (!res.ok) return;
       const data: { rows?: ConversationListRow[] } = await res.json();
       setSessions(
@@ -135,7 +155,7 @@ export default function F1InsightsChat() {
 
   const loadConversation = async (id: string) => {
     try {
-      const res = await fetch(`/api/conversations/${id}`);
+      const res = await fetch(`/api/conversations/${id}`, { headers: guestHeaders() });
       if (!res.ok) {
         if (res.status === 404 && typeof window !== "undefined") {
           window.localStorage.removeItem(ACTIVE_CONVERSATION_KEY);
@@ -183,6 +203,40 @@ export default function F1InsightsChat() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Guest → account claim: when a session appears (fresh mount after
+  // sign-in/up) while this browser session holds a guest identity,
+  // migrate the guest conversations to the account and drop the guest id.
+  useEffect(() => {
+    if (!user) return;
+    const guestId = getGuestId();
+    if (!guestId) return;
+    void (async () => {
+      try {
+        await fetch("/api/conversations/claim", {
+          method: "POST",
+          headers: guestHeaders()
+        });
+      } catch {
+        // Best-effort: the guest id survives, so a retry happens on the
+        // next mount while the web session lives.
+      }
+      window.sessionStorage.removeItem(GUEST_ID_KEY);
+      void refreshConversations();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // Guest chats die with the web session — warn before leaving mid-chat.
+  useEffect(() => {
+    if (user || messages.length === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [user, messages.length]);
 
   // Neon Auth session → profile chip. Null while signed out (the header
   // shows a Sign in link instead).
@@ -321,11 +375,18 @@ export default function F1InsightsChat() {
     }, 1500);
 
     try {
+      // First send while signed out mints the browser-session guest id,
+      // so the conversation persists for THIS web session and can be
+      // claimed by an account later.
+      if (!user) {
+        getGuestId(true);
+      }
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          Accept: "text/event-stream"
+          Accept: "text/event-stream",
+          ...guestHeaders()
         },
         body: JSON.stringify({
           message: text,
@@ -436,7 +497,7 @@ export default function F1InsightsChat() {
 
   const handleDeleteSession = async (id: string) => {
     try {
-      await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+      await fetch(`/api/conversations/${id}`, { method: "DELETE", headers: guestHeaders() });
     } catch {
       return;
     }
@@ -539,6 +600,15 @@ export default function F1InsightsChat() {
 
         <div className="shrink-0 border-t border-border/50 bg-background/80 backdrop-blur-sm min-h-[88px] flex flex-col justify-center">
           <div className="w-full max-w-3xl mx-auto px-3 md:px-4 py-3 md:py-4">
+            {!user && messages.length > 0 && (
+              <p className="text-xs text-muted-foreground text-center mb-2">
+                Guest chats last only this browser session —{" "}
+                <a href="/auth/sign-up" className="text-foreground underline underline-offset-2 hover:text-[#E10600]">
+                  create an account
+                </a>{" "}
+                to keep them.
+              </p>
+            )}
             <ChatInput
               onSend={(q) => void handleSend(q)}
               placeholder="Ask about lap times, strategy..."

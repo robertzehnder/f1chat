@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clampInt } from "@/lib/querySafety";
 import { listConversations } from "@/lib/chat/conversationStore";
-import { getSessionUserId } from "@/lib/auth/server";
+import { resolveEffectiveUserId } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,6 @@ export async function GET(req: NextRequest) {
   );
   // Signed-in users see their own conversations; anonymous visitors see
   // the legacy shared 'guest' pool (also what cookie-less harnesses use).
-  const rows = await listConversations(await getSessionUserId(), limit);
+  const rows = await listConversations(await resolveEffectiveUserId(req), limit);
   return NextResponse.json({ rows, count: rows.length });
 }

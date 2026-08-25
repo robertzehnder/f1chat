@@ -369,3 +369,44 @@ export async function loadCompactHistory(
   }
   return lines.length > 0 ? lines.join("\n") : null;
 }
+
+/**
+ * Guest → account migration: when a visitor signs up (or in), the
+ * conversations from their browser-session guest identity move to the
+ * account. Idempotent — a second claim matches zero rows.
+ */
+export async function claimGuestConversations(
+  guestUserId: string,
+  accountUserId: string
+): Promise<number> {
+  if (!guestUserId.startsWith("guest:") || accountUserId.startsWith("guest")) {
+    return 0;
+  }
+  const rows = await sql<{ id: string }>(
+    "UPDATE core.chat_conversation SET user_id = $2 WHERE user_id = $1 RETURNING id",
+    [guestUserId, accountUserId]
+  );
+  return rows.length;
+}
+
+/**
+ * Hygiene: anonymous conversations are session-scoped by product design —
+ * once the visitor's web session is gone there is nothing to restore, so
+ * rows older than a day are litter (this also sweeps up crashed harness
+ * runs in the legacy shared pool). Called opportunistically after guest
+ * writes; never throws.
+ */
+export async function purgeStaleGuestConversations(): Promise<number> {
+  try {
+    const rows = await sql<{ id: string }>(
+      `DELETE FROM core.chat_conversation
+       WHERE (user_id LIKE 'guest:%' OR user_id = 'guest')
+         AND updated_at < NOW() - INTERVAL '24 hours'
+       RETURNING id`,
+      []
+    );
+    return rows.length;
+  } catch {
+    return 0;
+  }
+}
