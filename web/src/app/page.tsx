@@ -513,7 +513,10 @@ export default function F1InsightsChat() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    // h-dvh, not h-screen: mobile browsers' 100vh includes the area
+    // behind their collapsing toolbars, which pushed the composer under
+    // Safari/Chrome's bottom bar. dvh tracks the VISIBLE viewport.
+    <div className="flex h-dvh bg-background">
       <ChatSidebar
         sessions={sessions}
         activeSessionId={activeSessionId}
@@ -566,8 +569,11 @@ export default function F1InsightsChat() {
         </header>
 
         {messages.length === 0 ? (
-          <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-4 overflow-auto">
-            <div className="text-center mb-8">
+          // Phones: top-align the welcome block (dead-centering sank the
+          // chips and composer toward the browser toolbar); desktop keeps
+          // the centered hero.
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-start pt-6 md:justify-center md:pt-0 px-4 overflow-auto">
+            <div className="text-center mb-6 md:mb-8">
               <div className="size-20 rounded-2xl bg-gradient-to-br from-[#E10600]/20 to-[#E10600]/5 flex items-center justify-center mx-auto mb-5 border border-[#E10600]/20">
                 <span className="text-[#E10600] font-bold text-3xl">F1</span>
               </div>
