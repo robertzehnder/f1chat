@@ -1,6 +1,6 @@
 "use client"
 
-import { TrackMap, useTrackOutline } from "./track-map"
+import { TrackMap, TrackMapSkeleton, useTrackOutline } from "./track-map"
 
 interface MinisectorStripProps {
   chart: {
@@ -52,7 +52,9 @@ export function MinisectorStrip({ chart }: MinisectorStripProps) {
       </div>
 
       {/* Track dominance map (derived outline); strip remains below as the
-          per-segment numeric detail */}
+          per-segment numeric detail. undefined = outline fetch in flight —
+          hold the map's footprint so it doesn't pop in from nowhere. */}
+      {outline === undefined && <TrackMapSkeleton />}
       {outline && (
         <TrackMap
           outline={outline}

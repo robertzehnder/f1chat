@@ -2,7 +2,7 @@
 
 import type { ChartSpec } from "@/lib/chart-types"
 import { DivergingBarChart } from "./diverging-bar-chart"
-import { TrackMap, useTrackOutline } from "./track-map"
+import { TrackMap, TrackMapSkeleton, useTrackOutline } from "./track-map"
 
 /**
  * Brake-zone / corner comparison card: neutral track ribbon with the
@@ -17,6 +17,7 @@ export function TrackCornerDelta({ chart }: { chart: ChartSpec }) {
 
   return (
     <div className="space-y-4">
+      {outline === undefined && zones.length > 0 && <TrackMapSkeleton />}
       {outline && zones.length > 0 && (
         <TrackMap
           outline={outline}

@@ -139,6 +139,35 @@ export type TrackMapProps = {
 
 const NEUTRAL = "#3f3f46"
 
+/**
+ * Loading placeholder for any track-map card. The real outline IS the
+ * fetched payload, so it can't be drawn early — instead this reserves the
+ * exact footprint of the finished map (no layout jump when it swaps in)
+ * and pulses a ghost circuit loop under a loading label, so the reader
+ * knows a track map is about to appear right here.
+ */
+export function TrackMapSkeleton({ label = "Loading track map…" }: { label?: string }) {
+  return (
+    <div className="relative w-full max-w-md mx-auto" role="status" aria-label={label}>
+      <svg viewBox="0 0 1000 1000" className="w-full h-auto animate-pulse">
+        <path
+          d="M230 690 C170 520 220 330 400 265 C560 208 800 230 838 400 C870 545 700 560 590 610 C480 660 560 800 400 828 C280 848 270 800 230 690 Z"
+          fill="none"
+          stroke={NEUTRAL}
+          strokeOpacity={0.55}
+          strokeWidth={18}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <line x1="212" y1="672" x2="248" y2="708" stroke={NEUTRAL} strokeOpacity={0.8} strokeWidth={6} strokeDasharray="4 4" />
+      </svg>
+      <p className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+        {label}
+      </p>
+    </div>
+  )
+}
+
 function gradientColor(channel: "speed" | "throttle_brake", p: OutlinePoint, min: number, max: number): string {
   if (channel === "throttle_brake") {
     // Braking red > full-throttle green > coasting grey.

@@ -1,7 +1,7 @@
 "use client"
 
 import type { ChartSpec } from "@/lib/chart-types"
-import { TrackMap, useTrackOutline } from "./track-map"
+import { TrackMap, TrackMapSkeleton, useTrackOutline } from "./track-map"
 
 /**
  * Single-driver speed / traction map: the track ribbon colored from the
@@ -19,7 +19,7 @@ export function TrackSpeedMap({ chart }: { chart: ChartSpec }) {
 
   if (!cfg) return null
   if (outline === undefined) {
-    return <p className="text-xs text-muted-foreground text-center py-8">Deriving track map…</p>
+    return <TrackMapSkeleton label="Deriving track map…" />
   }
   if (outline === null) {
     return <p className="text-xs text-muted-foreground text-center py-8">No location telemetry available for this circuit.</p>

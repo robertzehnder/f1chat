@@ -2,7 +2,7 @@
 
 import type { ChartSpec } from "@/lib/chart-types"
 import { DivergingBarChart } from "./diverging-bar-chart"
-import { TrackMap, useTrackOutline } from "./track-map"
+import { TrackMap, TrackMapSkeleton, useTrackOutline } from "./track-map"
 
 /**
  * All-corner 2-driver entry/apex/exit delta card (A5). Three surfaces:
@@ -23,6 +23,7 @@ export function CornerDeltaGrid({ chart }: { chart: ChartSpec }) {
 
   return (
     <div className="space-y-4">
+      {outline === undefined && deltas.length > 0 && <TrackMapSkeleton />}
       {outline && deltas.length > 0 && (
         <TrackMap
           outline={outline}
