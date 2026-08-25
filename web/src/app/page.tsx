@@ -28,11 +28,16 @@ import { buildActivityLog, SYNTHETIC_PHASES, type ActivityEvent } from "@/lib/ac
 import type { DraftInsight } from "@/lib/chart-types";
 import type { ChatApiResponse } from "@/lib/chatTypes";
 
+// First-visit chips lead with the A-tier visuals from the 2026-07-03
+// design review (speed map is the standout; dominance ribbon, race
+// trace, brake-zone map complete the set), pointed at the freshest
+// races. Each phrasing is live-verified to hit its deterministic
+// template — templates guarantee the chart, LLM SQL doesn't.
 const INITIAL_SUGGESTIONS = [
-  "Who won the Melbourne 2026 Grand Prix?",
-  "Compare Verstappen vs Hamilton through the esses at Suzuka 2026",
-  "Show the grid vs finish for the Spielberg 2026 Grand Prix",
-  "Where was Verstappen fastest around Silverstone in the 2026 race?"
+  "Show Norris's speed map for the Zandvoort 2026 race — where was he fastest?",
+  "Show the sector dominance between Norris and Antonelli in the Zandvoort 2026 race",
+  "Show the race trace for the Hungarian 2026 Grand Prix",
+  "Compare the heaviest brake zones between Leclerc and Hamilton at Spa 2026"
 ];
 
 type UiMessage =
