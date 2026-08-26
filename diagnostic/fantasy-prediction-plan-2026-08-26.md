@@ -242,3 +242,23 @@ rejected: "driver_performance_score hard-coded to 2025" cited the 045 file,
 superseded by migration 052 in the live DB. Pass 2 (REVISE): missing
 price-evolution model; mechanics engine required for legal regret. Pass 3:
 both resolved, SHIP.
+
+---
+
+# EXECUTION STATUS (2026-08-26)
+Roadmap executed end-to-end in commits 775dda2 + c3e25b1 (main):
+- R0 ✅ rules-as-data (057) + component ledger (058) + reconciliation harness
+  (MAE vs official 4.46 → 4.04 after the classified-DNF rules fix)
+- R1 ✅ official feed ingest (059) — 13 gamedays of prices/ownership/official
+  points; the "external data" blocker dissolved (feed N = gameday N)
+- R2 ✅ fantasyEngine mechanics (legality/transfers/chips, 4 property tests)
+  + walk-forward harness with executable-decision points and oracle regret
+- R3 ◐ projection v1 (order_mc) built and MEASURED AT PARITY with
+  persistence (harness verdict; champion = persistence until beaten).
+  Open: sprint scoring, overtake/FL submodels, price-evolution model
+- R4 ◐ single-round optimizer + recommend CLI (rolling horizon + chip
+  calendar + 3-team portfolio still open)
+- R5 ✅ chat: deterministic recap template + fantasy MATVIEW hint (official
+  feed / ledger / projections queryable); decision card UI still open
+- R6 ✅ weekly cadence scripts (ingest → project → recommend, reconcile after)
+- R7 — untouched by design
