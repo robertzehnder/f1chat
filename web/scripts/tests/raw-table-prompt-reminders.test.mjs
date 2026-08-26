@@ -238,9 +238,12 @@ test("Fix 4: prompt-size impact within ±100 tokens of pre-fix baseline", async 
     // columns are double precision and two-arg ROUND() needs ::numeric;
     // this was a recurring first-attempt SQL failure the repair pass
     // didn't always fix (full2026 sweep c-speedmap) — deliberate, ~230 chars.
+    // Fantasy tables (2026-08-26): 7100 -> 7300 for the four fantasy
+    // tables in the allowed list (points ledger, by-round, feed
+    // snapshots, projections) — deliberate, ~190 chars.
     assert.ok(
-      prompt.length < 7100,
-      `prompt size ${prompt.length} chars exceeds 7100-char budget`
+      prompt.length < 7300,
+      `prompt size ${prompt.length} chars exceeds 7300-char budget`
     );
   });
 });

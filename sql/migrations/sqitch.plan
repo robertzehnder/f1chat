@@ -59,3 +59,5 @@
 056_grid_vs_finish_dsq_honesty [055_driver_identity_pairs] 2026-08-24T13:50:47Z System Administrator <root@Roberts-MacBook-Pro.local> # DSQ'd drivers keep NULL finish when official results exist (INV3 dup-finish fix)
 057_fantasy_scoring_rules [056_grid_vs_finish_dsq_honesty] 2026-08-26T19:29:06Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R0 — official scoring rules as versioned data
 058_fantasy_points_ledger [057_fantasy_scoring_rules] 2026-08-26T19:29:06Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R0 — per-component points ledger with computable/source honesty
+059_fantasy_feed_snapshots [058_fantasy_points_ledger] 2026-08-26T19:35:52Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R1 — official game feed snapshots (prices, ownership, official points)
+060_fantasy_projection [059_fantasy_feed_snapshots] 2026-08-26T19:44:13Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R3/R6 — stored per-gameday projections

@@ -24,6 +24,7 @@ async function loadDeterministicSql() {
     "src/lib/deterministicSql/pitCycle.ts",
     "src/lib/deterministicSql/paceCliff.ts",
     "src/lib/deterministicSql/inferredOvertakes.ts",
+    "src/lib/deterministicSql/fantasyPoints.ts",
     "src/lib/deterministicSql/minisectorDominance.ts",
     "src/lib/deterministicSql/stintDelta.ts",
     "src/lib/deterministicSql/strategySplit.ts",
@@ -66,7 +67,7 @@ async function loadDeterministicSql() {
     rewritten = rewritten.replace(/from\s+["']\.\/minisectorDominance["']/g, 'from "./minisectorDominance.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/stintDelta["']/g, 'from "./stintDelta.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/strategySplit["']/g, 'from "./strategySplit.mjs"');
-    rewritten = rewritten.replace(/from\s+["']\.\/(performanceRadar|raceControlIncidents|telemetryWeatherGap|lap1Positions|wetCrossover|brakeZones|cornerDelta|sectorDominance|speedMap|raceTrace|degradationCurve|positionChanges|telemetryOverlay)["']/g, 'from "./$1.mjs"');
+    rewritten = rewritten.replace(/from\s+["']\.\/(performanceRadar|raceControlIncidents|telemetryWeatherGap|lap1Positions|wetCrossover|brakeZones|cornerDelta|sectorDominance|speedMap|raceTrace|degradationCurve|positionChanges|telemetryOverlay|fantasyPoints)["']/g, 'from "./$1.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/result["']/g, 'from "./result.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/dataHealth["']/g, 'from "./dataHealth.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/telemetry["']/g, 'from "./telemetry.mjs"');
@@ -81,7 +82,7 @@ async function loadDeterministicSql() {
     rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/minisectorDominance["']/g, 'from "./minisectorDominance.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/stintDelta["']/g, 'from "./stintDelta.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/strategySplit["']/g, 'from "./strategySplit.mjs"');
-    rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/(performanceRadar|raceControlIncidents|telemetryWeatherGap|lap1Positions|wetCrossover|brakeZones|cornerDelta|sectorDominance|speedMap|raceTrace|degradationCurve|positionChanges|telemetryOverlay)["']/g, 'from "./$1.mjs"');
+    rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/(performanceRadar|raceControlIncidents|telemetryWeatherGap|lap1Positions|wetCrossover|brakeZones|cornerDelta|sectorDominance|speedMap|raceTrace|degradationCurve|positionChanges|telemetryOverlay|fantasyPoints)["']/g, 'from "./$1.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/result["']/g, 'from "./result.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/dataHealth["']/g, 'from "./dataHealth.mjs"');
     rewritten = rewritten.replace(/from\s+["']\.\/deterministicSql\/telemetry["']/g, 'from "./telemetry.mjs"');

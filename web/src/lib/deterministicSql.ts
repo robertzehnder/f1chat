@@ -8,6 +8,7 @@ export { buildPitCycleTemplate } from "./deterministicSql/pitCycle";
 import { buildPaceCliffTemplate } from "./deterministicSql/paceCliff";
 export { buildPaceCliffTemplate } from "./deterministicSql/paceCliff";
 import { buildInferredOvertakesTemplate } from "./deterministicSql/inferredOvertakes";
+import { buildFantasyPointsTemplate } from "./deterministicSql/fantasyPoints";
 export { buildInferredOvertakesTemplate } from "./deterministicSql/inferredOvertakes";
 import { buildMinisectorDominanceTemplate } from "./deterministicSql/minisectorDominance";
 export { buildMinisectorDominanceTemplate } from "./deterministicSql/minisectorDominance";
@@ -328,6 +329,11 @@ function _buildDeterministicSqlTemplateRaw(
   // the classified-position feed.
   const inferredOvertakes = buildInferredOvertakesTemplate({ lower, targetSession });
   if (inferredOvertakes) return inferredOvertakes;
+
+  // Fantasy round recap ("fantasy points at <race>") — reconstructed
+  // per-driver fantasy totals for the resolved round.
+  const fantasyPoints = buildFantasyPointsTemplate({ lower, targetSession });
+  if (fantasyPoints) return fantasyPoints;
 
   // Driver-pair OFFICIAL-SECTOR dominance card (track map + S1/S2/S3
   // timing deltas) — the default for corner/sector dominance questions.

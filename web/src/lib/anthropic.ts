@@ -107,7 +107,9 @@ core.strategy_summary, core.grid_vs_finish, core.race_progression_summary, core.
 core.telemetry_lap_bridge, core.lap_context_summary, core.replay_lap_frames, core.metric_registry
 raw.sessions, raw.drivers, raw.laps, raw.car_data, raw.location, raw.intervals, raw.position_history,
 raw.weather, raw.race_control, raw.pit, raw.stints, raw.team_radio, raw.session_result,
-raw.starting_grid, raw.overtakes, raw.championship_drivers, raw.championship_teams
+raw.starting_grid, raw.overtakes, raw.championship_drivers, raw.championship_teams,
+analytics.fantasy_points_by_round, analytics.fantasy_points_ledger, raw.fantasy_feed_snapshots,
+analytics.fantasy_projection
 
 Important column reminders (raw.* — hand-curated):
 - raw.session_result has: session_key, driver_number, position, points, status, classified (no "time" column).
@@ -259,6 +261,25 @@ const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
       "  Do NOT use core.pit_cycle_summary for pit_loss_s — that column lives on analytics.pit_loss_per_circuit.",
       "  Do NOT return one row per individual stop — that produces a 50-row chart with driver_number axis labels.",
       "  driver_name MUST be present and human-readable so the chart renders team-coloured per-driver bars."
+    ].join("\n")
+  },
+  {
+    triggers: [
+      "fantasy"
+    ],
+    hint: [
+      "MATVIEW HINT (F1 Fantasy):",
+      "  analytics.fantasy_points_by_round — reconstructed fantasy totals per round: meeting_key, year,",
+      "    circuit_short_name, entity_type ('driver'|'constructor'), entity_name, points, all_exact.",
+      "  analytics.fantasy_points_ledger — per-component breakdown (component, quantity, points,",
+      "    computable 'exact'|'proxy', source). Missing by design: driver_of_the_day, pit stationary tiers.",
+      "  raw.fantasy_feed_snapshots — the OFFICIAL game feed per gameday: season, gameday (= Nth meeting",
+      "    of the season by date), entity_type, full_name, team_name, price ($M), gameday_points (official),",
+      "    overall_points, selected_pct (ownership %), captain_pct. Prefer OFFICIAL points for totals,",
+      "    the ledger for WHY/breakdowns.",
+      "  analytics.fantasy_projection — model projections for the UPCOMING gameday: season, gameday,",
+      "    entity_type, entity_name, model ('persistence'|'order_mc'), expected_points, price.",
+      "  Rules values live in core.fantasy_scoring_rules (season, component, position, points)."
     ].join("\n")
   },
   {

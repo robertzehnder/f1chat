@@ -264,6 +264,11 @@
       "class": "gated",
       "truthTier": "hard-truth",
       "note": "count of sessions by session_type for a season"
+    },
+    "fantasy_round_points": {
+      "class": "gated",
+      "truthTier": "methodology-scoped",
+      "note": "reconstructed per-driver fantasy totals for a round (DotD/pit-tiers absent, overtakes inferred)"
     }
   },
   "detectors": {
@@ -391,11 +396,11 @@
     },
     "initial": {
       "class": "excluded",
-      "note": "not a generationSource value — regex neighbour literal on a generationSource/queryPath line"
+      "note": "not a generationSource value \u2014 regex neighbour literal on a generationSource/queryPath line"
     },
     "muted": {
       "class": "excluded",
-      "note": "not a generationSource value — regex neighbour literal on a generationSource/queryPath line"
+      "note": "not a generationSource value \u2014 regex neighbour literal on a generationSource/queryPath line"
     },
     "no_data_refusal": {
       "class": "gated",
@@ -407,7 +412,7 @@
     },
     "repair_retry": {
       "class": "excluded",
-      "note": "not a generationSource value — regex neighbour literal on a generationSource/queryPath line"
+      "note": "not a generationSource value \u2014 regex neighbour literal on a generationSource/queryPath line"
     },
     "runtime_clarification": {
       "class": "gated",
@@ -511,127 +516,127 @@
   "materializedLayers": {
     "analytics.braking_performance_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.corner_analysis_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.driver_performance_score_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.drs_effectiveness_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.fuel_corrected_pace_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.minisector_dominance_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.overtake_events_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.pit_loss_per_circuit_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.race_control_incidents_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.restart_performance_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.sector_dominance_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.stint_degradation_curve_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.straight_line_dominance_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.telemetry_coverage_per_driver_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.traction_analysis_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.traffic_adjusted_pace_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.tyre_warmup_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.undercut_overcut_history_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "analytics.weather_impact_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "core.driver_session_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.grid_vs_finish_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.lap_context_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.lap_phase_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.laps_enriched_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.pit_cycle_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.race_progression_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.session_completeness_data [matview]": {
       "class": "gated",
-      "note": "true matview — refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
+      "note": "true matview \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY (needs unique index)"
     },
     "core.stint_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.strategy_evidence_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.strategy_summary_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     },
     "core.telemetry_lap_bridge_mat [heap]": {
       "class": "gated",
-      "note": "heap _mat table — refresh via per-session delete+insert WITH dedup"
+      "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
     }
   },
   "clientFetchEdges": {

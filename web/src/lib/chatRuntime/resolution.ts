@@ -163,6 +163,18 @@ export function requiresResolvedSession(questionType: QuestionType, normalizedTe
   if (isWarehouseWideQuestion(normalizedText)) {
     return false;
   }
+  // Season/market-scoped fantasy-game questions (season totals, prices,
+  // ownership, projections, picks) have no session to resolve — but a
+  // venue-named fantasy round recap keeps the session requirement so the
+  // deterministic recap template can fire.
+  if (
+    /\bfantasy\b/.test(normalizedText) &&
+    /\b(season|overall|so far|cumulative|championship|price|prices|cost|costs|value|project|projection|pick|picks|recommend|transfer|budget|ownership|selected|gameday|next round)\b/.test(
+      normalizedText
+    )
+  ) {
+    return false;
+  }
   if (isSeasonCalendarMetadataQuestion(normalizedText)) {
     return false;
   }

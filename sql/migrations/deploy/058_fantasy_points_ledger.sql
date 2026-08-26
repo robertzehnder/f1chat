@@ -112,6 +112,10 @@ pos_delta AS (
 ),
 
 -- ── Driver: not classified / DSQ penalties ─────────────────────────────
+-- Reconciliation finding (2026-08-26): the game penalizes NOT CLASSIFIED,
+-- not the DNF flag — a late retiree who covered race distance is
+-- classified with a position and scores it normally. position IS NULL is
+-- the correct condition (DSQ is charged to the constructor separately).
 race_nc AS (
   SELECT res.session_key, res.meeting_key, res.year, res.circuit_short_name,
          res.driver_number, res.driver_name, res.team_name,
@@ -121,7 +125,8 @@ race_nc AS (
   FROM results res
   JOIN rules ru ON ru.season = res.year
     AND ru.component = CASE WHEN res.session_name = 'Race' THEN 'race_not_classified' ELSE 'sprint_not_classified' END
-  WHERE res.session_name IN ('Race', 'Sprint') AND res.status IN ('DNF', 'DNS')
+  WHERE res.session_name IN ('Race', 'Sprint')
+    AND res.position IS NULL AND res.status <> 'DSQ'
 ),
 
 -- ── Driver: fastest valid lap (proxy for the official award) ───────────
