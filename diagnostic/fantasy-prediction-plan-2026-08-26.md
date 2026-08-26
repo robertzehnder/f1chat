@@ -160,3 +160,85 @@ backtesting any model.
 - DotD and fastest lap are high-variance small terms — model coarsely, flag
   as noise in answers.
 - Price data is unofficial-API-dependent; isolate behind one ingest module.
+
+---
+
+# CONVERGED ROADMAP (v3) — supersedes §4
+*Converged 2026-08-26 via three GPT-5.6 Sol review passes (REVISE → REVISE → SHIP).*
+
+**Principles:** decision metric over model metric (season points from executable
+decisions + regret vs a time-respecting oracle, not MAE); ground truth and
+baselines before models; calibrated distributions, not point estimates; degrade
+visibly, never guess.
+
+**R0 — Scoring truth & decomposition.** Versioned scoring-rules table per
+season (rules are DATA with tests, never constants — verify every number
+against the official rules page; quali/race/sprint penalty and positions-lost
+details differ from third-party summaries). Fantasy component ledger per
+driver/constructor/round with per-component `source`/`confidence`/`is_exact`
+(overtakes are a PROXY — raw.overtakes includes pit-cycle passes, fantasy
+scores legal on-track only; DotD is external). Reconciliation harness vs
+official published round totals. Empirical variance decomposition to rank which
+components actually drive points. Widget: post-race recap card (QA tier).
+
+**R1 — Temporal foundation.** Price/roster/transfer/chip-state ingest with
+as-of deadline snapshots (pre-weekend · pre-quali main deadline · post-quali
+for Final Fix only); price-move events as their own table, partial history
+flagged. External timestamped inputs: weather FORECASTS (observed warehouse
+weather is not a legal feature), penalties/upgrades/driver-news. 2026 coverage
+audit of every warehouse feature used.
+
+**R2 — Mechanics engine + harness + baselines.** `web/src/lib/fantasyEngine/`:
+pure, season-pinned rules engine (5+2 roster, budget, $3M floor, 2026
+net-transfer accounting, penalties, chip inventory/effects/state transitions
+incl. Final Fix and No Negative, deadline calendar, 3-team portfolio) with
+legality property tests + replay tests reproducing official totals within
+ledger bounds. Walk-forward harness with strict as-of; every state transition
+goes through the engine (executable-by-construction). Baselines: hold-team,
+persistence, direct-points regression, price-implied (betting odds stretch).
+Metrics: executable-decision season points, oracle regret under real
+constraints, proper scores + calibration, race-level bootstrap, splits by
+sprint/wet/era.
+
+**R3 — Projection model v1.** Recency-weighted hierarchical ratings (driver
+within team) → quali/race order samplers → DNF hazard → explicit submodels:
+proxy-calibrated overtakes, fastest lap, pit-stop count+tier, sprint-specific
+tables, and the PRICE-EVOLUTION model (per-asset price-change distributions,
+backtested + calibrated on R1 history; thin history ⇒ no-move prior with
+widened uncertainty). Monte Carlo scored through R0 rules. Calibration report
+ships inside every release.
+
+**R4 — Rolling-horizon optimizer (2–4 rounds).** Objective: expected points +
+squad-value growth (from the calibrated price model ONLY; drops to pure points
+if uncalibratable) + transfer option value − penalties. Chip-calendar planner
+(sprint weekends, weather-risk No Negative). 3-team diversified portfolio.
+Utility profiles (chaser / leader / new entrant).
+
+**R5 — Decision-first UI.** `fantasy_team` decision card: current vs
+recommended roster, exact transfers + penalty, 1-round & horizon gain,
+P10/P50/P90 team outcomes, price-change probabilities (hidden when
+uncalibrated), top-3 near-optimal alternatives, boost/chip incremental value,
+data timestamp. Value view = marginal points over replacement per dollar,
+drivers/constructors separate. Honest scoping: new chart detectors + composite
+card extension + surface-manifest sync (moderate work, not renderer reuse);
+recap + model scorecard are secondary surfaces.
+
+**R6 — Automation & chat.** Projection runs keyed to the official deadline
+calendar (main run BEFORE quali; Final-Fix re-run after quali); chat question
+family over projection/decision matviews with provenance.
+
+**R7 — Optional depth.** Race-sim variance into finish tails; live in-race
+mode (the only home for lap-by-lap car-position regression).
+
+**Stop condition:** if R3 can't sustainably beat the price-implied baseline on
+executable-decision season points, ship the optimizer over market forecasts
+and say so.
+
+**Review log:** pass 1 (REVISE): scoring-table errors + overtakes-proxy catch,
+price-baseline dependency error, myopic optimizer → rolling horizon + chips +
+portfolio, missing MC submodels, as-of deadline leakage contract, renderer
+overstatement, decision-first UI, executable-decision metrics. One finding
+rejected: "driver_performance_score hard-coded to 2025" cited the 045 file,
+superseded by migration 052 in the live DB. Pass 2 (REVISE): missing
+price-evolution model; mechanics engine required for legal regret. Pass 3:
+both resolved, SHIP.
