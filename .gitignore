@@ -81,3 +81,10 @@ data/ingest/
 # Local build artifacts / downloads (not source)
 web/test-results/
 diagnostic/**/*.zip
+
+# analyst corpus: raw artifacts + inbox/quarantine content stay out of git
+corpus-artifacts/
+corpus/inbox/*
+!corpus/inbox/.gitkeep
+corpus/quarantine/*
+!corpus/quarantine/.gitkeep
