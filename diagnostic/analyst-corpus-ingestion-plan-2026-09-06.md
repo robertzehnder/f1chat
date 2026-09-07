@@ -270,6 +270,63 @@ anywhere, no full text in git.
 
 ---
 
+## Anticipated agent roster (consumer of this corpus; build order after G5)
+
+Two lines: a CONTENT PRODUCTION LINE (public-facing) and a PLATFORM
+DEVELOPMENT LOOP (the on/off-platform comparison that generates dev work).
+House pattern applies: mostly-deterministic pipelines with an LLM only where
+judgment lives; human-in-the-loop approval on anything public until the
+untouched-approval rate earns automation.
+
+### Production line (every race weekend)
+
+1. **Domain analyst agents (2-4)** — off-platform workhorses, free-form SQL
+   against the warehouse, one per dimension: strategy/tyre analyst (stint
+   pace, deg, pit windows), pace/telemetry analyst (corner deltas, sector
+   dominance), fantasy analyst (mostly built already). Output = structured
+   "analysis packets": findings, each with the query that produced it, the
+   numbers, and a confidence note. The evidence layer — largely existing
+   SQL/scripts with the LLM interpreting.
+2. **Editorial agent** — picks the story. Consumes all packets + the per-race
+   fan-question notes (corpus/questions/) and decides thesis, angle, which
+   findings carry the piece. The Hughes-structure judgment step. Genuinely
+   agentic.
+3. **The Analyst (writer agent)** — the public voice. Editorial brief +
+   selected packets → newsletter piece / social posts in the composite voice
+   from the distilled style guide. HARD CONSTRAINT: may only use numbers
+   present in the packets — narrates evidence, never generates facts.
+4. **Verifier/editor agent** — gate before anything ships. Every claim in the
+   draft traces to a packet query; similarity guard (no corpus phrasing);
+   style-guide compliance; hedging check (proxies not stated as fact). Output:
+   annotated draft for HUMAN approval. Claim-tracing is mechanical.
+
+### Development loop
+
+5. **Platform-probe agent** — system-under-test harness. Re-asks the domain
+   analysts' questions THROUGH the chat product and diffs: same numbers, right
+   chart, honest refusal vs hallucination. Divergence = platform bug;
+   inability = platform gap. An evolution of the sweep harness with a better
+   question distribution.
+6. **Gap-triage agent** — roadmap generator. Claim extraction over the pro
+   corpus AND our own analysts' packets → 6-way taxonomy →
+   calculable-but-missing findings, human-adjudicated before becoming dev
+   work. Closes the loop: analyst wants it → platform can't → next
+   template/matview.
+
+### Occasional
+
+7. **Style curator** — runs only when adding voices: distills dev-split corpus
+   into dimension docs + composite style guide, hand-reviewed into git. A
+   pipeline with an LLM step, not a resident agent.
+
+Sequencing: corpus plan (G0-G5) lands first — agents 2/3/4 consume its outputs
+(style guide, similarity guard, question notes); agents 5/6 need only the claim
+taxonomy and can start earlier. Build order once the corpus exists: domain
+analysts → writer+verifier (private drafts) → probe+triage (dev loop) →
+editorial polish → publishing.
+
+---
+
 ## Review log (GPT-5.6 Sol, 6 passes, 2026-09-06)
 
 - **Pass 1 (REVISE, 8 findings):** compliance overstated (Reddit AI-use terms,
