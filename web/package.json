@@ -9,6 +9,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:grading": "node --test scripts/tests/*.test.mjs",
+    "corpus:weekly": "node scripts/corpus/corpus_weekly.mjs",
     "test:adapter": "tsx --test scripts/tests/mapInsight.test.ts",
     "test:visualization-contract": "tsx --test scripts/tests/visualization-contract.test.ts",
     "verify:ui": "npm run typecheck && npm run test:adapter && npm run test:visualization-contract",

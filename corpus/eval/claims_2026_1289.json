@@ -1,0 +1,1346 @@
+{
+  "season": 2026,
+  "meeting_key": 1289,
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "claim_extraction@1",
+  "extracted_at": "2026-09-07T03:48:43.713Z",
+  "docs": [
+    {
+      "doc_id": 8,
+      "source_key": "the_race",
+      "source_id": "f1-2026-british-grand-prix-driver-rankings-edd-straw",
+      "title": "Edd Straw's 2026 British Grand Prix F1 driver rankings",
+      "fetch_id": 8,
+      "derivation_id": 8,
+      "session_scope": "weekend",
+      "claims": [
+        {
+          "quote": "For only the second time in the 2026 Formula 1 season, Mercedes was beaten on a Sunday as Ferrari and Charles Leclerc triumphed at the British Grand Prix.",
+          "claim": "The British Grand Prix was only the second race in the 2026 F1 season where Mercedes did not win on a Sunday.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 0,
+          "char_end": 154,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Struggled in the sprint element of the weekend relative to Hamilton, 0.327s off in qualifying showing he was \"missing that final bit\".",
+          "claim": "Leclerc was 0.327 seconds slower than Hamilton in sprint qualifying at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3511,
+          "char_end": 3645,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Was driving a superb race that would have yielded victory when he sustained damage, and while he was fractionally wide at Copse the damage wasn't a foreseeable outcome.",
+          "claim": "Antonelli was on course to win the grand prix before sustaining damage after going fractionally wide at Copse.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 1681,
+          "char_end": 1849,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Grand prix jump start was costly, even though it was a minuscule error.",
+          "claim": "Lewis Hamilton committed a jump start in the British Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5984,
+          "char_end": 6055,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Wasn't in any way responsible for the penalty lap he was given for unlapping himself given the team instructed him to do it and it would have been impossible for him to be aware of the mistake.",
+          "claim": "Sainz received a penalty lap for unlapping himself but was acting on team instructions and bore no personal responsibility for the error.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2347,
+          "char_end": 2540,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Great first lap in the grand prix meant he leaped from 17th to 11th, which was thanks to a blend of a good launch, some canny racecraft and Piastri's problem.",
+          "claim": "Ocon advanced from 17th to 11th on the opening lap of the grand prix, aided partly by Piastri's incident.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 9722,
+          "char_end": 9880,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "only finishing behind him in the grand prix thanks to a slow first pitstop that cost him around 13 seconds.",
+          "claim": "Ocon's slow first pitstop in the grand prix cost him approximately 13 seconds.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 9961,
+          "char_end": 10068,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Had a decent sprint part of the weekend, qualifying only 0.028s off Bortoleto then leading him home in the race.",
+          "claim": "Hulkenberg qualified just 0.028 seconds behind Bortoleto in sprint qualifying and finished ahead of him in the sprint race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 17003,
+          "char_end": 17115,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Had an untidy main qualifying, with a laptime deletion for track limits then an untidy final attempt in Q2 that left him almost seven tenths off his team-mate.",
+          "claim": "Hulkenberg had a laptime deleted for track limits in main qualifying and ended Q2 nearly seven tenths slower than Bortoleto.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 17233,
+          "char_end": 17392,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "impeding Stroll in Q1 earned him a three-place grid penalty and compromised his race.",
+          "claim": "Gasly received a three-place grid penalty for impeding Stroll in Q1 at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 13288,
+          "char_end": 13373,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "warnings, impeding Stroll in Q1 earned him a three-place grid penalty and compromised his race.  \n\\- A minor point, but he couldn't turn his small pace advantage over Colapinto into a pass",
+          "claim": "Gasly had a small pace advantage over Colapinto but was unable to convert it into an on-track pass.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 13278,
+          "char_end": 13466,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.97"
+        },
+        {
+          "quote": "Qualifying pace deficit to Sainz wasn't massive, with the 0.132s gap in main qualifying representative.",
+          "claim": "Albon was 0.132 seconds slower than Sainz in main qualifying at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 17895,
+          "char_end": 17998,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Locking up and clattering into Bearman at Brooklands on lap one was effectively a race-ruining mistake.",
+          "claim": "Albon locked up and collided with Bearman at Brooklands on the first lap of the grand prix, ruining his race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 18120,
+          "char_end": 18223,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Significant car problems that were only really fixed for the race mean his 0.782s qualifying deficit to Bottas was in no way representative.",
+          "claim": "Perez was 0.782 seconds slower than Bottas in qualifying, but this gap was attributed to car problems that were resolved before the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 14800,
+          "char_end": 14940,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Was fortunate to escape moving over on Piastri on the run to Brooklands on lap one, which broke the McLaren's front wing, without damage or a puncture.",
+          "claim": "Lawson moved across on Piastri heading to Brooklands on lap one, breaking the McLaren's front wing, but Lawson's car avoided damage.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4515,
+          "char_end": 4666,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Outqualified Verstappen on Saturday.",
+          "claim": "Hadjar outqualified Verstappen in main qualifying on Saturday at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 7953,
+          "char_end": 7989,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Leclerc played a big part in the turnaround facilitated by overnight work that modified the set-up \"philosophy\" for qualifying proper.",
+          "claim": "Ferrari made an overnight set-up philosophy change before main qualifying, with Leclerc playing a significant role in enabling that turnaround.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3199,
+          "char_end": 3333,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "lapping 0.162s slower in main qualifying.",
+          "claim": "Alonso lapped 0.162 seconds slower than Stroll in main qualifying at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 14240,
+          "char_end": 14281,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 42,
+      "source_key": "the_race",
+      "source_id": "f1-2026-british-grand-prix-everything-we-learned",
+      "title": "Everything we learned from F1's British Grand Prix",
+      "fetch_id": 42,
+      "derivation_id": 42,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "A record-breaking 564,000 people packed into Silverstone for a British Grand Prix that produced a plentiful mix of joy and despair throughout the Formula 1 field.",
+          "claim": "A record-breaking attendance of 564,000 people attended the British Grand Prix at Silverstone.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 0,
+          "char_end": 162,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He was suffering with such an ill-handling set-up and complaining of deployment issues that he was willing to sacrifice his seventh position on the grid to make wholesale changes and start from the pitlane.",
+          "claim": "Verstappen qualified seventh at Silverstone and wanted to make wholesale setup changes and start from the pitlane.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1095,
+          "char_end": 1301,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "624 days had passed since his last win, at the 2024 United States Grand Prix.",
+          "claim": "Leclerc's previous win before the 2025 British GP was at the 2024 United States Grand Prix, 624 days earlier.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2505,
+          "char_end": 2582,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "If we presume Antonelli would have passed Leclerc and won the race, that's 68 points lost to reliability issues for Mercedes, far more than any other team.",
+          "claim": "Mercedes has lost 68 points to reliability issues in 2026, more than any other team.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 3993,
+          "char_end": 4148,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Mercedes has been the clear benchmark team of 2026 and is still the odds-on title favourite but its margin in both championships (32 points in the drivers', 78 in the constructors') really should be a lot more comfortable.",
+          "claim": "After the 2025 British GP, Mercedes leads the drivers' championship by 32 points and the constructors' championship by 78 points.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4530,
+          "char_end": 4752,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The battle between Lewis Hamilton and former team-mate Russell on lap 29, as the Ferrari swooped around the outside of the Mercedes at Copse before they fought side-by-side into Maggotts, was the perfect case in point.",
+          "claim": "Hamilton overtook Russell around the outside at Copse and they fought side-by-side into Maggotts on lap 29 of the British GP.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 8349,
+          "char_end": 8567,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "its cars have been in Q3 on five of the previous six opportunities - to such an extent that there's now just one point in it in the fight for fifth in the constructors' championship, with that scoreline still in Alpine's favour",
+          "claim": "Racing Bulls had been in Q3 on five of the six most recent qualifying sessions, and trail Alpine by just one point in the constructors' championship fight for fifth.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 10367,
+          "char_end": 10594,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "My feeling is that at Suzuka we were 1.6, 1.8 seconds \\[off\\] with a very overweight car. Here we're two seconds off with a much better weight. And it means that something is not going into the car",
+          "claim": "Sainz stated Williams was 1.6–1.8 seconds off the pace at Suzuka and two seconds off at Silverstone despite improved weight.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 9696,
+          "char_end": 9893,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Stroll was dinged for six separate track limits violations, converting into three separate (meaningless) five-second penalties.",
+          "claim": "Lance Stroll received six track limits violations, resulting in three five-second time penalties, at the British GP.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 12453,
+          "char_end": 12580,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Red Bull junior Nikola Tsolov has now won three races on the trot, and six in total, as an F2 rookie. He's taking control of the title race - so putting himself at 'risk' of being ineligible to return in 2027 as series champion.",
+          "claim": "Nikola Tsolov, a Red Bull junior F2 rookie, has won six races in total including three consecutive wins and leads the F2 championship.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 13371,
+          "char_end": 13599,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "McLaren starting its 2026 running on the third day of the pre-season 'shakedown' test to maximise its development time",
+          "claim": "McLaren only began its 2026 pre-season shakedown testing on the third day in order to maximise development time.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7477,
+          "char_end": 7595,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the next round of McLaren upgrades, after its staggered but substantial Miami-to-Montreal package, will come in Hungary, with another due after the summer break",
+          "claim": "McLaren's next upgrade package after Miami-to-Montreal is scheduled for the Hungarian GP, with a further update after the summer break.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 6652,
+          "char_end": 6812,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 43,
+      "source_key": "the_race",
+      "source_id": "winners-and-losers-from-f1s-2026-british-grand-prix",
+      "title": "Winners and losers from F1's 2026 British Grand Prix",
+      "fetch_id": 43,
+      "derivation_id": 43,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "Let's say, conservatively, he was on course for second in Spain before retiring there. That's 43 points gone.",
+          "claim": "Antonelli's retirements in Spain and Britain cost him an estimated 43 points, combining his projected results from both races.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1317,
+          "char_end": 1426,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "this bit of fortune at least means he’s now only a race win's worth of points behind Antonelli.",
+          "claim": "After the British Grand Prix, George Russell's points deficit to Antonelli is approximately equal to a race win's worth of points.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4429,
+          "char_end": 4524,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Russell was struggling all weekend relative to team-mate Antonelli, with this probably on par with Monaco for his toughest event, pace-wise.",
+          "claim": "George Russell's pace relative to Antonelli at the British Grand Prix was among the worst of his season, comparable to Monaco.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 4223,
+          "char_end": 4363,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he’d done a great job to stay ahead of George Russell’s Mercedes until another rear wing drama struck.",
+          "claim": "Verstappen had maintained a position ahead of George Russell before his rear wing failure caused him to retire from the race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3359,
+          "char_end": 3461,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Albon - admittedly not likely fighting for anything today as even a fairly flawless Carlos Sainz could ‘only’ score 12th, despite many drivers who should have finished in the top 10 falling out of it - effectively put himself out on lap one.",
+          "claim": "Alex Albon retired from the British Grand Prix on lap one after making contact with Ollie Bearman's Haas at Brooklands.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6563,
+          "char_end": 6804,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Franco Colapinto benefitted from Pierre Gasly’s slow pitstop, but he still drove a brilliant comeback race from his qualifying off - one he said was down to a floor problem that lost him 25 points of downforce from one second to the next.",
+          "claim": "Colapinto attributed his poor qualifying performance to a floor problem that caused a sudden loss of 25 points of downforce.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7148,
+          "char_end": 7386,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He started down in 19th, picked his way through the opening lap chaos, jumped Gasly at the pitstop and then was lifted to ninth place when Antonelli’s penalty was applied.",
+          "claim": "Colapinto started 19th, overtook Gasly via the pitstop phase, and ultimately finished ninth after Antonelli received a time penalty.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 7389,
+          "char_end": 7560,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Gabriel Bortoleto cursed a mistake at Turn 6 and an energy management-related issue at Turn 9 on Saturday, which stopped him from snatching Lawson's Q3 spot.",
+          "claim": "Bortoleto missed out on a Q3 place in qualifying due to a driving mistake at Turn 6 and an energy management problem at Turn 9.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8666,
+          "char_end": 8823,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Bortoleto’s first points since Melbourne left him buoyant after the race, and while the sister car of Nico Hulkenberg retired in another sign of poor Audi reliability",
+          "claim": "Bortoleto had not scored points between the Melbourne race and the British Grand Prix, while his teammate Hulkenberg retired from Britain.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 9215,
+          "char_end": 9381,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "1/lewis-hamilton-keeps-british-gp-f1-podium-yellow-flag-infringement/) puts a neat bow on top of an exceptionally productive day for Ferrari, at a track where it expected to suffer pace-wise (but really didn't, even before Mercedes' misfortune aided it).\n\nA",
+          "claim": "Hamilton received only a reprimand (not a time penalty) for a yellow flag infringement, and Ferrari performed better than expected on pace at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2418,
+          "char_end": 2675,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.84"
+        },
+        {
+          "quote": "A more optimal outcome would've been keeping the 1-2 that was lost by that late Hamilton pitstop.",
+          "claim": "Ferrari lost a 1-2 finish because Hamilton made a late pit stop that dropped him behind another car.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2674,
+          "char_end": 2771,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Arvid Lindblad hurriedly urging his team to tell Liam Lawson ahead to speed up was prophetic as the pair were almost undercut by Gabriel Bortoleto",
+          "claim": "Lindblad radioed his team to instruct Lawson to speed up, and the pair were nearly undercut by Bortoleto during the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5691,
+          "char_end": 5837,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "very-dangerous-f1-wing-issues/) to have back-to-back car failures causing high-speed crashes after his Austria qualifying shunt",
+          "claim": "Verstappen publicly described the repeated rear wing failures leading to high-speed incidents as 'super dangerous', referencing a prior Austria qualifying crash.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3562,
+          "char_end": 3689,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.81"
+        },
+        {
+          "quote": "Racing Bulls is the fastest car in the midfield currently and is maximising the results as an effective operator.",
+          "claim": "Racing Bulls is currently the fastest midfield team and is effectively converting its pace into results.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 6203,
+          "char_end": 6316,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 44,
+      "source_key": "the_race",
+      "source_id": "winners-and-losers-from-f1s-2026-british-grand-prix-qualifying",
+      "title": "Winners and losers from F1's 2026 British Grand Prix qualifying",
+      "fetch_id": 44,
+      "derivation_id": 44,
+      "session_scope": "qualifying",
+      "claims": [
+        {
+          "quote": "He believes he's down on straightline speed to Antonelli - and an attempt to resolve it this morning didn't work. He thinks he has no chance of fighting for victory if he goes into Sunday with the same problem.",
+          "claim": "George Russell stated he believes he is losing straightline speed to Antonelli and that an attempted fix before qualifying failed, leaving him pessimistic about his victory chances.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 818,
+          "char_end": 1028,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He said the Luffield mini-crash was unlike anything that had happened to him at that corner in 12 years of racing at Silverstone.",
+          "claim": "Russell said the Luffield crash was unprecedented in his experience over 12 years of racing at Silverstone.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1029,
+          "char_end": 1158,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The gap is 43 points.",
+          "claim": "The championship gap between George Russell and Kimi Antonelli is 43 points heading into the British Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1300,
+          "char_end": 1321,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "“I just kept losing a lot on the straights, plus a bad balance, so it was just very, very poor,” was Max Verstappen’s matter-of-fact assessment of his qualifying.",
+          "claim": "Verstappen attributed his poor qualifying performance to straight-line speed losses and bad balance.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2065,
+          "char_end": 2227,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He reckons he’s been down on power since the start of the weekend, and probably will care less about Isack Hadjar beating him in qualifying and more that Red Bull looks to be locked in a fight for the third-best car on present form despite significant car upgrades in recent races.",
+          "claim": "Verstappen believes he has been down on power all weekend, and Red Bull appears to be fighting for the third-best car despite recent upgrades.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2233,
+          "char_end": 2514,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Fifth on the grid, 0.15s and two places ahead of Verstappen. The best the Red Bull was capable of on this track today, reckoned Hadjar.",
+          "claim": "Hadjar qualified fifth, 0.15 seconds and two grid positions ahead of Verstappen, and considered it the maximum the Red Bull could achieve at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3334,
+          "char_end": 3469,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Norris’s nearly eight-tenths deficit to the pole time in sixth makes his third in the sprint race look even more astonishing.",
+          "claim": "Norris qualified sixth with a deficit of nearly eight tenths of a second to pole position, while having finished third in the sprint race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3682,
+          "char_end": 3807,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "“We just don't have any pace,” said Norris. “I thought my lap was pretty amazing. I improved in every single corner and I felt like I got everything out of the car. We're just slow. The car was slow in the straights and slow in all the corners.”",
+          "claim": "Norris stated that McLaren lacked pace across the entire lap, with the car being slow on both straights and corners despite him feeling he extracted the maximum.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3813,
+          "char_end": 4058,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Bortoleto acknowledged that the error was also likely a byproduct of a \"f\\*\\*k it, if I crash, I crash, but I have to deliver\" approach, partly borne out of a gearbox issue that limited his mileage in Q1",
+          "claim": "Bortoleto said his aggressive approach in Q2 was partly caused by a gearbox issue that had limited his running in Q1.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4900,
+          "char_end": 5103,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "he got Brooklands wrong on his fastest lap with a double snap that he estimates cost him as much as 0.15s, more than enough to be the difference between Q3 and no Q3.",
+          "claim": "Bortoleto estimated that his error at Brooklands cost him up to 0.15 seconds, which would have been enough to reach Q3.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4724,
+          "char_end": 4890,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Franco Colapinto was a step behind Alpine team-mate Pierre Gasly in sprint qualifying on Friday, but in the sprint race he finished right on Gasly’s tail.",
+          "claim": "Colapinto was slower than Gasly in sprint qualifying but closed to finish right behind him in the sprint race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5545,
+          "char_end": 5699,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "That ruined any chance of Colapinto progressing (as well as Esteban Ocon’s Haas, too) and left him 19th, his worst qualifying since he was slowest in the Abu Dhabi season finale last year",
+          "claim": "Colapinto's spin at Becketts left him 19th, his worst qualifying result since the Abu Dhabi season finale the previous year.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5876,
+          "char_end": 6063,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Sergio Perez has been the more impressive Cadillac driver so far in 2026, so Valtteri Bottas’s first intra-team qualifying victory in seven sessions is well-timed.",
+          "claim": "Bottas had not out-qualified Perez in the previous six qualifying sessions before the British Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6319,
+          "char_end": 6482,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Bottas was over two tenths clear of Perez at Silverstone.",
+          "claim": "Bottas out-qualified Perez by more than two tenths of a second at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6485,
+          "char_end": 6542,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "There's talk of Aston Martin expecting a two-second gain from its upcoming upgrade, which is a surreal laptime step to target in modern F1 - but even if that target is accurate, two seconds today would put its cars 18th and 19th, behind the yellow flag-compromised Ocon.",
+          "claim": "Aston Martin is reportedly targeting a two-second lap time gain from an upcoming upgrade, but even that improvement would only place them 18th and 19th at Silverstone.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 7906,
+          "char_end": 8176,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 45,
+      "source_key": "the_race",
+      "source_id": "winners-and-losers-from-f1s-2026-silverstone-sprint",
+      "title": "Winners and losers from F1's 2026 Silverstone sprint",
+      "fetch_id": 45,
+      "derivation_id": 45,
+      "session_scope": "sprint",
+      "claims": [
+        {
+          "quote": "Hamilton was utterly powerless to avoid Antonelli easily passing him on the run to Stowe; \"halfway down the straight\", in the words of Hamilton.",
+          "claim": "Hamilton stated that Antonelli passed him halfway down the straight on the run to Stowe.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 506,
+          "char_end": 650,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he faced a race-long battle to try to break the one-second overtake mode barrier, something he couldn't do.",
+          "claim": "Hamilton was unable to close within one second of Antonelli throughout the sprint race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 726,
+          "char_end": 833,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "A three-point extension of the championship lead - though totally par for the course given the sprint allocation - feels like it undersells somehow just how emphatic this was from Antonelli.",
+          "claim": "Antonelli extended his championship lead by three points as a result of winning the sprint race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1024,
+          "char_end": 1214,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Max Verstappen was on the right end of some truly fine margins in qualifying (in third, 0.31s behind second but just 0.075s ahead of seventh)",
+          "claim": "In qualifying, Verstappen was third, 0.31 seconds behind second place and only 0.075 seconds ahead of seventh place.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1826,
+          "char_end": 1967,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "tipping into the corner Verstappen was already sixth instead of third. He briefly got himself back into the mix in that podium battle, but for him it was a losing battle.",
+          "claim": "Verstappen lost three positions at the start and dropped to sixth by the first corner, and was unable to recover to a podium position.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2096,
+          "char_end": 2266,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He was irritated at the finish - \"good job... just, f\\*\\*k me, guys, just get it right for once, please\" - seemingly in relation to having needed to fuel-save.",
+          "claim": "Norris expressed frustration over team radio at the finish, apparently regarding having been asked to fuel-save during the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2706,
+          "char_end": 2865,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Hadjar hasn't scored in any of the four 2026 sprint races so far, and that won't change without some help from the stewards in their judgment of Lawson's robust defence.",
+          "claim": "Hadjar has failed to score points in all four of the 2026 sprint races.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3802,
+          "char_end": 3971,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Sergio Perez's race unravelled badly in the first couple of laps, first dropping behind both Aston Martins at the start then, after dispatching Lance Stroll into Stowe, clattering into Fernando Alonso at Turn 3 on lap two and being hit with a time penalty for causing a collision.",
+          "claim": "Perez dropped behind both Aston Martins at the start, passed Stroll, then collided with Alonso at Turn 3 on lap two and received a time penalty.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4381,
+          "char_end": 4661,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He finished last, 11.289s behind Stroll once the time penalty was applied.",
+          "claim": "After his time penalty, Perez finished last, 11.289 seconds behind Stroll.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5092,
+          "char_end": 5166,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The energy-starved, high-speed nature of Silverstone, especially the long stretch from Copse to Stowe, means we're seeing a see-saw, battery dominated style of racing most reminiscent of the season-opener in Melbourne.",
+          "claim": "The racing style at Silverstone, characterised by battery-dominated see-saw overtaking, is most similar to the season-opening race in Melbourne.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 5219,
+          "char_end": 5437,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The engine notes were still dying horribly from the exit of Copse, towards the Maggotts/Becketts complex, with a brief bit of low-gear assisted energy recovery for the first part of Hangar Straight before it happened again and the cars limped through Stowe and towards the Club chicane.",
+          "claim": "Cars were audibly losing power from the exit of Copse through Maggotts/Becketts and again through Stowe towards Club chicane due to energy depletion.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 6449,
+          "char_end": 6735,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "even overpowered DRS passes weren't this easy…",
+          "claim": "The overtaking enabled by battery depletion in 2026 F1 is easier than DRS-assisted overtaking was in previous regulations.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 7037,
+          "char_end": 7083,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Liam Lawson quickly moved into an eighth place that he wasn't ever going to give up easily - with Lawson putting a big squeeze on Hadjar into Stowe.",
+          "claim": "Lawson moved into eighth place early in the race and defended it aggressively against Hadjar into Stowe.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3337,
+          "char_end": 3485,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "with Hamilton and George Russell taking points off each other, he needs just a couple of clean rounds to make the points lead start to feel unassailable.",
+          "claim": "Antonelli's championship lead is bolstered by Hamilton and Russell competing against each other and splitting points between them.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 1616,
+          "char_end": 1769,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 46,
+      "source_key": "the_race",
+      "source_id": "winners-and-losers-from-silverstone-f1-sprint-qualifying-2026",
+      "title": "Winners and losers from Silverstone F1 sprint qualifying 2026",
+      "fetch_id": 46,
+      "derivation_id": 46,
+      "session_scope": "sprint",
+      "claims": [
+        {
+          "quote": "George Russell wasn't the only driver in a top team on the end of a three tenths of a second deficit to his team-mate today. But on home ground, having just revived his title bid with Austria victory, this one looked painful.",
+          "claim": "George Russell was approximately three tenths of a second slower than his team-mate Lewis Hamilton in sprint qualifying at Silverstone.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 241,
+          "char_end": 466,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "\"Story of the year, always on the back foot,\" said Russell, \"very much off the pace to Lewis and Kimi\".",
+          "claim": "George Russell stated he felt off the pace compared to both Lewis Hamilton and Kimi Antonelli.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 468,
+          "char_end": 571,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Antonelli's Mercedes had the best theoretical lap of anyone, but it was Hamilton - not the fastest in any of the three sectors - who delivered the actual fastest outright lap, with a particularly strong run through Village.",
+          "claim": "Antonelli had the best combined theoretical lap time from all three sectors, but Hamilton's single actual lap was faster overall despite not topping any individual sector.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1509,
+          "char_end": 1732,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Ferrari beat Mercedes in qualifying in F1 2026 for the first time.",
+          "claim": "The Silverstone sprint qualifying was the first time in the 2026 F1 season that Ferrari outqualified Mercedes.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1440,
+          "char_end": 1506,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Leclerc managed to stay within two tenths of his clearly on-form and dominant Ferrari team-mate Hamilton in SQ1 and SQ2, but when it counted, Leclerc was 0.321s off in the third and final segment.",
+          "claim": "Charles Leclerc was within two tenths of Hamilton in SQ1 and SQ2 but fell 0.321 seconds behind in SQ3.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1962,
+          "char_end": 2158,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He was faster than Red Bull team-mate Max Verstappen in SQ1, and shockingly, shipped just 0.138s to Verstappen in SQ3.\n\nBut that was the difference between third and eighth!",
+          "claim": "Hadjar was faster than Verstappen in SQ1 and only 0.138 seconds behind him in SQ3, yet finished eighth while Verstappen finished third.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2925,
+          "char_end": 3098,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Racing Bulls has now achieved three consecutive ‘one-two' finishes in F1's midfield with Liam Lawson and Arvid Lindblad ninth and 10th in sprint qualifying.",
+          "claim": "Racing Bulls achieved three consecutive sessions in which they finished first and second among midfield teams, with Lawson ninth and Lindblad tenth at Silverstone sprint qualifying.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3454,
+          "char_end": 3610,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Bearman was 0.010s from safety, and the time lost from having 90% battery instead of 100% at the start of his qualifying lap would have been more than that difference.",
+          "claim": "Bearman missed advancement to SQ2 by 0.010 seconds, and a battery charge of only 90% at the start of his lap cost him more time than that margin.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 4241,
+          "char_end": 4408,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Hamilton's pole position lap was 3.484s slower than Verstappen's 2025 mark.",
+          "claim": "Hamilton's 2026 Silverstone sprint qualifying pole lap was 3.484 seconds slower than Verstappen's equivalent benchmark from 2025.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5357,
+          "char_end": 5432,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "This year, Hamilton was around 34km/h (21mph) slower than Verstappen at Abbey, approximately 20km/h (12mph) slower at Copse and his top speed in Maggotts/Becketts was 28km/h (17mph) down.",
+          "claim": "Hamilton's 2026 car was approximately 34 km/h slower at Abbey, 20 km/h slower at Copse, and 28 km/h slower through Maggotts/Becketts compared to Verstappen's 2025 speeds at those points.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5570,
+          "char_end": 5757,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "In total, around 1.7s of the year-to-year drop was between Copse (Turn 9) and the entry to Stowe (Turn 15).",
+          "claim": "Approximately 1.7 seconds of the overall lap time deficit between 2025 and 2026 was accumulated in the section between Copse and the entry to Stowe.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 5953,
+          "char_end": 6060,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "There's a clear sense at Haas that it has simply been outdeveloped by its midfield rivals, falling from the high of its Red Bull-challenging status in China.",
+          "claim": "Haas believe they have been outpaced in development by midfield competitors since their strong form in China earlier in the season.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4519,
+          "char_end": 4676,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "\"That's where we will struggle probably the most. The deficit could be twice as big.\"\n\nThat was Hamilton's pessimistic prediction of Ferrari's prospects for the weekend on Thursday, with a continuation of its Austria struggles expected.",
+          "claim": "Hamilton predicted before the Silverstone weekend that Ferrari could face a deficit twice as large as usual due to MGU-K deployment limitations, anticipating a repeat of their Austria struggles.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1149,
+          "char_end": 1385,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "mostly it's because of the lopsided energy demands of this track forcing drivers to be below the limit of grip in these legendary turns.",
+          "claim": "The primary reason for lower speeds through Silverstone's high-speed corners in 2026 is the track's energy deployment demands forcing drivers to operate below the grip limit.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 5816,
+          "char_end": 5952,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 47,
+      "source_key": "the_race",
+      "source_id": "everything-we-learned-o",
+      "title": "Nine things we learned on day one of F1's British Grand Prix",
+      "fetch_id": 47,
+      "derivation_id": 47,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "And we now know when the upgraded Honda power unit is targeted for arrival - one race after the summer break at Zandvoort.",
+          "claim": "Honda's upgraded power unit is targeted to arrive at the Dutch Grand Prix at Zandvoort, one race after the 2025 summer break.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 439,
+          "char_end": 561,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "While ADUO has granted Honda two upgrades for this year (and two for 2027), Honda's Zandvoort upgrade will be the only mid-season update.",
+          "claim": "The FIA's ADUO has granted Honda two engine upgrades for 2025 and two for 2027, with the Zandvoort upgrade being Honda's sole mid-season update in 2025.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 563,
+          "char_end": 700,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "we are working on combustion chamber shape. And also we modify the pre-chamber. And also we will change the combustion chamber shape to improve combustion performance. Also we are working to reduce friction by modifying the lubrication system",
+          "claim": "Honda is working on combustion chamber shape, pre-chamber modifications, and lubrication system changes to reduce friction as part of their engine upgrade.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 821,
+          "char_end": 1063,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "For the Silverstone weekend, Ocon revealed he'll be using a patched up version of the floor his team-mate Bearman used at Barcelona, in an attempt to help figure out this rear grip problem that Ocon says has persisted on his car for \"quite a few events\".",
+          "claim": "Ocon will use a repaired floor at Silverstone that was previously fitted to Bearman's car at the Barcelona Grand Prix, to investigate a persistent rear grip problem.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5641,
+          "char_end": 5895,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "For instance, Ollie's car in Montreal FP1, rear wasn't working at all,\" Komatsu added. \"And then Ollie's car in FP3 of Barcelona, it was terrible. \n\n\"And then Esteban had a bit of an issue on Friday in Spielberg, but Saturday was fine",
+          "claim": "Haas team boss Komatsu identified specific sessions where parts inconsistency affected car performance: Bearman's car in Montreal FP1 and Barcelona FP3, and Ocon's car on Friday in Spielberg.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6781,
+          "char_end": 7015,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "I think it was like four-tenths of a lap we lose in a straight line,\" said Hamilton of Ferrari's Austria \"reality check\". \"So it's hard to recover that through corners",
+          "claim": "Hamilton estimated Ferrari lost approximately four-tenths of a second per lap on the straights at the Austrian Grand Prix.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 11917,
+          "char_end": 12084,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "This year, I finally got the brakes that I wanted \\[in Japan when he switched to Carbon Industrie\\], which was a big push",
+          "claim": "Hamilton switched to Carbon Industrie brakes at the Japanese Grand Prix in 2025.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 9831,
+          "char_end": 9952,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Ferrari's much-anticipated upgraded engine endured an underwhelming debut in Austria, where the high heat forced the team to open up cooling vents on the car and its engine's smaller turbo design was punished by the higher altitude because of how hard it had to work.",
+          "claim": "Ferrari's upgraded engine debuted at the Austrian Grand Prix, where high temperatures and altitude forced the team to open cooling vents and compromised overall performance.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 11123,
+          "char_end": 11390,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the power unit also had such an unusual energy deployment strategy that Antonelli almost rear-ended Leclerc during their early laps battling in the race.",
+          "claim": "During the Austrian Grand Prix, Antonelli nearly collided with Leclerc from behind due to Ferrari's unusual energy deployment strategy.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 11470,
+          "char_end": 11623,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He plans to raise his proposal for grid penalties for causing stoppages or yellows with the rest of the Grand Prix Drivers' Association.",
+          "claim": "Carlos Sainz intends to propose to the GPDA that drivers who cause yellow or red flags in qualifying should receive grid penalties.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8741,
+          "char_end": 8877,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Ahead of the British GP, Adrian Newey revealed the upgraded Aston Martin car will arrive at the Hungaroring, one race prior to the summer break.",
+          "claim": "Adrian Newey revealed that Aston Martin's upgraded car will be introduced at the Hungarian Grand Prix, the last race before the 2025 summer break.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 293,
+          "char_end": 437,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Fernando is really looking forward to the \\[Hungary\\] upgrade and, if it performs, we hope he'll be in the cockpit for another season",
+          "claim": "Aston Martin team boss Adrian Newey indicated Alonso's continuation for another season is contingent on the performance of the Hungary upgrade.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 15224,
+          "char_end": 15357,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "That might be why Lego has attached bumpers to the cars this year after a demolition filled 2025 race in Miami.",
+          "claim": "Lego added bumpers to the Lego F1 cars for the 2025 British GP parade following a crash-filled drivers' parade in Miami earlier in 2025.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 14421,
+          "char_end": 14532,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Bottas said \"saving distance is my strategy, and using tow\" as cars are capped at 25km/h.",
+          "claim": "The Lego F1 cars used in the drivers' parade are speed-limited to 25 km/h.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 14535,
+          "char_end": 14624,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 93,
+      "source_key": "f1com",
+      "source_id": "strategy-guide-what-are-the-tactical-options-for-the-british-gp",
+      "title": "STRATEGY GUIDE: What are the tactical options for the British Grand Prix?",
+      "fetch_id": 93,
+      "derivation_id": 92,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "a Force Nine gale \u0013�so the last good signpost to the sort of pleasant day we\u0019re expecting this year is 2023, when all three compounds were in play, and [Max Verstappen",
+          "claim": "In the 2023 British Grand Prix, all three tyre compounds were used and Max Verstappen won using a medium-to-soft strategy.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 598,
+          "char_end": 765,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.81"
+        },
+        {
+          "quote": "Both 2024 and 2025 were wet races \u0013 the proper sort of Silverstone wet where the pit lane looks like the deck of a deep-sea trawler in a Force Nine gale",
+          "claim": "The 2024 and 2025 British Grand Prix races were both held in wet conditions.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 463,
+          "char_end": 615,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "teams/mclaren) struggled in the gusting wind, but have potential to do better on race day. But given the",
+          "claim": "Red Bull and McLaren struggled in qualifying due to gusting wind but are expected to be more competitive in the race.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 132,
+          "char_end": 236,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.84"
+        },
+        {
+          "quote": "starting position might not, in the end, count for too much \u0013 but strategy almost certainly will",
+          "claim": "At this track with the 2026 cars, race strategy is expected to matter more than qualifying position.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 280,
+          "char_end": 376,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "The C2 medium tyre was the choice for most of the front runners. They extended the opening stint, building a gap over the midfield.",
+          "claim": "In the 2023 British Grand Prix, most front-runners chose the C2 medium tyre and ran a long opening stint to build a gap over the midfield.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 855,
+          "char_end": 986,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Main sequence pit-stops started around Lap 28, but many went longer, with a view to getting deep enough into the race to potentially finish with a C3 soft.",
+          "claim": "In the 2023 British Grand Prix, the main pit-stop window began around lap 28 but many drivers extended their stints to enable a finishing stint on the C3 soft tyre.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 987,
+          "char_end": 1142,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 127,
+      "source_key": "f1com",
+      "source_id": "need-to-know-the-most-important-facts-stats-and-trivia-ahead-of-the-2026-british-grand-prix",
+      "title": "NEED TO KNOW: The most important facts, stats and trivia ahead of the 2026 British Grand Prix",
+      "fetch_id": 127,
+      "derivation_id": 150,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "Copse is a big challenge even though there\u0019s run-off \u0013 you go so quick that if anything goes wrong there, you\u0019ll be lucky if you get off lightly. And then the change of direction through Maggots and Becketts is a lot of fun",
+          "claim": "Jolyon Palmer asserts that Copse is a dangerous corner despite run-off and that Maggots/Becketts provides an enjoyable change of direction.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 298,
+          "char_end": 521,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.91"
+        },
+        {
+          "quote": "All of this puts a lot of strain on the front-left tyre and we\u0019ve seen some issues here in the",
+          "claim": "Palmer claims that the fast, flowing corners at Silverstone place significant stress on the front-left tyre and that tyre issues there have occurred historically.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 705,
+          "char_end": 799,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.91"
+        },
+        {
+          "quote": "The selection for the weekend consists of the hardest compounds in the range,\u001d Pirelli\u0019s weekend preview reads. \u001cC1, C2 and C3 have been chosen due to the high severity of the circuit, which causes tyre",
+          "claim": "Pirelli selected the three hardest compounds (C1, C2, C3) for the Silverstone weekend due to the circuit's high severity and associated tyre degradation.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1331,
+          "char_end": 1533,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.94"
+        },
+        {
+          "quote": "The accelerations reached in some sections exceed 5g, similar to what is seen at Suzuka and Spa. The front axle is the most stressed, with the left-front tyre particularly prone to wear due to the predominance of right-hand corners.",
+          "claim": "Pirelli states that lateral accelerations at Silverstone exceed 5g in some sections, comparable to Suzuka and Spa, and that the left-front tyre suffers the most wear due to predominantly right-hand corners.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1550,
+          "char_end": 1782,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Taking all factors into account, we expect teams to attempt to complete Sunday\u0019s race with a one-stop strategy, using the two compounds with greater grip, C2 and",
+          "claim": "Pirelli expects teams to run a one-stop strategy at Silverstone using C2 and C3 compounds.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2001,
+          "char_end": 2162,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.93"
+        },
+        {
+          "quote": "For two consecutive years, it has rained on Sunday, leading drivers to use the Cinturato intermediate tyres.",
+          "claim": "It rained on race day at Silverstone for two consecutive years prior to this event, requiring the use of intermediate tyres.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2464,
+          "char_end": 2572,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "victory seeing him move back into P2 ahead of Ferrari\u0019s [Lewis Hamilton](https://www.formula1.com/en/drivers/lewis-hamilton).\n\n[Kimi Antonelli](https://www.formula1.com/en/drivers/kimi-antonelli)\u0019s lead has also been cut to 40 points",
+          "claim": "After the Austrian Grand Prix, Russell moved to second in the Drivers' Championship and Antonelli's championship lead was reduced to 40 points.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2928,
+          "char_end": 3161,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.83"
+        },
+        {
+          "quote": "race, chasing down [Max Verstappen](https://www.formula1.com/en/drivers/max-verstappen) until the very end before just missing out on P2 \u0013 but he will also be keen to learn from the weekend, with a mistake in Qualifying costing him a potential place on the front row of the grid.\n\nIn",
+          "claim": "Antonelli finished just behind Verstappen (missing P2) in the Austrian Grand Prix race and made a qualifying mistake that cost him a potential front-row start.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3216,
+          "char_end": 3499,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.85"
+        },
+        {
+          "quote": "formula1.com/en/teams/racing-bulls) continued their impressive run by claiming a third consecutive double points finish, meaning that they now sit just 13 points away from fifth-placed [Alpine",
+          "claim": "Racing Bulls achieved a third consecutive double points finish in Austria and trail fifth-placed Alpine by 13 points in the Constructors' Championship.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4451,
+          "char_end": 4643,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.90"
+        },
+        {
+          "quote": "Hamilton ended a tricky Qualifying session down in fourth, behind Ferrari\u0019s [Kimi Raikkonen](https://www.formula1.com/en/information/drivers-hall-of-fame-kimi-raikkonen.4Ykdt9U76gWO40cNbjaMXf), Red Bull\u0019s [Mark Webber](https://www.formula1.com/en/latest/tags/mark-webber.2xgCaKmbl9VAeJINeKJJUN) and pole-sitting McLaren team mate Heikki Kovalainen, leaving him with work to do on race day",
+          "claim": "At the 2008 British Grand Prix, Hamilton qualified fourth, with Kovalainen on pole ahead of Webber and Raikkonen.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5368,
+          "char_end": 5756,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.89"
+        },
+        {
+          "quote": "a blistering getaway from a damp grid saw him jump to second by Turn 1 and, after an initial scrap with Kovalainen through the first few corners, the lead was his in a matter of laps.",
+          "claim": "Hamilton made a strong start at the 2008 British GP, moving to second by Turn 1 and taking the lead within a few laps after battling Kovalainen.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5768,
+          "char_end": 5951,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the youngster storming into the distance and expertly managing further downpours to finish more than a minute clear of his nearest rival, and having lapped everyone up to P4.",
+          "claim": "Hamilton won the 2008 British Grand Prix by more than a minute and lapped all drivers up to fourth place.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6009,
+          "char_end": 6183,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 142,
+      "source_key": "youtube:formula1",
+      "source_id": "palmer:2026:1289:3TkJLuyQ7a8",
+      "title": "What Led To Verstappen & Antonelli's Silverstone Struggles? | Jolyon Palmer's F1 TV Analysis",
+      "fetch_id": 142,
+      "derivation_id": 166,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "Clutch drop is good.\nAnd then you can just hear the chatter\nas the the rear wheels start to spin up.\nSo the procedure for Kimi is initially\nvery good but he's ambitious when he\ngoes back on throttle and it allows\nLewis Hamilton to come past.",
+          "claim": "Antonelli's clutch drop procedure was initially good but excessive throttle application caused wheelspin, allowing Hamilton to overtake him.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1965,
+          "char_end": 2206,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Watch Lewis\nwith his right hand here. There's going\nto be movement\njust there and it triggers the car to\njump forward quickly. He actually does\nan amazing job to get it stationary\nagain inside the box for the launch and\n[02:32]\nthen gets a good start still",
+          "claim": "Lewis Hamilton made an involuntary movement with his right hand before the start lights went out, constituting a jump start, but recovered to make a good launch.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2573,
+          "char_end": 2829,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        },
+        {
+          "quote": "And he\nsaid just an involuntary movement of his\nright hand. Maybe just so much focus,\nhome race, knows he needs to get a good\nstart to get ahead of Antonelli.",
+          "claim": "Hamilton stated that his jump start was caused by an involuntary movement of his right hand.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3147,
+          "char_end": 3305,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "This is Verstappen in the\nred against Hadjar in the blue. And what\nI'm particularly interested here is the\nstraight-line speed, which is what Max\nwas talking about all weekend,\ndeployment issues for his Red Bull. And\nit is actually there to see on a lot of\nthese straights.",
+          "claim": "Telemetry data shows Verstappen's Red Bull had inferior straight-line speed compared to Hadjar's car throughout the weekend due to energy deployment issues.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4817,
+          "char_end": 5090,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "It\ntranspires that it's the rear wing not\nattaching properly when he closes this\nbarn door of of an active aero section\nthere. So, press the the button, it\n[07:37]\nactivates straight mode in your in your\ncar. And so, the rear wing and the front\nwing both open. Problem for Red Bull\nsince they've bought this upgraded one,\nit's not shutting every time perfectly",
+          "claim": "Verstappen's crash was caused by the upgraded Red Bull active rear wing failing to close fully, a problem that has occurred since the upgrade was introduced.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8719,
+          "char_end": 9079,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.97"
+        },
+        {
+          "quote": "That rear wing is an upgrade. It is\nquicker for Red Bull. It minimizes your\n[09:08]\ndrag with the uh the rotor three\nelement, but if you can't get it shut\nevery single time, you are going to find\nit only takes once for you to be\nspinning out of qualifying or the race",
+          "claim": "Red Bull's rear wing upgrade improves performance by reducing drag but has a reliability issue causing it to not shut fully on every deployment.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 10617,
+          "char_end": 10884,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        },
+        {
+          "quote": "Kim\nAntonelli was the man that did this very\nvery well. He was rapid all weekend and\nwe're going to see him here blast past\nLewis Hamilton eventually for second\nplace. Moves to the inside and as they\nturn into to Copse Corner there's\nabsolutely nothing that Lewis can do\nabout it.",
+          "claim": "Antonelli overtook Hamilton for second place by moving to the inside into Copse Corner, where Hamilton had no answer.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 11563,
+          "char_end": 11843,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Mercedes have their boost\nbutton up here\non the top left and Kimi doesn't go for\nit. It's interesting because this looked\n[10:39]\nlike it was a great opportunity but\nLewis does in the Ferrari because he can\nsee the Mercedes is is quite close",
+          "claim": "Antonelli deliberately did not use his boost button approaching Brooklands, while Hamilton activated his boost in response to Antonelli's proximity.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 12331,
+          "char_end": 12572,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        },
+        {
+          "quote": "So\nmanages to keep going longer while\nCharles Leclerc is pitted from the lead\nand that's really good pace he's got on\nthe medium tire. So when he pits he's\n[13:11]\nnow going a second and a half quicker\nthan Charles",
+          "claim": "After Leclerc pitted from the lead, Antonelli's pace on the medium tyre was approximately one and a half seconds per lap faster than Leclerc.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 15043,
+          "char_end": 15257,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        },
+        {
+          "quote": "And according to our simulations he's\ngoing to pass him with a few laps to\nspare even before the late race safety\ncar so\na very good pace rewarded with with a\nrace win had he not picked up the damage\nbut he did.",
+          "claim": "Simulation modelling indicates Antonelli would have overtaken Leclerc for the race win with several laps remaining even without the late safety car, had he not sustained damage.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 15259,
+          "char_end": 15470,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He would have\ncome out just behind Lando or right with\nLando with a car that wasn't working as\nwell, but been able to stay well clear\nof uh of those behind and still get the\npoints. So, it was really the second pit\nstop that absolutely put paid to\nAntonelli's race.",
+          "claim": "Had Mercedes correctly diagnosed and fixed the suspension damage at the first pit stop, Antonelli would still have scored points, meaning it was the second pit stop that ended his race.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 15814,
+          "char_end": 16079,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he's just missing a huge\namount of downforce as that air flow is\nnow suboptimal on the uh the well-honed\nMercedes, uh particularly the fast\ncorners. He's absolutely nowhere through\nuh through Copse, through Maggotts,\nBecketts, and uh and Stowe.",
+          "claim": "After the wheel shield damage, Antonelli lost significant downforce and lap time specifically through the high-speed corners of Copse, Maggotts, Becketts, and Stowe.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 16372,
+          "char_end": 16616,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "This is when Norris\nhas passed him after his first pit stop,\nand he can't turn the car in. He's going\nreally deep, cuts it back with a clear\n[15:15]\ncar issue, and there's no one that can\ntell me that that is gaining an\nadvantage there for Antonelli",
+          "claim": "After Norris passed him following his first pit stop, Antonelli ran deep into a corner due to his car damage, which the analyst argues did not constitute gaining an advantage.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 17345,
+          "char_end": 17594,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        },
+        {
+          "quote": "You've got a slow corner, turns\nit in, runs wide, keeps his foot in and\ngains time. Even if that is very slow,\nhe's driving a hobble car and to stay on\n[15:46]\nthe track, he'd have to just drive that\nlittle bit slower",
+          "claim": "Despite his car damage, Antonelli gained time by running wide off the track at a slow corner and maintaining throttle, justifying the track limits penalty.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 17949,
+          "char_end": 18166,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        }
+      ]
+    }
+  ]
+}

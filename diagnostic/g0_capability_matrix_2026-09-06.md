@@ -62,6 +62,29 @@ of approved sources across Spielberg [ordinary, 1288], Zandvoort [sprint,
   title fight involves Russell/Norris/Antonelli; Tsunoda standing in at
   Racing Bulls; Audi/Cadillac on grid.
 
+## Corrections discovered during G2/G3 implementation (2026-09-06)
+
+- **Mark Hughes no longer writes per-race pieces at The Race in 2026** (3
+  evergreen posts vs 291 in 2023 — the G0 "race-report slugs present" check
+  pooled years). The 2026 per-race analysis register is the
+  `everything-we-learned-*` series + `winners-and-losers-*` verdicts (The
+  Race Team); curation updated accordingly. Straw ratings unaffected.
+- **The 2026 Bahrain and Saudi Arabian GPs were CANCELLED** (announced
+  ~2026-03-14; Bahrain GP relocated to Kuala Lumpur in October = meeting
+  1308). Warehouse meetings 1282/1283 are phantom calendar entries with zero
+  laps — corpus tooling guards on lap-data existence; a separate task was
+  spawned to purge them from the warehouse.
+- **F1.com renamed Facts & Stats in 2026** to
+  `need-to-know-…-facts-stats-and-trivia-ahead-of-…` (pre-race). Fetcher
+  matches both slug families.
+- **2 of 27 f1com articles client-render their body** from the private
+  `/v1/editorial` API (outside allowed methods) — recorded as auditable
+  `rejected` normalization markers, never fetched via the API.
+- **Palmer video titles often name no GP** ("Home Heartbreak…") and YouTube
+  search occasionally returns an adjacent race's video — linker@2 adds
+  country-name aliases + a search-prefix×upload-window fallback (0.7
+  confidence), and the fetcher dedupes by video id.
+
 ## G0 exit checklist
 - [x] No-fetch preflight before any probe (ToS/robots read first; probes only on approved sources)
 - [x] User sign-off: YouTube → approved_private; Reddit → prohibited + manual substitute

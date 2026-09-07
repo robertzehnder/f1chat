@@ -327,6 +327,64 @@ editorial polish → publishing.
 
 ---
 
+## EXECUTION STATUS (2026-09-07)
+
+**G0 ✅** — preflight + 3-weekend probe; capability matrix + signed rights
+registry (diagnostic/g0_capability_matrix_2026-09-06.md, incl. the G2/G3
+corrections section: Hughes stopped per-race writing in 2026, Bahrain/Saudi
+2026 cancelled → phantom warehouse meetings, F&S renamed, 2 f1com articles
+client-rendered-only, Palmer titles often GP-less).
+
+**G1 ✅** — migration 061 live on Neon (6 tables + seeded registry); chain
+gate PASS 001..061; fail-closed helpers (assertAcquireAllowed /
+assertUseAllowed with purpose) + retention purge; G1 integration gate PASS
+(14 checks: refusals, round-trip, purge tombstone + output_text-NULL CHECK,
+shared-sha live-reference). 9 pure refusal tests + 5 parser fixture tests in
+the grading suite (367 total, 41 known fails — baseline held).
+
+**G2 ✅** — The Race end-to-end: sitemap curation (everything-we-learned +
+winners-losers + Hughes + Straw ratings), .md fetcher (site-invited via
+llms.txt), normalizer, evidence-first linker@2, overrides, accounting gate
+PASS. 73 linked docs.
+
+**G3 ✅** — f1com (flight-data parser @2, incl. T-segment encoding),
+substack RSS, YouTube captions (gated, deduped by video id), inbox +
+quarantine, streaming LLM cleanup (13 canonical+cleaned transcript pairs).
+**Corpus: 143 documents, 122 linked** across every actually-run 2026 race
+(3-4 sources each); zero silent drops; review queue empty.
+
+**G4 ✅ (pending owner sign-off)** — season split committed
+(corpus/splits/2026.json: 15 dev / 5 val / 5 holdout meetings, assigned for
+the FULL season up front); 5 dimension docs + composite voice v1 distilled
+from 59 dev exemplars (manifest pins every doc/fetch/derivation consumed);
+similarity guard PASS after catching (and hand-fixing) 3 leaked 8-word
+fragments — the guard works. REMAINING: owner reads and approves
+corpus/style/composite_voice_v1.md.
+
+**G5 ✅ bar (a) / pending human bar (b)** — claim extraction over 3
+completed holdout races (Melbourne, Miami, Silverstone): 365 claims across
+33 docs; **span validity 364/365 = 99.7%** (bar ≥98%) after fuzzy
+re-anchoring (punctuation/apostrophe/markdown-link normalization; the 1
+survivor is a genuine paraphrase, honestly kept invalid). Provisional
+categories: reproducible 188, source-only 117, calculable-but-missing 34
+(ALL individually listed for adjudication), opinion 20, unsupported 5,
+insufficient-evidence 0; unsupported-assertion is under-populated (5 < 10)
+and recorded as INSUFFICIENT SAMPLE — stays open. REMAINING: owner works
+through corpus/eval/g5_sample_review.md (≥80% agreement; every category-2
+verdict individual).
+
+**Steady state** — `npm run corpus:weekly` (web/) = fetch×4 → inbox →
+normalize → cleanup → link → split → retention → accounting;
+continue-on-error. Weekly alongside the fantasy cadence.
+
+**Ops notes** — Neon kills idle pg connections during multi-minute LLM
+streams: corpus scripts gather-then-disconnect (withCorpus helper), and
+anthropicStream (raw fetch + SSE, no SDK dependency) carries a 10-min
+per-call timeout. Purge respects shared-sha live references. Raw artifacts
+in git-ignored corpus-artifacts/ (gzip, sha-addressed).
+
+---
+
 ## Review log (GPT-5.6 Sol, 6 passes, 2026-09-06)
 
 - **Pass 1 (REVISE, 8 findings):** compliance overstated (Reddit AI-use terms,

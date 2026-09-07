@@ -1,0 +1,37 @@
+{
+  "season": 2026,
+  "seed": "corpus-2026",
+  "assigned_at": "2026-09-07T03:13:10.980Z",
+  "dev": [
+    1281,
+    1282,
+    1285,
+    1286,
+    1287,
+    1288,
+    1290,
+    1291,
+    1294,
+    1295,
+    1296,
+    1299,
+    1301,
+    1302,
+    1308
+  ],
+  "validation": [
+    1280,
+    1292,
+    1293,
+    1298,
+    1300
+  ],
+  "holdout": [
+    1279,
+    1283,
+    1284,
+    1289,
+    1297
+  ],
+  "note": "Assigned once per season before any distillation. Style guide reads dev only; paired quality eval holdout only; claim triage all. Never reassign mid-season."
+}

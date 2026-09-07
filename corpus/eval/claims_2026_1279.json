@@ -1,0 +1,1234 @@
+{
+  "season": 2026,
+  "meeting_key": 1279,
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "claim_extraction@1",
+  "extracted_at": "2026-09-07T03:40:38.483Z",
+  "docs": [
+    {
+      "doc_id": 17,
+      "source_key": "the_race",
+      "source_id": "australian-grand-prix-f1-driver-rankings-2026-edd-straw",
+      "title": "Edd Straw's 2026 Australian Grand Prix F1 driver rankings",
+      "fetch_id": 17,
+      "derivation_id": 17,
+      "session_scope": "weekend",
+      "claims": [
+        {
+          "quote": "He was on course to outqualify Racing Bulls team-mate Liam Lawson, only for what was described as a \"minor control issue\", which the team apologised for, to ruin his final Q3 lap. Without that, there's every chance he'd have had a tenth or two over Lawson.",
+          "claim": "Lindblad's final Q3 lap was ruined by a minor control issue the team apologised for, and without it he might have outqualified Lawson by a tenth or two.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1598,
+          "char_end": 1854,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He passed Kimi Antonelli, Lando Norris and Lewis Hamilton out of Turn 2 on the run to Turn 3 and later got ahead of Isack Hadjar, too, to briefly hold third before inevitably being shuffled back. His real battle was with Ollie Bearman, who was on an identical strategy and only got ahead on lap 41 of 58.",
+          "claim": "Lindblad briefly held third place after passing Antonelli, Norris, Hamilton and Hadjar, before Bearman, on the same strategy, overtook him on lap 41 of 58.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2169,
+          "char_end": 2473,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Pole position was never in doubt but his \"horrendous start\" thanks to unexpectedly lacking battery energy at the start meant he fell behind Charles Leclerc.",
+          "claim": "Russell described his start as horrendous and fell behind Leclerc due to unexpectedly lacking battery energy at the race start.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3188,
+          "char_end": 3344,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he closed up on Leclerc at a rate of a quarter of a second per lap in the final stint having made his pitstop to switch to hards three laps later than his team-mate.",
+          "claim": "Hamilton closed on Leclerc at approximately 0.25 seconds per lap in the final stint after pitting for hard tyres three laps later than Leclerc.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 5131,
+          "char_end": 5296,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "once he did he pulled away at three-and-a-half tenths per lap and took a comfortable midfield 'victory'.",
+          "claim": "After getting past Lindblad, Bearman pulled away from him at approximately 0.35 seconds per lap.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 5812,
+          "char_end": 5916,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Graining troubles meant he two-stopped, but even fresher rubber didn't prevent him slipping back from Lando Norris across the final 10 laps.",
+          "claim": "Verstappen suffered graining and made two pit stops, but still lost ground to Norris in the final 10 laps despite having fresher tyres.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6588,
+          "char_end": 6728,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Norris felt he was on the back foot after missing most of FP1 thanks to a \"transmission control issue\", which he felt was unusually costly thanks to the steep learning curve with these new cars. That was perhaps reflected in him ending up 0.120s behind McLaren team-mate Oscar Piastri in qualifying",
+          "claim": "Norris missed most of FP1 due to a transmission control issue and ended up 0.120 seconds behind Piastri in qualifying.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6952,
+          "char_end": 7250,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The key numbers - second in qualifying and the race, three tenths and three seconds behind respectively - suggest Antonelli did a good, solid number two job in Australia.",
+          "claim": "Antonelli qualified second, three tenths behind Russell, and finished second, three seconds behind Russell.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 10134,
+          "char_end": 10304,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "his shunt at Turn 2 in FP3 after running a little too deep and unsettling the car over the kerb, which did significant damage that would have kept him out of qualifying but for the red flag delay for Verstappen's crash giving Mercedes just enough time to get him out in Q1",
+          "claim": "Antonelli's FP3 crash damage would have prevented him from qualifying, but Verstappen's crash caused a red flag that gave Mercedes enough time to repair the car and get Antonelli out in Q1.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 10381,
+          "char_end": 10653,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "He was never going to finish, spending 16 minutes in the pits on his way to a DNF.",
+          "claim": "Alonso spent 16 minutes in the pits during the race before retiring with a DNF.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 11604,
+          "char_end": 11686,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "That was reflected in a one-tenth deficit in qualifying after a conservative approach to the first corner on his final Q2 lap.",
+          "claim": "Hulkenberg was one tenth slower than Bortoleto in qualifying because of a conservative approach to the first corner on his final Q2 lap.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 14259,
+          "char_end": 14385,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the 0.955s gap to Gasly in qualifying was not representative and he likely would have only been a few tenths down but for a baffling absence of rear grip on his final run in Q2.",
+          "claim": "Colapinto's 0.955-second qualifying gap to Gasly was unrepresentative of his true pace because of an unexpected loss of rear grip on his final Q2 run.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 17313,
+          "char_end": 17490,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "While he was the slower Cadillac driver in qualifying by a margin of just under eight tenths, that was distorted by unexpected de-rating that cost him significant time having been marginally ahead of Perez earlier in the lap.",
+          "claim": "Bottas was nearly eight tenths slower than Perez in qualifying, but this was distorted by unexpected de-rating that cost him time after he had been marginally ahead of Perez earlier in the lap.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 16431,
+          "char_end": 16656,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "While he was clearly distracted by the battery behaviour and caught out by the unexpected delivery of an extra 100kW, driver error was a big part of losing it at the exit of Turn 4 and firing the car into the wall.",
+          "claim": "Piastri's pre-race reconnaissance lap crash at Turn 4 was partly caused by unexpected delivery of an extra 100kW, but driver error was also a significant factor.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 19259,
+          "char_end": 19473,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he managed only 16 laps prior to the race, and none at all on Saturday",
+          "claim": "Stroll completed only 16 laps in practice sessions prior to the race and did not run at all on Saturday.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 18088,
+          "char_end": 18158,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "although after starting on mediums he didn't replicate Alonso's first-lap heroics he was at least able to take the chequered flag without being classified thanks to an 18-minute stay in the pits.",
+          "claim": "Stroll started on medium tyres, took the chequered flag but was not classified as a finisher due to an 18-minute pit stop.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 18462,
+          "char_end": 18657,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 76,
+      "source_key": "the_race",
+      "source_id": "everything-we-learned-from-f1-2026s-australian-grand-prix",
+      "title": "11 things we learned from F1 2026's Australian Grand Prix",
+      "fetch_id": 76,
+      "derivation_id": 76,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "the eight-tenths margin that Russell had in Q3 over the nearest non-Mercedes driver - Red Bull's Isack Hadjar - proved to be a surprise even to its customer teams.",
+          "claim": "George Russell's Q3 qualifying gap to the nearest non-Mercedes driver, Isack Hadjar of Red Bull, was eight-tenths of a second.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1396,
+          "char_end": 1559,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Arvid Lindblad produced one of the great F1 debuts, and not just because he became the third-youngest point scorer in F1 history behind Max Verstappen and Kimi Antonelli.",
+          "claim": "Arvid Lindblad became the third-youngest points scorer in F1 history, behind Max Verstappen and Kimi Antonelli.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 3624,
+          "char_end": 3794,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He is the seventh driver to score points on debut over the past decade, which seems good if unremarkable, but what really caught the eye was how complete his weekend was.",
+          "claim": "Arvid Lindblad was the seventh driver to score points on their F1 debut over the past decade.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 3937,
+          "char_end": 4107,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Lindblad was fast from the off, and had a slight underlying pace advantage over more experienced Racing Bulls team-mate Liam Lawson even though he qualified behind after a problem on his sole Q3 lap.",
+          "claim": "Lindblad had an underlying pace advantage over Lawson in race trim despite qualifying behind him due to a problem on his Q3 lap.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 4109,
+          "char_end": 4308,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He briefly jumped to third on the opening lap, before settling into the midfield pack, racing big names including Lewis Hamilton and Max Verstappen along the way.",
+          "claim": "Lindblad briefly ran in third position on the opening lap of the Australian Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4310,
+          "char_end": 4472,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Fernando Alonso retired early, after 21 laps, but this decision was made to save parts, not because something failed.",
+          "claim": "Fernando Alonso's retirement from the Australian GP after 21 laps was a deliberate decision to save parts rather than the result of a failure.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 6228,
+          "char_end": 6345,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Lance Stroll was actually still running at the finish!\n\nHe wasn’t classified, though, as he only completed 43 of 58 laps due to some downtime in the garage while the team performed various checks.",
+          "claim": "Lance Stroll was not classified as a finisher in the Australian GP having completed only 43 of 58 laps due to time spent stationary in the garage.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6030,
+          "char_end": 6226,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Oscar Piastri had an unexpected extra 100kW of power delivered exiting Turn 4 on his pre-race reconnaissance lap and crashed.",
+          "claim": "Oscar Piastri crashed on his pre-race reconnaissance lap after an unexpected 100kW power surge exiting Turn 4.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7862,
+          "char_end": 7987,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Red Bull suffered its first engine failure as a manufacturer which dropped podium contender Hadjar out early, and Bottas's Cadillac stopped on track.",
+          "claim": "Red Bull suffered an engine failure in the Australian GP that caused Isack Hadjar, who had been a podium contender, to retire from the race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 12444,
+          "char_end": 12593,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "It was 1.3s behind the next real midfield car in Melbourne qualifying and the only team to finish three laps down, so reducing these deficits is an obvious target.",
+          "claim": "Cadillac was 1.3 seconds off the next midfield car in Melbourne qualifying and finished the race three laps behind the leaders.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 9426,
+          "char_end": 9589,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Nico Hulkenberg was then unable to even take part in the race because of, again, a technical issue that prevented Audi having a genuine shot at a double-points finish in the grand prix.",
+          "claim": "Nico Hulkenberg was unable to start the Australian Grand Prix due to a technical issue on his Audi.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5290,
+          "char_end": 5475,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Sergio Perez and Valtteri Bottas ran between the two Aston Martins in the first part of the race, and after Bottas and Alonso retired Perez was still comfortably ahead of Stroll.",
+          "claim": "In the early part of the Australian GP race, Perez and Bottas ran in between the two Aston Martin cars, and Perez remained ahead of Stroll after Bottas and Alonso retired.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 9000,
+          "char_end": 9178,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Alpine will also need to work on its energy deployment strategy given its lost a lot to leading midfield team Racing Bulls on several straights in qualifying - but the high-speed weakness was evident in Turns 9 and 10.",
+          "claim": "Alpine lost significant time to Racing Bulls on multiple straights in Australian GP qualifying due to energy deployment deficiencies.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 10265,
+          "char_end": 10483,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Those would be in place before round three at Suzuka at the end of March, and there's now likely to be a big April gap where further changes could be implemented, with the Bahrain and Saudi Arabia races likely to be cancelled.",
+          "claim": "The Bahrain and Saudi Arabia races are likely to be cancelled, creating a gap in the 2026 calendar for further regulation changes to be implemented.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2838,
+          "char_end": 3064,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "\"We remain a little puzzled by the difference we see in the data between the speed of our car and the speed of others using the same power unit,\" is how Stella put it.",
+          "claim": "McLaren team principal Andrea Stella stated that McLaren is puzzled by the speed differential between their car and other Mercedes-powered cars.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7171,
+          "char_end": 7338,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Williams didn't get Carlos Sainz out for qualifying, Stroll's Aston Martin didn't appear at all on Saturday, and McLaren and Cadillac had issues in practice that hurt mileage.",
+          "claim": "Carlos Sainz did not participate in Australian GP qualifying due to a Williams reliability issue.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 12199,
+          "char_end": 12374,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 77,
+      "source_key": "the_race",
+      "source_id": "winners-losers-from-f1-2026-australian-gp",
+      "title": "Winners and losers from F1 2026's Australian GP",
+      "fetch_id": 77,
+      "derivation_id": 77,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "The paddock whispers last year were that Mercedes had the 2026 edge. The evidence from the Barcelona shakedown test was that Mercedes could run and run and run and finetune while others were scrabbling. The Bahrain test pace was ominous in places. Qualifying was a dominant 1-2.",
+          "claim": "Mercedes achieved a dominant 1-2 in qualifying for the 2026 Australian Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1072,
+          "char_end": 1350,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "its refusal to pit either car during that first virtual safety car period is clearly the wrong decision. Whatever risk there was in rolling the dice with Charles Leclerc or Lewis Hamilton would not have resulted in anything worse than the 3-4 finish Ferrari got.",
+          "claim": "Ferrari chose not to pit either of its cars during the first virtual safety car period, ultimately finishing 3rd and 4th.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1999,
+          "char_end": 2261,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Max Verstappen's 20th-to-sixth drive is a nice headline, but there's precious little for Red Bull the team to celebrate coming out of this weekend. It's no disaster given the debut of a new powertrain - but Racing Bulls has plainly had a much better weekend relative to expectation.",
+          "claim": "Max Verstappen started from 20th position and finished 6th in the 2026 Australian Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3667,
+          "char_end": 3949,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Isack Hadjar did his job at the start but was waylaid by a failure that had been foreshadowed by a temperature issue and then a \"terrible\" sound from the engine.",
+          "claim": "Isack Hadjar's race ended with a mechanical failure that was preceded by a temperature issue and an audible engine problem.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3951,
+          "char_end": 4112,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "\"I think where our pace is lacking is half and half - so half car, half engine. Which is not bad. Those are things that can be overcome. It’s not shocking,\" he mused.",
+          "claim": "Verstappen stated that Red Bull's pace deficit was attributable equally to the car and the engine.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4279,
+          "char_end": 4445,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he deserves great credit nonetheless for looking like anything but an 18-year-old with just one patchy year of Formula 2 under his belt.",
+          "claim": "Arvid Lindblad is 18 years old and had only one year of Formula 2 experience before his F1 debut.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4846,
+          "char_end": 4982,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Alex Albon and Carlos Sainz's to-do list for Williams was enormous after their point-less midfield finishes. It needs less weight, more downforce, better aero, better reliability. In Albon's words it's a lonely ninth-best - clear of Cadillac and Aston Martin but adrift of everyone else.",
+          "claim": "Alex Albon described Williams as the ninth-fastest team, ahead only of Cadillac and Aston Martin.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5341,
+          "char_end": 5628,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "In Gabriel Bortoleto's own words,\"if someone told me we were going to score points in our first-ever race and be in Q3, man, I would've asked if they were drunk or what\".",
+          "claim": "Gabriel Bortoleto reached Q3 in qualifying and scored points in the 2026 Australian Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6744,
+          "char_end": 6914,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the highlight of his day was probably Franco Colapinto's incredible reactions to just miss him and slew through an impossibly narrow gap rather than slamming into the Racing Bulls.",
+          "claim": "Franco Colapinto narrowly avoided colliding with Liam Lawson's stationary Racing Bulls car at the race start.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7390,
+          "char_end": 7570,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Lawson slamming Perez (\"two years later he’s not over it\") over their bit of wheel-banging was a fun sideshow, but if anything, it's Perez whose medium-term F1 future looks brighter right now.",
+          "claim": "Lawson publicly criticised Perez following on-track wheel-banging between the two drivers during the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8226,
+          "char_end": 8418,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He was convincingly the quicker Haas driver, so much so that he’s got team-mate Esteban Ocon worried once again. \n\n“We damaged the tyres very early on with that, a lot of degradation, and it's flashback to last year, when it was not working well at all,” Ocon said.",
+          "claim": "Esteban Ocon suffered significant tyre degradation in the Australian Grand Prix and expressed concern about Bearman's pace advantage.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8574,
+          "char_end": 8839,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "McLaren has only just ended the long title drought that began when it had that the equivalent situation across 2008 into '09.",
+          "claim": "McLaren's constructors' title drought lasted from 2008 until their recent championship win.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 618,
+          "char_end": 743,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Nico Hulkenberg being parked up immediately disqualifies Audi from being a true 'winner'. But Bortoleto's feisty drive ensured this goes down as a positive weekend for the debutant manufacturer.",
+          "claim": "Nico Hulkenberg retired from the 2026 Australian Grand Prix, while team-mate Bortoleto finished in the points.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6917,
+          "char_end": 7111,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Arvid Lindblad went a bit under the radar in pre-season - and even his impressive eighth place on debut in Melbourne might go the same way amid so much criticism of these new cars.",
+          "claim": "Arvid Lindblad finished eighth on his Formula 1 debut at the 2026 Australian Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4660,
+          "char_end": 4840,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 78,
+      "source_key": "the_race",
+      "source_id": "winners-losers-f1-2026-australian-grand-prix-qualifying",
+      "title": "Winners and losers from F1 2026 Australian Grand Prix qualifying",
+      "fetch_id": 78,
+      "derivation_id": 78,
+      "session_scope": "qualifying",
+      "claims": [
+        {
+          "quote": "A three-tenth advantage over his team-mate? Emphatic. A seven-tenth gap to the best non-Mercedes? The stuff of dreams.",
+          "claim": "George Russell was approximately 0.3 seconds faster than his Mercedes team-mate and approximately 0.7 seconds faster than the best non-Mercedes qualifier.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 366,
+          "char_end": 484,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "a strange crash on his first flying lap made sure. \n\nIt was by all accounts no operating error, more like a harvesting issue for Red Bull’s new engine.",
+          "claim": "Verstappen's qualifying crash was attributed to an energy harvesting issue with Red Bull's new engine rather than driver error.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 977,
+          "char_end": 1128,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "a long first race of the season awaits [the disgruntled four-time world champion](https://www.the-race.com/formula-1/verstappen-not-having-fun-at-all-amid-crash-and-f1-2026-car-disdain/) from 20th on the grid",
+          "claim": "Max Verstappen will start the first race of the season from 20th position on the grid.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1166,
+          "char_end": 1374,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "With the Mercedes so clearly out of reach, third was the best result available. But that still required beating both McLarens and both Ferraris; it was no mean feat that Hadjar achieved that considering the quality of drivers at those teams, and the fact both have had session-topping performances this weekend.",
+          "claim": "Isack Hadjar qualified third, ahead of both McLarens and both Ferraris.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1709,
+          "char_end": 2020,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "To be the best part of a second slower than its engine supplier leaves McLaren with a lot of head-scratching.",
+          "claim": "McLaren was approximately one second slower than Mercedes in qualifying.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2365,
+          "char_end": 2474,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Antonelli still had to do his bit by jumping in cold in Q1 and, once back in play, he got the job done. Shame, then, that his side of the garage had its own missteps - as the double investigation that hangs over his second place in qualifying could yet prove costly.",
+          "claim": "Antonelli faces a double investigation related to his second-place qualifying result.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2835,
+          "char_end": 3101,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the FW48 remains the ninth-fastest car and half a second away from the upper-midfield group on this evidence.",
+          "claim": "Williams' FW48 is the ninth-fastest car and was approximately 0.5 seconds off the upper-midfield group in qualifying.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 3798,
+          "char_end": 3907,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "there's the very big caveat a Red Bull fell unexpectedly in Q1, and the competition to beat was a hobbled Aston Martin and the incoming Cadillac cars.",
+          "claim": "Albon's progression to Q2 was aided by Verstappen's Q1 exit, with his direct competition being a struggling Aston Martin and the Cadillac cars.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3637,
+          "char_end": 3787,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Rookie Arvid Lindblad felt the team had \"made a massive step\" from Bahrain testing by bringing upgrades to Australia, but neither he nor team-mate Liam Lawson expected both of them would make it to Q3",
+          "claim": "Both Lindblad and Lawson stated they did not expect to both reach Q3, with Lindblad saying Racing Bulls made a massive step from Bahrain testing.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4387,
+          "char_end": 4587,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Lance Stroll’s car couldn’t even participate in final practice, let alone qualifying, while Alonso was 2.7s off the pace and only beat the two Cadillacs and the drivers who suffered problems in Q1",
+          "claim": "Stroll's car missed final practice and qualifying, while Alonso was 2.7 seconds off the pace and only beat the Cadillacs and drivers who had problems.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5278,
+          "char_end": 5474,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "it was only a late effort from Franco Colapinto that prevented the embarrassment of a Q1 exit at the hands of the struggling Aston Martin of Fernando Alonso.",
+          "claim": "Colapinto avoided Q1 elimination by Fernando Alonso's Aston Martin only thanks to a late lap.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6054,
+          "char_end": 6211,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "With Pierre Gasly out of sorts in a car that is \"just not reacting as well\" as it was in testing, this just ended up as a very mediocre showing for a team that would have been hoping for a lot more",
+          "claim": "Gasly described the Alpine as not reacting as well as it did in testing.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 6212,
+          "char_end": 6409,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "After testing in Bahrain, we had it down as a potential best-of-the-rest contender. But if that's the real potential...well, Alpine showed none of that in qualifying and never looked like having a shot at making it into Q3.",
+          "claim": "Alpine failed to reach Q3 despite having been considered a best-of-the-rest contender after Bahrain testing.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 5820,
+          "char_end": 6043,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 79,
+      "source_key": "the_race",
+      "source_id": "winners-losers-friday-2026-f1-australian-grand-prix",
+      "title": "Winners and losers from F1 Australian Grand Prix practice sessions",
+      "fetch_id": 79,
+      "derivation_id": 79,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "Adrian Newey has confirmed Honda has only two working batteries left, and even if the car can be made to run cleanly, the engine is severely down on power.",
+          "claim": "Adrian Newey confirmed that Honda has only two working batteries remaining and that the engine is significantly lacking in power.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 371,
+          "char_end": 526,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Fernando Alonso didn't appear at all in FP1, and in FP2 he managed 18 difficult laps, ending up almost five seconds off the pace and a full second off the Valtteri Bottas-driven Cadillac.",
+          "claim": "Fernando Alonso did not participate in FP1 and completed 18 laps in FP2, finishing nearly five seconds off the pace and approximately one second behind Valtteri Bottas in the Cadillac.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 528,
+          "char_end": 715,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Lance Stroll only did three laps in FP1 and another 13 in FP2\\. He was six seconds off the pace",
+          "claim": "Lance Stroll completed only three laps in FP1 and thirteen laps in FP2, finishing six seconds off the pace.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 717,
+          "char_end": 812,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Norris was straight on the radio complaining about \"shocking\" downshifts in first practice and had barely registered a laptime before he was parked up in the McLaren garage with what team CEO Zak Brown later revealed was a clutch problem.",
+          "claim": "Lando Norris complained about downshifts on the radio in FP1 and was stopped in the garage early due to a clutch problem, as confirmed by McLaren CEO Zak Brown.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2011,
+          "char_end": 2249,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Brown reckoned that lack of mileage in FP1 explained why Norris finished FP2 a second off team-mate Oscar Piastri, suggesting there is significant time to be gained or lost depending on your growing familiarity with how the circuit layout impacts your car's energy harvesting needs.",
+          "claim": "Zak Brown attributed Norris finishing one second behind Piastri in FP2 to the lack of mileage in FP1, citing the importance of circuit familiarity for energy harvesting.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2251,
+          "char_end": 2533,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he ended the day fastest overall and perhaps most importantly comfortably clear of reigning champion team-mate Norris, who had a relatively troubled day.",
+          "claim": "Oscar Piastri ended Friday as the fastest driver overall and was comfortably ahead of Norris in the combined day's timesheets.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2859,
+          "char_end": 3012,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The Williams looked heavy and unwieldy in testing and that impression continued in Friday practice in Australia. The FW48 was only the eighth-quickest car in both sessions and more than two seconds off the outright pace in FP2",
+          "claim": "The Williams FW48 was the eighth-quickest car in both FP1 and FP2, finishing more than two seconds off the outright pace in FP2.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3348,
+          "char_end": 3574,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Alex Albon suffering a hydraulics problem in FP1 and Carlos Sainz stuck in the garage after just 10 laps in FP2 with what the team suspects was a leak somewhere in the vicinity of the engine/gearbox installation.",
+          "claim": "Alex Albon had a hydraulics issue in FP1 and Carlos Sainz stopped after 10 laps in FP2 due to a suspected leak near the engine/gearbox area.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3772,
+          "char_end": 3984,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Ferrari looks firmly in the mix at the front and it has two drivers up there for the first time in a while as well, with Lewis Hamilton living up to his billing of himself as a different person in 2026 so far - even if the fact he ended up ahead of Charles Leclerc in the final times owed quite a lot to his team-mate having a sketchy flying lap.",
+          "claim": "Hamilton finished ahead of Leclerc in the session results partly because Leclerc had a poor flying lap rather than solely due to Hamilton's pace advantage.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 4518,
+          "char_end": 4864,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Ferrari started 2026 with an opening practice 1-2.",
+          "claim": "Ferrari achieved a 1-2 finish in FP1 at the 2026 Australian Grand Prix.",
+          "category": "reproducible",
+          "span_valid": false,
+          "char_start": null,
+          "char_end": null,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Perez's first F1 race weekend in 14 months hasn't started the way he'd have hoped, with 14 laps completed in FP1\\. He then had to wait the majority of FP2 to leave the garage, only to stop on track after two laps",
+          "claim": "Sergio Perez completed 14 laps in FP1 and only two laps in FP2 before stopping on track, marking his return to F1 after 14 months away.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5022,
+          "char_end": 5234,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Team-mate Bottas got 52 laps in comparison, something that will still be useful to Perez, but it's clear Bottas is the better-prepared returning driver ahead of their first F1 qualifying sessions in over a year.",
+          "claim": "Valtteri Bottas completed 52 laps across Friday practice, significantly more than Perez, making Bottas the better-prepared of the two returning Cadillac drivers.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5350,
+          "char_end": 5561,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "F1 2026's sole rookie enjoyed a really promising start to his first full F1 race weekend, placing fifth in FP1 and eighth in FP2, with a pace deficit of just over a second in each session.",
+          "claim": "Arvid Lindblad, the only rookie in F1 2026, finished fifth in FP1 and eighth in FP2 with a pace deficit of just over one second in each session.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5612,
+          "char_end": 5800,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Neither driver cracked the top 15 in either session, with lead driver Pierre Gasly 2.438s off the pace in FP2.",
+          "claim": "Neither Alpine driver finished in the top 15 in FP1 or FP2, with Pierre Gasly 2.438 seconds off the pace in FP2.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6842,
+          "char_end": 6952,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Alpine's Dave Greenwood says it has \"sizeable chunks of laptime\" that it knows it can recover for Saturday, as everything was far from optimised on Friday.",
+          "claim": "Alpine's Dave Greenwood stated the team has significant laptime to recover for Saturday because their setup was not optimised on Friday.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 6954,
+          "char_end": 7109,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 85,
+      "source_key": "f1com",
+      "source_id": "strategy-guide-what-are-the-tactical-options-for-the-2026-season-opener-in",
+      "title": "STRATEGY GUIDE: What are the tactical options for the 2026 season opener in Australia?",
+      "fetch_id": 85,
+      "derivation_id": 85,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "the Bahrain tests tempered that opinion a little: overtaking doesn\u0019t look straightforward and it isn\u0019t necessarily the case that the field will automatically shake out into pace order",
+          "claim": "Bahrain pre-season testing suggested overtaking would be difficult and the race would not simply sort itself into pace order.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 157,
+          "char_end": 340,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.87"
+        },
+        {
+          "quote": "Ferraris and singular Red Bull in a congealed pack behind the [Mercedes](https://www.formula1.com/en/teams/mercedes), the soft tyre may be an attractive, aggressive option, with a soft>hard race bringing the pit window forward to Laps",
+          "claim": "A soft-then-hard strategy would bring the pit window forward to laps 15–21 for cars starting behind the Mercedes.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 449,
+          "char_end": 683,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.82"
+        },
+        {
+          "quote": "know that teams are managing the graining on the front quite well, and the degradation we\u0019ve seen in low,\u001d says Pirelli Motorsport Director Mario Isola",
+          "claim": "Pirelli Motorsport Director Mario Isola stated that teams were managing front tyre graining well and degradation levels were low.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 696,
+          "char_end": 847,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        },
+        {
+          "quote": "we believe the one-stop strategy is the quickest, and all three compounds are suitable for the race.",
+          "claim": "Pirelli believed a one-stop strategy would be the fastest race option and all three tyre compounds were viable for the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 874,
+          "char_end": 974,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Medium>hard is the quickest on paper, but if someone want to try something different, soft >hard could be the best option.",
+          "claim": "A medium-then-hard strategy was calculated to be the fastest one-stop option, with soft-then-hard as an alternative.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 977,
+          "char_end": 1099,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The delta lap-time between the compounds is around 0.4 \u0013 0.5 seconds here, which isn\u0019t a big difference, and it\u0019s why all the three compounds can be options for the race",
+          "claim": "The lap-time delta between tyre compounds at this circuit was approximately 0.4–0.5 seconds, making all three compounds viable race options.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1100,
+          "char_end": 1269,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.89"
+        },
+        {
+          "quote": "For the out-of-position Max Verstappen, starting down in 20th, reversing the prime strategy and running hard>medium or hard>soft may be the way to go",
+          "claim": "Max Verstappen was set to start the race from 20th position.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1687,
+          "char_end": 1836,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The best two-stop is a medium>hard>medium, with pit windows between laps 14-20 and 38-44 \u0013 but not everyone has the tyres for that",
+          "claim": "The optimal two-stop strategy was calculated to be medium–hard–medium, with first pit windows between laps 14–20 and second windows between laps 38–44.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1945,
+          "char_end": 2075,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "The Racing Bulls, Haas, Alpine, Williams and [Fernando Alonso](https://www.formula1.com/en/drivers/fernando-alonso) have retained only one medium and one hard in their allocations",
+          "claim": "The Racing Bulls, Haas, Alpine, Williams and Fernando Alonso each had only one medium and one hard tyre set remaining in their tyre allocations.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2077,
+          "char_end": 2256,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "The two-stop for them is soft>medium>soft, with windows between Laps 12-18 and 36-42.",
+          "claim": "For teams with limited tyre allocations, the recommended two-stop strategy was soft–medium–soft, with pit windows between laps 12–18 and laps 36–42.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 2259,
+          "char_end": 2344,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 116,
+      "source_key": "substack:f1debrief",
+      "source_id": "george-russell-kicks-off-wild-f1",
+      "title": "George Russell kicks off wild F1 2026 opener in Melbourne",
+      "fetch_id": 116,
+      "derivation_id": 114,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "George Russell kicked things off by winning the first race in the new era, with teammate Andrea Kimi Antonelli completing a one-two victory for Mercedes.",
+          "claim": "George Russell won the 2026 Australian Grand Prix with Kimi Antonelli finishing second, giving Mercedes a one-two result.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 158,
+          "char_end": 311,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Charles Leclerc went from fourth to first at Turn 1, and Lewis Hamilton gained four places and jumped to third by the end of the opening lap.",
+          "claim": "Leclerc started fourth and led by Turn 1, while Hamilton gained four positions to run third by the end of lap one.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 598,
+          "char_end": 739,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "they were partially helped by both Mercedes drivers starting the race with 0% energy, much to the surprise of polesitter Russell.",
+          "claim": "Both Mercedes drivers began the race with zero battery energy, which disadvantaged their starts.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 820,
+          "char_end": 949,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The pivotal point in this lead battle came when Isack Hadjar’s Red Bull power unit expired 11 laps into the race, causing a Virtual Safety Car to emerge.",
+          "claim": "Isack Hadjar's Red Bull retired with a power unit failure on lap 11, triggering a Virtual Safety Car.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1535,
+          "char_end": 1688,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Mercedes pitted both drivers and lost little ground while Ferrari stayed out, much to the dismay of Hamilton, who retorted over team radio: “At least one of us should’ve come in…”",
+          "claim": "Mercedes pitted both cars under the first VSC while Ferrari kept both cars out, and Hamilton complained over team radio that Ferrari should have pitted.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2164,
+          "char_end": 2343,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Ferrari would get another chance four laps later when Valtteri Bottas stopped at the pit entry and needed recovering, bringing out a second VSC.",
+          "claim": "Valtteri Bottas stopped at the pit entry four laps after the first VSC, causing a second Virtual Safety Car period.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2469,
+          "char_end": 2613,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "both Russell and Antonelli completing 46 laps to make the one-stop work.",
+          "claim": "Russell and Antonelli each completed a final stint of 46 laps on a single set of tyres.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3519,
+          "char_end": 3591,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Max Verstappen, who recovered from starting 20th on the grid to finish sixth behind Lando Norris, blamed much of his lack of pace at the end on tyre management.",
+          "claim": "Max Verstappen started 20th and finished sixth, citing tyre degradation as a limiting factor.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4300,
+          "char_end": 4460,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "It was a bitter outcome for Oscar Piastri at his home race, who crashed on the reconnaissance laps to the grid at Turn 4.",
+          "claim": "Oscar Piastri crashed at Turn 4 during the reconnaissance lap before the race start, ending his home grand prix before it began.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5280,
+          "char_end": 5401,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Team principal Andrea Stella said it was “a combination of factors” that included “suboptimal tyre temperatures, unexpected torque deployment and being up on the kerb,” that caused the spin.",
+          "claim": "McLaren team principal Andrea Stella attributed Piastri's pre-race crash to suboptimal tyre temperatures, unexpected torque deployment, and kerb contact.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5403,
+          "char_end": 5593,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "F1 was criticised after qualifying for introducing a power unit specification that deliberately starved them of energy, with the 50/50 split between the combustion engine and electric motor proving to be a challenge around the mostly full-throttle Albert Park.",
+          "claim": "The 2026 power unit's 50/50 combustion-to-electric split caused energy shortages at the mostly full-throttle Albert Park circuit.",
+          "category": "unsupported-assertion",
+          "span_valid": true,
+          "char_start": 5624,
+          "char_end": 5884,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The teams are operating at the limit of these regeneration systems, as evidenced by Verstappen’s crash in qualifying that put him at the back of the grid in the first place.",
+          "claim": "Verstappen's qualifying crash was caused by operating at the limit of the new regeneration systems, resulting in him starting last.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 6434,
+          "char_end": 6607,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "On a circuit like this, where you have four straights, and you’ve got 100% of battery, you’ve got to split that between four straights. No team is splitting that 25% per straight.",
+          "claim": "Russell stated that teams distribute battery energy unevenly across Albert Park's four straights rather than allocating 25% per straight.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7343,
+          "char_end": 7522,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Norris kicked off his title defence with a conservative race, although McLaren knew it would be a tricky start to the season after seeing the pace deficit to Mercedes in pre-season testing.",
+          "claim": "McLaren identified a pace deficit to Mercedes during pre-season testing and anticipated a difficult start to the 2026 season.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4738,
+          "char_end": 4927,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 117,
+      "source_key": "substack:f1debrief",
+      "source_id": "mclaren-and-ferrari-lead-australian",
+      "title": "McLaren and Ferrari lead Australian GP practice, but is Mercedes hiding pace?",
+      "fetch_id": 117,
+      "derivation_id": 115,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "Oscar Piastri reported he had “no power” in the early minutes of FP1, and then Lando Norris was out after just half an hour due to downshift problems.",
+          "claim": "Oscar Piastri reported a loss of power early in FP1, and Lando Norris stopped running after approximately 30 minutes due to downshift problems.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 147,
+          "char_end": 297,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Charles Leclerc posting the fastest time of 1:20.267s, which was half a second faster than teammate Lewis Hamilton and Max Verstappen.",
+          "claim": "Charles Leclerc set the fastest FP1 time of 1:20.267s, approximately half a second ahead of both Lewis Hamilton and Max Verstappen.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 954,
+          "char_end": 1088,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the quickest lap by RB’s Arvid Lindblad (which was fourth fastest overall) featured a purple middle sector.",
+          "claim": "Arvid Lindblad's quickest lap was fourth fastest overall in FP1 and included the fastest middle sector of the session.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1787,
+          "char_end": 1894,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Piastri was quickest in front of the home fans with a 1:19.729s, ahead of Antonelli and Russell, while Norris was still a few seconds off, having missed a chunk of time in FP1.",
+          "claim": "Oscar Piastri set the fastest time in FP2 with a 1:19.729s, ahead of Antonelli and Russell, with Norris further back due to lost track time in FP1.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2606,
+          "char_end": 2782,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Russell’s long runs appeared to be the most representative, with him averaging lap times in the mid-1:23s. Piastri was in the high-1:24s, Hadjar on the medium tyre was in the high-1:24s, while the Ferrari drivers did not get a proper representative run in.",
+          "claim": "George Russell averaged mid-1:23s on long runs in FP2, while Piastri and Hadjar were in the high-1:24s, and Ferrari did not complete representative long runs.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 2784,
+          "char_end": 3040,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Verstappen stopped in the pits due to a problem with the electronic control box, then spent a few minutes in the garage because the mechanics couldn’t get his car out of gear.",
+          "claim": "Verstappen had an electronic control box problem in FP2 that caused a pit stop, and his car was subsequently stuck in gear in the garage.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3667,
+          "char_end": 3842,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Down at Aston Martin, the most laps they completed in the morning were three with Lance Stroll before his battery pack gave up.",
+          "claim": "Lance Stroll completed only three laps in FP1 before his battery pack failed.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4557,
+          "char_end": 4684,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Fernando Alonso didn’t even turn a wheel until FP2 after his battery pack also gave up without even running. This was improved to 31 laps between them in FP2",
+          "claim": "Fernando Alonso did not run in FP1 due to a battery pack failure, and both Aston Martin drivers combined for 31 laps in FP2.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4686,
+          "char_end": 4843,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "batteries. We came here with four batteries. We’ve had conditioning problems or communication problems with two of those batteries, which means we’ve only got two operational",
+          "claim": "Aston Martin arrived in Melbourne with four battery packs but two became unusable due to conditioning or communication problems, leaving only two operational.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5131,
+          "char_end": 5305,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Honda pulled out at the end of 2021. They then re-entered the sport at the end of 2022, so they had been out of competition for roughly a year",
+          "claim": "Honda withdrew from Formula 1 at the end of 2021 and re-entered at the end of 2022, meaning they were absent from competition for approximately one year.",
+          "category": "unsupported-assertion",
+          "span_valid": true,
+          "char_start": 6135,
+          "char_end": 6277,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "when they came back in 2023, that was the first year of the budget cap introduction for engines. So all their rivals had been developing away through ’21, ’22 with continuity, their existing team, and free of the budget cap.",
+          "claim": "Honda's return in 2023 coincided with the first year of the power unit cost cap, putting them at a disadvantage versus rivals who had developed freely in 2021 and 2022.",
+          "category": "unsupported-assertion",
+          "span_valid": true,
+          "char_start": 6560,
+          "char_end": 6784,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Newey estimates that Honda re-entered with around 30% of their original team, but Aston Martin only knew about this quite late into the development process.",
+          "claim": "Adrian Newey claims Honda restarted their F1 programme with only around 30% of their original workforce, and Aston Martin learned of this late in the development process.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 6787,
+          "char_end": 6943,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "We only really became aware of it in November of last year when Lawrence, Andy Cowell and myself went to Tokyo to discuss rumours starting to suggest that the original target power they wouldn’t achieve for race one",
+          "claim": "Aston Martin senior management only became aware of Honda's power unit shortfall relative to targets in November 2025 during a trip to Tokyo.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 6946,
+          "char_end": 7161,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "stewards now able to disqualify or impose one-race bans for “apparent deliberate or reckless intent.” \n\nLast year, the guidelines only specified a 10-second stop-and-go penalty and four penalty points for the same offence.",
+          "claim": "The updated 2026 driving standards guidelines allow stewards to disqualify drivers or impose race bans for deliberate or reckless intent, whereas previously only a 10-second stop-and-go penalty and four penalty points were specified.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7820,
+          "char_end": 8042,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 119,
+      "source_key": "f1com",
+      "source_id": "need-to-know-the-most-important-facts-stats-and-trivia-ahead-of-the-2026",
+      "title": "NEED TO KNOW: The most important facts, stats and trivia ahead of the 2026 Australian Grand Prix",
+      "fetch_id": 119,
+      "derivation_id": 117,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "the tyres are narrower due to a reduced contact patch and overall diameter. This means that there are some unknowns entering into the first weekend of the season.",
+          "claim": "The 2026 Pirelli tyres have a reduced contact patch and overall diameter compared to their predecessors, making them narrower.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 171,
+          "char_end": 333,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The energy delivered by the power unit to the rear axle will inevitably accentuate an asymmetry that may need to be corrected, particularly in Qualifying, either by differentiating tyre blanket temperatures or by completing a preparation lap before the flying lap.",
+          "claim": "Pirelli's weekend preview states that rear-axle energy delivery from the 2026 power unit may create a thermal asymmetry requiring correction via tyre blanket temperature differentiation or a preparation lap.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 480,
+          "char_end": 744,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The first concerns the loads generated by the individual cars, which could prove decisive in determining whether or not to use the softest compound during a race stint, theoretically an option on a relatively low-severity circuit such as Melbourne.",
+          "claim": "Melbourne is characterised as a relatively low-severity circuit where using the softest tyre compound during a race stint is theoretically viable.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 882,
+          "char_end": 1130,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the cars are smaller than their predecessors, but despite modifications introduced in recent years, Albert Park remains a circuit where identifying the right section to attempt a move is not straightforward.",
+          "claim": "Albert Park is described as a circuit where overtaking opportunities are difficult to identify despite the 2026 cars being smaller than their predecessors.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 1193,
+          "char_end": 1400,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The new Overtake Mode could help in this respect.",
+          "claim": "The new 2026 Overtake Mode feature may improve overtaking opportunities at Albert Park.",
+          "category": "unsupported-assertion",
+          "span_valid": true,
+          "char_start": 1401,
+          "char_end": 1450,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The race takes place at the start of autumn (one week earlier than last year), a period characterised by frequent temperature swings and rainfall.",
+          "claim": "The 2026 Australian Grand Prix is scheduled one week earlier than the 2025 race, placing it at the start of autumn when temperature swings and rainfall are common.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1527,
+          "char_end": 1673,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Intermittent showers significantly affected the 2025 race, won by Lando Norris on intermediates.",
+          "claim": "Lando Norris won the 2025 Australian Grand Prix in wet conditions, using intermediate tyres.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1674,
+          "char_end": 1770,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "a thrilling conclusion to the 2025 season \u0013 in which a three-way Drivers\u0019 Championship fight went down to the wire, with [Lando Norris](https://www.formula1.com/en/drivers/lando-norris) emerging triumphant",
+          "claim": "The 2025 Formula 1 Drivers' Championship was decided by a three-way fight that went to the final race, with Lando Norris winning the title.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1803,
+          "char_end": 2008,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "based on the Barcelona Shakedown and two pre-season tests in Bahrain, many have tipped the \u0018top four\u0019 as consisting of [McLaren](https://www.formula1.com/en/teams/mclaren), [Mercedes](https://www.formula1.com/en/teams/mercedes), [Red Bull](https://www.formula1.com/en/teams/red-bull-racing) and [Ferrari](https://www.formula1.com/en/teams/ferrari) \u0013 though the order in which those teams could line up is up for debate",
+          "claim": "Pre-season testing in Barcelona and Bahrain led observers to predict McLaren, Mercedes, Red Bull and Ferrari as the top four teams for 2026, though their relative order is uncertain.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2361,
+          "char_end": 2779,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "[Aston Martin](https://www.formula1.com/en/teams/aston-martin) are expected to face a tricky start following a challenging run during pre-season testing.",
+          "claim": "Aston Martin are expected to struggle at the start of the 2026 season after a difficult pre-season testing campaign.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3209,
+          "char_end": 3362,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Norris is preparing to defend his maiden crown at a track where he claimed victory one year ago in mixed weather conditions. The forecast this time around suggests that the 2026 event will remain dry",
+          "claim": "Norris won the 2025 Australian Grand Prix in mixed weather conditions, and the forecast for the 2026 race at the same venue is dry.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3385,
+          "char_end": 3584,
+          "review_status": "unreviewed"
+        }
+      ]
+    }
+  ]
+}

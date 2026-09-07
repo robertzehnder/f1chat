@@ -61,3 +61,4 @@
 058_fantasy_points_ledger [057_fantasy_scoring_rules] 2026-08-26T19:29:06Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R0 — per-component points ledger with computable/source honesty
 059_fantasy_feed_snapshots [058_fantasy_points_ledger] 2026-08-26T19:35:52Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R1 — official game feed snapshots (prices, ownership, official points)
 060_fantasy_projection [059_fantasy_feed_snapshots] 2026-08-26T19:44:13Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R3/R6 — stored per-gameday projections
+061_analyst_corpus [060_fantasy_projection] 2026-09-07T02:00:00Z System Administrator <root@Roberts-MacBook-Pro.local> # analyst-corpus G1 — rights registry + provenance document store
