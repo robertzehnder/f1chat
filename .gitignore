@@ -88,3 +88,5 @@ corpus/inbox/*
 !corpus/inbox/.gitkeep
 corpus/quarantine/*
 !corpus/quarantine/.gitkeep
+corpus/eval/blind/pairs/
+corpus/eval/blind/keys/

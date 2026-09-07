@@ -1,0 +1,281 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "The H2 heading leads with the verdict, but the opening paragraphs under it spend three sentences narrating context before delivering the mechanism claim"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'The verdict' section explicitly restates the argument: 'Antonelli's win was earned on pace and unlocked by circumstance, in that order' — a textbook summary paragraph"
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'Behind the Mercedes one-two, Verstappen brought...' is a bridging sentence doing transitional work inside the evidence section rather than letting a heading carry it"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "3.857 seconds, 1:23.504, four tenths, 0.16, 0.90 — figures cluster in one paragraph rather than being deployed singly to clinch discrete claims"
+      },
+      {
+        "id": "E2",
+        "score": 1,
+        "evidence": "'finishing perhaps sixth' uses a hedge, but 'the result was only ever a matter of whether ten laps was enough' asserts certainty for a counterfactual without earned documentation"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is consistently the primary benchmark throughout: 'eight tenths per lap that George Russell could not answer,' 'pass his team-mate'"
+      },
+      {
+        "id": "E4",
+        "score": 0,
+        "evidence": "No quotes, radio messages, or official communications appear anywhere in the text despite the subject matter inviting them"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'fourteenth on lap one became eighth by lap six' — recaps the running order rather than interpreting what the pace delta meant strategically"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'Russell may quietly note that he led thirty of fifty-three laps and lost' approaches dry irony but the surrounding prose leans toward earnest analytical summary rather than juxtaposition"
+      },
+      {
+        "id": "R3",
+        "score": 0,
+        "evidence": "No first-person voice appears anywhere; the meta-framing ('analyst-pipeline pilot,' 'the recap treats them as reported rather than measured') substitutes institutional distancing for personality"
+      },
+      {
+        "id": "R4",
+        "score": 1,
+        "evidence": "'teams may change tyres at no time cost' explains the red-flag tyre rule — unnecessary for an enthusiast audience; otherwise jargon is handled well"
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "Opening section under first H2 runs two paragraphs of 4-5 sentences each; the 'caveat' section contains one paragraph of seven sentences — both violate the 2-4 sentence rule"
+      },
+      {
+        "id": "P2",
+        "score": 1,
+        "evidence": "'It was, by one lap.' works as a short punch; but most paragraphs sustain uniform analytical sentence length without visible variation"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Density does peak at the gap table mechanism, but the caveat section gives equal or greater room to secondary threads (Pérez penalty, Gasly pole) than their significance warrants"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 4,
+      "register": 2,
+      "pacing": 3
+    },
+    "total": 11,
+    "max": 28,
+    "human_likelihood": 14,
+    "top_fixes": [
+      "Delete 'The verdict' section entirely — S2 is a hard rule; the piece should end when the caveat section ends, letting Russell's muted afternoon serve as the coda",
+      "Insert at least two evidentiary quotes or radio messages (team-to-driver, Antonelli post-race, or stewards' document on the Pérez penalty) — E4 is scoring zero and dragging credibility",
+      "Add a first-person judgment call in one place where the analyst is genuinely speculating — the Gasly pole cause or the Hamilton contact adjudication are natural sites — to satisfy R3 and break the institutional-voice flatness that signals machine authorship most loudly"
+    ],
+    "label": "monza_2026_recap_pilot.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-07T13:17:41.913Z",
+    "source": "draft"
+  },
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 0,
+        "evidence": "'A big early crash, back-and-forths up and down the field, and the late hunt for victory made this a lively Monza race'"
+      },
+      {
+        "id": "S2",
+        "score": 1,
+        "evidence": "'So, this was certainly one of those frustrating weekends' — soft closing sentence rather than a summary paragraph, but still a mild wrap-up coda"
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "Sections open cleanly on their verdict, but bridging phrases like 'That's the debate The Race had when putting this list together' dissolve the abruptness"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'the slight 3.8-second margin of victory' and '66 points ahead' appear in the same section; numbers cluster rather than each clinching a single claim"
+      },
+      {
+        "id": "E2",
+        "score": 1,
+        "evidence": "'May well have been', 'surely', 'certainly' used, but 'surely there's no stopping this title charge now' passes off speculation as near-certainty without an explicit marker"
+      },
+      {
+        "id": "E3",
+        "score": 1,
+        "evidence": "Norris/Piastri framing gestures at teammate benchmark but Lawson, Hamilton, Russell sections skip it in favour of absolute comparisons"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "Hamilton's 'here there are no rules' quote and Russell's tyre-strategy quote both land as hard stops that complicate or confirm the preceding reading"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'Starting from the pitlane in the aftermath of power unit changes necessitated by the battery issue in Q1' — recaps context the reader watched rather than interpreting it"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'the only way the badly outmatched AMR26s were ever going to influence things' is dry, but 'sky is falling down' is rhetorical flourish rather than earned understatement"
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'this writer specifically' flags a judgment call correctly, but 'Here's our pick of winners and losers from race day in Italy' is a sentence about the piece itself"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "No definitions offered for VSC, ICoA context, DRS; Parabolica, Lesmo 2 named without orientation — peer address maintained throughout"
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "Ferrari section has a five-sentence paragraph beginning 'Whatever the inside-team ruling' that bundles three separate points without exiting"
+      },
+      {
+        "id": "P2",
+        "score": 1,
+        "evidence": "'He was also gracious in defeat, taking nothing away from Antonelli's recovery to victory, and paying little attention to the podium boos - but the reality is now stark: Antonelli is 66 points ahead and going strong' — long sentence, punchy follow-through, but this rhythm is intermittent"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Ferrari (the big story) gets room; Racing Bulls gets comparable length; Verstappen (clear-cut positive) runs four paragraphs when two would do"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 5,
+      "register": 5,
+      "pacing": 3
+    },
+    "total": 15,
+    "max": 28,
+    "human_likelihood": 52,
+    "top_fixes": [
+      "Kill the intro blurb ('A big early crash… Here's our pick') entirely — open on Antonelli's verdict without scene-setting; the bylines and subheads do all the structural work needed.",
+      "Enforce one number per claim: strip the Russell section to either the 3.8-second gap or the 66-point deficit, not both; use the survivor to clinch a single sharp point.",
+      "Close Verstappen and Lawson two sentences earlier each — both sections drift into soft summary ('how good was it to see', 'certainly one of those frustrating weekends') that pads clear-cut verdicts beyond their weight."
+    ],
+    "label": "PRO:the_race:20",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-07T13:18:08.928Z",
+    "source": "the_race"
+  },
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 0,
+        "evidence": "'With 15 minutes to go before qualifying at Monza, pole contender George Russell revealed' — narrative scene-setting, verdict buried or absent"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'The lengthy saga has cost Gasly and Alpine nine points...while also raising questions' — classic wrap-up synthesis restating the argument"
+      },
+      {
+        "id": "S3",
+        "score": 0,
+        "evidence": "'It was the scene of his first and so far only victory...and now he has grabbed his first pole' — bridging sentence connecting sections rather than abrupt heading transition"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'0.060s faster than Russell' and '0.001s' and '77cm' and '3mm' — figures deployed but clustered across passages rather than singly surgical"
+      },
+      {
+        "id": "E2",
+        "score": 1,
+        "evidence": "'This likely arose due to the addition of the Cadillac garage' — one hedged speculation, but most speculative claims lack explicit markers"
+      },
+      {
+        "id": "E3",
+        "score": 0,
+        "evidence": "Russell's performance never benchmarked against Antonelli; Piastri never against Norris; teammate comparison absent throughout"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "'Max was very clever there...that cost us both' — Wolff quote lands directly after the mechanical account of what Verstappen did, complicating the reading"
+      },
+      {
+        "id": "R1",
+        "score": 0,
+        "evidence": "'Russell was in a pack of cars led by Max Verstappen, who messed up his braking at Turn 1' — pure sequence narration of visible on-screen action"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'less power than a Fiat Punto' is dry but borrowed from Verstappen; the piece's own prose is earnest rather than ironic"
+      },
+      {
+        "id": "R3",
+        "score": 0,
+        "evidence": "No first-person judgment calls appear; also two 'Thanks for reading F1 Debrief! Subscribe' sentences — explicit self-reference about the piece itself"
+      },
+      {
+        "id": "R4",
+        "score": 1,
+        "evidence": "'FIA International Court of Appeal (ICA)' — acronym spelled out; 'One Drop Foundation' context over-explained for an enthusiast audience"
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "'Although FOM used LIDAR scans accurate to 3mm, it did not accurately reconstruct...as is usual post-race' — several paragraphs run to 5+ sentences"
+      },
+      {
+        "id": "P2",
+        "score": 1,
+        "evidence": "Some variation present ('That forced Antonelli to slow. That cost us both') but many paragraphs run in uniform mid-length sentences without punchy exits"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "ICA ruling gets extensive room, qualifying mechanism compressed; density inversion — procedural legalese expands while the actual lap mechanism stays thin"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 0,
+      "evidence": 4,
+      "register": 2,
+      "pacing": 3
+    },
+    "total": 9,
+    "max": 28,
+    "human_likelihood": 28,
+    "top_fixes": [
+      "Invert every section opener: lead with the sharpest verdict ('Gasly's battery deployment was the story of qualifying; everything else was context'), then supply evidence — the chess anecdote and scene-setting are killing S1 throughout.",
+      "Cut both 'Thanks for reading' subscription plugs and the closing synthesis paragraph; the ICA statement is a fine hard stop — let it land without the 'nine points and questions raised' coda that re-narrates what the reader just processed.",
+      "Add one teammate benchmark per driver assessed: Antonelli's sector splits versus Russell, Norris versus Piastri at Turn 1 — without E3 anchors, individual verdicts float and the analysis reads as colour writing rather than evaluation."
+    ],
+    "label": "PRO:substack:f1debrief:98",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-07T13:18:35.631Z",
+    "source": "substack:f1debrief"
+  }
+]
