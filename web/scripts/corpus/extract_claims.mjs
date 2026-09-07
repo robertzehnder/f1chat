@@ -94,12 +94,37 @@ for (const [meetingKey, docs] of byMeeting) {
     const rows = [];
     for (const cl of claims) {
       totalClaims++;
-      const idx = d.output_text.indexOf(cl.quote);
+      // Exact match first; then punctuation-normalized recovery (curly
+      // quotes, dashes, whitespace) mapped back to ORIGINAL offsets — the
+      // stored quote is always re-read from the canonical text, so span
+      // validity stays a claim about the source, not the model's typing.
+      let idx = d.output_text.indexOf(cl.quote);
+      let quote = cl.quote;
+      if (idx < 0) {
+        const norm = (s) => s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ");
+        // index map: normalized position -> original position
+        const map = [];
+        let normSrc = "";
+        for (let i = 0; i < d.output_text.length; i++) {
+          const ch = norm(d.output_text[i]);
+          if (/\s/.test(ch)) {
+            if (normSrc.endsWith(" ")) continue;
+            normSrc += " "; map.push(i);
+          } else { normSrc += ch; map.push(i); }
+        }
+        const nIdx = normSrc.indexOf(norm(quote).trim());
+        if (nIdx >= 0) {
+          const start = map[nIdx];
+          const end = map[Math.min(nIdx + norm(quote).trim().length, map.length) - 1] + 1;
+          idx = start;
+          quote = d.output_text.slice(start, end);
+        }
+      }
       const valid = idx >= 0;
       if (valid) validSpans++;
       rows.push({
-        quote: cl.quote, claim: cl.claim, category: cl.category,
-        span_valid: valid, char_start: valid ? idx : null, char_end: valid ? idx + cl.quote.length : null,
+        quote, claim: cl.claim, category: cl.category,
+        span_valid: valid, char_start: valid ? idx : null, char_end: valid ? idx + quote.length : null,
         review_status: "unreviewed"
       });
     }

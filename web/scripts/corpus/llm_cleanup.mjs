@@ -53,6 +53,7 @@ let done = 0, errors = 0;
 for (const p of pending.slice(0, limit)) {
   try {
     assertUseAllowed(registry, p.source_key, "llm_process", PURPOSE);
+    console.log(`  → ${p.source_id} (${p.output_text.length} chars)…`);
     // Streamed request — long transcripts take minutes and a non-streaming
     // fetch times out waiting for headers that only arrive with the body.
     const text = (await anthropicStream({
