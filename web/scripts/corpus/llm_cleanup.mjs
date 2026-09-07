@@ -15,7 +15,7 @@
  * Env: ANTHROPIC_API_KEY, ANTHROPIC_MODEL (web/.env.local)
  */
 import { createHash } from "node:crypto";
-import { corpusClient } from "./lib/db.mjs";
+import { withCorpus } from "./lib/db.mjs";
 import { loadRegistry, assertUseAllowed } from "./lib/rights.mjs";
 import { anthropicStream } from "./lib/anthropic.mjs";
 
@@ -33,10 +33,11 @@ Rules — follow exactly:
 - Do NOT add, remove, summarize, or reorder content. Do NOT invent numbers or names not clearly intended by the audio text.
 - Output ONLY the repaired transcript, no preamble.`;
 
-const client = await corpusClient();
-const registry = await loadRegistry(client);
-
-const { rows: pending } = await client.query(
+// Gather with a short-lived connection, then work WITHOUT one held open —
+// Neon terminates connections left idle across multi-minute LLM streams.
+const { registry, pending } = await withCorpus(async (client) => ({
+  registry: await loadRegistry(client),
+  pending: (await client.query(
   `SELECT dv.derivation_id, dv.fetch_id, dv.output_text, dv.output_sha256, d.source_key, d.source_id
    FROM raw.analyst_derivations dv
    JOIN raw.analyst_fetches f USING (fetch_id)
@@ -46,7 +47,8 @@ const { rows: pending } = await client.query(
        SELECT 1 FROM raw.analyst_derivations c
        WHERE c.parent_derivation_id = dv.derivation_id AND c.kind = 'llm_cleanup'
          AND c.tool_version = $1 AND c.status <> 'purged')
-   ORDER BY dv.derivation_id`, [VERSION]);
+   ORDER BY dv.derivation_id`, [VERSION])).rows
+}));
 console.log(`llm_cleanup: ${pending.length} transcript(s) pending (model ${MODEL})`);
 
 let done = 0, errors = 0;
@@ -63,11 +65,11 @@ for (const p of pending.slice(0, limit)) {
       messages: [{ role: "user", content: p.output_text }]
     })).trim();
     if (!text || text.length < p.output_text.length * 0.5) throw new Error(`suspicious output length ${text?.length}`);
-    await client.query(
+    await withCorpus((client) => client.query(
       `INSERT INTO raw.analyst_derivations
          (fetch_id, parent_derivation_id, kind, tool_version, input_sha256, output_sha256, output_text)
        VALUES ($1, $2, 'llm_cleanup', $3, $4, $5, $6)`,
-      [p.fetch_id, p.derivation_id, `${VERSION}|${MODEL}`, p.output_sha256, sha256(text), text]);
+      [p.fetch_id, p.derivation_id, `${VERSION}|${MODEL}`, p.output_sha256, sha256(text), text]));
     done++;
     console.log(`  + ${p.source_id}`);
   } catch (e) {
@@ -75,5 +77,4 @@ for (const p of pending.slice(0, limit)) {
   }
 }
 console.log(`llm_cleanup: ${done} cleaned, ${errors} error(s)`);
-await client.end();
 process.exit(errors && !done ? 1 : 0);

@@ -54,7 +54,9 @@ mkdirSync(MANIFEST_DIR, { recursive: true });
 
 const manifest = { run: `distill_style_v1`, model: MODEL, season, started_at: new Date().toISOString(), groups: {} };
 
-const dimensionDocs = [];
+// GATHER first with the connection open, THEN do the LLM work with no DB
+// connection held (Neon terminates idle connections mid-stream).
+const gathered = [];
 for (const g of GROUPS) {
   // dev-split docs only; latest good normalization; transcripts read the
   // llm_cleanup child (readability), never as evidence.
@@ -84,7 +86,12 @@ for (const g of GROUPS) {
     }
   }
   if (docs.length < 3) { console.log(`distill: ${g.key} — only ${docs.length} dev doc(s), skipping`); continue; }
+  gathered.push({ g, docs });
+}
+await client.end();
 
+const dimensionDocs = [];
+for (const { g, docs } of gathered) {
   assertUseAllowed(registry, g.sourceKey, "llm_process", "style_research");
   const corpusText = docs
     .map((d, i) => `=== EXEMPLAR ${i + 1} (${d.title ?? "untitled"}) ===\n${d.output_text}`)
@@ -127,4 +134,3 @@ writeFileSync(resolve(STYLE_DIR, "composite_voice_v1.md"),
 manifest.finished_at = new Date().toISOString();
 writeFileSync(resolve(MANIFEST_DIR, "distill_style_v1.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log(`distill: done — ${dimensionDocs.length} dimension docs + composite + manifest`);
-await client.end();

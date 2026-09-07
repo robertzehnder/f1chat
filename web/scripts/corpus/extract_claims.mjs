@@ -55,7 +55,8 @@ const registry = await loadRegistry(client);
 mkdirSync(EVAL_DIR, { recursive: true });
 
 const { rows: holdoutDocs } = await client.query(
-  `SELECT d.doc_id, d.source_key, d.source_id, d.title, d.meeting_key, d.session_scope,
+  `SELECT DISTINCT ON (d.doc_id)
+          d.doc_id, d.source_key, d.source_id, d.title, d.meeting_key, d.session_scope,
           f.fetch_id, dv.derivation_id, dv.output_text
    FROM raw.analyst_documents d
    JOIN raw.analyst_fetches f USING (doc_id)
@@ -66,7 +67,8 @@ const { rows: holdoutDocs } = await client.query(
      AND EXISTS (SELECT 1 FROM raw.laps l WHERE l.session_key = s.session_key)
      AND dv.kind IN ('normalize_md','caption_dedup') AND dv.status NOT IN ('purged','rejected')
      AND ($1::int IS NULL OR d.meeting_key = $1::int)
-   ORDER BY d.meeting_key, d.doc_id`, [onlyMeeting]);
+   ORDER BY d.doc_id, dv.derivation_id DESC`, [onlyMeeting]);
+holdoutDocs.sort((a, b) => a.meeting_key - b.meeting_key || a.doc_id - b.doc_id);
 
 const byMeeting = new Map();
 for (const d of holdoutDocs) {
@@ -74,6 +76,9 @@ for (const d of holdoutDocs) {
   byMeeting.get(d.meeting_key).push(d);
 }
 console.log(`extract: ${holdoutDocs.length} holdout doc(s) across ${byMeeting.size} completed holdout meeting(s)`);
+// All DB reads done — drop the connection before the long LLM loop (Neon
+// terminates idle connections, which would crash the process mid-run).
+await client.end();
 
 let totalClaims = 0, validSpans = 0;
 for (const [meetingKey, docs] of byMeeting) {
@@ -139,4 +144,3 @@ for (const [meetingKey, docs] of byMeeting) {
 }
 const pct = totalClaims ? ((validSpans / totalClaims) * 100).toFixed(1) : "0";
 console.log(`extract: ${totalClaims} claims, span validity ${validSpans}/${totalClaims} (${pct}%) — G5 bar: >=98%`);
-await client.end();

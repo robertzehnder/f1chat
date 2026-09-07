@@ -1,0 +1,1102 @@
+{
+  "season": 2026,
+  "meeting_key": 1284,
+  "model": "claude-sonnet-4-6",
+  "prompt_version": "claim_extraction@1",
+  "extracted_at": "2026-09-07T03:44:44.627Z",
+  "docs": [
+    {
+      "doc_id": 13,
+      "source_key": "the_race",
+      "source_id": "f1-miami-grand-prix-driver-rankings-2026-edd-straw",
+      "title": "Edd Straw's 2026 F1 Miami Grand Prix driver rankings",
+      "fetch_id": 13,
+      "derivation_id": 13,
+      "session_scope": "weekend",
+      "claims": [
+        {
+          "quote": "he came through the first lap third and overtook Kimi Antonelli just before the safety car. He believed that had McLaren not let Mercedes pull an undercut, he'd have won, and he might very well have done.",
+          "claim": "Lando Norris overtook Kimi Antonelli just before the safety car deployed and believed he would have won had McLaren not allowed Mercedes to execute an undercut.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2261,
+          "char_end": 2465,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the fact that both McLarens were well off their Friday single-lap pace supported the conclusion that conditions had indeed turned against aspects of their deployment characteristics that had been, as team principal Andrea Stella put it, \"marginal\" on Friday.",
+          "claim": "McLaren team principal Andrea Stella described the team's deployment characteristics on Friday as 'marginal', and both McLarens were significantly slower in qualifying than in Friday running.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1997,
+          "char_end": 2255,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he outpaced team-mate Pierre Gasly throughout the weekend, finishing two places behind him in 10th in the sprint primarily thanks to the misfortune of being on the outside of Max Verstappen and Lewis Hamilton in Turn 2, which allowed his team-mate to get ahead.",
+          "claim": "Colapinto outpaced Gasly throughout the Miami weekend but finished two places behind him in the sprint because he was caught on the outside of Verstappen and Hamilton at Turn 2.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3078,
+          "char_end": 3339,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he was outpaced by Colapinto, who was 0.154s and 0.54s quicker in the respective qualifying sessions",
+          "claim": "Colapinto was 0.154 seconds faster than Gasly in sprint qualifying and 0.54 seconds faster in main qualifying at Miami.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 13364,
+          "char_end": 13464,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.94"
+        },
+        {
+          "quote": "track-limits penalties that turned fourth into sixth in the sprint - although it should be noted that Mercedes took responsibility for his poor start on Saturday thanks to giving him too aggressive a target for the launch after misjudging the grip.",
+          "claim": "Mercedes took responsibility for Antonelli's poor sprint start, stating they had given him too aggressive a launch target after misjudging grip levels.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4307,
+          "char_end": 4555,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Oscar Piastri was clearly the second-best McLaren driver on a Miami track surface that doesn't play to his strengths, although deployment troubles played a part in his qualifying deficits of 0.239s and 0.317s in the sprint and main sessions respectively.",
+          "claim": "Piastri was 0.239 seconds slower than Norris in sprint qualifying and 0.317 seconds slower in main qualifying at Miami.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 8135,
+          "char_end": 8389,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Four tenths off Mercedes team-mate Antonelli in both qualifying sessions, the only real sign of life he showed in the battle with his team-mate was in the sprint race where he looked to have the speed to maybe have beaten him on track but even so had to benefit from a penalty to move up to fifth.",
+          "claim": "Russell was approximately four tenths of a second slower than Antonelli in both qualifying sessions at Miami and needed a penalty against his team-mate to move up to fifth in the sprint.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 15176,
+          "char_end": 15473,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he was only 0.166s off pole position in qualifying proper. There was nothing suggesting the Red Bull quite had the edge of pace the McLaren did, so that represented a strong performance.",
+          "claim": "Verstappen qualified 0.166 seconds off pole position at Miami, which was considered a strong performance relative to the Red Bull's pace.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 22115,
+          "char_end": 22301,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He couldn't even start the sprint, while after having to pit at the end of the first lap after sustaining front wing damage that left his nose in at the first corner, he retired shortly afterwards with an unrelated problem.",
+          "claim": "Hulkenberg could not start the sprint race and retired from the main race after pitting for front wing damage on lap 1 and then suffering an unrelated mechanical problem.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 18301,
+          "char_end": 18524,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "His disqualification for the floorboards on both sides exceeding the permitted reference volume left him starting from the pits, but his race was short-lived and just after passing Lindblad he clipped the Turn 14 wall, with the resulting front-left damage sending him, furiously, into the wall.",
+          "claim": "Hadjar was disqualified from qualifying for floorboard infringements and subsequently crashed out of the race after clipping the Turn 14 wall following an overtake on Lindblad.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 23493,
+          "char_end": 23787,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Leclerc is the first in a small group of drivers who had outstanding weekends but with their rankings tanked by one major mistake.\n\nHe led the line for Ferrari, outpacing Hamilton by 0.379s and 0.176s in the two qualifying sessions",
+          "claim": "Leclerc outpaced Hamilton by 0.379 seconds in sprint qualifying and 0.176 seconds in main qualifying at Miami.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 20780,
+          "char_end": 21011,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he fought it a little too hard when trying to retaliate against Piastri after losing third place, spinning and clipping the barrier. Although he crossed the line sixth after being passed by Russell and Verstappen, his forced track cuts in a damaged car earned him a 20-second penalty that dropped him to eighth.",
+          "claim": "Leclerc received a 20-second penalty for forced track cuts while driving a damaged car, which dropped him from sixth to eighth in the final race classification.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 21284,
+          "char_end": 21595,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Bottas was well off Perez in the sprint parts of the weekend, but he credited aero parts changes \"because things were not performing as they should be\" for an improved main qualifying. He outpaced Perez by 0.338s, although that wasn't representative given his team-mate didn't get the best out of his second and third runs in Q1.",
+          "claim": "Bottas outpaced Perez by 0.338 seconds in main qualifying at Miami, though the author notes this margin was unrepresentative due to Perez's poor runs.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 19815,
+          "char_end": 20144,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "His two-stopper became a three-stopper thanks to a drivethrough penalty for speeding at his second stop, caused by not pressing the problematic limiter switch, which he says is lacking feedback, hard enough.",
+          "claim": "Bottas received a drive-through penalty for speeding in the pit lane at his second stop because he did not press the pit lane limiter switch firmly enough, which he said lacked sufficient tactile feedback.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 20304,
+          "char_end": 20511,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "In sprint qualifying, Hadjar attributed half of the near-one-second deficit to deployment problems and half to his driving, compounding that with a poor start on his way to a pointless ninth in the sprint after passing Colapinto late on.",
+          "claim": "Hadjar attributed roughly half of his near-one-second deficit to Verstappen in sprint qualifying to deployment problems and half to his own driving, and finished ninth in the sprint.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 23154,
+          "char_end": 23391,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He fell in Q1 after traffic compromised the preparation for his qualifying lap, leaving him an unrepresentative six tenths off Racing Bulls team-mate Lawson.",
+          "claim": "Lindblad was eliminated in Q1 at Miami with a gap of approximately six tenths of a second to Racing Bulls team-mate Lawson, which the author characterises as unrepresentative due to traffic.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 19197,
+          "char_end": 19354,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 64,
+      "source_key": "the_race",
+      "source_id": "winners-losers-action-packed-f1-2026-miami-gp",
+      "title": "Winners and losers from action-packed Miami GP",
+      "fetch_id": 64,
+      "derivation_id": 64,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "\"F\\*\\*\\*'s sake, how did we not win this?\" lamented Lando Norris after finishing second in a Miami GP that he led for 15 laps.",
+          "claim": "Lando Norris finished second at the Miami GP and led the race for 15 laps.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1337,
+          "char_end": 1463,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the [20-second penalty post-race](https://www.the-race.com/formula-1/leclerc-given-20-second-penalty-for-repeated-cuts-after-spin/) for his resulting corner-cutting while dragging his hobbled Ferrari to the finish",
+          "claim": "Charles Leclerc received a 20-second penalty after the race for repeated corner-cutting following his spin.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 815,
+          "char_end": 1028,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "McLaren was the top scorer across the Miami weekend, and has step two of its upgrade still to come in Montreal next time out as well.",
+          "claim": "McLaren scored the most championship points across the Miami weekend and had a second upgrade step planned for Montreal.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1844,
+          "char_end": 1977,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Russell admitted that \"the pace was really, really poor on my side\" and that he'd begun testing different brake settings and his overall driving style in the final 20 laps to see what he could do to extract the maximum out of the car.",
+          "claim": "George Russell stated his pace was very poor and that he experimented with brake settings and driving style in the final 20 laps of the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2420,
+          "char_end": 2654,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He's fortunate that Leclerc had his moment on the final lap and allowed him to make up one more place.",
+          "claim": "Russell gained a position on the final lap due to Leclerc's incident, moving Russell from fifth to fourth at the flag.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2831,
+          "char_end": 2933,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "team-mate Kimi Antonelli further extended his advantage in the championship.",
+          "claim": "Kimi Antonelli extended his championship lead over George Russell following the Miami GP.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3101,
+          "char_end": 3177,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he still had to pounce and pass Lando Norris; who knew whether he'd get another chance?\n\nThat pass was incisive, as was his subsequent one on Max Verstappen to break any real tow back to Norris.",
+          "claim": "Antonelli overtook both Lando Norris and Max Verstappen during the race to secure the lead.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3782,
+          "char_end": 3976,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "A tied-best F1 finish for Colapinto on the road - which then became a best result after Leclerc's penalty promoted him",
+          "claim": "Colapinto finished eighth on the road but was promoted to seventh after Leclerc's post-race penalty, making it his best F1 result.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4172,
+          "char_end": 4290,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "He only received a five-second penalty for being adjudged to have crossed the pit exit line by the stewards, which didn't change his finishing position.",
+          "claim": "Max Verstappen received a five-second penalty for crossing the pit exit line, which did not affect his final finishing position.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4981,
+          "char_end": 5133,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he did settle down and managed 51 laps on a set of hards, staying in the hunt on them for long enough that, with a bit of fortune thanks to Leclerc's off, he was able to turn what should have been sixth into fifth",
+          "claim": "Verstappen completed 51 laps on hard tyres and finished fifth, one place better than he would have otherwise due to Leclerc's incident.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5440,
+          "char_end": 5653,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Hadjar was visibly annoyed at himself for crashing out of the Miami GP, clouting the wall just as he was making progress through the field from his pitlane start.",
+          "claim": "Isack Hadjar started from the pit lane at the Miami GP and retired after crashing into the wall.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5919,
+          "char_end": 6081,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Carlos Sainz shared that Williams \"finally put on the upgrade of the car that was supposed to come to race one\", which finally seemed to hoist it properly into the midfield.",
+          "claim": "Carlos Sainz stated that the upgrade Williams brought to Miami was one originally intended for the season opener.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7114,
+          "char_end": 7287,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Alex Albon, who reckoned he \"must have made up six or seven positions\" by avoiding the path of the spinning Verstappen at the start.",
+          "claim": "Alex Albon claimed he gained approximately six or seven positions at the race start by avoiding Verstappen's spin.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 7378,
+          "char_end": 7510,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "that showed in the 20-second gap to Alpine's Franco Colapinto",
+          "claim": "Williams finished approximately 20 seconds behind Alpine's Franco Colapinto, indicating a deficit in race pace.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 7583,
+          "char_end": 7644,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 65,
+      "source_key": "the_race",
+      "source_id": "winners-losers-miami-grand-prix-qualifying-f1-2026",
+      "title": "Winners and losers from Miami Grand Prix qualifying 2026",
+      "fetch_id": 65,
+      "derivation_id": 65,
+      "session_scope": "qualifying",
+      "claims": [
+        {
+          "quote": "Oscar Piastri being the last car to make it through Q1 in 16th was the first alarm bell that McLaren wasn't going to be in the fight for pole position like it had been in sprint qualifying.",
+          "claim": "Oscar Piastri qualified 16th in Q1, being the last driver to progress through that segment.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 434,
+          "char_end": 623,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Only Ayrton Senna and Michael Schumacher had previously taken their first three grand prix poles in three consecutive weekends",
+          "claim": "Before Antonelli, only Ayrton Senna and Michael Schumacher had taken their first three Formula 1 pole positions in three consecutive weekends.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 3775,
+          "char_end": 3901,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he secured a hat-trick of pole positions that put him in esteemed company",
+          "claim": "Kimi Antonelli secured his third consecutive Formula 1 pole position at the Miami Grand Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3699,
+          "char_end": 3772,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "a disappointing qualifying left him fifth and almost four tenths of a second behind polesitter and Mercedes team-mate Kimi Antonelli.",
+          "claim": "George Russell qualified fifth, approximately four tenths of a second slower than pole-sitter Kimi Antonelli.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2606,
+          "char_end": 2739,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Russell believed an error at the final corner on his final lap cost him around three tenths, but even that wouldn't have been enough to snatch pole away from his title rival",
+          "claim": "Russell estimated a final-corner error cost him around three tenths of a second, which still would not have been sufficient for pole position.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2741,
+          "char_end": 2914,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Audi managed to put the gearbox and whole rear axle back on the car \"in half an hour\", it was hardly worth it for the 3.8-second gap to Q2 progression and subsequent in-lap brake fire",
+          "claim": "Bortoleto's Audi qualified 3.8 seconds away from Q2 progression and suffered a brake fire on his in-lap.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5194,
+          "char_end": 5377,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "He said afterwards this was a \"consequence probably of what happened to put the cars out on track\", and not connected to his sprint race exclusion for his engine's intake air pressure exceeding the maximum permitted limit",
+          "claim": "Bortoleto's sprint race disqualification was due to his engine's intake air pressure exceeding the maximum permitted limit.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 5380,
+          "char_end": 5601,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "for Colapinto to outqualify his team-mate Pierre Gasly twice and be comfortably inside the top 10 each time makes him undoubtedly one of the winners from qualifying.",
+          "claim": "Colapinto outqualified Gasly in both sprint qualifying and main qualifying, finishing inside the top 10 on both occasions.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6038,
+          "char_end": 6203,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The Alpine advantage is several tenths of a second, which Liam Lawson said had 'caught out' Racing Bulls and Haas driver Ollie Bearman admitted was unexpected",
+          "claim": "Alpine's qualifying pace advantage over rivals was several tenths of a second, which Lawson said caught out Racing Bulls and Bearman admitted was unexpected.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 7373,
+          "char_end": 7531,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Valtteri Bottas was happier he still qualified half a second slower than the Aston Martins and 1.7s from a Q2 place.",
+          "claim": "Bottas qualified half a second slower than the Aston Martins and 1.7 seconds away from a Q2 place.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 8479,
+          "char_end": 8595,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Cadillac choosing Saturday's race to run the hard tyres for the first time and gather data for the grand prix.",
+          "claim": "Cadillac ran hard tyres for the first time during the sprint race in order to gather data for the grand prix.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8129,
+          "char_end": 8239,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "His Racing Bulls team had been working on the car and didn't put a cover on it after sprint qualifying, which meant a pitlane start, but then another as-yet unexplained issue stopped him from even starting the sprint.",
+          "claim": "Lindblad missed the sprint race start entirely due to an unexplained issue, having already been consigned to a pit lane start because his car was left uncovered after sprint qualifying.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 9167,
+          "char_end": 9384,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Perez lamented a messy qualifying session, with a deployment issue on his final run",
+          "claim": "Sergio Perez reported a deployment issue on his final qualifying run at Miami.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8384,
+          "char_end": 8467,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Not only has the car been tricky to drive and slow early this season, Red Bull has also struggled to make progress with it in-weekend. It has been hard to understand so whatever potential may have existed remained untapped.",
+          "claim": "Red Bull's RB22 has been difficult to drive and develop within race weekends for most of the early 2025 season.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 1535,
+          "char_end": 1758,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 66,
+      "source_key": "the_race",
+      "source_id": "winners-and-losers-from-f1s-2026-miami-sprint",
+      "title": "Winners and losers from F1's 2026 Miami sprint",
+      "fetch_id": 66,
+      "derivation_id": 66,
+      "session_scope": "sprint",
+      "claims": [
+        {
+          "quote": "McLaren confirmed its sprint supremacy in Miami by breaking Mercedes’ unbeaten run and clinching its first 1-2 of 2026.",
+          "claim": "McLaren achieved its first 1-2 finish of the 2026 season in the Miami sprint, ending Mercedes' unbeaten run.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 328,
+          "char_end": 447,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The second Lando Norris made it to the first corner in front, a fourth-career sprint victory never looked in doubt. He was simply in cruise control from start to finish and never came under any pressure to defend his lead",
+          "claim": "Lando Norris led from the first corner and won the Miami sprint without facing any pressure on his lead, which was his fourth career sprint victory.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 638,
+          "char_end": 859,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Oscar Piastri, on the other hand, saw off some late pressure from Charles Leclerc to keep a firm grip of second place.",
+          "claim": "Oscar Piastri finished second in the Miami sprint after resisting late pressure from Charles Leclerc.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 967,
+          "char_end": 1085,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "It began with a terrible start, and ended with a track limits penalty - Kimi Antonelli had a terrible sprint Saturday.",
+          "claim": "Kimi Antonelli suffered a poor start and received a track limits penalty during the Miami sprint.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1456,
+          "char_end": 1574,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Antonelli said he’d done all the procedures on the start correctly so that wasn’t his fault, but the many driving errors and track limits infringements thereafter made us think back to the rookie of a year ago",
+          "claim": "Antonelli claimed his poor start was not due to driver error, but he committed multiple driving errors and track limits infringements during the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 1860,
+          "char_end": 2069,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Even Leclerc had a massive pop at Antonelli's “unbelievable” (in a bad way!) wheel-to-wheel combat, although Leclerc did soften those comments out of the cockpit afterwards.",
+          "claim": "Leclerc publicly criticised Antonelli's wheel-to-wheel racing during the sprint but later moderated his comments after the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2122,
+          "char_end": 2295,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Toto Wolff admitted the team was “hoping we were going to be able to hold onto our advantage” but never looked close to podium-level pace.",
+          "claim": "Toto Wolff acknowledged Mercedes hoped to maintain their advantage but the team lacked podium-level pace in the Miami sprint.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2753,
+          "char_end": 2891,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "its chances of a top three finish were scuppered by its best candidate - that was Antonelli - with the poor race start and for picking up that needless track limits penalty which demoted him from fourth to sixth after the flag.",
+          "claim": "Antonelli was demoted from fourth to sixth place after the Miami sprint due to a post-race track limits penalty.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2900,
+          "char_end": 3127,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "he was fortunate not to drop behind Max Verstappen at the chequered flag, with his pace seemingly evaporating in the latter stages as Mercedes’ winning streak came to a juddering end.",
+          "claim": "George Russell narrowly avoided being overtaken by Verstappen at the end of the Miami sprint as his pace faded in the closing stages.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3316,
+          "char_end": 3499,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "There have been five competitive starts so far this season: three grands prix, and two sprint races. And Audi has failed to put one of its cars on the grid three times out of five.",
+          "claim": "Audi failed to start at least one car in three out of five competitive sessions in the 2026 season.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3656,
+          "char_end": 3836,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Nico Hulkenberg’s smoky exit on the reconnaissance laps marked yet another technical failure of some description for the new works team, which also only had one car take the start in the Australian and Chinese GPs.",
+          "claim": "Hulkenberg retired before the Miami sprint start due to a technical failure, and Audi had also fielded only one car at the Australian and Chinese Grands Prix.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3838,
+          "char_end": 4052,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Gabriel Bortoleto lost his 11th place after being disqualified by the stewards for an engine air intake pressure breach.",
+          "claim": "Gabriel Bortoleto was disqualified from 11th place in the Miami sprint for an engine air intake pressure regulation breach.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4324,
+          "char_end": 4444,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "It got dicey on the opening lap sandwiched between Lewis Hamilton and Franco Colapinto, and contact with the latter, and the move on Hamilton mid-race that went just a touch too far led to a slightly laboured bit of letting the Ferrari back through.",
+          "claim": "Verstappen made contact with Colapinto on the opening lap, and a mid-race move on Hamilton resulted in Verstappen having to give the position back to the Ferrari.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4652,
+          "char_end": 4901,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "his race ended on such a high that he was able to beat the penalised Antonelli by a tenth of a second!",
+          "claim": "Verstappen finished just one tenth of a second ahead of the penalised Antonelli at the end of the Miami sprint.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5089,
+          "char_end": 5191,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "having been 0.631s slower than Bearman in that qualifying session, Ocon drove impeccably in the sprint, was the fastest Haas driver and mugged Bearman in the second half of the race to take 11th.",
+          "claim": "Ocon was 0.631 seconds slower than Bearman in sprint qualifying but outpaced him during the sprint race and overtook him in the second half to finish 11th.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6350,
+          "char_end": 6545,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Esteban Ocon entered this weekend with one point compared to Haas team-mate Ollie Bearman’s 17 scored in one fewer finish after Bearman’s massive Suzuka crash.",
+          "claim": "Heading into the Miami weekend, Ocon had scored one championship point while Bearman had scored 17 points from one fewer classified finish, following Bearman's crash at Suzuka.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6122,
+          "char_end": 6281,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Audi and Alpine were well up the road in the battle of the midfield and the team that came to Miami fourth in the constructors’ championship was painfully off the pace.",
+          "claim": "Haas arrived at Miami fourth in the constructors' championship but was significantly off the pace of Audi and Alpine in the midfield battle during the sprint.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6924,
+          "char_end": 7092,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 67,
+      "source_key": "the_race",
+      "source_id": "winners-losers-f1-2026-miami-sprint-qualifying",
+      "title": "Winners and losers from F1 2026 Miami sprint qualifying",
+      "fetch_id": 67,
+      "derivation_id": 67,
+      "session_scope": "sprint",
+      "claims": [
+        {
+          "quote": "A first defeat of the season in a competitive session for Mercedes has to go down as a loss, even though championship leader Kimi Antonelli made the front row.",
+          "claim": "Miami sprint qualifying was Mercedes's first defeat of the 2026 season in a competitive session.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 249,
+          "char_end": 408,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "A comparison of Lando Norris's (at times scruffy) pole lap versus a relatively cleaner run from Antonelli, suggests nearly all the Mercedes time loss came through a slightly understeery run through Turn 1 and then a lack of pace through the high-speed sweeps thereafter.",
+          "claim": "Analysis of telemetry comparing Norris's pole lap to Antonelli's lap shows Mercedes lost most of its time at Turn 1 and through high-speed sections.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 915,
+          "char_end": 1185,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "the speed traces also suggest - as in Suzuka - an initial divergence in terms of energy deployment strategy that seems to have once again given McLaren a Friday edge.",
+          "claim": "Speed trace data indicates McLaren had a different energy deployment strategy to Mercedes, giving McLaren an advantage in sprint qualifying.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1283,
+          "char_end": 1449,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Red Bull looks to have made a similar trade-off with deployment as Mercedes, so gaining on the runs to Turns 11 and 17 is offset against McLaren's superior speed heading to Turn 1 and between Turns 3 and 4.",
+          "claim": "Telemetry shows Red Bull made a similar energy deployment trade-off to Mercedes, gaining speed at Turns 11 and 17 but losing it at Turn 1 and between Turns 3 and 4 compared to McLaren.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1746,
+          "char_end": 1952,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The rest of that near-0.6s gap looks to be from the inferior speed Verstappen can carry through the corners. He loses a big chunk from Turns 4-8 and another whack though the fiddly bit of Turns 11-16.",
+          "claim": "Verstappen's lap was approximately 0.6 seconds off the pace, with corner speed losses concentrated in the Turns 4-8 and Turns 11-16 sections.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1954,
+          "char_end": 2154,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "To be a second off \\[Verstappen\\], I don't know why - I've never been more than a tenth off so far this year when it mattered,\" he said",
+          "claim": "Hadjar stated he was approximately one second off Verstappen's pace in sprint qualifying, whereas previously he had never been more than a tenth off when it mattered.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2803,
+          "char_end": 2938,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Leclerc's 0.173s advantage over Oscar Piastri on medium Pirellis in SQ2 became a 0.370s deficit to Norris in SQ3",
+          "claim": "Leclerc was 0.173 seconds faster than Piastri in SQ2 on medium tyres but ended up 0.370 seconds slower than Norris in SQ3 on soft tyres.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4931,
+          "char_end": 5043,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Fastest in free practice, second fastest in SQ1 (only 0.010s away from the top) and fastest again in SQ2 (by nearly two tenths), Charles Leclerc was looking like the guy who was going to topple Mercedes in Miami.",
+          "claim": "Leclerc was fastest in free practice, second in SQ1 by 0.010s, and fastest in SQ2 by nearly two tenths of a second.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 4590,
+          "char_end": 4802,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Aston Martin continued to prop up the order on a day where its best recorded laptime in sprint qualifying was slower than the worst F2 qualifying lap - and that series has never even been to Miami before.",
+          "claim": "Aston Martin's best sprint qualifying lap time was slower than the slowest lap recorded in the F2 qualifying session at Miami.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 5611,
+          "char_end": 5815,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Fernando Alonso was over 10 seconds slower than the next slowest car, Valtteri Bottas’s Cadillac, thanks to exceeding track limits in SQ1\\. Alonso's best recorded lap - a 1m32.490s - wouldn't have placed him any better than 21st had it actually counted",
+          "claim": "Alonso's fastest recorded lap of 1m32.490s, which was deleted for track limits, was still only good enough for 21st place.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 5970,
+          "char_end": 6222,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Lance Stroll didn't even set a time as he briefly stopped in the Turn 16 runoff after a big lock-up, and then returned to the pits with apparent brake issues.",
+          "claim": "Lance Stroll failed to set a timed lap in sprint qualifying after stopping in the Turn 16 runoff due to a lock-up and subsequent brake issues.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6229,
+          "char_end": 6387,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Carlos Sainz blasted his Williams team for being \"three steps behind\" on its execution, and lamented energy-deployment issues for halting any chance of an SQ3 push.",
+          "claim": "Carlos Sainz publicly criticised Williams's execution and said energy-deployment problems prevented him from challenging for SQ3.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 8526,
+          "char_end": 8690,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Alex Albon said he was happy with the progress on the car and it felt like a genuine, deserved SQ2 appearance. But then it turned out he exceeded track limits on his best SQ1 lap and shouldn't have been in SQ2 at all.",
+          "claim": "Albon's best SQ1 lap was retrospectively deleted for a track limits violation, meaning he should not have progressed to SQ2.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 8696,
+          "char_end": 8913,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Perez said of the \"issues\" that he'd experienced: \"Basically we went out too late, and then we just didn't have enough time for refuelling and \\[to\\] go back \\[out\\] again",
+          "claim": "Perez said Cadillac's operational timing cost him a potential SQ2 appearance due to late deployment and insufficient time to refuel and re-exit.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 10199,
+          "char_end": 10370,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "a near-six-tenth advantage over Valtteri Bottas (that was consistent with his edge in FP1) is nothing to be sniffed at, nor is recording that after losing time to \"issues with the engine\" in practice.",
+          "claim": "Perez outpaced Bottas by close to six tenths of a second in sprint qualifying, a margin consistent with his advantage in FP1, despite engine issues in practice.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 10385,
+          "char_end": 10585,
+          "review_status": "unreviewed"
+        }
+      ]
+    },
+    {
+      "doc_id": 88,
+      "source_key": "f1com",
+      "source_id": "strategy-guide-what-are-the-tactical-options-for-sundays-miami-grand-prix",
+      "title": "STRATEGY GUIDE: What are the tactical options for the 2026 Miami Grand Prix?",
+      "fetch_id": 88,
+      "derivation_id": 132,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "Every race in Miami has seen a one-stop victory on the hard and medium tyres and, [Oscar Piastri\u0019s](https://www.formula1.com/en/drivers/oscar-piastri) 2025 victory was no different. Piastri started P4, on a medium compound, climbed to P3 at the start, passed Kimi Antonelli for P2 on Lap 4 and passed [Max",
+          "claim": "Oscar Piastri won the 2025 Miami Grand Prix with a one-stop strategy on medium and hard tyres, starting P4, passing Antonelli for P2 on Lap 4 and Verstappen for the lead on Lap 14.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 40,
+          "char_end": 345,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.82"
+        },
+        {
+          "quote": "A Virtual Safety Car fell kindly for the leaders, with Piastri, [Lando Norris](https://www.formula1.com/en/drivers/lando-norris), George Russell and Charles Leclerc all making their pit-stop on Lap 28",
+          "claim": "A Virtual Safety Car occurred during the 2025 Miami Grand Prix, prompting Piastri, Norris, Russell and Leclerc to all pit on Lap 28.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 435,
+          "char_end": 635,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Everybody who finished did a single stop, and nobody raced on a soft tyre. Of the cars that scored points, eight ran the medium>hard strategy, and made their stops between laps 25 and 29.",
+          "claim": "All finishers in the 2025 Miami Grand Prix made a single pit stop, no soft tyres were used, and eight points-scorers ran a medium-to-hard strategy stopping between laps 25 and 29.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 723,
+          "char_end": 910,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The outliers were George Russell (P3) and Lewis Hamilton (P8) who went the other way with hard>medium strategy, both successfully making up ground on their starting positions \u0013 though both pitted under the VSC with the medium-shod runners",
+          "claim": "George Russell (P3) and Lewis Hamilton (P8) ran a hard-to-medium strategy in the 2025 Miami Grand Prix, gaining positions and pitting under the VSC.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 912,
+          "char_end": 1150,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "The top 10 on the grid features two [Mercedes](https://www.formula1.com/en/teams/mercedes), two Red Bulls, two Ferraris, two McLarens and two [Alpines](https://www.formula1.com/en/teams/alpine), which is exactly what we had in the top 10 finishing positions for the Sprint",
+          "claim": "The top 10 grid positions for the 2025 Miami Grand Prix race comprised two Mercedes, two Red Bulls, two Ferraris, two McLarens and two Alpines, mirroring the Sprint top-10 finishing order by constructor.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1595,
+          "char_end": 1867,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "Given overtaking looked tricky on Saturday, there might be a benefit to trying a soft start to make early gains. The soft>hard is the likely route, and has an optimum stop window between Laps 16-22.",
+          "claim": "A soft-to-hard strategy for lower-grid starters has an optimal pit-stop window between laps 16 and 22 at the Miami Grand Prix.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 1965,
+          "char_end": 2163,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "The medium>soft race is also possible, and has a window between Laps 32-38.",
+          "claim": "A medium-to-soft strategy at the Miami Grand Prix has an optimal pit-stop window between laps 32 and 38.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 2164,
+          "char_end": 2239,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "There is a high probability of a Safety Car or VSC, and anyone deciding on medium>soft is obliged to stop in a narrow window that is not ideal. This is why I believe the hard tyre will play a big role in strategy",
+          "claim": "The analyst believes the hard tyre will play a significant role in the 2025 Miami Grand Prix strategy due to Safety Car likelihood and the narrow stop window imposed by a medium-to-soft strategy.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 2435,
+          "char_end": 2647,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Our official forecast shows a front stalling across southern Florida, delivering a round of bad weather in the early morning, then a lull, and then a second, heavier, round arriving in the late afternoon, with the chance of rain increasing as the day progresses.",
+          "claim": "The official weather forecast for the 2025 Miami Grand Prix weekend predicted a stalling weather front bringing two rounds of bad weather, with rain probability increasing into the late afternoon.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2818,
+          "char_end": 3080,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Should storms hit us here, there\u0019s a risk of 25-35mm/hr, lightning, and gusts of wind at speeds between 50-70km/h. Perhaps even hail. With this forecast in mind, the race has been moved forward from a 1600 start to a 1300 start into the nominally better",
+          "claim": "Due to forecasted storms with 25–35 mm/hr rainfall, lightning, 50–70 km/h gusts and possible hail, the 2025 Miami Grand Prix start time was moved from 16:00 to 13:00.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 3082,
+          "char_end": 3335,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.96"
+        }
+      ]
+    },
+    {
+      "doc_id": 122,
+      "source_key": "f1com",
+      "source_id": "need-to-know-the-most-important-facts-stats-and-trivia-ahead-of-the-2026-miami-grand-prix",
+      "title": "NEED TO KNOW: The most important facts, stats and trivia ahead of the 2026 Miami Grand Prix",
+      "fetch_id": 122,
+      "derivation_id": 120,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "teams will have access to the three softest compounds in the Pirelli range: C3, C4 and C5,\u001d reads Pirelli\u0019s weekend",
+          "claim": "Pirelli has nominated the C3, C4, and C5 compounds for the Miami Grand Prix weekend.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 178,
+          "char_end": 293,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.90"
+        },
+        {
+          "quote": "The asphalt, resurfaced in 2023, has a low level of roughness and gains grip over the course of the weekend as the track evolves.",
+          "claim": "The Miami International Autodrome asphalt was resurfaced in 2023 and has low roughness characteristics.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 305,
+          "char_end": 434,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "drivers switched from intermediate tyres to slicks during the 19 laps, despite the heavy rain that had fallen before the lights went out.",
+          "claim": "During a previous Miami Sprint race, drivers switched from intermediate tyres to slicks within the 19-lap race despite pre-race heavy rain.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 631,
+          "char_end": 768,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Tyre degradation in Miami has always been limited, thanks to the characteristics of the circuit, allowing drivers to extend their stints and make just a single pit stop during the race.",
+          "claim": "Miami's circuit characteristics have consistently produced low tyre degradation, enabling one-stop race strategies.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 933,
+          "char_end": 1118,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "com/en/drivers/kimi-antonelli) \u0013 who incidentally enjoyed one of his strongest outings of his rookie campaign here last year \u0013 leads team mate [George Russell",
+          "claim": "Kimi Antonelli leads George Russell by nine points in the 2026 Drivers' Championship.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1529,
+          "char_end": 1687,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.88"
+        },
+        {
+          "quote": "the Silver Arrows hold a 45-point advantage over Ferrari in the [Teams\u0019 standings",
+          "claim": "Mercedes hold a 45-point lead over Ferrari in the 2026 Constructors' Championship.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1815,
+          "char_end": 1896,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "With Antonelli scoring back-to-back wins in China and Japan, Australia victor Russell will be keen to regain some momentum and return to the top step.",
+          "claim": "Kimi Antonelli won consecutive races in China and Japan, while George Russell won in Australia.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1947,
+          "char_end": 2097,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "oscar-piastri) finished in second place to clinch the papaya outfit\u0019s first podium of the",
+          "claim": "Oscar Piastri's second-place finish in Japan was McLaren's first podium of the 2026 season.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 2419,
+          "char_end": 2508,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.88"
+        },
+        {
+          "quote": "the team set to deliver upgrades this weekend that will amount to what Team Principal [Andrea Stella](https://www.formula1.com/en/latest/tags/andrea-stella.6eYl7yEbCO9K6l6Se4LJoG) calls a [\u001ccompletely new car",
+          "claim": "McLaren Team Principal Andrea Stella described the Miami upgrade package as amounting to a completely new car.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 2528,
+          "char_end": 2736,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "ferrari), who have enjoyed a positive start to the season but have not yet managed to maintain the pace to secure a victory",
+          "claim": "Ferrari have not won a race during the opening rounds of the 2026 season.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3081,
+          "char_end": 3204,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@1.00"
+        },
+        {
+          "quote": "teams/red-bull-racing) will be hoping for better following a challenging opening stint \u0013 the former champions currently lingering in sixth place of the Teams\u0019 standings behind [Haas",
+          "claim": "Red Bull are sixth in the 2026 Constructors' Championship, behind both Haas and Alpine.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 3320,
+          "char_end": 3501,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.93"
+        }
+      ]
+    },
+    {
+      "doc_id": 137,
+      "source_key": "youtube:formula1",
+      "source_id": "palmer:2026:1284:4703BVI4Giw",
+      "title": "The Race Start Chaos & Major Incidents from The Miami Grand Prix | Jolyon Palmer's F1 TV Analysis",
+      "fetch_id": 137,
+      "derivation_id": 162,
+      "session_scope": "race",
+      "claims": [
+        {
+          "quote": "Kimi\nAntonelli on pole once again, but once\nagain getting a bad start. Now, this\none, as we play it through, is not his\nworst by any stretch this year. There's\nnot a huge amount that he does wrong,\nbut he just gets a little bit too much\nwheel spin",
+          "claim": "Antonelli started from pole position and had a poor start due to excessive wheel spin, though it was not his worst start of the 2026 season.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 77,
+          "char_end": 324,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Verstappen gets one\nof his best starts of the year as well.",
+          "claim": "Verstappen's start in this race was among the best he had achieved during the 2026 season.",
+          "category": "calculable-but-missing-metric",
+          "span_valid": true,
+          "char_start": 453,
+          "char_end": 512,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Lewis Hamilton is the\ndriver here that's going to lose out the\nmost because, as you can see, his\ntrajectory is pretty bad straight\ntowards a spinning Max. Don't know if\n[01:32]\nhe's going to go left, don't know if\nhe's going to go right. Those on this\nline have a little bit more margin,\nwhereas Lewis just has to check up a\nlittle bit, and it's going to cost him\nmultiple places",
+          "claim": "Hamilton lost multiple positions at the start because Verstappen's spin blocked his trajectory, forcing him to lift off the throttle.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 1608,
+          "char_end": 1987,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.97"
+        },
+        {
+          "quote": "Last year was Oscar in his\nposition. He snuck through to to take an\neventual race win.",
+          "claim": "In the 2025 equivalent race start scenario, Oscar Piastri went on to win the race.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 6270,
+          "char_end": 6356,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "last year for for\nMax in 2025, more down force on the\ncars,\nuh less electrical power, better\ntraction it all means you can barrel\nspeed in, you're going to pick up a bit\nof under steer and wash wide and your\nfront limited. In '26, he's rear limited\n[07:12]\nwith all the changes to the cars",
+          "claim": "The 2026 car regulation changes—including reduced downforce and increased electrical power share—shifted Verstappen's handling balance from understeer-limited to oversteer/rear-limited compared to 2025.",
+          "category": "unsupported-assertion",
+          "span_valid": true,
+          "char_start": 8037,
+          "char_end": 8326,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.97"
+        },
+        {
+          "quote": "50%\nelectrical power that this first phase\nis difficult to manage.",
+          "claim": "The 2026 Formula 1 power units deliver 50% of their total power electrically.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 4360,
+          "char_end": 4426,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Lawson locked up, clips the back of\nGasly. Gasly goes flipping. They're both\nout of the race. But, this is the\ndefinition of an unlucky accident for\nme. Uh Lawson checking the mirrors,\ndefending, does nothing wrong at this\npoint. But, as he's going down the\ngears, he has a gearbox issue. So, his\ncar just jumps into uh to an anti-stall.",
+          "claim": "The Lawson–Gasly collision was caused by Lawson's car suffering a gearbox issue that triggered an anti-stall, eliminating engine braking and causing him to understeer into Gasly.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 13881,
+          "char_end": 14218,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "you can see the\ndifference here. Lap five to lap six,\nand once again, on the left-hand side,\nyou can see Hadjar's pretty aggressive\nthrough this corner compared to Arvid\n[11:14]\nLindblad, who he's ahead of",
+          "claim": "Telemetry or video comparison between Hadjar's lap 5 and lap 6 shows Hadjar taking a shallower, more aggressive line through the chicane than Lindblad.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 12904,
+          "char_end": 13109,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.95"
+        },
+        {
+          "quote": "There's the contact. So, a little bit of\nthe front floor edge is gone for\nHamilton. That's what's flying up.\nLittle bit of damage as well for\nColapinto\nand that will derail the the rest of\nHamilton's race.",
+          "claim": "The contact between Hamilton and Colapinto caused front floor damage to Hamilton's car that compromised his race pace for the remainder of the race.",
+          "category": "source-only-reporting",
+          "span_valid": true,
+          "char_start": 10332,
+          "char_end": 10537,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "Colapinto was within his right\nto drive as he did,\nbut you can see what he was trying to do\nHamilton because we had a a similar move\nfrom Oscar Piastri on George Russell.\nExactly the same intent here. This was\non the safety car restart.",
+          "claim": "Piastri attempted a similar overtaking move on Russell during the safety car restart, mirroring Hamilton's attempt on Colapinto at turn 11.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 10813,
+          "char_end": 11049,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "I believe this\nis pure judgment from Max. We've seen it\ntime and time again for him. So, we've\ngot the opposite lock on. He gives it a\nwellie of throttle. Maybe just a bit of\nfrustration, a bit of hope that it'll\ncome back.",
+          "claim": "Verstappen's recovery from his spin was the result of deliberate skilled judgment rather than luck, based on the analyst's interpretation of his steering and throttle inputs.",
+          "category": "opinion",
+          "span_valid": true,
+          "char_start": 4867,
+          "char_end": 5090,
+          "review_status": "unreviewed"
+        },
+        {
+          "quote": "an unlucky way for him to end his\n[13:19]\npoint-scoring streak",
+          "claim": "Gasly's retirement in this race ended an ongoing consecutive points-scoring streak.",
+          "category": "reproducible",
+          "span_valid": true,
+          "char_start": 15487,
+          "char_end": 15549,
+          "review_status": "unreviewed",
+          "span_repair": "fuzzy@0.85"
+        }
+      ]
+    }
+  ]
+}
