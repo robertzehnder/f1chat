@@ -8,7 +8,7 @@
  */
 
 const CIRCUIT_GP_ALIASES = {
-  "Melbourne": [["australian"], ["melbourne"]],
+  "Melbourne": [["australian"], ["australia"], ["melbourne"]],
   "Shanghai": [["chinese"], ["china"], ["shanghai"]],
   "Suzuka": [["japanese"], ["japan"], ["suzuka"]],
   "Sakhir": [["bahrain"], ["sakhir"]],
@@ -16,13 +16,13 @@ const CIRCUIT_GP_ALIASES = {
   "Miami": [["miami"]],
   "Montreal": [["canadian"], ["canada"], ["montreal"]],
   "Monte Carlo": [["monaco"], ["monte", "carlo"]],
-  "Catalunya": [["spanish"], ["barcelona"], ["catalunya"]],
+  "Catalunya": [["spanish"], ["spain"], ["barcelona"], ["catalunya"]],
   "Spielberg": [["austrian"], ["austria"], ["spielberg"]],
-  "Silverstone": [["british"], ["silverstone"]],
-  "Spa-Francorchamps": [["belgian"], ["spa"]],
-  "Hungaroring": [["hungarian"], ["hungaroring"], ["budapest"]],
-  "Zandvoort": [["dutch"], ["zandvoort"]],
-  "Monza": [["italian"], ["monza"]],
+  "Silverstone": [["british"], ["britain"], ["silverstone"]],
+  "Spa-Francorchamps": [["belgian"], ["belgium"], ["spa"]],
+  "Hungaroring": [["hungarian"], ["hungary"], ["hungaroring"], ["budapest"]],
+  "Zandvoort": [["dutch"], ["netherlands"], ["holland"], ["zandvoort"]],
+  "Monza": [["italian"], ["italy"], ["monza"]],
   "Madring": [["madrid"], ["madring"]],
   "Baku": [["azerbaijan"], ["baku"]],
   "Singapore": [["singapore"]],

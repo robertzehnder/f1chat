@@ -59,6 +59,20 @@ test("f1com_flight: ld+json meta + body recovered from flight chunks", () => {
   assert.ok(text.includes("\n\n"), "paragraph breaks preserved");
 });
 
+test("f1com_flight: body recovered from raw T-segment rows too", () => {
+  const para = "A synthetic strategy paragraph about tyres and synthetic pit windows for the parser to find. ".repeat(3);
+  const body = para + "\n\n" + para + "\n\n" + para; // > 400 chars (parser minimum)
+  const hexLen = body.length.toString(16);
+  const fixture = [
+    "<html><body>",
+    `<script>self.__next_f.push([1, "1a:T${hexLen},${body.replace(/\n/g, "\\n")}"])</script>`,
+    "</body></html>"
+  ].join("");
+  const { text } = parseF1comFlight(Buffer.from(fixture));
+  assert.ok(text.includes("synthetic strategy paragraph"));
+  assert.ok(text.includes("\n\n"));
+});
+
 test("substack_html: tags stripped, paragraphs kept, entities decoded", () => {
   const fixture = "<h2>Synthetic headline</h2><p>Para one &amp; more.</p><p>Para two.</p><script>evil()</script>";
   const { text } = parseSubstackHtml(Buffer.from(fixture));

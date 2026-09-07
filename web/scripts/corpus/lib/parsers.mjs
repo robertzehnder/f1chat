@@ -34,8 +34,13 @@ export function parseTheRaceMd(raw) {
   return { meta, text };
 }
 
-/** formula1.com article HTML → { meta, text } via Next.js flight-data chunks. */
-export const F1COM_FLIGHT_VERSION = "f1com_flight@1";
+/**
+ * formula1.com article HTML → { meta, text } via Next.js flight-data chunks.
+ * The body appears in one of two flight encodings: a quoted JSON string
+ * field, or a raw text row ("<id>:T<hexlen>,<text...>") — both are scanned
+ * and the longest paragraph-bearing candidate wins.
+ */
+export const F1COM_FLIGHT_VERSION = "f1com_flight@2";
 export function parseF1comFlight(raw) {
   const html = raw.toString("utf8");
   const meta = { title: null, published: null, updated: null, author: null };
@@ -56,15 +61,21 @@ export function parseF1comFlight(raw) {
   blob = blob.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
              .replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
   try { blob = Buffer.from(blob, "latin1").toString("utf8"); } catch { /* keep as-is */ }
-  // Article body = the longest embedded string containing paragraph breaks.
-  // Flight data stores it as one markdown-ish string field with \n\n paragraphs.
-  const strings = [...blob.matchAll(/"((?:[^"\\]|\\.){400,}?)"/gs)].map((m) => m[1]);
   let body = "";
-  for (const s of strings) {
-    if (s.includes("\\n\\n") || s.includes("\n\n")) {
-      const clean = s.replace(/\\n/g, "\n").replace(/\\"/g, '"');
-      if (clean.length > body.length && !clean.includes("</") && !clean.includes("className")) body = clean;
-    }
+  const consider = (s) => {
+    if (!s || !s.includes("\n\n")) return;
+    if (s.includes("</") || s.includes("className") || s.includes('{"')) return;
+    if (s.length > body.length) body = s;
+  };
+  // Encoding A: quoted JSON string fields with escaped newlines.
+  for (const m of blob.matchAll(/"((?:[^"\\]|\\.){400,}?)"/gs)) {
+    consider(m[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'));
+  }
+  // Encoding B: raw text rows "<id>:T<hexlen>,<text>" (length in hex chars).
+  for (const m of blob.matchAll(/[0-9a-f]+:T([0-9a-f]+),/g)) {
+    const len = parseInt(m[1], 16);
+    if (!Number.isFinite(len) || len < 400 || len > 200000) continue;
+    consider(blob.slice(m.index + m[0].length, m.index + m[0].length + len));
   }
   return { meta, text: body.trim() };
 }

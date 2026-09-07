@@ -59,14 +59,28 @@ const { rows: pending } = await client.query(
 );
 
 console.log(`normalize: ${pending.length} fetch(es) pending`);
-let done = 0, errors = 0;
+let done = 0, errors = 0, rejected = 0;
 for (const f of pending) {
   const p = PARSERS[f.source_key];
   if (!p) { console.error(`  ! no parser for ${f.source_key}`); errors++; continue; }
   try {
     const raw = readArtifact(f.artifact_path);
     const { meta, text } = p.fn(raw);
-    if (!text || text.length < 100) throw new Error(`suspiciously short output (${text?.length ?? 0} chars)`);
+    if (!text || text.length < 100) {
+      // Content unavailable via permitted methods (e.g. some f1com articles
+      // client-render the body from their private editorial API). Record an
+      // auditable REJECTED marker — never usable as content — so the
+      // accounting invariant sees the fetch as processed, not silently dropped.
+      const markerText = `[content unavailable via permitted methods: parser ${p.version} extracted ${text?.length ?? 0} chars]`;
+      await client.query(
+        `INSERT INTO raw.analyst_derivations (fetch_id, kind, tool_version, input_sha256, output_sha256, output_text, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'rejected')`,
+        [f.fetch_id, p.kind, p.version, f.raw_sha256, sha256(markerText), markerText]
+      );
+      console.log(`  ~ fetch ${f.fetch_id} (${f.source_key}/${f.source_id}): content unavailable, rejected marker recorded`);
+      rejected++;
+      continue;
+    }
     assertUseAllowed(registry, f.source_key, "store_full_text", PURPOSE);
     await client.query(
       `INSERT INTO raw.analyst_derivations (fetch_id, kind, tool_version, input_sha256, output_sha256, output_text)
@@ -87,6 +101,6 @@ for (const f of pending) {
     errors++;
   }
 }
-console.log(`normalize: ${done} derived, ${errors} error(s)`);
+console.log(`normalize: ${done} derived, ${rejected} rejected marker(s), ${errors} error(s)`);
 await client.end();
 process.exit(errors ? 1 : 0);
