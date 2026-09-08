@@ -109,7 +109,7 @@ raw.sessions, raw.drivers, raw.laps, raw.car_data, raw.location, raw.intervals, 
 raw.weather, raw.race_control, raw.pit, raw.stints, raw.team_radio, raw.session_result,
 raw.starting_grid, raw.overtakes, raw.championship_drivers, raw.championship_teams,
 analytics.fantasy_points_by_round, analytics.fantasy_points_ledger, raw.fantasy_feed_snapshots,
-analytics.fantasy_projection
+analytics.fantasy_projection, analytics.racing_state_intervals
 
 Important column reminders (raw.* — hand-curated):
 - raw.session_result has: session_key, driver_number, position, points, status, classified (no "time" column).
@@ -158,7 +158,8 @@ Guidance:
 - For per-driver telemetry-coverage questions, use core.session_completeness.car_data_rows / coverage_score; no per-driver coverage matview exists yet.
 - For "pit-stop timing vs FIA pit log" questions, JOIN core.session_completeness.pit_rows (manifest) vs COUNT(*) FROM raw.pit (observed) per session_key. Surface manifest-vs-observed deltas only; do not embed semicolons or multi-clause notes inside SQL string literals (the FIA-pit-log caveat belongs in the synthesis text, not the SQL output).
 - For tyre-degradation / deg-curve / compound-deg-comparison questions, return ROW-LEVEL data so the chart can draw a scatter-with-regression: SELECT driver_name, stint_number, lap_in_stint AS stint_lap, lap_time_s FROM core.laps_enriched JOINed with core.stint_summary, WHERE compound and stint and session_key match, ORDER BY driver_number, stint_lap. Also include the precomputed degradation_per_lap_s from analytics.stint_degradation_curve as a constant per-(driver, stint) column so the synthesis layer can read the slope. Do NOT collapse to one row per stint — the visual REQUIRES per-lap points.
-- For steward / penalty / incident questions, use analytics.race_control_incidents (driver_number, incident_kind, action_status, penalty_seconds, message_text). penalty_points is always NULL — note as data-not-ingested. JOIN core.race_progression_summary on (session_key, lap_number) when position context is needed.
+- For steward / penalty / incident questions, use analytics.race_control_incidents (driver_number, incident_kind, action_status incl. lap_deleted / black_white_flag / noted, penalty_seconds, occurred_lap, message_text) — it covers lap deletions and race-director notes, not just stewards' messages. penalty_points is always NULL — note as data-not-ingested.
+- For safety car / VSC / red flag periods use analytics.racing_state_intervals (session_key, kind sc|vsc|red, start_lap, end_lap, laps_affected, duration_s, endpoint_inferred). NEVER claim a session had no SC/VSC/red flag, or "zero disrupted laps", without querying it: VSC rows in raw.race_control have category='SafetyCar', flag=NULL and only the text "VSC DEPLOYED", so flag-based filters miss them. JOIN core.race_progression_summary on (session_key, lap_number) when position context is needed.
 
 Rules:
 - Output JSON only.
@@ -188,6 +189,25 @@ Rules:
 // normalized question text. First-match wins (so put more-specific
 // patterns first if they would otherwise collide).
 const MATVIEW_HINTS: ReadonlyArray<{ triggers: string[]; hint: string }> = [
+  {
+    triggers: [
+      "safety car", "virtual safety car", "vsc", "red flag", "red-flag",
+      "disrupted", "neutralis", "neutraliz", "caution period", "pure pace",
+      "without a safety car", "interruption"
+    ],
+    hint: [
+      "MATVIEW HINT (racing-state intervals, migration 062 — honesty-critical):",
+      "  SC / VSC / red-flag periods are materialised in analytics.racing_state_intervals",
+      "  (session_key, interval_no, kind sc|vsc|red, start_ts, end_ts, start_lap, end_lap,",
+      "  laps_affected, duration_s, endpoint_inferred, opened_by_message, closed_by_message).",
+      "  ALWAYS query it before saying anything about neutralisations or 'pure pace'.",
+      "  An empty result for a session that HAS raw.race_control rows is a genuine absence;",
+      "  anything else is not. endpoint_inferred is non-NULL when the close was inferred",
+      "  (this feed has no 'VSC ENDED' messages) — say 'ended around lap N (inferred)'.",
+      "  For 'who pitted under the VSC' join raw.pit (date = pit-lane EXIT; entry = date - pit_duration * interval '1 second')",
+      "  against the interval's [start_ts, end_ts] and raw.stints for compounds."
+    ].join("\n")
+  },
   {
     triggers: [
       "deg curve", "deg per lap", "tyre deg", "compound deg",

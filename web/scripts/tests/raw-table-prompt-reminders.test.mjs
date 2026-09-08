@@ -242,8 +242,10 @@ test("Fix 4: prompt-size impact within ±100 tokens of pre-fix baseline", async 
     // tables in the allowed list (points ledger, by-round, feed
     // snapshots, projections) — deliberate, ~190 chars.
     assert.ok(
-      prompt.length < 7300,
-      `prompt size ${prompt.length} chars exceeds 7300-char budget`
+      // 2026-09-08: 7300 -> 8200 for the racing-state-intervals honesty
+      // rules + widened incidents contract (analyst probe G3/G4).
+      prompt.length < 8200,
+      `prompt size ${prompt.length} chars exceeds 8200-char budget`
     );
   });
 });

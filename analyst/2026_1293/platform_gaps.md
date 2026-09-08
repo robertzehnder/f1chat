@@ -46,3 +46,18 @@ Gaps G1–G3 and G5–G6 are exactly what race_packet.mjs already computes deter
 
 ## What the probe proves about the pilot's original question
 The pilot asked "does the base platform support the analysis required?" The answer, now measured: the **warehouse** does (every fact in the corrected report came from raw tables), the **product** does not yet — it cannot discover the mechanism, cannot classify stops against cautions, cannot snapshot a restart, mis-reads gap evolution, and in one of two samples denies the VSC existed. Route-level: the deterministic layer is absent from this question class; the LLM-SQL layer is capable (t2-llm, a4-llm, a6) but unstable and prone to fabricated absence under adversarial framing.
+
+## Fix status (2026-09-08, migration 062 + session_interruptions card + incidents-card driver mode)
+
+| id | Status | What changed | Re-probe evidence (natural route unless noted) |
+|---|---|---|---|
+| **G3** | **FIXED** | `analytics.racing_state_intervals` (SC/VSC/red periods with flagged inferred endpoints, packet-identical temporal contract) + deterministic `session_interruptions` card with a queried-absence sentinel + LLM hint forbidding unqueried absence claims | t2: "4 neutralisation periods: SC lap 3 (54s) … Red flag laps 3–4 (26 min) … VSC laps 28–29 (117s). 6 laps ran under SC/VSC/red" — matches the packet. x1 ("pure pace?"): now routes to the card and states the VSC-priced stops must be accounted for; the "zero disrupted laps" fabrication is gone. LLM-only route (t2) also reproduces all four periods from the new view. |
+| **G4** | **FIXED** | `race_control_incidents` widened from stewards-only to lap deletions, race-director notes and black-and-white flags (source_kind, occurred_lap added; 12.7k rows vs 3.8k); incidents card gains resolved-driver filtering and an off-track answer mode | u2 ("gravel while attacking Russell?"): "Kimi ANTONELLI: lap 26: lap-time deletion for track limits at Turn 2; lap 49: lap-time deletion for track limits at Turn 1 … a deletion is the feed's record of running wide; it does not describe gravel or contact." LLM route ("laps deleted?") also correct now. |
+| **G1** | **FIXED** (folded into the card) | `session_interruptions` lists every stop whose lane interval overlaps a period, with compound before → after and lane time (raw.pit.date = exit; red-flag changes excluded by the 300 s guard) | a2: "Stops under the virtual safety car: VERSTAPPEN L28 MEDIUM to HARD (24.9s), PEREZ L27 SOFT to MEDIUM, ANTONELLI L28 MEDIUM to MEDIUM (24.9s), HULKENBERG, OCON, SAINZ, BOTTAS" — identical to the packet's seven. |
+| G2 | open | restart-order snapshot | — |
+| G5 | open | gap evolution from gap_to_leader, not lap-time deltas | — |
+| G6 | open | lead-change sequence | — |
+| G7 | open | "why did X beat Y" mechanism synthesis | — |
+| G8 | partially mitigated | LLM-SQL nondeterminism on interruptions is now moot for the natural route (deterministic card); the LLM-only route reads the view | — |
+
+Gate evidence: migration chain PASS 001..062 (deploy → revert → redeploy round-trips on Neon; revert keeps the two appended view columns as constants because the driver-score matview depends on the facade view); grading suite 378 tests / 41 known fails (baseline) with 3 new builder tests; tsc clean.

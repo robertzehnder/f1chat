@@ -50,6 +50,7 @@ import { buildStintDeltaInsight } from "@/lib/synthesis/stintDeltaInsight";
 import { buildStrategySplitInsight } from "@/lib/synthesis/strategySplitInsight";
 import { buildPerformanceRadarInsight } from "@/lib/synthesis/performanceRadarInsight";
 import { buildRaceControlIncidentsInsight } from "@/lib/synthesis/raceControlIncidentsInsight";
+import { buildInterruptionsInsight } from "@/lib/synthesis/interruptionsInsight";
 import { buildTelemetryWeatherGapInsight } from "@/lib/synthesis/telemetryWeatherGapInsight";
 import { buildLap1PositionsInsight } from "@/lib/synthesis/lap1PositionsInsight";
 import { buildWetCrossoverInsight } from "@/lib/synthesis/wetCrossoverInsight";
@@ -1789,6 +1790,8 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx, sessionU
                           ? buildPerformanceRadarInsight(result.rows)
                           : selectedTemplateKey === "session_race_control_incidents"
                             ? buildRaceControlIncidentsInsight(result.rows)
+                            : selectedTemplateKey === "session_interruptions"
+                              ? buildInterruptionsInsight(result.rows)
                             : selectedTemplateKey === "sessions_telemetry_without_weather"
                               ? buildTelemetryWeatherGapInsight(result.rows)
                               : selectedTemplateKey === "driver_pair_lap1_positions"
