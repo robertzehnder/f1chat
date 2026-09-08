@@ -20,29 +20,42 @@ import type { DeterministicSqlTemplate } from "./types";
 type BuildRaceControlIncidentsTemplateInput = {
   lower: string;
   targetSession: number;
+  /** Resolved drivers (1–2): rows are filtered to those cars and the
+   *  builder switches to a driver-focused answer for off-track questions. */
+  driverNumbers?: number[] | null;
 };
 
-const INCIDENT_TRIGGER = /penalt|steward|investigat|reprimand|track limits|drive[\s-]?through/;
+const OFFTRACK_TRIGGER = /gravel|ran wide|run wide|off[\s-]?track|excursion|went off|lap deleted|deleted lap|track limits/;
+
+const INCIDENT_TRIGGER = /penalt|steward|investigat|reprimand|track limits|drive[\s-]?through|gravel|ran wide|run wide|off[\s-]?track|excursion|went off|lap deleted|deleted lap|black and white/;
 
 export function buildRaceControlIncidentsTemplate(
   input: BuildRaceControlIncidentsTemplateInput
 ): DeterministicSqlTemplate | null {
-  const { lower, targetSession } = input;
+  const { lower, targetSession, driverNumbers } = input;
   if (!INCIDENT_TRIGGER.test(lower)) return null;
+  const focus = (driverNumbers ?? []).filter((n) => Number.isInteger(n)).slice(0, 2);
+  const list = focus.join(", ");
+  const driverFilter = focus.length ? `AND (driver_number IN (${list}) OR second_driver_number IN (${list}))` : "";
+  const mode = OFFTRACK_TRIGGER.test(lower) && focus.length ? "offtrack" : "stewards";
 
   const sql = `
     WITH inc AS (
       SELECT DISTINCT
         lap_number,
+        occurred_lap,
         driver_number,
         incident_kind,
         action_status,
         penalty_seconds,
         penalty_points,
         message_text,
+        source_kind,
+        NULLIF((regexp_match(UPPER(message_text), 'TURN\\s+(\\d+)'))[1], '')::int AS corner,
         date
       FROM analytics.race_control_incidents
       WHERE session_key = ${targetSession}
+      ${driverFilter}
     ),
     names AS (
       SELECT DISTINCT driver_number, full_name
@@ -61,6 +74,10 @@ export function buildRaceControlIncidentsTemplate(
       COALESCE(i.incident_kind, 'incident') AS kind,
       i.message_text AS message,
       i.action_status,
+      i.source_kind,
+      i.occurred_lap,
+      i.corner,
+      '${mode}'::text AS question_mode,
       ROUND(i.penalty_seconds::numeric, 1) AS penalty_seconds,
       i.penalty_points,
       (SELECT country_name FROM sess) AS country_name,

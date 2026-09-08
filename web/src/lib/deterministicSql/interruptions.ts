@@ -14,6 +14,12 @@ import type { DeterministicSqlTemplate } from "./types";
  * from a query rather than a guess: the SQL emits one sentinel row
  * (kind='none') so the builder can state a data-backed absence.
  *
+ * Also lists every pit stop whose lane interval overlaps a period
+ * (kind 'pit_under_sc|vsc|red', compound before/after, lane time) — the
+ * caution-aware pit classification the probe found missing (gap G1).
+ * Red-flag tyre changes are excluded by the < 300 s lane-time guard (their
+ * recorded duration is the whole suspension).
+ *
  * Output rows match the event_timeline detector: lap + kind + driver.
  * Keep the SQL free of the statement separator and the banned keywords
  * scanned by src/lib/querySafety.ts.
@@ -36,7 +42,7 @@ export function buildInterruptionsTemplate(
   const sql = `
     WITH periods AS (
       SELECT interval_no, kind, start_lap, end_lap, laps_affected, duration_s,
-             endpoint_inferred, opened_by_message, closed_by_message, start_ts
+             endpoint_inferred, opened_by_message, closed_by_message, start_ts, end_ts
       FROM analytics.racing_state_intervals
       WHERE session_key = ${targetSession}
     ),
@@ -48,6 +54,31 @@ export function buildInterruptionsTemplate(
     ),
     has_rc AS (
       SELECT COUNT(*) AS n FROM raw.race_control WHERE session_key = ${targetSession}
+    ),
+    stops AS (
+      SELECT
+        pt.driver_number,
+        pt.lap_number,
+        pt.pit_duration,
+        pt.date AS exit_ts,
+        pt.date - make_interval(secs => COALESCE(pt.pit_duration, 0)) AS entry_ts
+      FROM raw.pit pt
+      WHERE pt.session_key = ${targetSession}
+    ),
+    stops_in_period AS (
+      SELECT
+        s.driver_number, s.lap_number, s.pit_duration, s.entry_ts,
+        p.kind AS period_kind, p.interval_no, p.start_ts AS period_start,
+        (SELECT st.compound FROM raw.stints st WHERE st.session_key = ${targetSession} AND st.driver_number = s.driver_number
+           AND s.lap_number BETWEEN st.lap_start AND st.lap_end ORDER BY st.stint_number LIMIT 1) AS compound_before,
+        (SELECT st.compound FROM raw.stints st WHERE st.session_key = ${targetSession} AND st.driver_number = s.driver_number
+           AND st.lap_start > s.lap_number ORDER BY st.stint_number LIMIT 1) AS compound_after
+      FROM stops s
+      JOIN periods p ON s.entry_ts < COALESCE(p.end_ts, s.entry_ts + interval '1 second') AND s.exit_ts > p.start_ts
+      WHERE COALESCE(s.pit_duration, 0) < 300
+    ),
+    names AS (
+      SELECT DISTINCT driver_number, full_name FROM core.session_drivers WHERE session_key = ${targetSession}
     ),
     rows_out AS (
       SELECT
@@ -62,6 +93,15 @@ export function buildInterruptionsTemplate(
         p.closed_by_message,
         p.start_ts
       FROM periods p
+      UNION ALL
+      SELECT
+        sp.lap_number,
+        COALESCE(n.full_name, 'Car ' || sp.driver_number::text),
+        'pit_under_' || sp.period_kind,
+        COALESCE(sp.compound_before, '?') || ' to ' || COALESCE(sp.compound_after, '?') || ' (' || ROUND(sp.pit_duration::numeric, 1)::text || 's lane)',
+        NULL, NULL, sp.pit_duration, NULL, NULL, sp.period_start + interval '1 millisecond' * sp.driver_number
+      FROM stops_in_period sp
+      LEFT JOIN names n USING (driver_number)
       UNION ALL
       SELECT 0, 'Race control', 'none', 'no SC / VSC / red-flag period in the race-control feed',
              NULL, 0, NULL, NULL, NULL, NULL
@@ -78,7 +118,7 @@ export function buildInterruptionsTemplate(
       (SELECT session_name FROM sess) AS session_name
     FROM rows_out r
     ORDER BY r.start_ts NULLS LAST
-    LIMIT 40
+    LIMIT 80
   `;
 
   return { templateKey: "session_interruptions", sql };

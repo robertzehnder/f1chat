@@ -285,7 +285,17 @@ const INCIDENT_KEYWORDS: ReadonlyArray<string> = [
   "investigation",
   "track limits",
   "drive through",
-  "drive-through"
+  "drive-through",
+  "gravel",
+  "ran wide",
+  "run wide",
+  "off track",
+  "off-track",
+  "excursion",
+  "went off",
+  "lap deleted",
+  "deleted lap",
+  "black and white"
 ];
 
 const INTERRUPTION_KEYWORDS: ReadonlyArray<string> = [

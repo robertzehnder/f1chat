@@ -36,7 +36,8 @@ export function buildInterruptionsInsight(rows: Row[] | undefined): Interruption
   const venueYear = [venue, year !== null ? String(year) : null].filter(Boolean).join(" ");
   const rcRows = num(rows[0].race_control_rows) ?? 0;
 
-  const periods = rows.filter((r) => str(r.kind) !== "none");
+  const pitRows = rows.filter((r) => (str(r.kind) ?? "").startsWith("pit_under_"));
+  const periods = rows.filter((r) => { const k = str(r.kind) ?? ""; return k !== "none" && !k.startsWith("pit_under_"); });
   if (periods.length === 0) {
     const answer =
       `The race-control feed for ${venueYear || "this session"} (${rcRows} messages) records no safety car, virtual safety car or red-flag period. ` +
@@ -72,24 +73,35 @@ export function buildInterruptionsInsight(rows: Row[] | undefined): Interruption
     lines.push(`${KIND_LABEL[kind] ?? kind}: ${span}${durTxt ? ` (${durTxt})` : ""}${inf ? `, end ${inf.replace(/_/g, " ")}` : ""}`);
   }
 
-  const metrics: InsightFieldMetric[] = [
-    { label: "Neutralisations", value: String(periods.length), context: `SC ${counts.sc} · VSC ${counts.vsc} · red ${counts.red}`, emphasis: true },
-    { label: "Laps affected", value: String(lapsAffected), context: inferred ? `${inferred} endpoint(s) inferred` : "explicit endpoints" },
-    { label: "Race-control messages", value: String(rcRows), context: "source feed" }
-  ];
+  const pitsByKind = new Map<string, string[]>();
+  for (const p of pitRows) {
+    const k = (str(p.kind) ?? "").replace("pit_under_", "");
+    const who = `${str(p.driver) ?? "?"} L${num(p.lap) ?? "?"} ${str(p.message) ?? ""}`;
+    pitsByKind.set(k, [...(pitsByKind.get(k) ?? []), who]);
+  }
+  const pitLines = [...pitsByKind.entries()].map(([k, who]) => `Stops under the ${KIND_LABEL[k]?.toLowerCase() ?? k}: ${who.join(", ")}`);
 
   const takeaways = [
     ...lines.slice(0, 5),
+    ...pitLines,
     inferred
       ? `${inferred} period end(s) are inferred (this feed has no "VSC ENDED"; VSC closes at the end of the ENDING lap unless a later clear message exists)`
       : `All period endpoints come from explicit race-control messages`
+  ];
+
+  const metrics: InsightFieldMetric[] = [
+    { label: "Neutralisations", value: String(periods.length), context: `SC ${counts.sc} · VSC ${counts.vsc} · red ${counts.red}`, emphasis: true },
+    { label: "Laps affected", value: String(lapsAffected), context: inferred ? `${inferred} endpoint(s) inferred` : "explicit endpoints" },
+    { label: "Stops under caution", value: String(pitRows.length), context: pitRows.length ? [...pitsByKind.entries()].map(([k, w]) => `${k.toUpperCase()} ${w.length}`).join(" · ") : "none (red-flag tyre changes excluded)" },
+    { label: "Race-control messages", value: String(rcRows), context: "source feed" }
   ];
 
   const answer =
     `${venueYear || "This session"} had ${periods.length} neutralisation period${periods.length === 1 ? "" : "s"}: ` +
     lines.join("; ") +
     `. ${lapsAffected} lap${lapsAffected === 1 ? "" : "s"} ran under SC, VSC or red-flag conditions` +
-    (counts.vsc ? `, so any claim that the race was decided on pure pace has to account for the VSC-priced pit stops` : "") +
+    (pitLines.length ? `. ${pitLines.join("; ")}` : "") +
+    (counts.vsc ? `. Any claim that the race was decided on pure pace has to account for the VSC-priced pit stops` : "") +
     `.`;
 
   return {

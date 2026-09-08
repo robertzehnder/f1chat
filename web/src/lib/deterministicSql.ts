@@ -244,7 +244,11 @@ function _buildDeterministicSqlTemplateRaw(
 
   // Steward / penalty incidents card (event timeline + penalty-points
   // honesty). Session-scoped, no driver gate.
-  const raceControlIncidents = buildRaceControlIncidentsTemplate({ lower, targetSession });
+  const raceControlIncidents = buildRaceControlIncidentsTemplate({
+    lower,
+    targetSession,
+    driverNumbers: context.driverNumbers?.length ? context.driverNumbers.slice(0, 2) : null
+  });
   if (raceControlIncidents) return raceControlIncidents;
 
   // Race trace (gap evolution + deterministic over/under-cut verdict).

@@ -27,6 +27,12 @@ export function buildRaceControlIncidentsInsight(rows: Row[] | undefined): RaceC
   if (!rows || rows.length === 0) return null;
   if (!("kind" in rows[0]) || !("penalty_points" in rows[0])) return null;
 
+  // Driver-focused off-track mode (analyst probe u2): "did X run into the
+  // gravel / run wide / have a lap deleted?" — answer from that driver's
+  // rows (deletions, notes, penalties) with the cited lap and corner, and
+  // say plainly when none exist. Never the penalty-points boilerplate.
+  if (str(rows[0].question_mode) === "offtrack") return buildOfftrackAnswer(rows);
+
   const venue = str(rows[0].location) ?? str(rows[0].country_name);
   const year = num(rows[0].year);
   const sessionName = str(rows[0].session_name) ?? "Race";
@@ -82,6 +88,55 @@ export function buildRaceControlIncidentsInsight(rows: Row[] | undefined): RaceC
         `Which laps had safety cars or red flags at ${venueYear || "this race"}?`,
         `Did any penalty change the finishing order at ${venueYear || "this race"}?`,
         `Show track-limits deletions at ${venueYear || "this race"}`
+      ]
+    }
+  };
+}
+
+
+function buildOfftrackAnswer(rows: Row[]): RaceControlIncidentsInsightResult {
+  const venue = str(rows[0].location) ?? str(rows[0].country_name);
+  const year = num(rows[0].year);
+  const venueYear = [venue, year !== null ? String(year) : null].filter(Boolean).join(" ");
+  const byDriver = new Map<string, Row[]>();
+  for (const r of rows) {
+    const d = str(r.driver) ?? "Race control";
+    if (d === "Race control") continue;
+    byDriver.set(d, [...(byDriver.get(d) ?? []), r]);
+  }
+  const describe = (r: Row) => {
+    const lap = num(r.occurred_lap) ?? num(r.lap);
+    const corner = num(r.corner);
+    const action = str(r.action_status) ?? "event";
+    const label = action === "lap_deleted" ? "lap-time deletion for track limits" : action.replace(/_/g, " ");
+    return `lap ${lap ?? "?"}: ${label}${corner !== null ? ` at Turn ${corner}` : ""}`;
+  };
+  const parts: string[] = [];
+  const takeaways: string[] = [];
+  let total = 0;
+  for (const [driver, evs] of byDriver) {
+    const ordered = [...evs].sort((a, b) => (num(a.occurred_lap) ?? num(a.lap) ?? 0) - (num(b.occurred_lap) ?? num(b.lap) ?? 0));
+    total += ordered.length;
+    parts.push(`${driver}: ${ordered.map(describe).join("; ")}`);
+    for (const r of ordered.slice(0, 3)) takeaways.push(`${driver} — ${describe(r)}`);
+  }
+  const answer = byDriver.size
+    ? `Race control logged the following for ${[...byDriver.keys()].join(" and ")} at ${venueYear || "this session"}: ${parts.join(". ")}. ` +
+      `A track-limits deletion is the feed's record of running wide at that corner; it does not describe gravel or contact, which are not in the timing data.`
+    : `Race control logged no off-track, deleted-lap or incident message for the resolved drivers at ${venueYear || "this session"} — a queried absence from analytics.race_control_incidents.`;
+  return {
+    answer,
+    insight: {
+      title: `Off-track & Deleted Laps — ${venueYear || "Session"}`,
+      subtitle: [venueYear || venue, `${total} logged event${total === 1 ? "" : "s"}`].filter(Boolean).join(" · "),
+      metrics: [
+        { label: "Logged events", value: String(total), context: [...byDriver.keys()].join(", ") || "none", emphasis: true },
+        { label: "Source", value: "race control", context: "deletions, notes, stewards" }
+      ],
+      key_takeaways: takeaways.length ? takeaways.slice(0, 6) : ["No off-track or deleted-lap message for these drivers"],
+      related_questions: [
+        `Which laps were neutralised by SC, VSC or red flag at ${venueYear || "this race"}?`,
+        `Show the race trace for ${venueYear || "this race"}`
       ]
     }
   };
