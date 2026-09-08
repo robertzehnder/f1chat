@@ -1,0 +1,9 @@
+{
+  "report": "report.md",
+  "sha256": "c89a47df979e724614ed398bcfa0f4d3f2e0bfda8ce90d58bfbb1f0577ebb834",
+  "frozen_at": "2026-09-08T15:46:49Z",
+  "evaluation_label": "ASSISTED",
+  "label_reason": "The author read the seven reference pieces on 2026-09-07 (diagnostic/monza_2026_recap_comparison.md) BEFORE writing this v2, so this run cannot count as blind discovery. A blind run requires a race whose reference coverage the writing side has not seen (candidate: Zandvoort 1292, validation split, or the next race).",
+  "gates_at_freeze": { "verify": "PASS", "style_lint": "PASS", "similarity_guard": "PASS", "style_judge": "25/28, human_likelihood 81" },
+  "review_mode": "structured self-review (one developer)"
+}

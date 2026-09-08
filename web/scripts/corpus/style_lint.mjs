@@ -65,8 +65,10 @@ function analyze(file) {
     .replace(/^\*Draft in the[\s\S]*?\*\s*$/m, "");
   const text = stripMarkdown(body);
   const words = text.split(/\s+/).filter(Boolean);
-  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter((p) => p.split(/\s+/).length > 8);
-  const sentences = text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+/g) ?? [];
+  const paragraphs = text.replace(/(\d)\.(\d)/g, "$1\u2024$2").split(/\n\s*\n/).map((p) => p.trim()).filter((p) => p.split(/\s+/).length > 8);
+  // Protect decimals (7.1s, 0.264s) and lap-time colons so they don't split sentences.
+  const protectedText = text.replace(/\s+/g, " ").replace(/(\d)\.(\d)/g, "$1\u2024$2");
+  const sentences = (protectedText.match(/[^.!?]+[.!?]+/g) ?? []).map((s) => s.replace(/\u2024/g, "."));
   const sentLens = sentences.map((s) => s.trim().split(/\s+/).length);
   const mean = sentLens.reduce((a, b) => a + b, 0) / Math.max(1, sentLens.length);
   const sd = Math.sqrt(sentLens.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, sentLens.length));

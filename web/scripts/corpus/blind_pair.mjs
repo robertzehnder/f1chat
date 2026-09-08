@@ -43,6 +43,8 @@ const opt = (k) => argv.find((a, i) => argv[i - 1] === `--${k}`);
 function anonymize(text) {
   return text
     .replace(/\*\*\\?-\s*[A-Z][\w'.-]+(?: [A-Z][\w'.-]+)+\*\*/g, "")          // **- Byline Name**
+    .replace(/\*\*\\?-\s*[A-Z]{2,3}\*\*/g, "")                                     // **- JC** initials bylines
+    .replace(/(?:^|\s)[-–—]\s*[A-Z]{2,3}\s*$/gm, "")                                 // trailing "- JC"
     .replace(/—\s*\*[A-Z][\w'.-]+(?: [A-Z][\w'.-]+)+\*/g, "")                 // — *Byline*
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")                                    // links → text
     .replace(/\bThe Race(?: Team| Members'? Club)?\b/g, "this publication")

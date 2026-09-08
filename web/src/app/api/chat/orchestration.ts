@@ -240,6 +240,8 @@ type ChatBody = {
   debug?: {
     trace?: boolean;
     benchmark?: boolean;
+    /** Analyst platform probe: skip deterministic templates to exercise the LLM-SQL route alone. */
+    disableTemplates?: boolean;
     questionId?: number;
     runId?: string;
     attempt?: string;
@@ -956,10 +958,14 @@ async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx, sessionU
       const templateMatchSpan = startTrackedSpan(startSpan("template_match"));
       let deterministic: ReturnType<typeof buildDeterministicSqlTemplate>;
       try {
-        deterministic = buildDeterministicSqlTemplate(message, {
-          sessionKey: resolvedContext.sessionKey,
-          driverNumbers: runtime.resolution.selectedDriverNumbers
-        });
+        // Debug-only hook (analyst platform probe): skip the deterministic
+        // dispatcher so the LLM-SQL route can be exercised on its own.
+        deterministic = body.debug?.disableTemplates
+          ? null
+          : buildDeterministicSqlTemplate(message, {
+              sessionKey: resolvedContext.sessionKey,
+              driverNumbers: runtime.resolution.selectedDriverNumbers
+            });
       } finally {
         endTrackedSpan(templateMatchSpan);
       }

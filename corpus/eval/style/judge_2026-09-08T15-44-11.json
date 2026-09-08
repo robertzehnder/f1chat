@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 2,
+        "evidence": "\"The decisive choice was made while the race was stopped\" — verdict opens each section before evidence"
+      },
+      {
+        "id": "S2",
+        "score": 1,
+        "evidence": "\"What the timing data cannot see\" functions as a closing disclaimer section, partially wrapping up limitations — not a full synthesis but not clean either"
+      },
+      {
+        "id": "S3",
+        "score": 2,
+        "evidence": "No bridging sentences between sections; headings do all transitional work throughout"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "\"13.7s behind the leader... cost about 31 seconds... difference is roughly 18 seconds\" — three figures stacked in one paragraph rather than deployed singly"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "\"that figure is an estimate rather than a measured counterfactual\" and \"labelled as one\" — hedges are explicit and owned without collapsing"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is the persistent benchmark for Antonelli throughout; comparison is structural, not incidental"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "\"CAR 12 (ANT) TIME 1:28.582 DELETED - TRACK LIMITS AT TURN 1 LAP 49\" inserted as hard stop confirming the gap reversal"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "\"Gasly, from Alpine's first pole, was second by lap 2, sixth by lap 10\" — positional sequence narrated rather than interpreted in the midfield section"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "\"Nobody could see it yet, but that was the race\" — flat, dry, juxtaposition-based; no exclamation or flourish"
+      },
+      {
+        "id": "R3",
+        "score": 2,
+        "evidence": "\"I think this is the part the 19th-to-first line hides\" — first person flags a judgment call, appears once, not decoratively"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "Names and jargon (VSC, green-flag stop, lane time) used without definition or introduction throughout"
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "Lap-28 paragraph runs five sentences making three distinct points (stop, Verstappen, cost estimate) — exceeds one-point-per-paragraph rule"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "\"The medium car was quicker on equal-age rubber and still could not pass. I think this is the part the 19th-to-first line hides\" — long analytical then short punchy throughout"
+      },
+      {
+        "id": "P3",
+        "score": 2,
+        "evidence": "The VSC stop and tyre strategy sections get the most room; the midfield rest-of-grid section gets two compressed sentences per driver"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 5,
+      "evidence": 7,
+      "register": 7,
+      "pacing": 5
+    },
+    "total": 24,
+    "max": 28,
+    "human_likelihood": 76,
+    "top_fixes": [
+      "E1: The lap-28 paragraph stacks 13.7s, 31s, and 18s into a single unit — split across sentences or paragraphs so each figure lands alone as its own clinching moment rather than a cascade of arithmetic.",
+      "R1/S2: The 'rest of the grid' and 'timing data cannot see' sections drift toward narration and limitation-listing respectively; the midfield section should interpret Gasly's collapse and Pérez's penalty rather than sequence them, and the final section reads like a methods disclosure — cut or compress to a single dry aside.",
+      "P1: The VSC stop paragraph is doing five things at once; separate Verstappen's parallel stop into its own short paragraph to restore the one-point-per-paragraph discipline and sharpen the contrast between the two drivers' decisions."
+    ],
+    "label": "report.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T15:44:11.536Z",
+    "source": "draft"
+  }
+]
