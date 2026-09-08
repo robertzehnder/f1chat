@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "'If you only caught the last three laps on Sunday, you saw the right bit' — the Morning section opens on orientation, not verdict; the sharpest claim is buried."
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'Antonelli leads Russell by 66 points… Madrid next… See you Sunday' — explicit wrap-up restating championship context and teasing next race."
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'Nobody thought much of it at the time. It turned out to be the whole afternoon' — a bridging summary sentence doing transitional work a heading should handle."
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'0.85s a lap… 7.1s to 0.264s… 40-odd laps… 31 seconds… 18 seconds… 37 laps… 25 left' — figures cluster in several paragraphs rather than deploying singly."
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'Call it an estimate, because it is' and 'I'd rather say so than pretend otherwise' — hedges are explicit, owned, and never collapse into false neutrality."
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "'By lap 26 Antonelli was second, 0.5s behind Russell… medium against hard' — Russell is the constant benchmark throughout; absolute comparisons follow, not lead."
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "Official messages ('CAR 12 (ANT) TIME 1:28.582 DELETED', stewards' Pérez penalty text) deployed as hard stops confirming the preceding reading."
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'Leclerc went off on lap 2, race control called SAFETY CAR DEPLOYED and then, a minute later, RED FLAG' — partial narration of sequence rather than pure interpretation."
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Monza doesn't let you pass a car of equal speed, and a car half a second quicker isn't enough either, apparently' — flat, dry understatement with comic timing."
+      },
+      {
+        "id": "R3",
+        "score": 2,
+        "evidence": "'I think it's the whole story' and 'I don't think so' and 'I suspect' — first person used sparingly and only to flag judgment calls, never self-referentially."
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "Names without introduction, VSC/DRS/timing-sheet jargon unexplained — consistent peer-level address throughout."
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Most paragraphs are 2–4 sentences making one point; 'Verstappen did exactly the same thing at exactly the same moment, took a hard, and got the same discount' is a clean single-point exit."
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'At 0.85 a lap, a 31-second green-flag stop takes about 37 laps to recover and there were 25 left. Russell keeps the lead' — long analytical clause answered by short declarative."
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Winners/Losers section gives Gasly and Ferrari equal bullet weight to Antonelli's decisive mechanism; density doesn't clearly peak at the VSC analysis."
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 7,
+      "register": 7,
+      "pacing": 5
+    },
+    "total": 21,
+    "max": 28,
+    "human_likelihood": 72,
+    "top_fixes": [
+      "Kill 'Until next week': S2 is the hardest violation — the piece must end when the last entry ends; the championship standings kicker and Madrid tease are exactly the wrap-up synthesis the rules prohibit.",
+      "Open 'Morning' on a verdict, not an orientation ('If you only caught…'): bury the scene-setting or cut it; the section's actual claim ('the timing sheets tell the same story the crowd did') should be the first sentence.",
+      "Thin the number clusters in 'Eight tenths a lap' and 'Take the VSC away': the rule is one surgical figure per claim — pick the one number that clinches each point and cut the supporting arithmetic from the body text."
+    ],
+    "label": "report_v4_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T19:58:37.549Z",
+    "source": "draft"
+  }
+]

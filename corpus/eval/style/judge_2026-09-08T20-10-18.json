@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "'Morning' section opens with 'If you only caught the last four laps on Sunday, you saw the pass' — narration before verdict"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'Until next week' is a classic wrap-up paragraph restating standings and teasing next race"
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'Morning' section adds 'Here's what the data does say' — a bridging sentence doing work headings should handle"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "Lap-28 section clusters: 13.7s behind, ~31s green-flag cost, 18s cheaper, 40-odd laps old — numbers pile up rather than deploy singly"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'I don't think so... it might not have... on that simple extrapolation' — explicit, graded, owned"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is the sustained benchmark throughout; every Antonelli datum is measured against his team-mate"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "Track-limits deletion message quoted verbatim mid-analysis, complicating the closing narrative precisely"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'He'd already got seven of those back in two laps when the red flag came out' — mild sequence narration assumes reader needs the recap"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Closing wasn't passing, not at Monza' and 'Russell kept the lead and Antonelli finishes second in the quicker car' — flat, dry, effective"
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'Here's what the data does say' — sentence about the piece itself; first person elsewhere is appropriately restrained"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "No introductions, no definitions; VSC, track limits, tyre compounds all handled without gloss"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Paragraphs consistently 2-4 sentences; 'The pace was real. The cheap stop is what let him spend it.' exemplary"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'At green-flag speed the same stop would have cost about 31 seconds, going by the race's median pit-lane time. That's 18 seconds cheaper' — long/short alternation visible"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Winners/losers section gives Antonelli two sentences and Verstappen two — the race winner should command more density than third place"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 7,
+      "register": 8,
+      "pacing": 5
+    },
+    "total": 22,
+    "max": 28,
+    "human_likelihood": 62,
+    "top_fixes": [
+      "Kill 'Until next week' entirely — standings and Madrid tease are the exact summary paragraph the rules prohibit; the piece ends when Pérez's stewards note ends",
+      "Open 'Morning' on the verdict ('The red flag restarted the race from a position Antonelli could exploit; everything before lap 3 is prologue') and delete the narration-first sentences and the meta-line 'Here's what the data does say'",
+      "In the VSC section, choose one number to carry the argument — the 18-second delta — and let the others arrive only if they're doing distinct work; currently 13.7s, ~31s, 18s, and '40-odd laps' crowd the same paragraph and read like a spreadsheet"
+    ],
+    "label": "report_v7_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T20:10:18.587Z",
+    "source": "draft"
+  }
+]

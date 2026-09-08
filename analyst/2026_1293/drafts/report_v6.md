@@ -10,7 +10,7 @@
 
 ## Morning
 
-If you only caught the last four laps on Sunday, you saw the pass. What you didn't see is why it was ever close, and the answer starts on lap 3. An Italian winning at Monza for the first time since 1966 is a line from the record books rather than from our data. Here's what the data does say.
+If you only caught the last three laps on Sunday, you saw the pass. What you didn't see is why it was ever close, and the answer starts on lap 3. An Italian winning at Monza for the first time since 1966 is a line from the record books rather than from our data. Here's what the data does say.
 
 ## The race was decided while it was stopped
 
@@ -24,7 +24,7 @@ Antonelli had qualified seventh; the penalty (an engine change, according to the
 
 ## Quicker, and stuck
 
-By lap 26 Antonelli was second, 0.5s behind Russell, both on tyres 22 laps old, medium against hard. Over the next two laps he took about a tenth a lap out of that and got to within three tenths, and that was that. Closing wasn't passing, not at Monza.
+By lap 26 Antonelli was second, 0.5s behind Russell, both on tyres 24 laps old, medium against hard. He got to within three tenths over the next couple of laps and that was that. Half a second a lap quicker wasn't enough to get past at Monza.
 
 This is the bit the 19th-to-first line hides: on equal-age rubber the faster car was going nowhere.
 
@@ -44,7 +44,7 @@ Lap 50, he was through. Three laps to run. He set the fastest lap of the race on
 
 ## Take the VSC away
 
-Would he have won anyway? I don't think so. If the 0.85s a lap he found late on had held from lap 28 (it might not have), a 31-second green-flag stop takes about 37 laps to recover and there were 25 left. On that simple extrapolation Russell keeps the lead and Antonelli finishes second in the quicker car late on.
+Would he have won anyway? I don't think so. If the 0.85s a lap he found late on had held from lap 28 (it might not have), a 31-second green-flag stop takes about 37 laps to recover and there were 25 left. On that simple extrapolation Russell keeps the lead and Antonelli finishes second in the quickest car on the day.
 
 The pace was real. The cheap stop is what let him spend it.
 
@@ -56,7 +56,7 @@ The pace was real. The cheap stop is what let him spend it.
 
 **Winner: Verstappen (3rd).** The same cheap stop dropped him to seventh; he recovered to third. Same trick, one tyre step down.
 
-**Loser: Gasly (7th).** Alpine's first pole, second by lap 2, sixth by lap 10, seventh at the flag. The trace shows a steady drift back rather than an incident.
+**Loser: Gasly (7th).** Alpine's first pole, second by lap 2, sixth by lap 10, seventh at the flag. No incident anywhere in his trace. The car drifted back to where its race pace put it.
 
 **Loser: Ferrari (6th + DNF).** Leclerc out on lap 2 after a first-chicane tangle the stewards noted and let go; Hamilton sixth. Whether the tangle caused the crash isn't in the data.
 

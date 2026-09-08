@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "'Morning' section opens 'If you only caught the last three laps on Sunday, you saw the right bit' — scene-setting, not a verdict"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'Until next week' paragraph restates championship standings and previews Madrid — textbook summary/wrap-up violation"
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'Morning' section bridges with 'What you didn't see is why it was ever close' — a transitional sentence doing heading's work"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'0.85 seconds a lap, taken off a hard tyre that was 40-odd laps old' — good, but 'Lap 40 to lap 48: the gap came down from 7.1s to 0.264s' clusters figures in same breath"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'Call it an estimate, because it is' and 'I don't think so' and 'I'd rather say so than pretend otherwise' — hedges are explicit, owned, and never falsely neutral"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "'on equal-age rubber the faster car was going nowhere' — Russell is the constant teammate benchmark throughout; absolute comparisons only follow"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "FIA stewards penalty message quoted verbatim; track-limits deletion quoted with lap/time — both complicate or confirm the reading just given"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'About that grid penalty' section recaps Antonelli's qualifying position, penalty cause, and restart order — partial narration of sequence rather than pure interpretation"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Monza doesn't let you pass a car of equal speed, and a car half a second quicker isn't enough either, apparently' — flat, dry, exactly right"
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'I think it matters more than anything else in this piece' — sentence about the piece itself, violating the rule directly"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "No introductions, no jargon glosses; 'VSC', 'green-flag stop', 'trace' used without explanation throughout"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "'Nobody thought much of it at the time. It turned out to be the whole afternoon.' — consistently tight; nearly every paragraph is 2-4 sentences making one point"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'How much would that stop have cost at green-flag speed? About 31 seconds, going by the median pit-lane time in this race.' — long analytical setup, short punchy answer, sustained throughout"
+      },
+      {
+        "id": "P3",
+        "score": 2,
+        "evidence": "VSC mechanism gets the longest section; Gasly and Pérez get two sentences each — length tracks significance correctly"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 7,
+      "register": 7,
+      "pacing": 6
+    },
+    "total": 22,
+    "max": 28,
+    "human_likelihood": 74,
+    "top_fixes": [
+      "Cut 'Until next week' entirely — the piece ends when the last entry (Pérez) ends; the standings and Madrid preview are a summary paragraph that violates S2 and softens the close",
+      "Rewrite the 'Morning' section to open on an evaluative claim rather than 'If you only caught…' — it currently narrates the experience of watching rather than delivering a verdict; the whole section could be cut or collapsed into the red-flag section without loss",
+      "Remove 'I think it matters more than anything else in this piece' — first-person is earned here but the self-referential framing ('in this piece') breaks R3; replace with the claim stated flatly and let the emphasis do the work"
+    ],
+    "label": "report_v4_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T19:57:20.733Z",
+    "source": "draft"
+  }
+]

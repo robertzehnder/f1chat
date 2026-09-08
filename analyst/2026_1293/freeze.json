@@ -1,6 +1,6 @@
 {
   "report": "report.md",
-  "sha256": "864c4bf4fe593aadb62fe815d03132f747ba9c058bb03dd0c2f8faa01d6a3c91",
+  "sha256": "954f8240ce3087e91e42b9b5f7894b6b1ccdf5848289ba7e681974c25e485a70",
   "frozen_at": "2026-09-08T15:46:49Z",
   "evaluation_label": "ASSISTED",
   "label_reason": "The author read the seven reference pieces on 2026-09-07 (diagnostic/monza_2026_recap_comparison.md) BEFORE writing this v2, so this run cannot count as blind discovery. A blind run requires a race whose reference coverage the writing side has not seen (candidate: Zandvoort 1292, validation split, or the next race).",
@@ -22,11 +22,14 @@
         "style_lint": "PASS",
         "similarity_guard": "PASS",
         "style_judge": "25/28, human_likelihood 81"
-      }
+      },
+      "errata": [
+        "tyre age at lap 26 stated as 24; packet says 22 (24 is lap 28). Caught by GPT-5.6 Sol review of v6 against packet.json, 2026-09-08. Frozen text unchanged; corrected from v7."
+      ]
     },
     {
       "version": "v3",
-      "file": "report.md",
+      "file": "report_v3.md",
       "sha256": "864c4bf4fe593aadb62fe815d03132f747ba9c058bb03dd0c2f8faa01d6a3c91",
       "frozen_at": "2026-09-08T16:29:16Z",
       "structure": "owner-requested: highlights \u2192 greeting/sentiment lead-in \u2192 analysis \u2192 compressed winners & losers \u2192 sign-off; adds the grid-penalty beat",
@@ -35,7 +38,25 @@
         "style_lint": "PASS",
         "similarity_guard": "PASS",
         "style_judge": "18/28, human_likelihood 34 \u2014 judge objects to the greeting opener and the sign-off (S2/R3); a register decision for the owner"
-      }
+      },
+      "errata": [
+        "tyre age at lap 26 stated as 24; packet says 22 (24 is lap 28). Caught by GPT-5.6 Sol review of v6 against packet.json, 2026-09-08. Frozen text unchanged; corrected from v7."
+      ]
+    },
+    {
+      "version": "v7",
+      "file": "report.md",
+      "sha256": "954f8240ce3087e91e42b9b5f7894b6b1ccdf5848289ba7e681974c25e485a70",
+      "frozen_at": "2026-09-08T20:11:44Z",
+      "structure": "owner structure (highlights \u2192 lead-in \u2192 analysis \u2192 winners & losers \u2192 close), phrase-level humanisation per corpus/style/phrasing_method.md; 4-pass GPT-5.6 Sol review SHIP",
+      "gates": {
+        "verify": "PASS",
+        "style_lint": "PASS",
+        "similarity_guard": "PASS",
+        "style_judge": "22/28 (register 8/8, structure 2/6 \u2014 judge-register mismatch hypothesis; see plan)",
+        "blind_llm_detector": "unreliable at this level \u2014 reasoning contradicted its own pick on v5; awaiting owner-vote calibration"
+      },
+      "review_log": "pass1 REVISE(5): diagnosis conflated inherited vs v3-specific; v4 over-humanised (tokens, unsupported propositions incl. 'in the mirrors' contradicting 40 laps led); linter quotas game-able; byte-identity \u2260 meaning; metric overclaim. pass2 REVISE(6 textual + proportionality). pass3 REVISE(5 textual, incl. tyre-age erratum and false half-second pace claim). pass4 SHIP."
     }
   ]
 }

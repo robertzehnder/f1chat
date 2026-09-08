@@ -43,7 +43,22 @@ const HARD_TELLS = [
   [/\bIt (?:was|is), [^.]{2,40}\./g, "'It was, <aside>.' fragment"],
   [/\b(?:the|this) (?:story|piece|narrative) (?:is|was|resolves|reads|tells)\b/gi, "meta-framing (the story is…)"],
   [/\blet that sink in\b|\bhere's the thing\b|\bthe truth is\b|\bmake no mistake\b/gi, "stock hook phrase"],
-  [/\b(?:strip out|take away) [^,.]{3,40} and (?:he|she|they|it) (?:is|are)\b/gi, "tidy counterfactual synthesis"]
+  [/\b(?:strip out|take away) [^,.]{3,40} and (?:he|she|they|it) (?:is|are)\b/gi, "tidy counterfactual synthesis"],
+  // Phrasing method v1 (2026-09-08): stock greetings/closes are hard tells;
+  // everything subtler is ADVISORY below and never gates.
+  [/\b(?:hi|hello|hey) (?:friends|everyone|all|folks|team)\b/gi, "stock greeting"],
+  [/\bwhat a (?:weekend|race|day)\b[.!]/gi, "stock greeting ('What a weekend')"],
+  [/\blet'?s dive in\b|\bbuckle up\b|\bthat'?s a wrap\b|\bwithout further ado\b/gi, "stock opener/closer"]
+];
+const SIGNOFF_HEADING = /^#{1,4}\s*(?:sign[- ]?off|wrap[- ]?up|closing thoughts|final thoughts)\b/im;
+// ADVISORY diagnostics (reported, never gating): promoted to hard tells only after
+// repeated blinded owner rejection across ≥3 pieces (phrasing plan D1).
+const ADVISORY = [
+  [/\b(?:necessary|sufficient)\b/gi, "definitional 'necessary/sufficient'"],
+  [/\bthe (?:margin|difference) between [^.]{3,60} and [^.]{3,60}\b/gi, "balanced-contrast frame"],
+  [/\bon this evidence\b|\blabell?ed as (?:one|such)\b|\bmeasured counterfactual\b|\bthe data does not carry\b/gi, "method-speak"],
+  [/\b(?:call it an estimate|I'd rather say so|to be transparent|in the interest of honesty)\b/gi, "defensive transparency"],
+  [/\b(?:apparently|whatever you heard|keep everyone honest|I suspect)\b/gi, "personality token"]
 ];
 const WRAPUP_HEADING = /^#{1,4}\s*(?:the )?(?:verdict|conclusion|in the end|bottom line|takeaways?|summary)\b/im;
 
@@ -65,7 +80,8 @@ function analyze(file) {
     .replace(/^\*Draft in the[\s\S]*?\*\s*$/m, "");
   const text = stripMarkdown(body);
   const words = text.split(/\s+/).filter(Boolean);
-  const paragraphs = text.replace(/(\d)\.(\d)/g, "$1\u2024$2").split(/\n\s*\n/).map((p) => p.trim()).filter((p) => p.split(/\s+/).length > 8);
+  // Bullet items are separate paragraphs (stripMarkdown removed the markers, so split on line breaks inside list blocks too)
+  const paragraphs = text.replace(/(\d)\.(\d)/g, "$1\u2024$2").split(/\n\s*\n|\n(?=\S)/).map((p) => p.trim()).filter((p) => p.split(/\s+/).length > 8);
   // Protect decimals (7.1s, 0.264s) and lap-time colons so they don't split sentences.
   const protectedText = text.replace(/\s+/g, " ").replace(/(\d)\.(\d)/g, "$1\u2024$2");
   const sentences = (protectedText.match(/[^.!?]+[.!?]+/g) ?? []).map((s) => s.replace(/\u2024/g, "."));
@@ -78,7 +94,13 @@ function analyze(file) {
   const numbers = (text.match(/\b\d+(?:[.:]\d+)?\b/g) ?? []).length;
   const longParas = paragraphs.filter((p) => (p.match(/[^.!?]+[.!?]+/g) ?? []).length > 5).length;
   const tables = (body.match(/^\|.*\|$/gm) ?? []).length > 0;
-  const wrapup = WRAPUP_HEADING.test(body);
+  const wrapup = WRAPUP_HEADING.test(body) || SIGNOFF_HEADING.test(body);
+  // advisory: contraction rate + first-person rate + soft-tell hits
+  const contractions = (text.match(/\b\w+'(?:t|s|re|ve|ll|d|m)\b/g) ?? []).length;
+  const contractionPer100w = +((contractions / Math.max(1, words.length)) * 100).toFixed(2);
+  const advisories = [];
+  for (const [re, label] of ADVISORY) for (const m of text.matchAll(re)) advisories.push({ label, excerpt: m[0].slice(0, 60) });
+  if (contractionPer100w < 0.5) advisories.push({ label: "low contraction rate", excerpt: `${contractionPer100w}/100w` });
   // narrate-vs-interpret proxy: sentences opening on a temporal/narrative cue
   const narrOpen = sentences.filter((s) => /^\s*(?:When|After|As|Then|Once|Following|By lap|On lap)\b/i.test(s)).length;
 
@@ -99,6 +121,7 @@ function analyze(file) {
     meanSentenceLen: +mean.toFixed(1), sentenceLenSd: +sd.toFixed(1), emDashPer100w: +emRate.toFixed(2),
     firstPerson, numbersPerParagraph: +(numbers / Math.max(1, paragraphs.length)).toFixed(2),
     narrativeOpeners: narrOpen, longParagraphs: longParas, tables, wrapupHeading: wrapup,
+    contractionPer100w, advisories,
     tells, failures
   };
 }
@@ -109,8 +132,9 @@ if (asJson) { console.log(JSON.stringify(reports, null, 2)); }
 else {
   for (const r of reports) {
     console.log(`\n${r.file}: ${r.words} words, ${r.paragraphs} paras, ${r.sentences} sentences`);
-    console.log(`  sentence len mean ${r.meanSentenceLen} sd ${r.sentenceLenSd} | em-dash/100w ${r.emDashPer100w} | first-person ${r.firstPerson} | numbers/para ${r.numbersPerParagraph} | narrative openers ${r.narrativeOpeners}`);
+    console.log(`  sentence len mean ${r.meanSentenceLen} sd ${r.sentenceLenSd} | em-dash/100w ${r.emDashPer100w} | contractions/100w ${r.contractionPer100w} | first-person ${r.firstPerson} | numbers/para ${r.numbersPerParagraph} | narrative openers ${r.narrativeOpeners}`);
     for (const t of r.tells) console.log(`  ✗ ${t.label}: "${t.excerpt}"`);
+    for (const a of r.advisories) console.log(`  ~ advisory — ${a.label}: "${a.excerpt}"`);
     for (const f of r.failures.filter((f) => !f.includes("machine tell"))) console.log(`  ✗ ${f}`);
     console.log(r.failures.length ? `  STYLE LINT: FAIL (${r.failures.join("; ")})` : "  STYLE LINT: PASS");
   }

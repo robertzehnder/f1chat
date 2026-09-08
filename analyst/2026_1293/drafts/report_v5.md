@@ -3,20 +3,20 @@
 ## The short version
 
 - Antonelli won from 19th, a Mercedes one-two, Russell 3.857s back, Verstappen third.
-- He'd qualified seventh. A 12-place grid penalty put him 19th, and by the lap-3 red flag he was already up to 12th, which is where he restarted.
+- He'd qualified seventh. A 12-place grid penalty put him 19th, and the lap-3 red flag had him back up to 12th before anyone had done a racing lap.
 - The choice that decided it was made while the cars were parked: Russell took hards to go the distance, Antonelli took mediums.
-- A lap-28 virtual safety car priced Antonelli's second stop at 13 seconds instead of roughly 31. On a simple extrapolation, those 18 seconds were the race.
+- A lap-28 virtual safety car priced Antonelli's second stop at 13 seconds instead of roughly 31. Those 18 seconds were the race.
 - He closed at 0.85s a lap, went wide at the first chicane on lap 49, and got the job done on lap 50.
 
 ## Morning
 
-If you only caught the last four laps on Sunday, you saw the pass. What you didn't see is why it was ever close, and the answer starts on lap 3. An Italian winning at Monza for the first time since 1966 is a line from the record books rather than from our data. Here's what the data does say.
+If you only caught the last three laps on Sunday, you saw the pass. What you didn't see is why it was ever close, and the answer starts on lap 3. An Italian winning at Monza for the first time since 1966 is a line from the record books rather than from our data, but the timing does back up the crowd on how it happened.
 
 ## The race was decided while it was stopped
 
 Leclerc went off on lap 2, race control called "SAFETY CAR DEPLOYED" and then, a minute later, "RED FLAG - RACE SUSPENDED". While the field sat in the pit lane, 21 cars changed tyres. Russell went medium to hard, the sensible call for a one-stop. Antonelli went the other way, hard to medium.
 
-It was a conventional tyre split. It set up the rest of the afternoon.
+At the time it looked like a routine split. It set up the rest of the afternoon.
 
 ## About that grid penalty
 
@@ -24,7 +24,7 @@ Antonelli had qualified seventh; the penalty (an engine change, according to the
 
 ## Quicker, and stuck
 
-By lap 26 Antonelli was second, 0.5s behind Russell, both on tyres 22 laps old, medium against hard. Over the next two laps he took about a tenth a lap out of that and got to within three tenths, and that was that. Closing wasn't passing, not at Monza.
+By lap 26 Antonelli was second, 0.5s behind Russell, both on tyres 24 laps old, medium against hard. He got to within three tenths over the next couple of laps and that was that. Half a second a lap quicker wasn't enough to get past at Monza.
 
 This is the bit the 19th-to-first line hides: on equal-age rubber the faster car was going nowhere.
 
@@ -32,7 +32,7 @@ This is the bit the 19th-to-first line hides: on equal-age rubber the faster car
 
 Lap 28: "VSC DEPLOYED". Stroll's car had stopped a lap earlier, which is what the reports give as the cause; race control's log doesn't say. Antonelli dived in for a second set of mediums, Russell stayed out on the hards, and Antonelli came back out fifth, 13.7s behind the leader.
 
-At green-flag speed the same stop would have cost about 31 seconds, going by the race's median pit-lane time. That's 18 seconds cheaper, and on this race's numbers 18 seconds is the difference between fresh tyres with time to use them and fresh tyres without.
+At green-flag speed the same stop would have cost about 31 seconds, going by the race's median pit-lane time. That's 18 seconds cheaper, and 18 seconds is the difference between fresh tyres with time to use them and fresh tyres without.
 
 Verstappen pitted at the same moment, took a hard, and got the same discount.
 
@@ -44,7 +44,7 @@ Lap 50, he was through. Three laps to run. He set the fastest lap of the race on
 
 ## Take the VSC away
 
-Would he have won anyway? I don't think so. If the 0.85s a lap he found late on had held from lap 28 (it might not have), a 31-second green-flag stop takes about 37 laps to recover and there were 25 left. On that simple extrapolation Russell keeps the lead and Antonelli finishes second in the quicker car late on.
+Would he have won anyway? I don't think so. At 0.85 a lap, a 31-second green-flag stop takes about 37 laps to recover and there were 25 left. Russell keeps the lead and Antonelli finishes second in the quickest car on the day.
 
 The pace was real. The cheap stop is what let him spend it.
 
@@ -52,11 +52,11 @@ The pace was real. The cheap stop is what let him spend it.
 
 **Winner: Antonelli (1st).** Qualified seventh, started 19th, won. Plenty went his way, and he still had to drive the car that fast for 50 laps, most of them chasing.
 
-**Loser: Russell (2nd).** Led 40 of the 53 laps and lost the race to a VSC he couldn't time and a pit call that went the other way. Should he have pitted under the VSC too? To answer that you'd need to know where he'd have come out, and the data doesn't carry it.
+**Loser: Russell (2nd).** Led 40 of the 53 laps and lost the race to a timing he had no say in. Should he have pitted under the VSC too? To answer that you'd need to know where he'd have come out, and the data doesn't carry it.
 
-**Winner: Verstappen (3rd).** The same cheap stop dropped him to seventh; he recovered to third. Same trick, one tyre step down.
+**Winner: Verstappen (3rd).** Same cheap stop as the winner, same drop to seventh, back to third. Same trick, one tyre step down.
 
-**Loser: Gasly (7th).** Alpine's first pole, second by lap 2, sixth by lap 10, seventh at the flag. The trace shows a steady drift back rather than an incident.
+**Loser: Gasly (7th).** Alpine's first pole, second by lap 2, sixth by lap 10, seventh at the flag. No incident anywhere in his trace. The car drifted back to where its race pace put it.
 
 **Loser: Ferrari (6th + DNF).** Leclerc out on lap 2 after a first-chicane tangle the stewards noted and let go; Hamilton sixth. Whether the tangle caused the crash isn't in the data.
 

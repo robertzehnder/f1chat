@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "'Morning' section opens with 'If you only caught the last three laps' — narrative throat-clearing before any verdict"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'Until next week' is a textbook wrap-up: standings summary, next-race tease, signed-off farewell"
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'At the time it looked like a routine split. It set up the rest of the afternoon.' — bridging sentence between sections, not heading-driven transition"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'0.85s a lap… 31-second green-flag stop… 37 laps to recover… 25 left' — four figures clustered in the same analytical beat"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'Would he have won anyway? I don't think so' and 'probably' absent but 'I don't think so' cleanly owns the speculation"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell used as the explicit benchmark throughout: gap, tyre choice, VSC moment all benchmarked against team-mate before any absolute claim"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "Race control messages and stewards' bulletin quoted verbatim as hard stops: 'CAR 12 (ANT) TIME 1:28.582 DELETED – TRACK LIMITS AT TURN 1 LAP 49'"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'Morning' section recaps the running order rather than interpreting it; 'If you only caught the last three laps, you saw the pass' is pure recap framing"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Same trick, one tyre step down' — flat juxtaposition; Gasly entry's deadpan 'The car drifted back to where its race pace put it'"
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'An Italian winning at Monza for the first time since 1966 is a line from the record books rather than from our data' — sentence is about the piece itself"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "No introductions, no definition of VSC or track-limits procedure; names and jargon deployed as peer shorthand throughout"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Paragraphs consistently 2-4 sentences; 'Verstappen pitted at the same moment, took a hard, and got the same discount' exits cleanly on one point"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'Half a second a lap quicker wasn't enough to get past at Monza. / This is the bit the 19th-to-first line hides' — long analytical then short punchy"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "VSC mechanism section gets proper room; but 'Morning' and 'About that grid penalty' absorb significant length on context rather than mechanism"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 7,
+      "register": 7,
+      "pacing": 5
+    },
+    "total": 21,
+    "max": 28,
+    "human_likelihood": 62,
+    "top_fixes": [
+      "Kill 'Until next week' entirely — the Winners/Losers: Noted:Pérez entry is the natural close; the standings paragraph and 'See you Sunday' are machine-newsletter habit and violate S2 outright.",
+      "Gut the 'Morning' section: it opens with a recap of what the reader saw and a record-books aside that the text itself flags as irrelevant — move the lap-3 point straight into 'The race was decided while it was stopped' and open that section on a verdict, not a sequence.",
+      "Tighten the number clusters in 'Take the VSC away': '0.85 a lap, 31-second stop, 37 laps, 25 left' lands as a calculation dump; give the arithmetic one figure (37 laps needed, 25 available) and let the conclusion carry the rest."
+    ],
+    "label": "report_v5_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T20:03:04.936Z",
+    "source": "draft"
+  }
+]

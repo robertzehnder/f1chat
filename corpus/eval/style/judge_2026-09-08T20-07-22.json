@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "'Morning' section opens 'If you only caught the last three laps on Sunday, you saw the pass' — narrates before evaluating; verdict-first only in some sections"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'Until next week' paragraph restates standings and previews next race — explicit summary/wrap-up closure violating the rule"
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'Morning' section opens with 'If you only caught...' — a bridging/orienting sentence rather than letting the heading do transitional work"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'0.85s a lap... 18 seconds... 31 seconds... 13.7s' cluster within the VSC section; several paragraphs pile multiple figures rather than deploying one surgically"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'Would he have won anyway? I don't think so... it might not have' — explicit owned speculation; certainty reserved for documented outcomes"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is the constant benchmark throughout: lead times, tyre strategy, stop timing all measured against Russell before any absolute framing"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "'CAR 12 (ANT) TIME 1:28.582 DELETED - TRACK LIMITS AT TURN 1 LAP 49' — official message lands as hard stop complicating the pass narrative"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'Leclerc went off on lap 2, race control called SAFETY CAR DEPLOYED and then RED FLAG' — recaps sequence rather than interpreting meaning"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Gasly (7th)... The car drifted back to where its race pace put it' — flat, dry recounting for comic/ironic deflation of Alpine's pole narrative"
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'Here's what the data does say' — meta-sentence about the piece itself; first-person judgment calls present but occasionally diluted by frame-setting prose"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "Names dropped without introduction, 'VSC', 'DRS', timing data, escape-road instructions cited without definition — fully peer-addressed throughout"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "'It was a conventional tyre split. It set up the rest of the afternoon.' — consistent two-to-four sentence paragraphs, each exiting cleanly"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'Half a second a lap quicker wasn't enough to get past at Monza. / This is the bit the 19th-to-first line hides' — long analytical sentence answered by short punchy one"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "VSC section correctly peaks in density; 'Winners and losers' bullets compress everything equally regardless of significance, losing the density gradient"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 7,
+      "register": 8,
+      "pacing": 5
+    },
+    "total": 22,
+    "max": 28,
+    "human_likelihood": 62,
+    "top_fixes": [
+      "Kill 'Until next week' entirely — it is a summary paragraph with a standings restatement and a preview, violating S2 on both counts; the piece should end when the Pérez/Tsunoda entry closes",
+      "'Morning' section violates S1 and S3: drop 'If you only caught the last three laps...' and 'Here's what the data does say' — open on the evaluative claim about lap 3, not on an address to the reader or a meta-sentence about the piece",
+      "Thin the figure clusters in the VSC section — '13.7s behind the leader... about 31 seconds... 18 seconds cheaper' in two consecutive sentences dilutes E1; pick the one number that clinches the point (the 18-second delta) and let the others fall into subordinate clauses or be cut"
+    ],
+    "label": "report_v6_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T20:07:22.537Z",
+    "source": "draft"
+  }
+]

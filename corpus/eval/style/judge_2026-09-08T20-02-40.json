@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "'Morning' section opens on 'If you only caught the last three laps…you saw the pass' — narrative framing before verdict; other sections fare better"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'Until next week' paragraph restates standings and previews next race — a textbook summary closer the rule forbids"
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'At the time it looked like a routine split. It set up the rest of the afternoon.' — bridging sentence between red-flag section and penalty section"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'0.85 seconds a lap, taken off a hard tyre that was 40-odd laps old' — good; but '13.7s behind the leader' and '31 seconds' and '18 seconds' cluster in one paragraph"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'Would he have won anyway? I don't think so' and 'probably' absent but 'I don't think so' and 'data doesn't carry it' own the speculation cleanly"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is the persistent benchmark throughout: tyre age, gap, stop timing, counterfactual — teammate comparison is structural"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "Track-limits deletion message and Pérez penalty message quoted verbatim as hard evidentiary stops, not decoration"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'Leclerc went off on lap 2, race control called SAFETY CAR DEPLOYED' — recaps sequence rather than interpreting; 'Morning' section narrates viewing experience"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Alpine's first pole, second by lap 2, sixth by lap 10, seventh at the flag. No incident anywhere in his trace.' — flat recounting as damning verdict"
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'I don't think so' appropriately flags judgment; but 'the timing does back up the crowd' is a sentence about the story validating itself"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "No introductions: Piastri, Lawson, Stroll named and dropped; VSC mechanics assumed; jargon undefined throughout"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Almost all paragraphs 2-4 sentences; 'Thirteen seconds' section slightly dense but stays within bounds"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'That's 18 seconds cheaper, and 18 seconds is the difference between fresh tyres with time to use them and fresh tyres without. Verstappen pitted at the same moment' — long then short rhythm consistent"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "VSC mechanism correctly gets the most room; but 'Winners and losers' section runs long on Pérez/Tsunoda marginalia relative to their significance"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 7,
+      "register": 8,
+      "pacing": 5
+    },
+    "total": 22,
+    "max": 28,
+    "human_likelihood": 72,
+    "top_fixes": [
+      "Kill 'Until next week' entirely — standings and Madrid preview is a summary closer that violates S2 and announces itself as machine-tidy housekeeping; the piece ends when Gasly/Ferrari/Pérez end",
+      "Strip the 'Morning' section: 'If you only caught the last three laps…' is a narrative hook addressed to a casual viewer, not peer address; open instead on the sharpest claim about why the race turned where it did",
+      "Collapse the Pérez/Tsunoda 'Noted' entry or move the radio verbatim quote earlier as evidentiary punctuation on a claim already made — in its current position it reads like a data-dump footnote rather than a hard stop confirming a reading"
+    ],
+    "label": "report_v5_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T20:02:40.295Z",
+    "source": "draft"
+  }
+]
