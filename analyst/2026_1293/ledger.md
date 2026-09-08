@@ -66,4 +66,4 @@ per claim; the frozen blind evaluation is the external check.*
 **Gate result:** no material claim rejected or unresolved → prose may proceed. CL6 is excluded from the draft by outcome; CL8 is not made.
 
 ## 5. Platform reconciliation (U5)
-*Filled from analyst/2026_1293/probe.json when the probe completes — see §5 addendum.*
+See analyst/2026_1293/platform_gaps.md. Summary: 27/28 requests routed to LLM-SQL (the deterministic layer covers only the compounds question); correct 2, honest refusals 2, partial 1, dodge 1, computable-but-zero-rows 2, wrong 5 — including a fabricated absence ("zero disrupted laps", "no VSC recorded") that contradicts race control, and the pilot's exact "pure pace" error reproduced by the product. Eight gaps listed (G1–G8); G3/G4 are honesty bugs and rank first.
