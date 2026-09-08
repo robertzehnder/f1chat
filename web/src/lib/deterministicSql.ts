@@ -9,6 +9,7 @@ import { buildPaceCliffTemplate } from "./deterministicSql/paceCliff";
 export { buildPaceCliffTemplate } from "./deterministicSql/paceCliff";
 import { buildInferredOvertakesTemplate } from "./deterministicSql/inferredOvertakes";
 import { buildFantasyPointsTemplate } from "./deterministicSql/fantasyPoints";
+import { buildInterruptionsTemplate } from "./deterministicSql/interruptions";
 export { buildInferredOvertakesTemplate } from "./deterministicSql/inferredOvertakes";
 import { buildMinisectorDominanceTemplate } from "./deterministicSql/minisectorDominance";
 export { buildMinisectorDominanceTemplate } from "./deterministicSql/minisectorDominance";
@@ -329,6 +330,12 @@ function _buildDeterministicSqlTemplateRaw(
   // the classified-position feed.
   const inferredOvertakes = buildInferredOvertakesTemplate({ lower, targetSession });
   if (inferredOvertakes) return inferredOvertakes;
+
+  // SC / VSC / red-flag periods (analyst probe honesty fix G3) — answers
+  // "which laps were neutralised" and the pure-pace framing from the
+  // materialised racing-state intervals, never from flag heuristics.
+  const interruptions = buildInterruptionsTemplate({ lower, targetSession });
+  if (interruptions) return interruptions;
 
   // Fantasy round recap ("fantasy points at <race>") — reconstructed
   // per-driver fantasy totals for the resolved round.

@@ -27,6 +27,7 @@ const SCAN_FILES = [
   "src/lib/deterministicSql/strategySplit.ts",
   "src/lib/deterministicSql/performanceRadar.ts",
   "src/lib/deterministicSql/raceControlIncidents.ts",
+  "src/lib/deterministicSql/interruptions.ts",
   "src/lib/deterministicSql/telemetryWeatherGap.ts",
   "src/lib/deterministicSql/lap1Positions.ts",
   "src/lib/deterministicSql/wetCrossover.ts",

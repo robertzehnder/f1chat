@@ -26,7 +26,8 @@ export type TopicSignal = {
   straight_line: boolean;   // primary — pairs with pace
   traffic: boolean;         // modifier — composes with pace, stint, strategy, overtake_battle
   weather: boolean;         // primary — pairs with pace, stint
-  incident: boolean;        // primary — pairs with restart
+  incident: boolean;
+  interruption: boolean;        // primary — pairs with restart
   restart: boolean;         // primary — pairs with overtake_battle, incident
   overtake_battle: boolean; // primary — pairs with strategy, restart, pace
   driver_score: boolean;    // primary — aggregator (bypasses pair check)
@@ -43,6 +44,7 @@ export const PRIMARY_TOPICS: ReadonlySet<keyof TopicSignal> = new Set<keyof Topi
   "straight_line",
   "weather",
   "incident",
+  "interruption",
   "restart",
   "overtake_battle",
   "driver_score",
@@ -69,6 +71,9 @@ export const ALLOWED_PRIMARY_PAIRS: ReadonlyArray<ReadonlyArray<keyof TopicSigna
   ["pace", "overtake_battle"],
   ["overtake_battle", "restart"],
   ["incident", "restart"],
+  ["incident", "interruption"],
+  ["interruption", "restart"],
+  ["interruption", "pace"],
   ["overtake_battle", "strategy"]
 ];
 
@@ -283,6 +288,23 @@ const INCIDENT_KEYWORDS: ReadonlyArray<string> = [
   "drive-through"
 ];
 
+const INTERRUPTION_KEYWORDS: ReadonlyArray<string> = [
+  "safety car",
+  "virtual safety car",
+  "vsc",
+  "red flag",
+  "red-flag",
+  "interruption",
+  "interruptions",
+  "neutralisation",
+  "neutralization",
+  "neutralised",
+  "neutralized",
+  "caution period",
+  "disrupted laps",
+  "pure pace"
+];
+
 const RESTART_KEYWORDS: ReadonlyArray<string> = [
   "safety car restart",
   "sc restart",
@@ -372,6 +394,7 @@ export function topicSignal(text: string): TopicSignal {
     traffic: anyContains(lower, TRAFFIC_KEYWORDS),
     weather: anyContains(lower, WEATHER_KEYWORDS),
     incident: anyContains(lower, INCIDENT_KEYWORDS),
+    interruption: anyContains(lower, INTERRUPTION_KEYWORDS),
     restart: anyContains(lower, RESTART_KEYWORDS),
     overtake_battle: anyContains(lower, OVERTAKE_BATTLE_KEYWORDS),
     driver_score: anyContains(lower, DRIVER_SCORE_KEYWORDS)
@@ -463,6 +486,9 @@ export const TEMPLATE_TOPICS: Readonly<Record<string, TemplateTopicEntry>> = {
 
   // raceControlIncidents.ts (session steward/penalty event timeline)
   session_race_control_incidents:                   { owns: ["incident"] },
+
+  // interruptions.ts (SC / VSC / red-flag periods — analyst probe honesty fix G3)
+  session_interruptions:                            { owns: ["interruption"] },
 
   // telemetryWeatherGap.ts (season data-health status grid)
   sessions_telemetry_without_weather:               { owns: ["dataHealth", "telemetry"] },

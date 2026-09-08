@@ -269,6 +269,11 @@
       "class": "gated",
       "truthTier": "methodology-scoped",
       "note": "reconstructed per-driver fantasy totals for a round (DotD/pit-tiers absent, overtakes inferred)"
+    },
+    "session_interruptions": {
+      "class": "gated",
+      "truthTier": "data-backed",
+      "note": "SC/VSC/red periods from analytics.racing_state_intervals; states a queried absence via sentinel row; inferred endpoints flagged (G3 honesty fix)"
     }
   },
   "detectors": {
