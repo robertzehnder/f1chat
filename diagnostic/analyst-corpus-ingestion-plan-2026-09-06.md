@@ -313,6 +313,24 @@ untouched-approval rate earns automation.
    work. Closes the loop: analyst wants it → platform can't → next
    template/matview.
 
+### Sidecar (owner feedback 2026-09-08)
+
+8. **News & sentiment sidecar** — runs BEFORE analysis and again before
+   writing. Two jobs: (a) *steer* — pull the weekend's known context that
+   timing data cannot see (engine/gearbox changes and the grid penalties they
+   caused, driver-of-the-day, stewards' written decisions, team statements)
+   so the domain analysts know what to test — e.g. "Antonelli took a new
+   engine: quantify the penalty and the recovery"; (b) *colour* — the fan
+   sentiment and anecdotes a human lead-in uses ("first Italian winner at
+   Monza since 1966"). Output = an attributed `context.json` sidecar
+   (fact, source, url, fetched_at) that the writer may cite only as
+   attribution, never as measurement. Rights: X remains manual-only
+   (registry); news sites/RSS need their own registry rows before any fetch;
+   every item carries its source. Season-wide follow-on: an engine-change
+   ledger (penalty size × places recovered × points delta) is COMPUTABLE
+   from the packet's grid_penalties block once the sidecar supplies the
+   change events.
+
 ### Occasional
 
 7. **Style curator** — runs only when adding voices: distills dev-split corpus

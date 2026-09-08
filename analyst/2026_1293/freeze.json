@@ -1,9 +1,41 @@
 {
   "report": "report.md",
-  "sha256": "c89a47df979e724614ed398bcfa0f4d3f2e0bfda8ce90d58bfbb1f0577ebb834",
+  "sha256": "864c4bf4fe593aadb62fe815d03132f747ba9c058bb03dd0c2f8faa01d6a3c91",
   "frozen_at": "2026-09-08T15:46:49Z",
   "evaluation_label": "ASSISTED",
   "label_reason": "The author read the seven reference pieces on 2026-09-07 (diagnostic/monza_2026_recap_comparison.md) BEFORE writing this v2, so this run cannot count as blind discovery. A blind run requires a race whose reference coverage the writing side has not seen (candidate: Zandvoort 1292, validation split, or the next race).",
-  "gates_at_freeze": { "verify": "PASS", "style_lint": "PASS", "similarity_guard": "PASS", "style_judge": "25/28, human_likelihood 81" },
-  "review_mode": "structured self-review (one developer)"
+  "gates_at_freeze": {
+    "verify": "PASS",
+    "style_lint": "PASS",
+    "similarity_guard": "PASS",
+    "style_judge": "25/28, human_likelihood 81"
+  },
+  "review_mode": "structured self-review (one developer)",
+  "versions": [
+    {
+      "version": "v2",
+      "file": "report_v2.md",
+      "sha256": "c89a47df979e724614ed398bcfa0f4d3f2e0bfda8ce90d58bfbb1f0577ebb834",
+      "structure": "verdict-first sections, ends on the caveat (The Race register)",
+      "gates": {
+        "verify": "PASS",
+        "style_lint": "PASS",
+        "similarity_guard": "PASS",
+        "style_judge": "25/28, human_likelihood 81"
+      }
+    },
+    {
+      "version": "v3",
+      "file": "report.md",
+      "sha256": "864c4bf4fe593aadb62fe815d03132f747ba9c058bb03dd0c2f8faa01d6a3c91",
+      "frozen_at": "2026-09-08T16:29:16Z",
+      "structure": "owner-requested: highlights \u2192 greeting/sentiment lead-in \u2192 analysis \u2192 compressed winners & losers \u2192 sign-off; adds the grid-penalty beat",
+      "gates": {
+        "verify": "PASS",
+        "style_lint": "PASS",
+        "similarity_guard": "PASS",
+        "style_judge": "18/28, human_likelihood 34 \u2014 judge objects to the greeting opener and the sign-off (S2/R3); a register decision for the owner"
+      }
+    }
+  ]
 }

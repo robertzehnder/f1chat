@@ -326,6 +326,36 @@
     "driver": "GAS",
     "finished": 7
   },
+  "grid_penalties": [
+    {
+      "driver": "ANT",
+      "qualified": 7,
+      "grid": 19,
+      "places_lost": 12,
+      "cause": "not in timing data (source-only)"
+    },
+    {
+      "driver": "LAW",
+      "qualified": 14,
+      "grid": 22,
+      "places_lost": 8,
+      "cause": "not in timing data (source-only)"
+    },
+    {
+      "driver": "PIA",
+      "qualified": 3,
+      "grid": 6,
+      "places_lost": 3,
+      "cause": "not in timing data (source-only)"
+    },
+    {
+      "driver": "ALB",
+      "qualified": 18,
+      "grid": 20,
+      "places_lost": 2,
+      "cause": "not in timing data (source-only)"
+    }
+  ],
   "standings_after": [
     {
       "driver": "ANT",
@@ -29569,7 +29599,7 @@
   "manifest": {
     "packet_version": "race_packet@1",
     "session_key": 11361,
-    "built_at": "2026-09-08T15:40:26.325Z",
+    "built_at": "2026-09-08T16:26:42.767Z",
     "sources": {
       "sessions": {
         "rows": 1
@@ -29603,6 +29633,9 @@
       },
       "standings": {
         "rows": 23
+      },
+      "qualifying_result": {
+        "rows": 22
       }
     },
     "flags": [

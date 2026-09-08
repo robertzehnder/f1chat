@@ -3,52 +3,441 @@
   "packet_version": "race_packet@1",
   "review_mode": "structured self-review (one developer); frozen blind evaluation is the external check",
   "claims": [
-    { "id": "CL1", "type": "causal_interpretation", "material": true, "text": "The cheaply priced stop was what made it sufficient",
-      "relation": "VSC → cheap stop (13.2s observed vs 31.1s estimated green) → fresh-tyre offset preserved → win",
-      "refs": ["moment:m_vsc_28", "packet:caution_windows.3.observed_change", "packet:caution_windows.3.estimate_green_flag_loss_s", "packet:stints"],
-      "cause_event": "rc103", "effect_lap": 50, "confidence": "high on observed change; medium on the estimate", "counterfactual_required": true,
-      "review": { "outcome": "qualified", "qualification": "that figure is an estimate rather than a measured counterfactual", "alternative_considered": "pure pace (CL4)" } },
-    { "id": "CL2", "type": "causal_interpretation", "material": true, "text": "Lap 49 he ran wide at the first chicane",
-      "relation": "track-limits excursion at Turn 1 → +4.0s lap → gap 0.264→0.871",
-      "refs": ["moment:m_lapspike_ANT_49", "packet:timeline.events.145", "packet:position_trace.ANT.48"],
-      "cause_event": "rc145", "effect_lap": 49, "confidence": "high",
-      "review": { "outcome": "accepted", "alternative_considered": "Russell defending (no evidence; RUS lap 49 also slow but ANT S1 +4.3s is the driver)" } },
-    { "id": "CL3", "type": "causal_interpretation", "material": false, "text": "Stroll's car had stopped a lap earlier, which reports give as the cause",
-      "relation": "STR stop L27 → VSC L28", "refs": ["packet:results", "packet:timeline.intervals.3", "attributed:press reports"],
-      "cause_event": "rc103", "effect_lap": 28, "confidence": "coincident in data; cause attributed",
-      "review": { "outcome": "qualified", "qualification": "race control does not say" } },
-    { "id": "CL4", "type": "causal_interpretation", "material": true, "text": "The pace was necessary",
+    {
+      "id": "CL1",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "The cheaply priced stop was what made it sufficient",
+      "relation": "VSC \u2192 cheap stop (13.2s observed vs 31.1s estimated green) \u2192 fresh-tyre offset preserved \u2192 win",
+      "refs": [
+        "moment:m_vsc_28",
+        "packet:caution_windows.3.observed_change",
+        "packet:caution_windows.3.estimate_green_flag_loss_s",
+        "packet:stints"
+      ],
+      "cause_event": "rc103",
+      "effect_lap": 50,
+      "confidence": "high on observed change; medium on the estimate",
+      "counterfactual_required": true,
+      "review": {
+        "outcome": "qualified",
+        "qualification": "that figure is an estimate rather than a measured counterfactual",
+        "alternative_considered": "pure pace (CL4)"
+      }
+    },
+    {
+      "id": "CL2",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "Lap 49 he ran wide at the first chicane",
+      "relation": "track-limits excursion at Turn 1 \u2192 +4.0s lap \u2192 gap 0.264\u21920.871",
+      "refs": [
+        "moment:m_lapspike_ANT_49",
+        "packet:timeline.events.145",
+        "packet:position_trace.ANT.48"
+      ],
+      "cause_event": "rc145",
+      "effect_lap": 49,
+      "confidence": "high",
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Russell defending (no evidence; RUS lap 49 also slow but ANT S1 +4.3s is the driver)"
+      }
+    },
+    {
+      "id": "CL3",
+      "type": "causal_interpretation",
+      "material": false,
+      "text": "Stroll's car had stopped a lap earlier, which reports give as the cause",
+      "relation": "STR stop L27 \u2192 VSC L28",
+      "refs": [
+        "packet:results",
+        "packet:timeline.intervals.3",
+        "attributed:press reports"
+      ],
+      "cause_event": "rc103",
+      "effect_lap": 28,
+      "confidence": "coincident in data; cause attributed",
+      "review": {
+        "outcome": "qualified",
+        "qualification": "race control does not say"
+      }
+    },
+    {
+      "id": "CL4",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "The pace was necessary",
       "relation": "counter-thesis: pace alone insufficient (equal-age blockage L26-28; 31s/0.85 = 37 laps > 25 available)",
-      "refs": ["packet:caution_windows.3.before_top10", "packet:position_trace.ANT.25", "packet:fastest_laps"],
-      "confidence": "high", "counterfactual_required": true,
-      "review": { "outcome": "accepted", "alternative_considered": "pure pace — rejected as sole cause, retained as component" } },
-    { "id": "CL5", "type": "observation", "material": false, "text": "Pérez's five-second penalty was for the lap-25 escape-road incident",
-      "refs": ["packet:timeline.links.0", "packet:timeline.events.114", "packet:timeline.events.95"],
-      "review": { "outcome": "accepted" } },
-    { "id": "CL7", "type": "causal_interpretation", "material": false, "text": "the Alpine could not hold the leaders",
-      "relation": "car race pace → regression P1→P7", "refs": ["packet:position_trace.GAS", "packet:results.6"],
-      "confidence": "medium", "review": { "outcome": "qualified", "qualification": "could not hold the leaders", "alternative_considered": "tyre choice (hard from lap 4) — not separable" } },
-    { "id": "CL9", "type": "observation", "material": true, "text": "he restarted 12th, not 19th",
-      "refs": ["packet:restart_snapshots.1", "packet:position_trace.ANT.1"], "review": { "outcome": "accepted" } },
-    { "id": "CL10", "type": "attribution", "material": false, "text": "whether it caused Leclerc's crash is not in the data",
-      "refs": ["packet:timeline.events.28", "packet:timeline.events.64", "packet:results"], "review": { "outcome": "accepted" } },
-    { "id": "D1", "type": "derived_metric", "material": true, "text": "a closing rate of 0.85 seconds per lap", "values": ["0.85", "7.1"], "formula": "(7.058-0.264)/8", "refs": ["packet:position_trace.ANT.39", "packet:position_trace.ANT.47"], "review": { "outcome": "accepted" } },
-    { "id": "D2", "type": "derived_metric", "material": true, "text": "The difference is roughly 18 seconds", "values": ["18", "13.2", "13.7", "31"], "formula": "13.684-0.519=13.2 observed; 31.1 estimated; 31.1-13.2≈18", "refs": ["packet:caution_windows.3.observed_change", "packet:caution_windows.3.estimate_green_flag_loss_s"], "review": { "outcome": "accepted" } },
-    { "id": "D3", "type": "derived_metric", "material": true, "text": "takes about 37 laps to recover", "values": ["37", "25"], "formula": "31.1/0.85≈37; 53-28=25", "refs": ["packet:session.total_laps", "packet:timeline.intervals.3"], "review": { "outcome": "accepted" } },
-    { "id": "D5", "type": "derived_metric", "material": false, "text": "That lap was four seconds slower", "values": ["4.0", "4.3"], "formula": "88.582-84.572=4.0", "refs": ["moment:m_lapspike_ANT_49"], "review": { "outcome": "accepted" } },
-    { "id": "D6", "type": "derived_metric", "material": false, "text": "leads Russell by 66 points", "values": ["66"], "formula": "267-201", "refs": ["packet:standings_after.0", "packet:standings_after.1"], "review": { "outcome": "accepted" } },
-    { "id": "D7", "type": "derived_metric", "material": false, "text": "1m23.504s", "values": ["23.504"], "formula": "83.504 s formatted", "refs": ["packet:fastest_laps.0"], "review": { "outcome": "accepted" } }
+      "refs": [
+        "packet:caution_windows.3.before_top10",
+        "packet:position_trace.ANT.25",
+        "packet:fastest_laps"
+      ],
+      "confidence": "high",
+      "counterfactual_required": true,
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "pure pace \u2014 rejected as sole cause, retained as component"
+      }
+    },
+    {
+      "id": "CL5",
+      "type": "observation",
+      "material": false,
+      "text": "P\u00e9rez's five-second penalty was for the lap-25 escape-road incident",
+      "refs": [
+        "packet:timeline.links.0",
+        "packet:timeline.events.114",
+        "packet:timeline.events.95"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "CL7",
+      "type": "causal_interpretation",
+      "material": false,
+      "text": "the Alpine could not hold the leaders",
+      "relation": "car race pace \u2192 regression P1\u2192P7",
+      "refs": [
+        "packet:position_trace.GAS",
+        "packet:results.6"
+      ],
+      "confidence": "medium",
+      "review": {
+        "outcome": "qualified",
+        "qualification": "only a car settling to where its pace put it",
+        "alternative_considered": "tyre choice (hard from lap 4) \u2014 not separable"
+      }
+    },
+    {
+      "id": "CL9",
+      "type": "observation",
+      "material": true,
+      "text": "he restarted 12th, not 19th",
+      "refs": [
+        "packet:restart_snapshots.1",
+        "packet:position_trace.ANT.1"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "CL10",
+      "type": "attribution",
+      "material": false,
+      "text": "whether it caused Leclerc's crash is not in the data",
+      "refs": [
+        "packet:timeline.events.28",
+        "packet:timeline.events.64",
+        "packet:results"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "D1",
+      "type": "derived_metric",
+      "material": true,
+      "text": "a closing rate of 0.85 seconds per lap",
+      "values": [
+        "0.85",
+        "7.1"
+      ],
+      "formula": "(7.058-0.264)/8",
+      "refs": [
+        "packet:position_trace.ANT.39",
+        "packet:position_trace.ANT.47"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "D2",
+      "type": "derived_metric",
+      "material": true,
+      "text": "The difference is roughly 18 seconds",
+      "values": [
+        "18",
+        "13.2",
+        "13.7",
+        "31"
+      ],
+      "formula": "13.684-0.519=13.2 observed; 31.1 estimated; 31.1-13.2\u224818",
+      "refs": [
+        "packet:caution_windows.3.observed_change",
+        "packet:caution_windows.3.estimate_green_flag_loss_s"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "D3",
+      "type": "derived_metric",
+      "material": true,
+      "text": "takes about 37 laps to recover",
+      "values": [
+        "37",
+        "25"
+      ],
+      "formula": "31.1/0.85\u224837; 53-28=25",
+      "refs": [
+        "packet:session.total_laps",
+        "packet:timeline.intervals.3"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "D5",
+      "type": "derived_metric",
+      "material": false,
+      "text": "That lap was four seconds slower",
+      "values": [
+        "4.0",
+        "4.3"
+      ],
+      "formula": "88.582-84.572=4.0",
+      "refs": [
+        "moment:m_lapspike_ANT_49"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "D6",
+      "type": "derived_metric",
+      "material": false,
+      "text": "leads Russell by 66 points",
+      "values": [
+        "66"
+      ],
+      "formula": "267-201",
+      "refs": [
+        "packet:standings_after.0",
+        "packet:standings_after.1"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "D7",
+      "type": "derived_metric",
+      "material": false,
+      "text": "1m23.504s",
+      "values": [
+        "23.504"
+      ],
+      "formula": "83.504 s formatted",
+      "refs": [
+        "packet:fastest_laps.0"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "CL11",
+      "type": "observation",
+      "material": true,
+      "text": "He had qualified seventh; a 12-place grid penalty",
+      "refs": [
+        "packet:grid_penalties.0",
+        "packet:results.0"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "CL12",
+      "type": "attribution",
+      "material": false,
+      "text": "an engine change according to the weekend's reporting",
+      "refs": [
+        "attributed:press reports (The Race, Formula1.com)",
+        "packet:grid_penalties.0"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "CL13",
+      "type": "attribution",
+      "material": false,
+      "text": "the first Italian to win here since 1966",
+      "values": [
+        "1966"
+      ],
+      "refs": [
+        "attributed:Sky Sports / FIA race reports"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "qualification": "as widely reported"
+      }
+    },
+    {
+      "id": "D8",
+      "type": "derived_metric",
+      "material": false,
+      "text": "Led 40 of the 53 laps",
+      "values": [
+        "40",
+        "53"
+      ],
+      "formula": "leader-by-lap from lead_changes: RUS L2-11 (10) + L15-17 (3) + L23-49 (27) = 40",
+      "refs": [
+        "packet:lead_changes"
+      ],
+      "review": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "id": "CL14",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "The tyre split that decided it was chosen under that red flag",
+      "relation": "red-flag tyre change (ANT hard\u2192medium, RUS medium\u2192hard) \u2192 medium-vs-hard offset for the rest of the race \u2192 CL1",
+      "refs": [
+        "moment:m_red_3",
+        "packet:caution_windows.1.stops_inside",
+        "packet:stints"
+      ],
+      "cause_event": "rc36",
+      "effect_lap": 50,
+      "confidence": "high",
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "offset created at the VSC stop instead \u2014 rejected: compounds were set on lap 3 (stints)"
+      }
+    }
   ],
   "contract": {
-    "C1": { "status": "covered", "reason": "result, margin, podium in the lede", "refs": ["packet:results"] },
-    "C2": { "status": "covered", "reason": "mechanism chain: red-flag tyre split → blocked → VSC-priced stop → closing rate → pass", "refs": ["moment:m_red_3", "moment:m_vsc_28", "packet:caution_windows.3"] },
-    "C3": { "status": "covered", "reason": "pass on lap 50; corner not available", "refs": ["moment:m_lead_50"] },
-    "C4": { "status": "covered", "reason": "lap-49 excursion with cause shown in the window", "refs": ["moment:m_lapspike_ANT_49"] },
-    "C5": { "status": "covered", "reason": "Gasly pole → 7th", "refs": ["packet:pole_sitter"] },
-    "C6": { "status": "covered", "reason": "restart 12th not 19th; estimate labelled", "refs": ["packet:restart_snapshots.1"] },
-    "C7": { "status": "covered", "reason": "66-point lead", "refs": ["packet:standings_after"] },
-    "C8": { "status": "covered", "reason": "Verstappen's parallel stop; Pérez penalty (correct incident); Tsunoda referral", "refs": ["moment:m_pen_rc114", "packet:timeline.events.78"] },
-    "C9": { "status": "covered", "reason": "four race-control messages quoted verbatim; driver/team quotation not available (radio not in warehouse)", "refs": ["packet:timeline.events"] },
-    "C10": { "status": "covered", "reason": "closing section names radio, stewards' reasoning, pass corner, Russell counterfactual", "refs": ["packet:manifest.not_available"] }
+    "C1": {
+      "status": "covered",
+      "reason": "result, margin, podium in the lede",
+      "refs": [
+        "packet:results"
+      ]
+    },
+    "C2": {
+      "status": "covered",
+      "reason": "mechanism chain: red-flag tyre split \u2192 blocked \u2192 VSC-priced stop \u2192 closing rate \u2192 pass",
+      "refs": [
+        "moment:m_red_3",
+        "moment:m_vsc_28",
+        "packet:caution_windows.3"
+      ]
+    },
+    "C3": {
+      "status": "covered",
+      "reason": "pass on lap 50; corner not available",
+      "refs": [
+        "moment:m_lead_50"
+      ]
+    },
+    "C4": {
+      "status": "covered",
+      "reason": "lap-49 excursion with cause shown in the window",
+      "refs": [
+        "moment:m_lapspike_ANT_49"
+      ]
+    },
+    "C5": {
+      "status": "covered",
+      "reason": "Gasly pole \u2192 7th",
+      "refs": [
+        "packet:pole_sitter"
+      ]
+    },
+    "C6": {
+      "status": "covered",
+      "reason": "restart 12th not 19th; estimate labelled",
+      "refs": [
+        "packet:restart_snapshots.1"
+      ]
+    },
+    "C7": {
+      "status": "covered",
+      "reason": "66-point lead",
+      "refs": [
+        "packet:standings_after"
+      ]
+    },
+    "C8": {
+      "status": "covered",
+      "reason": "Verstappen's parallel stop; P\u00e9rez penalty (correct incident); Tsunoda referral",
+      "refs": [
+        "moment:m_pen_rc114",
+        "packet:timeline.events.78"
+      ]
+    },
+    "C9": {
+      "status": "covered",
+      "reason": "four race-control messages quoted verbatim; driver/team quotation not available (radio not in warehouse)",
+      "refs": [
+        "packet:timeline.events"
+      ]
+    },
+    "C10": {
+      "status": "covered",
+      "reason": "closing section names radio, stewards' reasoning, pass corner, Russell counterfactual",
+      "refs": [
+        "packet:manifest.not_available"
+      ]
+    },
+    "C0": {
+      "status": "covered",
+      "reason": "greeting + sentiment lead-in; one attributed fact (1966), rest packet facts",
+      "refs": [
+        "packet:results",
+        "attributed:race reports"
+      ]
+    },
+    "C1a": {
+      "status": "covered",
+      "reason": "five one-line highlights, each traceable",
+      "refs": [
+        "moment:m_red_3",
+        "moment:m_vsc_28",
+        "moment:m_lapspike_ANT_49",
+        "packet:grid_penalties"
+      ]
+    },
+    "C11": {
+      "status": "covered",
+      "reason": "grid penalties from qualifying-vs-grid; cause attributed",
+      "refs": [
+        "packet:grid_penalties"
+      ]
+    },
+    "C12": {
+      "status": "covered",
+      "reason": "six compressed verdict entries after the analysis",
+      "refs": [
+        "moment:m_vsc_28",
+        "moment:m_pen_rc114",
+        "packet:position_trace.GAS"
+      ]
+    },
+    "C13": {
+      "status": "covered",
+      "reason": "two-line human sign-off, forward-looking, no synthesis",
+      "refs": [
+        "packet:standings_after"
+      ]
+    }
   }
 }

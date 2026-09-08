@@ -105,6 +105,14 @@ const lastLap = Object.fromEntries([...lapsByDriver].map(([d, ls]) => [d, Math.m
 const standings = await q("standings", `SELECT r.driver_number, SUM(r.points) FILTER (WHERE s.date_start < $2) AS before, SUM(r.points) AS after
   FROM raw.session_result r JOIN raw.sessions s USING (session_key) WHERE s.year = $1 AND s.session_name IN ('Race','Sprint') AND s.date_start <= $2 GROUP BY 1 ORDER BY after DESC`, [sess.year, sess.date_start]);
 const pole = grid.find((g) => Number(g.grid_position) === 1);
+// Grid penalties: qualifying classification vs grid slot (cause is source-only).
+const qualiResult = await q("qualifying_result", `SELECT r.driver_number, r.position FROM raw.session_result r JOIN raw.sessions s USING (session_key)
+  WHERE s.meeting_key = $1 AND s.session_name = 'Qualifying'`, [sess.meeting_key]);
+const gridPenalties = grid.map((g) => {
+  const qp = num(qualiResult.find((r) => r.driver_number === g.driver_number)?.position);
+  const gp = num(g.grid_position);
+  return qp != null && gp != null && gp > qp ? { driver: acr(g.driver_number), qualified: qp, grid: gp, places_lost: gp - qp, cause: "not in timing data (source-only)" } : null;
+}).filter(Boolean).sort((a, b) => b.places_lost - a.places_lost);
 const fastest = laps.filter((l) => l.lap_duration && !l.is_pit_out_lap).sort((a, b) => a.lap_duration - b.lap_duration).slice(0, 3).map((l) => ({ driver: acr(l.driver_number), lap: l.lap_number, time_s: num(l.lap_duration) }));
 
 // ---- caution event-window records
@@ -137,6 +145,7 @@ const packet = {
   packet_version: PACKET_VERSION, session: { ...sess, total_laps: totalLaps }, drivers: drivers.map((d) => ({ number: d.driver_number, acronym: d.name_acronym, name: d.full_name, team: d.team_name })),
   results: results.map((r) => ({ driver: acr(r.driver_number), position: r.position, points: num(r.points), status: r.status, last_completed_lap: lastLap[r.driver_number] ?? null, grid: num(grid.find((g) => g.driver_number === r.driver_number)?.grid_position) })),
   pole_sitter: pole ? { driver: acr(pole.driver_number), finished: results.find((r) => r.driver_number === pole.driver_number)?.position ?? null } : null,
+  grid_penalties: gridPenalties,
   standings_after: standings.slice(0, 8).map((s) => ({ driver: acr(s.driver_number), before: num(s.before) ?? 0, after: num(s.after) })),
   fastest_laps: fastest,
   timeline: { events, links, unresolved_links: unresolved, intervals, announcements },

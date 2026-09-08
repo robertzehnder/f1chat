@@ -1,12 +1,26 @@
 # Antonelli's Monza win was set up at the red flag and paid for under the virtual safety car
 
-Italian Grand Prix, Monza, 53 laps. Kimi Antonelli won from 19th on the grid, beating George Russell by 3.857s for a Mercedes one-two, with Max Verstappen third. The headline number needs its caveat at once: after the lap-3 red flag he restarted 12th, not 19th, having gained seven places in the first two laps.
+## The short version
+
+- Antonelli won from 19th on the grid, a Mercedes one-two over Russell by 3.857s, Verstappen third.
+- He had qualified seventh; a 12-place grid penalty put him 19th, and the lap-3 red flag reset him to 12th before a green lap had been run.
+- The tyre split that decided it was chosen under that red flag: Russell to hards for the distance, Antonelli to mediums.
+- A lap-28 virtual safety car priced Antonelli's second stop at 13 seconds instead of an estimated 31, and 18 seconds was the race.
+- He closed at 0.85s a lap, ran wide at the first chicane on lap 49, and passed on lap 50.
+
+## Hi friends
+
+What a weekend. An Italian winning at Monza for a Mercedes-powered team, from the back half of the grid, past his own team-mate with three laps left; as widely reported, the first Italian to win here since 1966. The crowd got the ending it wanted and, for once, the data agrees with the crowd about how it happened. Let's dive in.
 
 ## The tyre split was decided on lap 3, not lap 28
 
 The decisive choice was made while the race was stopped. Leclerc's retirement on lap 2 brought "SAFETY CAR DEPLOYED" and then, a minute later, "RED FLAG - RACE SUSPENDED". While the field sat in the pits, 21 cars changed tyres. Russell went from medium to hard for the distance. Antonelli went the other way, hard to medium.
 
 Nobody could see it yet, but that was the race.
+
+## The penalty that framed everything
+
+Antonelli had qualified seventh. The grid penalty, an engine change according to the weekend's reporting, cost him 12 places and put him 19th. He gained seven of those back in two laps before the red flag, so the restart order had him 12th; the "from 19th" headline is true and slightly generous. Lawson lost eight places to his own penalty, Piastri three.
 
 ## The faster car was stuck behind the slower one
 
@@ -32,14 +46,20 @@ He passed on lap 50, three laps from home, and set the fastest lap of the race o
 
 At 0.85 seconds a lap, a green-flag stop's 31 seconds takes about 37 laps to recover. There were 25 left. On that arithmetic Russell keeps the lead and Antonelli, with the quickest car on the day, finishes second. The pace was necessary. The cheaply priced stop was what made it sufficient, and the price of the alternative is an estimate, labelled as one.
 
-## The rest of the grid
+## Winners and losers
 
-Gasly, from Alpine's first pole, was second by lap 2, sixth by lap 10 and seventh at the flag; the Alpine could not hold the leaders, and the trace shows no incident to blame, only a car settling to where its pace put it. Verstappen's cheap stop dropped him to seventh and his recovery to third was the same mechanism as the winner's, one tyre offset lower.
+**Winner: Antonelli.** Qualified seventh, started 19th, won. The circumstances helped and he still had to drive the car that fast for 50 laps.
 
-Pérez's five-second penalty was for the lap-25 escape-road incident at Turn 1, not for the start: "FIA STEWARDS: 5 SECOND TIME PENALTY FOR CAR 11 (PER) - FAILING TO FOLLOW RACE DIRECTORS INSTRUCTIONS – ESCAPE ROAD INSTRUCTIONS". Tsunoda's starting-procedure infringement was referred to the stewards for after the race and the feed carries no decision.
+**Loser: Russell.** Led 40 of the 53 laps and lost the race to a timing he did not control. Whether he should have stopped under the VSC needs an estimate of where he would have rejoined, and the data does not carry one.
 
-Antonelli now leads Russell by 66 points, 267 to 201.
+**Winner: Verstappen.** Took the same cheap stop as the winner, dropped to seventh, recovered to third. Same mechanism, one tyre offset lower.
 
-## What the timing data cannot see
+**Loser: Gasly.** Alpine's first pole, second by lap 2, sixth by lap 10, seventh at the flag. The trace shows no incident, only a car settling to where its pace put it.
 
-The stewards noted a Turn 2 incident between Leclerc and Hamilton on lap 2 and reviewed it with no further investigation; whether it caused Leclerc's crash is not in the data. Team radio, the stewards' written reasoning and the corner of the winning pass are not in the warehouse. Whether Russell should have stopped under the virtual safety car would need an estimate of where he would have rejoined, and the packet does not carry one.
+**Loser: Ferrari.** Leclerc out on lap 2 after a first-chicane incident the stewards noted and did not pursue; Hamilton sixth. Whether the contact caused the crash is not in the data.
+
+**Noted: Pérez.** The five-second penalty was for the lap-25 escape-road incident at Turn 1, not for the start: "FIA STEWARDS: 5 SECOND TIME PENALTY FOR CAR 11 (PER) - FAILING TO FOLLOW RACE DIRECTORS INSTRUCTIONS – ESCAPE ROAD INSTRUCTIONS". Tsunoda's starting-procedure infringement went to the stewards after the race and the feed carries no decision.
+
+## Sign-off
+
+Antonelli leads Russell by 66 points, 267 to 201, and the sister car is the only one on this evidence that can take points off him. Madrid next week, a new circuit and no data yet; see you there.

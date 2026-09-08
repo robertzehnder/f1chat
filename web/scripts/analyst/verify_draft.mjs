@@ -31,7 +31,8 @@ const warn = (m) => { warns.push(m); console.log(`  ⚠️  ${m}`); };
 // ---- 1. every number in the body is in the packet (or whitelisted by the sidecar as arithmetic)
 const packetNumbers = new Set();
 (function walk(v) { if (v == null) return; if (typeof v === "number") { packetNumbers.add(String(v)); packetNumbers.add(v.toFixed(1)); packetNumbers.add(v.toFixed(3)); packetNumbers.add(String(Math.round(v))); } else if (typeof v === "string") { for (const m of v.matchAll(/\d+(?:\.\d+)?/g)) packetNumbers.add(m[0]); } else if (Array.isArray(v)) v.forEach(walk); else if (typeof v === "object") Object.values(v).forEach(walk); })(packet);
-const derived = new Set((sidecar.claims ?? []).flatMap((c) => (c.type === "derived_metric" ? (c.values ?? []).map(String) : [])));
+// derived-metric values AND attributed numbers (an attribution claim carries its source) count as provenance
+const derived = new Set((sidecar.claims ?? []).flatMap((c) => (["derived_metric", "attribution"].includes(c.type) ? (c.values ?? []).map(String) : [])));
 // Verbatim race-control quotes ARE provenance: strip any body substring that
 // equals a packet message before scanning numbers (their times/lap refs live in the packet).
 let scanBody = body;

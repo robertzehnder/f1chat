@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "'The decisive choice was made while the race was stopped' — verdict lands but only after the section header does the heavy lifting; 'Winners and losers' entries open on verdicts cleanly, but 'By lap 26 Antonelli had climbed' is evidence-first."
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'Antonelli leads Russell by 66 points… Madrid next week, a new circuit and no data yet; see you there' — explicit summary-and-tease sign-off paragraph restating the argument's stakes."
+      },
+      {
+        "id": "S3",
+        "score": 1,
+        "evidence": "'Nobody could see it yet, but that was the race' — bridging sentence closing the tyre-split section before the next heading; headings do most of the work but this sentence softens the cut."
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'From lap 40 to lap 48 the gap fell from 7.1s to 0.264s, a closing rate of 0.85 seconds per lap' — three figures in one clause; closing section clusters 0.85/31/37/25 without surgical separation."
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'that figure is an estimate rather than a measured counterfactual… the price of the alternative is an estimate, labelled as one' — hedges are explicit, owned, and not collapsed into false neutrality."
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "'Russell went from medium to hard… Antonelli went the other way' — team-mate is the default benchmark throughout; pace, stop strategy, and outcome all filtered through Russell first."
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "'FIA STEWARDS: 5 SECOND TIME PENALTY FOR CAR 11 (PER)…' and 'CAR 12 (ANT) TIME 1:28.582 DELETED' — official messages deployed as hard evidentiary stops confirming the reading."
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'Leclerc's retirement on lap 2 brought SAFETY CAR DEPLOYED and then, a minute later, RED FLAG' — sequential narration of the sequence rather than pure interpretation of its meaning."
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'The crowd got the ending it wanted and, for once, the data agrees with the crowd' — mildly ironic but the 'Hi friends / What a weekend' opener is exclamatory and warm, not dry."
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'I think this is the part the 19th-to-first line hides' — first person flags a judgment call correctly; 'Let's dive in' and 'Hi friends' are throat-clearing sentences about the piece itself."
+      },
+      {
+        "id": "R4",
+        "score": 1,
+        "evidence": "'as widely reported, the first Italian to win here since 1966' — the parenthetical citation of common knowledge is explaining the obvious; elsewhere jargon and names go undefined correctly."
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "'A green-flag stop in this race cost about 31 seconds of lane time on the median, and that figure is an estimate rather than a measured counterfactual. The difference is roughly 18 seconds. Eighteen seconds was the margin…' — three-sentence paragraph makes one point but the repetition pads it past its natural exit."
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'The medium car was quicker on equal-age rubber and still could not pass.' after the longer analytical sentence — push-pull rhythm consistent and deliberate throughout."
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "VSC stop section gets the most room appropriately; 'Winners and losers' bullets are correctly brief, but the sign-off coda is a full paragraph where one sentence would suffice, blurring the density signal."
+      }
+    ],
+    "dimension_totals": {
+      "structure": 2,
+      "evidence": 7,
+      "register": 5,
+      "pacing": 4
+    },
+    "total": 18,
+    "max": 28,
+    "human_likelihood": 34,
+    "top_fixes": [
+      "Kill 'Hi friends / What a weekend / Let's dive in' entirely — the opener is the most machine-generated-sounding element, a self-admiring framing device that no working analyst would use; drop straight into the tyre-split section.",
+      "Cut the sign-off paragraph; the piece ends when the Pérez/Tsunoda note ends — the Madrid teaser and points summary are a textbook AI wrap-up that violates S2 and collapses the register.",
+      "Audit number clustering: the VSC section fires 31, 13, 18, 31, 37, 25 across two paragraphs — each claim needs one figure doing its own work, the rest pruned or folded into the 'What happens without the VSC' counterfactual rather than repeated there."
+    ],
+    "label": "report.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T16:28:26.959Z",
+    "source": "draft"
+  }
+]
