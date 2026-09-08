@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 2,
+        "evidence": "The decisive choice was made while the race was stopped... Nobody could see it yet, but that was the race."
+      },
+      {
+        "id": "S2",
+        "score": 1,
+        "evidence": "'What the timing data cannot see' functions as a limitations coda — not a summary restatement, but it does wrap and close the argument rather than simply ending on the last entry's final fact."
+      },
+      {
+        "id": "S3",
+        "score": 2,
+        "evidence": "No bridging sentences detected between sections; headings do all transitional work throughout."
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'From lap 40 to lap 48 the gap fell from 7.1s to 0.264s, a closing rate of 0.85 seconds per lap' — multiple figures clustered in a single sentence; also '13.7s', '31 seconds', '18 seconds' appear in close succession."
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'that figure is an estimate rather than a measured counterfactual' and 'the price of the alternative is an estimate, labelled as one' — hedges are explicit and owned, not neutralising."
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is the consistent benchmark throughout: gap to Russell, tyre age relative to Russell, what Russell did at the VSC."
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "'RED FLAG - RACE SUSPENDED' and the stewards' penalty text used as hard evidentiary stops confirming the analytical point just made."
+      },
+      {
+        "id": "R1",
+        "score": 2,
+        "evidence": "No recap of running order; 'The headline number needs its caveat at once' interprets rather than narrates."
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Verstappen made the same call at the same moment, took a hard tyre, and paid the same discounted price' — dry, flat, no exclamation."
+      },
+      {
+        "id": "R3",
+        "score": 2,
+        "evidence": "'I think this is the part the 19th-to-first line hides' and 'I wonder if' absent — first person appears exactly once to flag a judgment call."
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "Names introduced bare, VSC/tyre offsets unexplained, pace delta assumed understood."
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Paragraphs consistently 2-4 sentences; 'Nobody could see it yet, but that was the race' is a one-sentence standalone that works as a unit."
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'The medium car was quicker on equal-age rubber and still could not pass.' following a long analytical sentence; rhythm is consistently varied."
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "'The rest of the grid' compresses Gasly's pole and Pérez's penalty into one paragraph — correct instinct, but Tsunoda's loose end and the 66-point standings tacked on dilute the coda discipline."
+      }
+    ],
+    "dimension_totals": {
+      "structure": 5,
+      "evidence": 7,
+      "register": 8,
+      "pacing": 5
+    },
+    "total": 25,
+    "max": 28,
+    "human_likelihood": 81,
+    "top_fixes": [
+      "E1: Disaggregate the number cluster in the VSC section — '13.7s', '31 seconds', '18 seconds' should each anchor a separate claim rather than stacking in consecutive sentences; the arithmetic argument is the mechanism, so it deserves room to breathe one figure at a time.",
+      "S2/P3: The final 'What the timing data cannot see' section slides into a limitations disclaimer that functions as a summary wrapper; cut it to two sentences or fold the data-gap caveats into the relevant analytical sections so the piece ends on the last substantive fact rather than on a procedural note about the warehouse.",
+      "P3: 'The rest of the grid' stitches Gasly's pace degradation, Verstappen's mechanism, Pérez's penalty, Tsunoda's unresolved infringement, and the championship standings into one paragraph — significance is not signalled by length here; Gasly's collapse from pole deserves its own short entry, and the standings line should either go there or be cut."
+    ],
+    "label": "report.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T15:45:33.322Z",
+    "source": "draft"
+  }
+]
