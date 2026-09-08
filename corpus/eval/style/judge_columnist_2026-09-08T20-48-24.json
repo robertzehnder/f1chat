@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "opener gives context before verdict; 'hinged on a decision made while the cars were standing still' is a tease, not a sharp evaluative claim"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'He recovered the positions, made the tyres work and, when the race finally brought Russell within reach, completed the pass' — explicit summary paragraph restating the argument"
+      },
+      {
+        "id": "S3",
+        "score": 0,
+        "evidence": "'Behind the Mercedes pair, Verstappen made the most...' and 'Ferrari also left its home race with little to celebrate' are bridging sentences, not abrupt transitions"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "3.857s, 13.7s, 0.264s, 0.85s/lap, 7.1s, 1m23.504s cluster repeatedly; multiple figures per paragraph rather than one surgical number per claim"
+      },
+      {
+        "id": "E2",
+        "score": 1,
+        "evidence": "'His late-race pace suggests he would still have caught Russell rapidly, but catching him before the finish would have been a much bigger ask' — hedged, but 'does not make the result inevitable in either direction' collapses into false neutrality"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is the default benchmark throughout; Antonelli's pace, strategy and pass all measured against his teammate first"
+      },
+      {
+        "id": "E4",
+        "score": 1,
+        "evidence": "Race-control log entries used ('CAR 12 (ANT) TIME 1:28.582 DELETED') but no radio, team comms or driver quotes; evidentiary punctuation is thin and mechanical rather than complicating the reading"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'He slipped to second by lap two, sixth by lap 10 and seventh at the finish' — sequential running-order recap; 'Antonelli had qualified seventh before a 12-place grid penalty' re-narrates known facts"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "Almost no dry irony; 'For Russell, second place was a frustrating return' is plain statement; closest thing to understatement is 'little to celebrate' — flat but not genuinely comic or ironic"
+      },
+      {
+        "id": "R3",
+        "score": 0,
+        "evidence": "First person absent entirely; no judgment calls flagged, no genuine surprise registered; personality as accent is missing altogether"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "Gasly, Pérez, Tsunoda named without introduction; VSC mechanics, track-limits procedure assumed known; no hand-holding"
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "'That does not make the result inevitable in either direction. Traffic, tyre wear and the timing of a green-flag stop could all have changed the calculation. What is clear is...' — three-sentence paragraph making two or three points and not exiting cleanly"
+      },
+      {
+        "id": "P2",
+        "score": 1,
+        "evidence": "'A lap later, he was through' works; but many paragraphs run long sentences against long sentences with no short punch to answer them"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "VSC mechanism section gets appropriate room; but the final Ferrari/Pérez/Tsunoda paragraph crams too many events into equal density, and the summary coda is longer than warranted"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 1,
+      "evidence": 5,
+      "register": 4,
+      "pacing": 3
+    },
+    "total": 13,
+    "max": 28,
+    "human_likelihood": 22,
+    "top_fixes": [
+      "Kill the final paragraph entirely — it is a textbook summary restatement; the piece should end at 'Madrid' or on the Verstappen/Ferrari coda with no reprise of Antonelli's arc",
+      "Strip one number from every multi-figure paragraph and deploy the surviving one as a hard stop rather than part of a data list; the 0.85s/lap figure should land alone, not inside a sentence already carrying 7.1s and 0.264s",
+      "Insert first-person once — flag the extrapolation ('I make that roughly 37 laps of recovery at normal racing pace, with 25 to go') rather than presenting the arithmetic as neutral fact; the absence of any voiced judgment call is the single biggest AI tell"
+    ],
+    "label": "report_v8_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T20:48:24.939Z",
+    "source": "draft"
+  }
+]

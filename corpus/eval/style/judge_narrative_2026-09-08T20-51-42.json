@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 2,
+        "evidence": "comeback that delivered a Mercedes one-two at Monza hinged on a decision made while the cars were standing still"
+      },
+      {
+        "id": "S2",
+        "score": 2,
+        "evidence": "The stop dropped Antonelli to fifth…but it had cost him far less time than a stop under normal racing conditions"
+      },
+      {
+        "id": "S3",
+        "score": 2,
+        "evidence": "Behind the Mercedes pair…Gasly's afternoon went the other way…Ferrari also left its home race with little to celebrate"
+      },
+      {
+        "id": "S4",
+        "score": 2,
+        "evidence": "where the tyre call that decided Monza will have to be made without a single lap of history to lean on"
+      },
+      {
+        "id": "E1",
+        "score": 2,
+        "evidence": "With both sets of tyres 22 laps old…Over the next two laps, he whittled the gap down to three tenths"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "roughly 31, going by the race's median pit-lane time"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "race control's log reads 'CAR 12 (ANT) TIME 1:28.582 DELETED…' and fell back to 0.871 seconds behind"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "gaining an average of 0.85 seconds a lap…that is about 37 laps of work with 25 remaining"
+      },
+      {
+        "id": "R1",
+        "score": 2,
+        "evidence": "The final move settled the race; the circumstances that made it possible had been taking shape since lap three"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "Getting past was another matter — dry understatement rather than a rhetorical question; no overuse"
+      },
+      {
+        "id": "R3",
+        "score": 2,
+        "evidence": "no greetings, no 'let's dive in'; VSC, track limits, pit-lane time used without definition"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Kimi Antonelli started 19th and finished an Italian Grand Prix winner — short, dense, no padding"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'The race turned on lap 28.' / 'A lap later, he was through.' — both one-clause pivots placed correctly"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Gasly and Ferrari midfield sections run slightly long for P3's 'sentence or two per team' standard; final sentence is open-ended but not truly syntactically open"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 8,
+      "evidence": 8,
+      "register": 6,
+      "pacing": 5
+    },
+    "total": 27,
+    "max": 28,
+    "human_likelihood": 81,
+    "top_fixes": [
+      "P3: The Ferrari/Gasly midfield passage runs three to four sentences per team rather than one to two; compress Pérez's penalty and Tsunoda's stewards referral into a single clause to restore the prescribed midfield pace.",
+      "P3: The final sentence ('where the tyre call that decided Monza will have to be made without a single lap of history to lean on') is strong but grammatically closed; leave it slightly more syntactically suspended — a trailing clause or a fragment — to honour the 'open-ended' requirement.",
+      "S3/E4: Gasly's slide from pole to seventh is noted but the mechanism is absent; one clause on tyre behaviour or track position loss would pay the analytical debt the structure creates when it flags him as a lead item in the secondary section."
+    ],
+    "label": "report.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@2-narrative",
+    "scored_at": "2026-09-08T20:51:42.679Z",
+    "source": "draft"
+  }
+]

@@ -54,6 +54,36 @@ No fine-tuning; no weakening of any hedge (only its phrasing); no removal of the
 
 ---
 
+## Register decision (owner, 2026-09-08, supersedes the "calibration hypothesis")
+
+The owner read v7 against a GPT-6 Astra rewrite of the same facts (a flowing,
+connected, wire-service/feature-style article with no greeting, no highlights,
+no winners-and-losers list and no sign-off) and chose the Astra register: "it
+sounded way better, it was too jarring before." Under this plan blinded owner
+preference is the arbiter, so this decides the target:
+
+- **Target register = flowing analytical article.** Connected sections,
+  chronology as the spine, restrained third person, a closing that lands.
+  The jump-cut columnist register (composite_voice_v1) is demoted to an
+  optional profile.
+- **Corpus-first, as the plan requires:** Mark Hughes' 2025 race pieces
+  (flowing analytical narrative) were fetched into the corpus (167 docs; 17
+  dev-split race-scope Hughes pieces), a `narrative` distillation profile
+  produces composite_voice_v2_narrative.md, and the style judge gains a
+  `narrative` mode whose rules come from that distillation — not from
+  imitating Astra.
+- **The v1 judge's verdict on Astra (11/28) is now understood as
+  register mismatch, not a quality finding**; it scored the piece zero on
+  exactly the traits the owner values (transitions, narrative spine, closing).
+- **Honesty rules are unchanged and were applied to the Astra text to make
+  v8:** the VSC cause attributed, observed 13 s vs estimated 31 s
+  distinguished, perception/crowd claims removed, race-control record woven
+  in, the counterfactual named as an extrapolation.
+- The three-race blinded calibration still runs — now to check that the
+  narrative-mode judge agrees with the owner, not to decide the register.
+
+---
+
 ## Review log (GPT-5.6 Sol, 4 passes, 2026-09-08)
 - **Pass 1 (REVISE, 5):** diagnosis conflated inherited defects with the v3
   regression (v2 had the same buttons and scored 81%); v4 over-humanised with

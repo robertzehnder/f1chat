@@ -1,5 +1,15 @@
 # Content contract — race recap (analyst design U2)
 
+> **Register decision (owner, 2026-09-08): the default shape is a flowing
+> analytical ARTICLE** — result and hinge stated in the first two paragraphs,
+> a chronological-analytical body whose sections hand off to one another, a
+> closing paragraph that lands the argument. The highlights block (C1a),
+> greeting lead-in (C0), separate winners-and-losers list (C12) and sign-off
+> (C13) are OPTIONAL beats, `not material` by default; the verdicts on the
+> rest of the field are written as connected closing paragraphs. The
+> jump-cut columnist shape (composite_voice_v1) remains available as a
+> profile but is no longer the default. Voice: composite_voice_v2_narrative.md.
+
 Separate from the voice guide (composite_voice_v1.md). Every beat below must be
 RESOLVED in the claims sidecar as one of `covered` / `not material` /
 `not available`, each with a one-line reason. Resolution is mandatory; prose

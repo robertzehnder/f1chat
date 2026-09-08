@@ -1,0 +1,732 @@
+{
+  "run": "distill_style_narrative",
+  "profile": "narrative",
+  "model": "claude-sonnet-4-6",
+  "season": 2026,
+  "started_at": "2026-09-08T20:44:02.028Z",
+  "groups": {
+    "hughes_narrative": [
+      {
+        "doc_id": 174,
+        "fetch_id": 174,
+        "derivation_id": 191,
+        "meeting_key": 1276,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 199,
+        "fetch_id": 199,
+        "derivation_id": 216,
+        "meeting_key": 1272,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 201,
+        "fetch_id": 201,
+        "derivation_id": 218,
+        "meeting_key": 1272,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 225,
+        "fetch_id": 225,
+        "derivation_id": 242,
+        "meeting_key": 1268,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 227,
+        "fetch_id": 227,
+        "derivation_id": 244,
+        "meeting_key": 1268,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 229,
+        "fetch_id": 229,
+        "derivation_id": 246,
+        "meeting_key": 1268,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 247,
+        "fetch_id": 247,
+        "derivation_id": 264,
+        "meeting_key": 1265,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 252,
+        "fetch_id": 252,
+        "derivation_id": 269,
+        "meeting_key": 1277,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 256,
+        "fetch_id": 256,
+        "derivation_id": 273,
+        "meeting_key": 1277,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 258,
+        "fetch_id": 258,
+        "derivation_id": 275,
+        "meeting_key": 1277,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 268,
+        "fetch_id": 268,
+        "derivation_id": 285,
+        "meeting_key": 1263,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 272,
+        "fetch_id": 272,
+        "derivation_id": 289,
+        "meeting_key": 1262,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 275,
+        "fetch_id": 275,
+        "derivation_id": 292,
+        "meeting_key": 1261,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 277,
+        "fetch_id": 277,
+        "derivation_id": 294,
+        "meeting_key": 1261,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 278,
+        "fetch_id": 278,
+        "derivation_id": 295,
+        "meeting_key": 1261,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 279,
+        "fetch_id": 279,
+        "derivation_id": 296,
+        "meeting_key": 1260,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 281,
+        "fetch_id": 281,
+        "derivation_id": 298,
+        "meeting_key": 1260,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 282,
+        "fetch_id": 282,
+        "derivation_id": 299,
+        "meeting_key": 1260,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 304,
+        "fetch_id": 304,
+        "derivation_id": 321,
+        "meeting_key": 1256,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 306,
+        "fetch_id": 306,
+        "derivation_id": 323,
+        "meeting_key": 1256,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 321,
+        "fetch_id": 321,
+        "derivation_id": 338,
+        "meeting_key": 1254,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 323,
+        "fetch_id": 323,
+        "derivation_id": 340,
+        "meeting_key": 1254,
+        "corpus_split": "dev"
+      }
+    ],
+    "f1debrief_newsletter": [
+      {
+        "doc_id": 102,
+        "fetch_id": 102,
+        "derivation_id": 100,
+        "meeting_key": 1290,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 103,
+        "fetch_id": 103,
+        "derivation_id": 101,
+        "meeting_key": 1288,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 106,
+        "fetch_id": 106,
+        "derivation_id": 104,
+        "meeting_key": 1286,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 107,
+        "fetch_id": 107,
+        "derivation_id": 105,
+        "meeting_key": 1286,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 109,
+        "fetch_id": 109,
+        "derivation_id": 107,
+        "meeting_key": 1285,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 113,
+        "fetch_id": 113,
+        "derivation_id": 111,
+        "meeting_key": 1281,
+        "corpus_split": "dev"
+      }
+    ],
+    "therace_race_analysis": [
+      {
+        "doc_id": 31,
+        "fetch_id": 31,
+        "derivation_id": 31,
+        "meeting_key": 1287,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 32,
+        "fetch_id": 32,
+        "derivation_id": 32,
+        "meeting_key": 1291,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 33,
+        "fetch_id": 33,
+        "derivation_id": 33,
+        "meeting_key": 1291,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 34,
+        "fetch_id": 34,
+        "derivation_id": 34,
+        "meeting_key": 1291,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 35,
+        "fetch_id": 35,
+        "derivation_id": 35,
+        "meeting_key": 1291,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 36,
+        "fetch_id": 36,
+        "derivation_id": 36,
+        "meeting_key": 1291,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 37,
+        "fetch_id": 37,
+        "derivation_id": 37,
+        "meeting_key": 1290,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 38,
+        "fetch_id": 38,
+        "derivation_id": 38,
+        "meeting_key": 1290,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 39,
+        "fetch_id": 39,
+        "derivation_id": 39,
+        "meeting_key": 1290,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 40,
+        "fetch_id": 40,
+        "derivation_id": 40,
+        "meeting_key": 1290,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 41,
+        "fetch_id": 41,
+        "derivation_id": 41,
+        "meeting_key": 1290,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 48,
+        "fetch_id": 48,
+        "derivation_id": 48,
+        "meeting_key": 1288,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 49,
+        "fetch_id": 49,
+        "derivation_id": 49,
+        "meeting_key": 1288,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 50,
+        "fetch_id": 50,
+        "derivation_id": 50,
+        "meeting_key": 1288,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 51,
+        "fetch_id": 51,
+        "derivation_id": 51,
+        "meeting_key": 1288,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 52,
+        "fetch_id": 52,
+        "derivation_id": 52,
+        "meeting_key": 1288,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 53,
+        "fetch_id": 53,
+        "derivation_id": 53,
+        "meeting_key": 1287,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 54,
+        "fetch_id": 54,
+        "derivation_id": 54,
+        "meeting_key": 1286,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 55,
+        "fetch_id": 55,
+        "derivation_id": 55,
+        "meeting_key": 1286,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 56,
+        "fetch_id": 56,
+        "derivation_id": 56,
+        "meeting_key": 1286,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 57,
+        "fetch_id": 57,
+        "derivation_id": 57,
+        "meeting_key": 1286,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 58,
+        "fetch_id": 58,
+        "derivation_id": 58,
+        "meeting_key": 1286,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 59,
+        "fetch_id": 59,
+        "derivation_id": 59,
+        "meeting_key": 1285,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 60,
+        "fetch_id": 60,
+        "derivation_id": 60,
+        "meeting_key": 1285,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 61,
+        "fetch_id": 61,
+        "derivation_id": 61,
+        "meeting_key": 1285,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 62,
+        "fetch_id": 62,
+        "derivation_id": 62,
+        "meeting_key": 1285,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 63,
+        "fetch_id": 63,
+        "derivation_id": 63,
+        "meeting_key": 1285,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 69,
+        "fetch_id": 69,
+        "derivation_id": 69,
+        "meeting_key": 1281,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 70,
+        "fetch_id": 70,
+        "derivation_id": 70,
+        "meeting_key": 1281,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 71,
+        "fetch_id": 71,
+        "derivation_id": 71,
+        "meeting_key": 1281,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 84,
+        "fetch_id": 84,
+        "derivation_id": 84,
+        "meeting_key": 1287,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 170,
+        "fetch_id": 170,
+        "derivation_id": 187,
+        "meeting_key": 1276,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 173,
+        "fetch_id": 173,
+        "derivation_id": 190,
+        "meeting_key": 1276,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 197,
+        "fetch_id": 197,
+        "derivation_id": 214,
+        "meeting_key": 1272,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 200,
+        "fetch_id": 200,
+        "derivation_id": 217,
+        "meeting_key": 1272,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 202,
+        "fetch_id": 202,
+        "derivation_id": 219,
+        "meeting_key": 1272,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 204,
+        "fetch_id": 204,
+        "derivation_id": 221,
+        "meeting_key": 1271,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 206,
+        "fetch_id": 206,
+        "derivation_id": 223,
+        "meeting_key": 1271,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 208,
+        "fetch_id": 208,
+        "derivation_id": 225,
+        "meeting_key": 1271,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 209,
+        "fetch_id": 209,
+        "derivation_id": 226,
+        "meeting_key": 1271,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 210,
+        "fetch_id": 210,
+        "derivation_id": 227,
+        "meeting_key": 1271,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 213,
+        "fetch_id": 213,
+        "derivation_id": 230,
+        "meeting_key": 1270,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 214,
+        "fetch_id": 214,
+        "derivation_id": 231,
+        "meeting_key": 1270,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 216,
+        "fetch_id": 216,
+        "derivation_id": 233,
+        "meeting_key": 1270,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 218,
+        "fetch_id": 218,
+        "derivation_id": 235,
+        "meeting_key": 1270,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 223,
+        "fetch_id": 223,
+        "derivation_id": 240,
+        "meeting_key": 1268,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 226,
+        "fetch_id": 226,
+        "derivation_id": 243,
+        "meeting_key": 1268,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 228,
+        "fetch_id": 228,
+        "derivation_id": 245,
+        "meeting_key": 1268,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 245,
+        "fetch_id": 245,
+        "derivation_id": 262,
+        "meeting_key": 1265,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 246,
+        "fetch_id": 246,
+        "derivation_id": 263,
+        "meeting_key": 1265,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 248,
+        "fetch_id": 248,
+        "derivation_id": 265,
+        "meeting_key": 1265,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 250,
+        "fetch_id": 250,
+        "derivation_id": 267,
+        "meeting_key": 1265,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 253,
+        "fetch_id": 253,
+        "derivation_id": 270,
+        "meeting_key": 1277,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 255,
+        "fetch_id": 255,
+        "derivation_id": 272,
+        "meeting_key": 1277,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 257,
+        "fetch_id": 257,
+        "derivation_id": 274,
+        "meeting_key": 1277,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 265,
+        "fetch_id": 265,
+        "derivation_id": 282,
+        "meeting_key": 1263,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 266,
+        "fetch_id": 266,
+        "derivation_id": 283,
+        "meeting_key": 1263,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 270,
+        "fetch_id": 270,
+        "derivation_id": 287,
+        "meeting_key": 1262,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 273,
+        "fetch_id": 273,
+        "derivation_id": 290,
+        "meeting_key": 1261,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 276,
+        "fetch_id": 276,
+        "derivation_id": 293,
+        "meeting_key": 1261,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 280,
+        "fetch_id": 280,
+        "derivation_id": 297,
+        "meeting_key": 1260,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 292,
+        "fetch_id": 292,
+        "derivation_id": 309,
+        "meeting_key": 1258,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 295,
+        "fetch_id": 295,
+        "derivation_id": 312,
+        "meeting_key": 1258,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 305,
+        "fetch_id": 305,
+        "derivation_id": 322,
+        "meeting_key": 1256,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 312,
+        "fetch_id": 312,
+        "derivation_id": 329,
+        "meeting_key": 1254,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 319,
+        "fetch_id": 319,
+        "derivation_id": 336,
+        "meeting_key": 1254,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 322,
+        "fetch_id": 322,
+        "derivation_id": 339,
+        "meeting_key": 1254,
+        "corpus_split": "dev"
+      }
+    ],
+    "palmer_transcripts": [
+      {
+        "doc_id": 134,
+        "fetch_id": 134,
+        "derivation_id": 172,
+        "meeting_key": 1281,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 135,
+        "fetch_id": 135,
+        "derivation_id": 173,
+        "meeting_key": 1282,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 138,
+        "fetch_id": 138,
+        "derivation_id": 176,
+        "meeting_key": 1285,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 140,
+        "fetch_id": 140,
+        "derivation_id": 177,
+        "meeting_key": 1287,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 141,
+        "fetch_id": 141,
+        "derivation_id": 178,
+        "meeting_key": 1288,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 143,
+        "fetch_id": 143,
+        "derivation_id": 180,
+        "meeting_key": 1290,
+        "corpus_split": "dev"
+      },
+      {
+        "doc_id": 144,
+        "fetch_id": 144,
+        "derivation_id": 181,
+        "meeting_key": 1291,
+        "corpus_split": "dev"
+      }
+    ]
+  },
+  "finished_at": "2026-09-08T20:47:55.089Z"
+}

@@ -92,3 +92,46 @@ Linter v2 (hard stock-phrase list + advisory diagnostics, gates only after
 repeated blinded owner rejection); voice pass with semantic claim protection
 and a reviewer-confirmed new-proposition check; register-aware judge only if a
 three-race calibration earns it; blinded owner preference as the arbiter.
+
+---
+
+## v2 addendum — the narrative article register (owner decision, 2026-09-08)
+
+The owner chose the flowing article over the jump-cut columnist shape ("it
+sounded way better; it was too jarring before"). Corpus-first response: Mark
+Hughes' 2025 race pieces were added (22 dev-split exemplars), a `narrative`
+distillation profile produced `corpus/style/composite_voice_v2_narrative.md`,
+and the style judge gained `--mode narrative` with rules distilled from that
+register. Principles 1–12 above still apply at the sentence level; these
+override where they conflict:
+
+- **Open on the result and the hinge, in the first two paragraphs.** No
+  greeting, no highlights block, no scene-setting: "Antonelli started 19th and
+  finished an Italian Grand Prix winner. But the comeback … hinged on a
+  decision made while the cars were standing still."
+- **Sections hand off; transitions carry information.** Chronology is the
+  spine and the analysis rides on it. A one-sentence pivot paragraph marks a
+  turning point ("The race turned on lap 28.").
+- **Restrained third person.** Findings are stated as findings; first person
+  is rarer than in the columnist register and used only for a judgment the
+  data leaves open. The reader is trusted, not addressed.
+- **Caveats folded mid-sentence, once.** "…would have cost roughly 31, going
+  by the race's median pit-lane time." Never an isolated apparatus sentence.
+- **Record and quotes respond to claims already made** — parenthetical, in
+  flow — never as section-leading punctuation.
+- **Questions only at genuine pivots.** The narrative judge docked a soft
+  mid-flow question ("The question was whether…"); a declarative carried it.
+- **The rest of the field as connected closing paragraphs**, a sentence or
+  two per team, in descending relevance — not a labelled winners/losers list.
+- **Close forward-leaning and syntactically open**, never a recap. The judge
+  docked a triadic checklist ("recovered the positions, made the tyres work,
+  completed the pass"); the replacement leans into Madrid's unknowns.
+- **Honesty rules are unchanged.** The Astra draft the owner liked still
+  needed five fixes before it passed: the VSC cause attributed, observed 13 s
+  distinguished from the estimated 31 s, two perception/crowd claims removed,
+  the counterfactual named as an extrapolation, and the stewards' record
+  woven in. Flow and honesty are not in tension; flow and *apparatus* were.
+
+Measured (narrative-mode judge): v8 25/28, Astra 24, v2 23, v7 16 — the
+register the owner prefers now has a judge that scores it fairly, and the
+honesty edits improved the piece rather than costing it.

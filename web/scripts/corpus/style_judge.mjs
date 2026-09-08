@@ -24,13 +24,32 @@ import { anthropicStream } from "./lib/anthropic.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = resolve(HERE, "..", "..", "..", "corpus", "eval", "style");
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
-const JUDGE_VERSION = "style_judge@1";
 
 const args = process.argv.slice(2);
-const draftFiles = args.filter((a, i) => !a.startsWith("--") && args[i - 1] !== "--pro");
+const draftFiles = args.filter((a, i) => !a.startsWith("--") && args[i - 1] !== "--pro" && args[i - 1] !== "--mode");
 const proIds = args.filter((a, i) => args[i - 1] === "--pro").map(Number);
 
-export const RULES = [
+// --mode columnist (v1 rules, jump-cut register) | narrative (v2: flowing analytical
+// article — owner-selected register 2026-09-08; rules distilled from
+// corpus/style/dimensions/hughes_narrative_narrative.md + f1debrief_newsletter_narrative.md)
+const MODE = process.argv.find((a, i) => process.argv[i - 1] === "--mode") ?? "columnist";
+export const RULES_NARRATIVE = [
+  ["S1", "structure", "The opening states the result AND the hinge of the race in the first two paragraphs — a competitive claim, not scene-setting or a greeting."],
+  ["S2", "structure", "The body builds in nested layers (observation → contextual correction → mechanism → consequence) and each section hands off to the next; transitions carry information rather than announce structure."],
+  ["S3", "structure", "Secondary teams/drivers come after the lead battle is resolved, in descending relevance, handled at pace."],
+  ["S4", "structure", "The close leans forward with moderate certainty (next race, an open variable) — it does not restate the argument as a checklist summary."],
+  ["E1", "evidence", "Numbers are qualified before conclusions are drawn (tyre age, run length, observed vs estimated); like-for-like gaps are named, not papered over."],
+  ["E2", "evidence", "Uncertainty is folded into the claim mid-sentence, once, where the figure first appears — no isolated 'this is an estimate' apparatus and no repeated hedging."],
+  ["E3", "evidence", "Quotes, radio or official record respond to a claim already made analytically — they confirm or complicate; they never lead a section."],
+  ["E4", "evidence", "Every figure does work; precision signals authority and vague language is reserved for genuinely unknown quantities; causes that come from reporting are attributed."],
+  ["R1", "register", "A confident, first-person-absent analytical voice: findings stated as findings, not prefaced with 'I think'; the reader is trusted, not addressed."],
+  ["R2", "register", "Rhetorical questions only at genuine pivots; dry wit as a fragment or parenthetical, understatement over emphasis; no personality tokens."],
+  ["R3", "register", "Technical vocabulary used precisely without definition; no stock openers/closers, no greetings, no 'let's dive in'."],
+  ["P1", "pacing", "Short dense opening paragraph; mechanical-explanation paragraphs may run long (4–8 sentences) because depth is dwelt on, not summarised."],
+  ["P2", "pacing", "After a dense section the prose resets with a one-clause breath-point; one-sentence pivot paragraphs mark turning points."],
+  ["P3", "pacing", "The midfield passage moves at a sentence or two per team; the final sentence is short and syntactically open-ended."]
+];
+export const RULES_COLUMNIST = [
   ["S1", "structure", "Verdict first: each section/entry opens on its sharpest evaluative claim; evidence follows the verdict, never the reverse."],
   ["S2", "structure", "No wrap-up synthesis: the piece closes when the last entry closes — no summary paragraph restating the argument."],
   ["S3", "structure", "Abrupt transitions: headings do the transitional work; no bridging sentences between sections."],
@@ -46,8 +65,10 @@ export const RULES = [
   ["P2", "pacing", "Push-pull rhythm: long analytical sentences answered by short punchy ones; sentence length varies visibly within paragraphs."],
   ["P3", "pacing", "Density peaks at the mechanism, relaxes into a coda; length signals significance (big stories get room, clear-cut ones get two sentences)."]
 ];
+export const RULES = MODE === "narrative" ? RULES_NARRATIVE : RULES_COLUMNIST;
+const JUDGE_VERSION = `style_judge@${MODE === "narrative" ? "2-narrative" : "1"}`;
 
-const SYSTEM = `You are a strict style editor for professional F1 race analysis. You score a text against 14 house rules distilled from professional analysts' work. Be harsh and specific: a 2 means the text does this as well as a professional; 1 means partially or inconsistently; 0 means it violates the rule or shows the opposite (machine-prose) habit.
+const SYSTEM = `You are a strict style editor for professional F1 race analysis (${MODE === "narrative" ? "flowing analytical ARTICLE register — connected sections, chronology as spine, restrained third person" : "columnist register — verdict-first entries, jump cuts"}). You score a text against 14 house rules distilled from professional analysts' work. Be harsh and specific: a 2 means the text does this as well as a professional; 1 means partially or inconsistently; 0 means it violates the rule or shows the opposite (machine-prose) habit.
 
 Rules:
 ${RULES.map(([id, dim, rule]) => `${id} (${dim}): ${rule}`).join("\n")}
@@ -101,7 +122,7 @@ if (proIds.length) {
 }
 
 const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-const outFile = resolve(OUT_DIR, `judge_${ts}.json`);
+const outFile = resolve(OUT_DIR, `judge_${MODE}_${ts}.json`);
 writeFileSync(outFile, JSON.stringify(results, null, 2) + "\n");
 
 console.log("\n=== STYLE JUDGE ===");

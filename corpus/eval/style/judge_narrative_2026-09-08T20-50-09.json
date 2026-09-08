@@ -1,0 +1,374 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 2,
+        "evidence": "comeback that delivered a Mercedes one-two at Monza hinged on a decision made while the cars were standing still"
+      },
+      {
+        "id": "S2",
+        "score": 2,
+        "evidence": "Verstappen took the same opportunity…while the fight for victory increasingly became a contest between Russell's track position and Antonelli's pace"
+      },
+      {
+        "id": "S3",
+        "score": 2,
+        "evidence": "Behind the Mercedes pair…Pierre Gasly's afternoon went the other way…Ferrari also left its home race with little to celebrate"
+      },
+      {
+        "id": "S4",
+        "score": 1,
+        "evidence": "Antonelli heads to Madrid with 267 points…He recovered the positions, made the tyres work and…completed the pass"
+      },
+      {
+        "id": "E1",
+        "score": 2,
+        "evidence": "With both sets of tyres 22 laps old…Over the next two laps, he whittled the gap down to three tenths"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "The stop cost him about 13 seconds of gap under the VSC. At racing speed the same stop would have cost roughly 31, going by the race's median pit-lane time"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "race control's log reads 'CAR 12 (ANT) TIME 1:28.582 DELETED' — responds to the analytical claim that the pass did not come cleanly"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "gaining an average of 0.85 seconds a lap…a 1m23.504s…13.7 seconds behind his teammate"
+      },
+      {
+        "id": "R1",
+        "score": 2,
+        "evidence": "That saving gave Antonelli a chance to put his fresh tyres to use before the laps ran out"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'The question was whether Antonelli could build enough of an advantage' — pivot framed as rhetorical question but not at a genuine narrative turning point"
+      },
+      {
+        "id": "R3",
+        "score": 2,
+        "evidence": "virtual safety car, hard tyres, median pit-lane time — used precisely; no stock openers or closers"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Short dense opener: 'Kimi Antonelli started 19th and finished an Italian Grand Prix winner' — two sentences, result and hinge stated"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'The race turned on lap 28.' and 'A lap later, he was through.' — single-sentence pivots deployed correctly"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Final sentence 'He recovered the positions, made the tyres work and…completed the pass' — tricolon summary closes syntactically shut rather than open-ended"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 7,
+      "evidence": 8,
+      "register": 5,
+      "pacing": 5
+    },
+    "total": 25,
+    "max": 28,
+    "human_likelihood": 74,
+    "top_fixes": [
+      "S4/P3: The close collapses into a three-item checklist ('recovered the positions, made the tyres work, completed the pass') — exactly the tidy restatement the rule prohibits. Replace with a single syntactically open sentence that leans toward Madrid or an unresolved variable (Russell's strategy exposure on street circuits, Antonelli's tyre management record), not a summary of what just happened.",
+      "R2: 'The question was whether Antonelli could build enough of an advantage' is a soft rhetorical question dropped mid-flow rather than at a genuine pivot. Either sharpen it into a declarative claim or cut it and let the lap-by-lap evidence carry the tension — the prose is strong enough that the flag isn't needed.",
+      "P3 (midfield passage): Gasly, Ferrari, Pérez, and Tsunoda are bundled into two dense paragraphs rather than given the one-to-two-sentence-per-team velocity the rule asks for. Separate the threads slightly — Gasly's pole-to-seventh collapse earns its own breath-point sentence before Ferrari — and the midfield section will move at the right pace without losing any information."
+    ],
+    "label": "report_v8_draft.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@2-narrative",
+    "scored_at": "2026-09-08T20:49:01.231Z",
+    "source": "draft"
+  },
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 2,
+        "evidence": "comeback that delivered a Mercedes one-two at Monza hinged on a decision made while the cars were standing still"
+      },
+      {
+        "id": "S2",
+        "score": 1,
+        "evidence": "sections hand off adequately but 'For much of the afternoon…Then a virtual safety car' is announced rather than carried by the prose mechanism"
+      },
+      {
+        "id": "S3",
+        "score": 2,
+        "evidence": "Verstappen, Gasly, Ferrari dispatched in descending relevance at pace after lead battle resolves"
+      },
+      {
+        "id": "S4",
+        "score": 1,
+        "evidence": "'recovered the positions, made the tyres work…completed the pass' — close recapitulates argument as a triadic checklist rather than leaning forward to an open variable"
+      },
+      {
+        "id": "E1",
+        "score": 2,
+        "evidence": "both sets of tyres 22 laps old; estimated loss under VSC around 13 seconds, compared with roughly 31 seconds at racing speed"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'estimated loss under the VSC was around 13 seconds' — hedge folded into first appearance, not repeated"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "no quotes lead a section; radio/record absent entirely, which is acceptable — no violation"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "1m23.504s, 3.857 seconds, 0.264 seconds, 0.85 seconds a lap — precision throughout; vague language reserved for genuinely unknown counterfactuals"
+      },
+      {
+        "id": "R1",
+        "score": 2,
+        "evidence": "findings stated as findings throughout; no 'I think' or reader address"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'The question was whether Antonelli could build enough of an advantage' — soft rhetorical question not at a genuine pivot; 'let Russell off the hook' is the only dry aside"
+      },
+      {
+        "id": "R3",
+        "score": 2,
+        "evidence": "no stock openers/closers; VSC, green-flag stop, track limits used precisely without definition"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Opening paragraph is two short dense sentences; result and hinge stated immediately"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'The race turned on lap 28' and 'A lap later, he was through' — clean one-sentence pivots; prose resets after dense VSC-calculation section"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "midfield moves at pace but final sentence 'completed the pass' is syntactically closed and retrospective, not open-ended"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 6,
+      "evidence": 8,
+      "register": 5,
+      "pacing": 5
+    },
+    "total": 24,
+    "max": 28,
+    "human_likelihood": 62,
+    "top_fixes": [
+      "Rewrite the closing paragraph: replace the triadic recap ('recovered the positions, made the tyres work, completed the pass') with a single syntactically open sentence pointing to Madrid or an unresolved variable — the current close reads like a machine tidying its own argument.",
+      "Sharpen S2 transitions so the causal chain carries itself: 'For much of the afternoon, Russell's approach looked the stronger bet. Then a virtual safety car gave Antonelli the opening he needed' announces the structure rather than enacting it — fold the VSC's role into the preceding observation rather than flagging it as a reveal.",
+      "The rhetorical question at paragraph five ('The question was whether Antonelli could build enough of an advantage…') is not at a genuine pivot and weakens R2; convert it to a declarative claim or delete it and let the next lap-count sentence carry the tension."
+    ],
+    "label": "report_astra.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@2-narrative",
+    "scored_at": "2026-09-08T20:49:23.493Z",
+    "source": "draft"
+  },
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "The opening bullet list states result and hinge, but the first prose paragraph ('If you only caught the last four laps') is scene-setting scene-setting, not a competitive claim"
+      },
+      {
+        "id": "S2",
+        "score": 1,
+        "evidence": "'It was a conventional tyre split. It set up the rest of the afternoon.' — transitions announce rather than carry information; layers present but mechanical hand-offs are thin"
+      },
+      {
+        "id": "S3",
+        "score": 2,
+        "evidence": "Gasly, Ferrari, Pérez, Tsunoda handled in descending relevance after the lead battle, at pace, one or two sentences each"
+      },
+      {
+        "id": "S4",
+        "score": 0,
+        "evidence": "'Madrid next: a new circuit, so no prior-year data to lean on. See you Sunday.' — stock closer with a greeting token; no open variable or forward uncertainty"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "'about 31 seconds, going by the race's median pit-lane time' qualifies the estimate, but tyre ages at critical moments (e.g. Antonelli's lap-28 rubber) are not named before conclusions"
+      },
+      {
+        "id": "E2",
+        "score": 2,
+        "evidence": "'That's 0.85 seconds a lap, taken off a hard tyre that was 40-odd laps old by then' — uncertainty folded into the figure once, mid-sentence, no repeated hedging apparatus"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Track-limits deletion quote and stewards' penalty quote both follow an analytical claim already made; neither leads a section"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "1m23.504s fastest lap, 13.7s gap, 0.264s gap, 0.871s gap — precise figures do specific analytical work throughout"
+      },
+      {
+        "id": "R1",
+        "score": 0,
+        "evidence": "'I don't think so' and 'Here's what the data does say' — first-person intrudes twice; findings not stated as findings"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'Would he have won anyway?' is a rhetorical question but not at a genuine analytical pivot; dry wit is absent; no egregious emphasis but no understatement either"
+      },
+      {
+        "id": "R3",
+        "score": 1,
+        "evidence": "'See you Sunday' is a stock closer/greeting token; 'Morning' as a section header is an unexplained personality quirk; technical vocab otherwise precise"
+      },
+      {
+        "id": "P1",
+        "score": 0,
+        "evidence": "The opening paragraph ('If you only caught the last four laps…') is a medium-length scene-setter, not a short dense opening; the dense content is buried in bullets above the prose"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'This is the bit the 19th-to-first line hides: on equal-age rubber the faster car was going nowhere.' — clean one-sentence pivot after a dense mechanical section"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Midfield handled at correct pace; final sentence 'See you Sunday' is short but closed and formulaic, not syntactically open-ended"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 4,
+      "evidence": 7,
+      "register": 2,
+      "pacing": 3
+    },
+    "total": 16,
+    "max": 28,
+    "human_likelihood": 38,
+    "top_fixes": [
+      "Remove all first-person ('I don't think so', 'Here's what') and recast as findings: 'The extrapolation suggests not' / 'The data offers a different account'.",
+      "Delete 'See you Sunday' and 'Morning'; replace S4 close with a genuine open variable — e.g. how Antonelli's two-stop flexibility translates to Madrid's unknown degradation profile.",
+      "Kill the bullet 'short version' preamble or absorb it into a short, dense, claim-first opening paragraph — as written, the prose opener wastes its slot on scene-setting and the structural work is done before the article begins."
+    ],
+    "label": "report.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@2-narrative",
+    "scored_at": "2026-09-08T20:49:46.969Z",
+    "source": "draft"
+  },
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 2,
+        "evidence": "Kimi Antonelli won from 19th on the grid…The headline number needs its caveat at once"
+      },
+      {
+        "id": "S2",
+        "score": 1,
+        "evidence": "'I think this is the part the 19th-to-first line hides' breaks the analytical chain; also 'What the timing data cannot see' is a structural appendage rather than a handoff"
+      },
+      {
+        "id": "S3",
+        "score": 2,
+        "evidence": "Gasly, Verstappen, Pérez, Tsunoda handled at pace after lead battle resolved, in descending relevance"
+      },
+      {
+        "id": "S4",
+        "score": 1,
+        "evidence": "'Antonelli now leads Russell by 66 points' and the data-limitations section together form a trailing checklist rather than a lean-forward open variable"
+      },
+      {
+        "id": "E1",
+        "score": 2,
+        "evidence": "tyre age (24-lap-old), run length, observed vs estimated gap costs all qualified before conclusions drawn"
+      },
+      {
+        "id": "E2",
+        "score": 1,
+        "evidence": "'that figure is an estimate rather than a measured counterfactual' appears as a separate sentence, then the hedge is repeated: 'the price of the alternative is an estimate, labelled as one'"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Pérez stewards quote follows the analytical claim about the penalty; Antonelli track-limits record follows the lap-time claim"
+      },
+      {
+        "id": "E4",
+        "score": 2,
+        "evidence": "0.85s/lap, 7.1s to 0.264s over laps 40–48, 13.7s gap on rejoin, 1m23.504s fastest lap — all figures do specific work"
+      },
+      {
+        "id": "R1",
+        "score": 1,
+        "evidence": "'I think this is the part the 19th-to-first line hides' — first-person intrusion, only once but clean violation"
+      },
+      {
+        "id": "R2",
+        "score": 2,
+        "evidence": "'Nobody could see it yet, but that was the race' — dry pivot; no rhetorical questions; wit restrained ('one tyre offset lower')"
+      },
+      {
+        "id": "R3",
+        "score": 2,
+        "evidence": "VSC, tyre offset, lane time used without definition; no greetings, no 'let's dive in'"
+      },
+      {
+        "id": "P1",
+        "score": 2,
+        "evidence": "Opening paragraph is dense and short; mechanical sections (VSC stop, closing rate) run 4–6 sentences with depth"
+      },
+      {
+        "id": "P2",
+        "score": 2,
+        "evidence": "'Nobody could see it yet, but that was the race' and 'Verstappen made the same call' function as one-clause breath-points after dense sections"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "Midfield moves at acceptable pace but final sentence ('the packet does not carry one') is closed and self-referential rather than syntactically open-ended"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 6,
+      "evidence": 7,
+      "register": 5,
+      "pacing": 5
+    },
+    "total": 23,
+    "max": 28,
+    "human_likelihood": 72,
+    "top_fixes": [
+      "Delete 'I think this is the part the 19th-to-first line hides' entirely — fold the observation into the preceding paragraph as a declarative finding; this is the single hardest R1 violation and also breaks S2's analytical chain",
+      "Collapse the repeated hedging on the 31-second estimate: qualify it once, mid-sentence, where the figure first appears and cut the echo in 'What happens without the virtual safety car'; E2 penalises the double apparatus",
+      "Replace the closing section ('What the timing data cannot see') with a single forward-leaning sentence that names one open variable for the next race or the championship — the current ending is a limitations disclaimer, not the S4/P3 syntactically open close the rules require"
+    ],
+    "label": "report_v2.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@2-narrative",
+    "scored_at": "2026-09-08T20:50:09.669Z",
+    "source": "draft"
+  }
+]

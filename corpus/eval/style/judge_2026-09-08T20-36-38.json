@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "opener names the winner but the second paragraph buries the verdict in narrative setup rather than sharpest evaluative claim"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'He recovered the positions, made the tyres work and, when the race finally brought Russell within reach, completed the pass' — textbook restatement summary"
+      },
+      {
+        "id": "S3",
+        "score": 0,
+        "evidence": "'That left him 12th for the restart and gave Mercedes an opportunity' — bridging sentence doing transitional work a heading should handle"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "13.7 seconds, 13 seconds, 31 seconds, 0.85s/lap, 0.264s, 0.871s — numbers cluster repeatedly rather than deploying singly"
+      },
+      {
+        "id": "E2",
+        "score": 1,
+        "evidence": "'His late-race pace suggests he would still have caught Russell rapidly' — 'suggests' is correct but the surrounding conditional analysis lacks ownership markers like 'I think' or 'probably'"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is consistently the primary benchmark throughout — 'compared with Russell's track position,' teammate delta tracked lap by lap"
+      },
+      {
+        "id": "E4",
+        "score": 0,
+        "evidence": "No quotes, radio messages or official communications appear anywhere in the piece"
+      },
+      {
+        "id": "R1",
+        "score": 0,
+        "evidence": "'He passed his teammate with three laps remaining... The final move settled the race; the circumstances... had been taking shape since lap three' — positional recap posing as interpretation"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'Leclerc's early retirement was followed by sixth place for Lewis Hamilton' is flat recounting; no dry irony or juxtaposition deployed for comic/critical effect"
+      },
+      {
+        "id": "R3",
+        "score": 0,
+        "evidence": "No first-person appears at all; no flagged judgment calls or surprise; personality entirely absent"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "VSC, track limits, green-flag stop used without gloss; Gasly's Alpine pole unremarkable; reader assumed informed"
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "'That does not make the result inevitable in either direction. Traffic, tyre wear...' — this paragraph makes two distinct points and runs slightly long"
+      },
+      {
+        "id": "P2",
+        "score": 1,
+        "evidence": "'A lap later, he was through' is the one punchy sentence; most paragraphs run uniform mid-length without visible variation"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "VSC mechanism gets room but the Gasly collapse — arguably as significant — gets one throwaway sentence; length doesn't fully track significance"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 1,
+      "evidence": 4,
+      "register": 3,
+      "pacing": 3
+    },
+    "total": 11,
+    "max": 28,
+    "human_likelihood": 18,
+    "top_fixes": [
+      "Kill the final paragraph entirely — it restates the argument in three neat clauses, which is the machine's most reliable tell; the piece should end when Antonelli crosses the line or when the Gasly/Ferrari observations close",
+      "Insert at least one radio message or team communication as evidentiary punctuation — the VSC call and Antonelli's pit-entry are obvious moments where team audio would complicate or confirm the strategic reading",
+      "Break the number-clustering habit: the sequence '13.7 seconds behind... around 13 seconds... roughly 31 seconds' in adjacent paragraphs reads like a data dump; deploy one figure per claim and let the others go"
+    ],
+    "label": "report_astra.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T20:36:38.908Z",
+    "source": "draft"
+  }
+]

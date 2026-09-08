@@ -1,0 +1,95 @@
+[
+  {
+    "scores": [
+      {
+        "id": "S1",
+        "score": 1,
+        "evidence": "Opening lede buries the verdict in scene-setting; 'hinged on a decision made while the cars were standing still' delays the evaluative claim"
+      },
+      {
+        "id": "S2",
+        "score": 0,
+        "evidence": "'He recovered the positions, made the tyres work and, when the race finally brought Russell within reach, completed the pass' — textbook summary restatement"
+      },
+      {
+        "id": "S3",
+        "score": 0,
+        "evidence": "'The race turned on lap 28' and 'Getting past was another matter' are bridging sentences doing transitional work that headings should handle"
+      },
+      {
+        "id": "E1",
+        "score": 1,
+        "evidence": "0.264 seconds, 0.85 seconds, 13.7 seconds, 3.857 seconds — figures cluster across consecutive paragraphs rather than deployed singly to clinch single claims"
+      },
+      {
+        "id": "E2",
+        "score": 1,
+        "evidence": "'His late-race pace suggests he would still have caught Russell rapidly' — 'suggests' is the only hedge; 'probably / I wonder if' markers absent throughout"
+      },
+      {
+        "id": "E3",
+        "score": 2,
+        "evidence": "Russell is the consistent benchmark for Antonelli throughout; gap in seconds to teammate anchors every phase of the race analysis"
+      },
+      {
+        "id": "E4",
+        "score": 0,
+        "evidence": "No quotes, radio messages, or official communications appear anywhere in the piece"
+      },
+      {
+        "id": "R1",
+        "score": 0,
+        "evidence": "'He passed his teammate with three laps remaining… The final move settled the race' — recaps sequence rather than interpreting meaning; narrative runs order throughout"
+      },
+      {
+        "id": "R2",
+        "score": 1,
+        "evidence": "'leaving the Monza crowd to find its celebration in an Italian driver winning for Mercedes' — one dry note; otherwise earnest and unironic throughout"
+      },
+      {
+        "id": "R3",
+        "score": 0,
+        "evidence": "No first person appears anywhere; no judgment calls or surprises flagged; the analyst is invisible, making it read as machine-neutral reportage"
+      },
+      {
+        "id": "R4",
+        "score": 2,
+        "evidence": "Names dropped without introduction, VSC jargon unexplained, chicane named without gloss — peer address maintained consistently"
+      },
+      {
+        "id": "P1",
+        "score": 1,
+        "evidence": "'During the early red flag… For much of the afternoon… Then a virtual safety car' — second paragraph makes three separate points without exiting"
+      },
+      {
+        "id": "P2",
+        "score": 1,
+        "evidence": "'A lap later, he was through' works well; but most paragraphs are uniformly medium-length with little visible sentence-length variation"
+      },
+      {
+        "id": "P3",
+        "score": 1,
+        "evidence": "VSC mechanism gets appropriate room but the closing section sprawls equally; coda ('Antonelli heads to Madrid') reads like a standings update, not a relaxed exit"
+      }
+    ],
+    "dimension_totals": {
+      "structure": 1,
+      "evidence": 4,
+      "register": 3,
+      "pacing": 3
+    },
+    "total": 11,
+    "max": 28,
+    "human_likelihood": 18,
+    "top_fixes": [
+      "Cut the final three paragraphs entirely — they restate the argument and add a standings summary that kills the piece twice; close on 'completed the pass' or, better, find a harder exit one beat earlier",
+      "Insert at least one radio clip or team message as evidentiary punctuation, and flag one genuine judgment call in first person (e.g. 'I'm not convinced Russell ever had a real answer once the VSC fired') to put an analyst on the page",
+      "Stop narrating sequence and start interpreting: replace 'He passed his teammate with three laps remaining' with what that pass revealed about the strategy call — the reader watched; they need meaning, not running order"
+    ],
+    "label": "report_astra.md",
+    "model": "claude-sonnet-4-6",
+    "judge_version": "style_judge@1",
+    "scored_at": "2026-09-08T20:37:03.891Z",
+    "source": "draft"
+  }
+]
