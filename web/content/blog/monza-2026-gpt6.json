@@ -1,0 +1,438 @@
+{
+ "slug": "monza-2026-gpt6",
+ "title": "Antonelli’s Monza recovery went further than the shared VSC stop",
+ "dek": "Antonelli and Verstappen stopped on the same lap under the VSC, but their recoveries separated as Russell stayed ahead.",
+ "published_at": "2026-09-09T18:00:00Z",
+ "author": "GPT-6 Astra (orchestra)",
+ "meeting_key": 1293,
+ "session_key": 11361,
+ "hero_figure": "unequal_recoveries",
+ "body_md": "# Antonelli’s Monza recovery went further than the shared VSC stop\n\nKimi Antonelli won the Italian Grand Prix after converting a post-stop deficit into a lead that Max Verstappen, stopping on the same lap, never matched. George Russell finished 2nd ahead of Verstappen, but the decisive separation was already visible while Russell still led: Antonelli kept closing as the Red Bull's recovery stalled.\n\nThe VSC stop was a shared opportunity with unequal returns. Antonelli and Verstappen each recorded 24.9 seconds in the pit lane, then resumed on different compounds; the subsequent gaps show how much remained to be done after the stop. That comparison cannot isolate the tyre advantage from the cars, drivers or traffic, but it does resist treating the caution as a complete explanation of the winner.\n\nAntonelli's recovery had begun well before that opening. He qualified 7th and started 19th after a 12-place grid penalty, whose cause isn't supplied by the timing record. By the end of lap 2 he was 12th. The approximate lap-end restart snapshot also places him 12th after the red flag, with positions retained from earlier observations; that qualification matters when separating his opening gains from his later progress.\n\nThe restart introduced the compound split. Russell's hard stint runs from lap 4 to the finish, while Antonelli's medium stint runs from lap 4 through lap 28. Verstappen was also on mediums during that phase. Those records establish the tyre choices, without revealing whether Mercedes had planned to run Russell to the flag or what alternatives the team was considering during the stoppage.\n\nAntonelli had already reached the lead on lap 18. Russell returned to the front on lap 23, with Antonelli 0.399 seconds behind at the line. The lead had changed hands before the later tyre stop; the eventual winner hadn't spent the entire opening stint trapped behind his teammate. The record identifies the laps of those changes, but supplies no corner for either move and no radio explaining how the Mercedes drivers were racing each other.\n\n{{fig:early_lead_exchange}}\n\nAt lap 27, Antonelli was 0.531 seconds behind Russell, with Verstappen 2 seconds behind the leader. Race control subsequently recorded \"VSC DEPLOYED\" on lap 28. The log establishes the intervention, without establishing its cause. Antonelli's stop retained the medium compound; Verstappen switched to hard tyres, while Russell's hard stint continued uninterrupted.\n\nBy the end of lap 29, Antonelli was 14.374 seconds behind Russell and Verstappen was 15.484 seconds back. These are gaps between their lap-ending line crossings, rather than the asynchronously sampled gaps on the position feed. They describe the task after the stop; neither number is a controlled measurement of pit loss, and the timing packet cannot reconstruct a race in which the VSC never appeared.\n\nInitially, each pursuer reduced his deficit. At lap 39 Antonelli was 7.498 seconds behind Russell, while Verstappen was 9.882 seconds back. From there their traces separated sharply. By lap 48 Antonelli was within 0.236 seconds, but Verstappen's deficit had grown to 13.946 seconds, despite his tyres having been fitted during the same intervention.\n\nAntonelli was sustaining the recovery deep into the stint. His gap shrank at every lap ending from lap 29 through lap 48, across the traffic and changing positions recorded during that stretch.\n\nRussell remained the reference throughout that comparison, so the divergence cannot be explained merely by a change of leader. It still combines the performance of different cars on different compounds, and the traffic each encountered. No isolated compound test sits behind the curves.\n\nThe comparison with Verstappen strengthens the case for examining the running after the stop, although it cannot assign the difference to medium tyres alone. Fresh rubber and a VSC-classified stop were features of Verstappen's race too.\n\n{{fig:unequal_recoveries}}\n\nThe approach to Russell still contained a reversal. Antonelli's deficit rose to 0.860 seconds on lap 49, when his recorded lap time was 88.582 seconds. Race control deleted that lap for track limits at Turn 1; the message was issued on lap 50 and refers back to lap 49. It establishes the infringement, without describing the attempted manoeuvre or proving that the deletion itself caused the loss of time.\n\nAntonelli led at the next lap ending. The lap-50 line-crossing gap puts Russell 1.313 seconds behind him, consistent with the lead-change record. Antonelli then recorded the race's fastest lap on lap 53 at 83.504 seconds. His final advantage in the pair-gap series is 3.942 seconds. That margin is reconstructed from the final lap's start and duration because there is no following lap-start timestamp.\n\nVerstappen's podium belongs alongside that victory as a different outcome from the shared stop. Behind him, Lando Norris finished 4th and Oscar Piastri 5th; their reconstructed final line-crossing separation was only 0.238 seconds. Piastri had been ahead at the end of lap 52. That late change settled the McLaren order while leaving Verstappen's podium intact, a reminder that the closing laps were still rearranging the result beyond the Mercedes contest.\n\n{{fig:mclaren_finish}}\n\nPierre Gasly finished 7th from pole, behind Lewis Hamilton in 6th. Charles Leclerc's last completed lap was lap 2 and his result is recorded as a retirement. Those outcomes sit outside the comparison of the VSC stoppers: the finishing order contains recoveries, lost ground and an early exit, without timing alone supplying a mechanical or strategic cause for each result.\n\nAntonelli leaves Monza on 267 points to Russell's 201. The win extends an advantage already present before the race, but the useful lesson for the next strategy decision is narrower than a prescription to copy the winning stop. A caution can change the available choices; judging the choice still requires the pace and traffic that follow. Any repeat would have to survive that test again.",
+ "figures": {
+  "early_lead_exchange": {
+   "name": "early_lead_exchange",
+   "chart": {
+    "type": "race_trace",
+    "x_label": "Lap",
+    "y_label": "Gap to Russell (s)",
+    "y_value_format": "decimal_seconds",
+    "lap_numbers": [
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24
+    ],
+    "series": [
+     {
+      "name": "Antonelli behind Russell",
+      "color": "#27F4D2",
+      "values": [
+       3.69,
+       1.873,
+       1.172,
+       0.578,
+       0.875,
+       0.805,
+       0.391,
+       -0.581,
+       -0.594,
+       -0.578,
+       -0.625,
+       -0.458,
+       0.399,
+       0.678
+      ],
+      "point_quality": [
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed"
+      ]
+     },
+     {
+      "name": "Verstappen behind Russell",
+      "color": "#3671C6",
+      "values": [
+       0.216,
+       -0.744,
+       -0.641,
+       -0.797,
+       0.391,
+       1.187,
+       1.079,
+       0.308,
+       1,
+       1.438,
+       1.75,
+       1.351,
+       1.413,
+       1.477
+      ],
+      "point_quality": [
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed"
+      ]
+     }
+    ],
+    "racing_state": {
+     "source": "available",
+     "session_key": "11361",
+     "periods": [],
+     "sector_flags": [],
+     "notes": [],
+     "total_laps": 53
+    },
+    "chart_note": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration.",
+    "horizontal_marker": {
+     "value": 0,
+     "label": "Level at the line"
+    }
+   },
+   "caption": "The lead was contested before the VSC: gaps to Russell over laps 11–24. Antonelli led from lap 18 before Russell returned ahead on lap 23.",
+   "alt": "Gap curves cross the level line as Verstappen and then Antonelli run ahead of Russell during laps 11–24. Antonelli is back behind Russell at lap 23.",
+   "verified": true,
+   "provenance": {
+    "compiler_version": "figures@1",
+    "packet_version": "race_packet@1",
+    "packet_built_at": "2026-09-09T14:59:33.860Z",
+    "session_key": "11361",
+    "built_at": "2026-09-09T16:00:04.411Z",
+    "caption_slots": 4,
+    "content_sha256": "196a25cf4af7cf893a781db5ca7e22d248b766d8e5b2fbbd689c7ca1c11b9ad1"
+   }
+  },
+  "mclaren_finish": {
+   "name": "mclaren_finish",
+   "chart": {
+    "type": "race_trace",
+    "x_label": "Lap",
+    "y_label": "Gap to Norris (s)",
+    "y_value_format": "decimal_seconds",
+    "lap_numbers": [
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53
+    ],
+    "series": [
+     {
+      "name": "Piastri behind Norris",
+      "color": "#FF8000",
+      "values": [
+       -0.946,
+       -1.032,
+       -0.813,
+       -0.671,
+       -0.41,
+       0.501,
+       -1.125,
+       -0.373,
+       -0.625,
+       -0.386,
+       0.238
+      ],
+      "point_quality": [
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed"
+      ]
+     }
+    ],
+    "racing_state": {
+     "source": "available",
+     "session_key": "11361",
+     "periods": [],
+     "sector_flags": [],
+     "notes": [],
+     "total_laps": 53
+    },
+    "chart_note": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration.",
+    "horizontal_marker": {
+     "value": 0,
+     "label": "Level at the line"
+    }
+   },
+   "caption": "McLaren’s order remained unsettled over laps 43–53. Piastri finished 0.238 s behind Norris in the reconstructed final line-crossing comparison.",
+   "alt": "Piastri’s gap to Norris crosses the level line late in the race. The final reconstructed point places Piastri 0.238 s behind Norris.",
+   "verified": true,
+   "provenance": {
+    "compiler_version": "figures@1",
+    "packet_version": "race_packet@1",
+    "packet_built_at": "2026-09-09T14:59:33.860Z",
+    "session_key": "11361",
+    "built_at": "2026-09-09T16:00:04.414Z",
+    "caption_slots": 3,
+    "content_sha256": "90d053bc8c6e0fda5f254b46afb39a4f75ab8fd2321a23976d9df5617ca19655"
+   }
+  },
+  "unequal_recoveries": {
+   "name": "unequal_recoveries",
+   "chart": {
+    "type": "race_trace",
+    "x_label": "Lap",
+    "y_label": "Gap to Russell (s)",
+    "y_value_format": "decimal_seconds",
+    "lap_numbers": [
+     27,
+     28,
+     29,
+     30,
+     31,
+     32,
+     33,
+     34,
+     35,
+     36,
+     37,
+     38,
+     39,
+     40,
+     41,
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53
+    ],
+    "series": [
+     {
+      "name": "Antonelli behind Russell",
+      "color": "#27F4D2",
+      "values": [
+       0.531,
+       3.547,
+       14.374,
+       13.296,
+       12.428,
+       11.772,
+       11.332,
+       10.469,
+       9.693,
+       9.154,
+       8.266,
+       7.75,
+       7.498,
+       7.078,
+       6.393,
+       5.547,
+       4.688,
+       3.889,
+       2.938,
+       1.762,
+       0.965,
+       0.236,
+       0.86,
+       -1.313,
+       -1.282,
+       -1.96,
+       -3.942
+      ],
+      "point_quality": [
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed"
+      ]
+     },
+     {
+      "name": "Verstappen behind Russell",
+      "color": "#3671C6",
+      "values": [
+       2,
+       5.594,
+       15.484,
+       15.135,
+       13.903,
+       13.96,
+       13.504,
+       13.037,
+       12.491,
+       12.078,
+       10.969,
+       10.25,
+       9.882,
+       11.523,
+       13.239,
+       13.672,
+       13.255,
+       13.471,
+       13.782,
+       13.877,
+       14.19,
+       13.946,
+       10.875,
+       10.115,
+       11.126,
+       11.452,
+       10.77
+      ],
+      "point_quality": [
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed",
+       "observed"
+      ]
+     }
+    ],
+    "racing_state": {
+     "source": "available",
+     "session_key": "11361",
+     "periods": [
+      {
+       "kind": "vsc",
+       "start_ts": "2026-09-06T14:17:45.000Z",
+       "end_ts": "2026-09-06T14:19:42.000Z",
+       "from_lap": 28,
+       "to_lap": 29,
+       "endpoint_inferred": null,
+       "opened_by": "rc103",
+       "closed_by": "rc109"
+      }
+     ],
+     "sector_flags": [
+      {
+       "lap": 28,
+       "sector": 2,
+       "level": "yellow",
+       "issued_at": "2026-09-06T14:17:30.000Z"
+      },
+      {
+       "lap": 28,
+       "sector": 3,
+       "level": "double_yellow",
+       "issued_at": "2026-09-06T14:17:30.000Z"
+      }
+     ],
+     "notes": [],
+     "total_laps": 53
+    },
+    "chart_note": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration.",
+    "horizontal_marker": {
+     "value": 0,
+     "label": "Level at the line"
+    }
+   },
+   "caption": "Shared VSC stop, different recoveries: laps 27–53. At lap 48, Antonelli was 0.236 s behind Russell and Verstappen was 13.946 s behind. Final points use lap start plus duration.",
+   "alt": "Antonelli and Verstappen fall behind Russell around the VSC stop, then their curves diverge. At lap 48, Antonelli is 0.236 s behind, while Verstappen is 13.946 s behind; Antonelli crosses into the lead before the finish.",
+   "verified": true,
+   "provenance": {
+    "compiler_version": "figures@1",
+    "packet_version": "race_packet@1",
+    "packet_built_at": "2026-09-09T14:59:33.860Z",
+    "session_key": "11361",
+    "built_at": "2026-09-09T16:00:04.414Z",
+    "caption_slots": 5,
+    "content_sha256": "361ce44e21de068c7d088ea4d3f1b183aaade9a370e3bf18aa4d96c75e511801"
+   }
+  }
+ },
+ "provenance": {
+  "meeting": "2026_1293_gpt6",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T14:59:33.860Z",
+  "report_sha256": "85f23e5468ccedacbd8810fa68e38c8d027c4d3e12cac9783c3b20fbbbc22699",
+  "built_at": "2026-09-09T16:07:27.457Z",
+  "store": "file-backed draft (migration 063 revision model pending)",
+  "content_sha256": "b96a93613102468fdebec1efc29b4946766fb0129598665e01469730c7361e65"
+ }
+}

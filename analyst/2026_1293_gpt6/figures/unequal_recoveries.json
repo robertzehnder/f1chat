@@ -1,0 +1,351 @@
+{
+ "name": "unequal_recoveries",
+ "meeting": "2026_1293_gpt6",
+ "chart": {
+  "type": "race_trace",
+  "x_label": "Lap",
+  "y_label": "Gap to Russell (s)",
+  "y_value_format": "decimal_seconds",
+  "lap_numbers": [
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49,
+   50,
+   51,
+   52,
+   53
+  ],
+  "series": [
+   {
+    "name": "Antonelli behind Russell",
+    "color": "#27F4D2",
+    "values": [
+     0.531,
+     3.547,
+     14.374,
+     13.296,
+     12.428,
+     11.772,
+     11.332,
+     10.469,
+     9.693,
+     9.154,
+     8.266,
+     7.75,
+     7.498,
+     7.078,
+     6.393,
+     5.547,
+     4.688,
+     3.889,
+     2.938,
+     1.762,
+     0.965,
+     0.236,
+     0.86,
+     -1.313,
+     -1.282,
+     -1.96,
+     -3.942
+    ],
+    "point_quality": [
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed"
+    ]
+   },
+   {
+    "name": "Verstappen behind Russell",
+    "color": "#3671C6",
+    "values": [
+     2,
+     5.594,
+     15.484,
+     15.135,
+     13.903,
+     13.96,
+     13.504,
+     13.037,
+     12.491,
+     12.078,
+     10.969,
+     10.25,
+     9.882,
+     11.523,
+     13.239,
+     13.672,
+     13.255,
+     13.471,
+     13.782,
+     13.877,
+     14.19,
+     13.946,
+     10.875,
+     10.115,
+     11.126,
+     11.452,
+     10.77
+    ],
+    "point_quality": [
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed"
+    ]
+   }
+  ],
+  "racing_state": {
+   "source": "available",
+   "session_key": "11361",
+   "periods": [
+    {
+     "kind": "vsc",
+     "start_ts": "2026-09-06T14:17:45.000Z",
+     "end_ts": "2026-09-06T14:19:42.000Z",
+     "from_lap": 28,
+     "to_lap": 29,
+     "endpoint_inferred": null,
+     "opened_by": "rc103",
+     "closed_by": "rc109"
+    }
+   ],
+   "sector_flags": [
+    {
+     "lap": 28,
+     "sector": 2,
+     "level": "yellow",
+     "issued_at": "2026-09-06T14:17:30.000Z"
+    },
+    {
+     "lap": 28,
+     "sector": 3,
+     "level": "double_yellow",
+     "issued_at": "2026-09-06T14:17:30.000Z"
+    }
+   ],
+   "notes": [],
+   "total_laps": 53
+  },
+  "chart_note": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration.",
+  "horizontal_marker": {
+   "value": 0,
+   "label": "Level at the line"
+  }
+ },
+ "caption": {
+  "template": "Shared VSC stop, different recoveries: laps {from}–{to}. At lap {late}, Antonelli was {ant} s behind Russell and Verstappen was {ver} s behind. Final points use lap start plus duration.",
+  "slots": {
+   "from": {
+    "packet_path": "/pair_gaps/0/laps/26/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/0/laps/52/lap"
+   },
+   "late": {
+    "packet_path": "/pair_gaps/0/laps/47/lap"
+   },
+   "ant": {
+    "packet_path": "/pair_gaps/0/laps/47/gap",
+    "format": "0.000"
+   },
+   "ver": {
+    "packet_path": "/pair_gaps/2/laps/47/gap",
+    "format": "0.000"
+   }
+  },
+  "rendered": "Shared VSC stop, different recoveries: laps 27–53. At lap 48, Antonelli was 0.236 s behind Russell and Verstappen was 13.946 s behind. Final points use lap start plus duration."
+ },
+ "alt": {
+  "template": "Antonelli and Verstappen fall behind Russell around the VSC stop, then their curves diverge. At lap {late}, Antonelli is {ant} s behind, while Verstappen is {ver} s behind; Antonelli crosses into the lead before the finish.",
+  "slots": {
+   "from": {
+    "packet_path": "/pair_gaps/0/laps/26/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/0/laps/52/lap"
+   },
+   "late": {
+    "packet_path": "/pair_gaps/0/laps/47/lap"
+   },
+   "ant": {
+    "packet_path": "/pair_gaps/0/laps/47/gap",
+    "format": "0.000"
+   },
+   "ver": {
+    "packet_path": "/pair_gaps/2/laps/47/gap",
+    "format": "0.000"
+   }
+  },
+  "rendered": "Antonelli and Verstappen fall behind Russell around the VSC stop, then their curves diverge. At lap 48, Antonelli is 0.236 s behind, while Verstappen is 13.946 s behind; Antonelli crosses into the lead before the finish."
+ },
+ "series_sources": [
+  {
+   "series": 0,
+   "packet_path_template": "/pair_gaps/0/laps/{i}/gap",
+   "index_from": 26,
+   "laps": [
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53
+   ],
+   "lap_path_template": "/pair_gaps/0/laps/{i}/lap"
+  },
+  {
+   "series": 1,
+   "packet_path_template": "/pair_gaps/2/laps/{i}/gap",
+   "index_from": 26,
+   "laps": [
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53
+   ],
+   "lap_path_template": "/pair_gaps/2/laps/{i}/lap"
+  }
+ ],
+ "decoration_sources": {
+  "racing_state_window": [
+   27,
+   53
+  ],
+  "chart_note": {
+   "template": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration.",
+   "slots": {},
+   "rendered": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration."
+  },
+  "horizontal_marker": {
+   "value": 0,
+   "label": {
+    "template": "Level at the line",
+    "slots": {},
+    "rendered": "Level at the line"
+   }
+  }
+ },
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T14:59:33.860Z",
+  "session_key": "11361",
+  "built_at": "2026-09-09T16:00:04.414Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T16:00:04.414Z",
+  "ok": true,
+  "problems": []
+ }
+}
