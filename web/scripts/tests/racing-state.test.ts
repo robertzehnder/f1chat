@@ -38,7 +38,7 @@ test("builder: Monza → incomplete (inferred ends), periods in time order, note
   assert.equal(layer.periods[3].closed_by, null);
   assert.deepEqual(layer.sector_flags.map((f) => [f.lap, f.sector, f.level]), [[1, 2, "yellow"], [1, 5, "double_yellow"]]);
   assert.equal(layer.notes.length, 2, "one note per inferred end; superseded/resumption closures are exact");
-  assert.match(layer.notes[1], /VSC end inferred at end of lap 29 \(feed has no VSC ENDED message\)/);
+  assert.match(layer.notes[1], /VSC end placed at L29 end; no VSC end message recorded/);
 });
 
 test("builder: superseded and resumption closures are exact; lap-end / never-closed are inferred", () => {
