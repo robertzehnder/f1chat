@@ -431,7 +431,7 @@
   "packet_version": "race_packet@1",
   "packet_built_at": "2026-09-09T14:59:33.860Z",
   "report_sha256": "85f23e5468ccedacbd8810fa68e38c8d027c4d3e12cac9783c3b20fbbbc22699",
-  "built_at": "2026-09-09T16:00:58.820Z",
+  "built_at": "2026-09-09T16:02:38.748Z",
   "store": "file-backed draft (migration 063 revision model pending)",
   "content_sha256": "b96a93613102468fdebec1efc29b4946766fb0129598665e01469730c7361e65"
  }
