@@ -115,12 +115,12 @@ This is stricter than the prose pass and is documented as such. The sidecar gets
 ## 3. Not proposed
 Request-time PNG rendering; LLM-chosen chart types or LLM-authored captions; in-browser figure editing; public authoring.
 
-## 4. Open decisions for the owner
-1. URL path: `/blog` or `/analysis`.
-2. Racing-state layer on every lap-axis chart for race sessions by default (recommended: yes).
-3. Figure footer attribution ("Data: OpenF1") and whether OpenF1 terms need a commercial re-review before the funnel, same class as the YouTube re-review.
-4. Vercel Blob for exports (recommended) vs committing PNGs before deploy.
-5. Private Blob access for candidate-revision exports if the plan offers it; otherwise unguessable paths plus the no-emission rule.
+## 4. Owner decisions (taken 2026-09-09)
+1. URL path: **`/blog`**.
+2. Racing-state layer on every lap-axis chart for race sessions by default: **yes**.
+3. Figure footer attribution "Data: OpenF1": **add it**; no licensing check requested.
+4. Exports to **Vercel Blob** (owner must create the store and add `BLOB_READ_WRITE_TOKEN` to `web/.env.local` before S1.6).
+5. Candidate-revision exports: **private Blob access if the installed `@vercel/blob` supports it, else unguessable content-addressed paths + the no-emission rule** (my call, delegated).
 
 ## 5. Effort
 S1 ≈ 5.5 d (the full-race fixture and the packet `pair_gaps` series moved in), S2 ≈ 1 d, S3 ≈ 1.5 d → ≈ 8 d for the slice plus widening, with an explicit re-estimate after S1. Draft 1's eight days for the full scope was optimistic; the slice-first order means the owner sees a public Monza post with the hardest figure before the rest is built.
