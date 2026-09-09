@@ -109,9 +109,16 @@ const html = await page.evaluate(async ({ tooltips, title }) => {
   root.querySelectorAll(".recharts-wrapper").forEach((w) => { w.style.width = "100%"; w.style.height = "auto"; w.style.position = "relative"; });
   root.querySelectorAll(".recharts-wrapper > .recharts-surface").forEach((s) => {
     if (!s.getAttribute("viewBox")) s.setAttribute("viewBox", `0 0 ${s.getAttribute("width")} ${s.getAttribute("height")}`);
-    s.style.maxWidth = "100%"; s.style.height = "auto"; s.style.display = "block";
+    s.style.maxWidth = "100%"; s.style.minWidth = "480px"; s.style.height = "auto"; s.style.display = "block";
   });
-  root.querySelectorAll(".recharts-responsive-container").forEach((c) => { c.style.width = "100%"; c.style.height = "auto"; });
+  root.querySelectorAll(".recharts-responsive-container").forEach((c) => {
+    c.style.width = "100%"; c.style.height = "auto";
+    // The app sizes the chart box with a fixed-height class (h-80); the
+    // frozen SVG scales, so the box must follow it. Below ~480px the labels
+    // become unreadable, so the SVG keeps that width and the box pans.
+    c.style.overflowX = "auto";
+    const box = c.parentElement; if (box) { box.style.height = "auto"; box.style.overflowX = "auto"; }
+  });
   root.querySelectorAll(".recharts-legend-wrapper").forEach((l) => { l.style.position = "static"; l.style.width = "auto"; });
 
   const head = root.querySelector("head");
