@@ -1,6 +1,7 @@
 import type { ChatApiResponse, InsightFields, MessagePart } from "@/lib/chatTypes";
 import type { ChartSpec, DraftInsight } from "@/lib/chart-types";
 import { getTeamColor, getDistinctTeamColors } from "@/lib/f1-team-colors";
+import { attachRacingStateToChart } from "@/lib/racingState/build";
 
 // =============================================================================
 // foldPartsIntoInsight — collapse SSE MessagePart stream into DraftInsight
@@ -28,6 +29,13 @@ export function foldPartsIntoInsight(
       // Pass question through so topic-sensitive detectors (radar, etc.)
       // can match on natural-language signals as well as column shape.
       next.chart = detectChart(part.rows, ctx) ?? next.chart;
+      if (next.chart && next.racingState) next.chart = attachRacingStateToChart(next.chart, next.racingState);
+      break;
+    case "racing_state":
+      // Order-independent: attach now if the chart already exists, else the
+      // table case picks it up when the chart is detected.
+      next.racingState = part.state;
+      if (next.chart) next.chart = attachRacingStateToChart(next.chart, part.state);
       break;
     case "warning":
       // InsightMock doesn't define a `warnings` field; fold validator

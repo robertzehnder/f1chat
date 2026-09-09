@@ -17,6 +17,7 @@ import {
   makeGapAwareDot,
   renderCautionBands,
 } from "./line-hardening"
+import { RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
 
 interface LineWithStintMarkersProps {
   chart: {
@@ -34,6 +35,7 @@ interface LineWithStintMarkersProps {
       label: string
     }>
     caution_bands?: Array<{ from: number; to: number; label?: string }>
+    racing_state?: import("@/lib/chart-types").RacingStateLayer
     chart_note?: string
     horizontal_marker?: {
       value: number
@@ -44,6 +46,8 @@ interface LineWithStintMarkersProps {
 
 export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
   const { x_label, y_label, y_value_format, series, stint_boundaries, caution_bands, chart_note, horizontal_marker } = chart
+  const rs = chart.racing_state
+  const recordAvailable = rs?.source === "available" || rs?.source === "incomplete"
   const isLapTime = y_value_format === "lap_time_s"
   // Axis ticks: lap times as M:SS.s (one decimal keeps them short — e.g.
   // "1:21.7"); everything else via the shared formatter; fall back to 1dp.
@@ -66,6 +70,7 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
 
   // Transform data for Recharts
   const maxLength = Math.max(...series.map(s => s.values.length))
+  const lastLap = maxLength
   const data = Array.from({ length: maxLength }, (_, i) => {
     const point: Record<string, number> = { lap: i + 1 }
     series.forEach(s => {
@@ -182,8 +187,10 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
             />
           )}
 
-          {/* Caution shading first so bands sit under lines. */}
-          {renderCautionBands(caution_bands)}
+          {/* Caution shading first so bands sit under lines: the racing-state
+              record when attached, else the legacy track_flag bands. */}
+          {renderRacingStateLayer(recordAvailable ? rs : undefined, lastLap)}
+          {recordAvailable ? null : renderCautionBands(caution_bands)}
 
           {/* Dashed gap bridges: connectNulls underlay so sparse series
               still read as one trend; excluded from tooltip/legend. */}
@@ -218,7 +225,12 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
         </RechartsLineChart>
       </ResponsiveContainer>
       </div>
-      <ChartNote note={chart_note} />
+      <ChartNote note={mergeChartNotes(chart_note, racingStateNotes(rs))} />
+      {recordAvailable && (
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+          <RacingStateLegend state={rs} />
+        </div>
+      )}
     </div>
   )
 }

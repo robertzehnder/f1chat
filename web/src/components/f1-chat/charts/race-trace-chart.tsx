@@ -12,6 +12,8 @@ import {
   ReferenceDot
 } from "recharts"
 import type { ChartSpec } from "@/lib/chart-types"
+import { ChartNote } from "./line-hardening"
+import { RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
 
 /**
  * Race trace: every driver's gap to the leader, lap by lap. Y axis is
@@ -31,9 +33,14 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
     return point
   })
 
-  // SC bands as contiguous lap ranges.
+  // Racing-state layer (record) replaces the lap-time heuristic when the
+  // race-control feed is available; the heuristic survives ONLY as a
+  // labelled "slow laps" overlay when the feed is absent/failed.
+  const rs = chart.racing_state
+  const recordAvailable = rs?.source === "available" || rs?.source === "incomplete"
+  const heuristicLabel = rs ? "slow laps (heuristic)" : "SC/VSC"
   const bands: Array<[number, number]> = []
-  for (const lap of chart.neutralized_laps ?? []) {
+  for (const lap of recordAvailable ? [] : chart.neutralized_laps ?? []) {
     const last = bands[bands.length - 1]
     if (last && lap === last[1] + 1) last[1] = lap
     else bands.push([lap, lap])
@@ -95,8 +102,9 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
               labelStyle={{ color: "hsl(var(--foreground))" }}
               itemStyle={{ color: "hsl(var(--muted-foreground))" }}
             />
+            {renderRacingStateLayer(recordAvailable ? rs : undefined, maxLen)}
             {bands.map(([a, b], i) => (
-              <ReferenceArea key={`sc-${i}`} x1={a} x2={b} fill="hsl(var(--semantic-warning))" fillOpacity={0.12} strokeOpacity={0} />
+              <ReferenceArea key={`sc-${i}`} x1={a - 0.5} x2={b + 0.5} fill="hsl(var(--semantic-warning))" fillOpacity={0.12} strokeOpacity={0} />
             ))}
             {series.map((s) => {
               const emph = emphasized.has(s.name)
@@ -119,6 +127,7 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
           </RechartsLineChart>
         </ResponsiveContainer>
       </div>
+      <ChartNote note={mergeChartNotes(chart.chart_note, racingStateNotes(rs))} />
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
         {series.map((s) => (
           <span key={s.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -126,9 +135,10 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
             {s.name}
           </span>
         ))}
+        <RacingStateLegend state={recordAvailable ? rs : undefined} />
         {bands.length > 0 && (
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="size-2.5 rounded-sm bg-semantic-warning opacity-40" /> SC/VSC
+            <span className="size-2.5 rounded-sm bg-semantic-warning opacity-40" /> {heuristicLabel}
           </span>
         )}
         {(chart.trace_pit_dots ?? []).length > 0 && (

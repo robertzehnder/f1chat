@@ -27,6 +27,7 @@ import { m19 } from "./m19-donut";
 import { m20 } from "./m20-cross-cat-composite";
 import { m21 } from "./m21-no-data-refusal";
 import { m22 } from "./m22-pit-cycle-event";
+import { m24 } from "./m24-racing-state-layer";
 
 export const allMocks = {
   m01,
@@ -49,5 +50,6 @@ export const allMocks = {
   m19,
   m20,
   m21,
-  m22
+  m22,
+  m24
 };

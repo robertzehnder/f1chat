@@ -17,7 +17,11 @@ export type MessagePart =
       queryPlanSummary?: string;
       resolutionSummary?: string;
     }
-  | { type: "followUps"; prompts: string[] };
+  | { type: "followUps"; prompts: string[] }
+  /** Racing-state layer for the resolved race session (visuals plan S1.1).
+   *  Emitted after the table part; the fold attaches it to lap-axis charts
+   *  in either arrival order. */
+  | { type: "racing_state"; state: import("@/lib/chart-types").RacingStateLayer };
 
 export type ChatMessageUser = {
   id: string;
@@ -178,6 +182,11 @@ export type ChatApiResponse = {
   /** Phase 2: structured fields from synthesis. `null` when extraction
    *  failed or the model didn't emit them; old clients ignore. */
   insight?: InsightFields | null;
+  /** SC / VSC / red periods + sector yellows for the resolved race session,
+   *  attached only when the result rows are trusted to belong to that
+   *  session (src/lib/racingState/build.ts trustedSessionKey). Null/absent
+   *  when not a race, not trusted, or the turn produced no rows. */
+  racingState?: import("@/lib/chart-types").RacingStateLayer | null;
   error?: string;
 };
 

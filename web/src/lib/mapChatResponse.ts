@@ -35,6 +35,10 @@ export function mapChatApiResponseToParts(data: ChatApiResponse): MessagePart[] 
     });
   }
 
+  if (data.racingState) {
+    parts.push({ type: "racing_state", state: data.racingState });
+  }
+
   const warnings = data.runtime?.completeness?.warnings?.filter(Boolean) ?? [];
   if (warnings.length) {
     parts.push({ type: "warning", messages: warnings });

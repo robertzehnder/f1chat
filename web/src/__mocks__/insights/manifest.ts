@@ -35,6 +35,7 @@ import { m19 } from "./m19-donut";
 import { m20 } from "./m20-cross-cat-composite";
 import { m21 } from "./m21-no-data-refusal";
 import { m22 } from "./m22-pit-cycle-event";
+import { m24 } from "./m24-racing-state-layer";
 
 /** Status: `implemented` ships in /mock; `follow_up` is enumerated
  *  but not rendered (M07 + M23 — Decision 2 in source-of-truth). */
@@ -283,6 +284,16 @@ export const INSIGHT_FIXTURES: ReadonlyArray<InsightFixtureManifestEntry> = [
     status: "implemented",
     benchmarkQids: [2061, 2062, 2063, 2067],
     mock: m22
+  },
+  {
+    id: "m24",
+    title: "Racing-state layer — SC/red/VSC periods + sector yellows on a position trace",
+    chartType: "position_changes",
+    renderer: "PositionChangesChart + racing-state-layer",
+    sourceExport: "racingStateLayerMock",
+    status: "implemented",
+    benchmarkQids: [],
+    mock: m24
   },
   {
     id: "m23",

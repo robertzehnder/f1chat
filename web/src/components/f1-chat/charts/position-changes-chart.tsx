@@ -17,6 +17,7 @@ import {
   makeGapAwareDot,
   renderCautionBands,
 } from "./line-hardening"
+import { RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
 
 /** Position changes: every driver's position per lap, grid (lap 0) to
  *  flag. Inverted y (P1 on top); unclassified cars' lines stop at their
@@ -34,6 +35,8 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
     return point
   })
   const maxPos = Math.max(...series.flatMap((s) => s.values).filter((v) => Number.isFinite(v)), 10)
+  const rs = chart.racing_state
+  const recordAvailable = rs?.source === "available" || rs?.source === "incomplete"
 
   return (
     <div className="space-y-2">
@@ -65,8 +68,10 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
               labelStyle={{ color: "hsl(var(--foreground))" }}
               itemStyle={{ color: "hsl(var(--muted-foreground))" }}
             />
-            {/* Caution shading + pit markers (single-driver progression). */}
-            {renderCautionBands(chart.caution_bands)}
+            {/* Racing-state record (SC/VSC/red + sector yellows) when attached;
+                legacy track_flag bands only for sessions without the layer. */}
+            {renderRacingStateLayer(recordAvailable ? rs : undefined, maxLen - 1)}
+            {recordAvailable ? null : renderCautionBands(chart.caution_bands)}
             {chart.stint_boundaries?.map((boundary, idx) => (
               <ReferenceLine
                 key={`pit-${idx}`}
@@ -116,7 +121,7 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
           </RechartsLineChart>
         </ResponsiveContainer>
       </div>
-      <ChartNote note={chart.chart_note} />
+      <ChartNote note={mergeChartNotes(chart.chart_note, racingStateNotes(rs))} />
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
         {series.map((s) => (
           <span
@@ -128,6 +133,7 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
             {s.name}
           </span>
         ))}
+        <RacingStateLegend state={recordAvailable ? rs : undefined} />
       </div>
     </div>
   )

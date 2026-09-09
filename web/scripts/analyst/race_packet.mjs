@@ -50,7 +50,28 @@ if (!lapEnds.has(totalLaps)) manifest.flags.push("final lap end unknown (no lap 
 const rcRows = await q("race_control", `SELECT date, lap_number, category, flag, scope, sector, driver_number, message FROM raw.race_control WHERE session_key = $1 ORDER BY date, id`, [sessionKey]);
 const events = rcRows.map((r, i) => parseEvent(r, i));
 const { links, unresolved } = linkEvents(events);
-const { intervals, announcements } = racingIntervals(events, lapEnds);
+const { intervals: jsIntervals, announcements } = racingIntervals(events, lapEnds);
+// Racing-state periods come from analytics.racing_state_intervals (migration
+// 062) — the same record the product's chart layer and the interruptions card
+// read — so the article and the platform cannot disagree about a caution.
+// The JS builder (which 062 was derived from) is kept as a PARITY CHECK: any
+// divergence on (kind, start_lap, end_lap, endpoint_inferred) fails the packet
+// unless --allow-parity-mismatch is passed (and is recorded in the manifest).
+const viewRows = await q("racing_state_intervals", `SELECT interval_no, kind, start_ts, end_ts, start_lap, end_lap, endpoint_inferred, opened_by_message, closed_by_message FROM analytics.racing_state_intervals WHERE session_key = $1 ORDER BY start_ts, interval_no`, [sessionKey]);
+const eventAt = (ts, message) => events.find((e) => T(e.issued_at) === T(ts) && e.message === message) ?? events.find((e) => T(e.issued_at) === T(ts));
+const intervals = viewRows.map((r) => {
+  const opened = eventAt(r.start_ts, r.opened_by_message);
+  const closed = r.closed_by_message ? eventAt(r.end_ts, r.closed_by_message) : null;
+  return { kind: r.kind, start: new Date(r.start_ts).toISOString(), start_lap: r.start_lap, opened_by: opened?.id ?? null,
+    end: r.end_ts ? new Date(r.end_ts).toISOString() : null, end_lap: r.end_lap, closed_by: closed?.id ?? null, closed_by_message: r.closed_by_message ?? null,
+    endpoint_inferred: r.endpoint_inferred ?? null, source: "analytics.racing_state_intervals" };
+});
+const sig = (list) => list.map((iv) => `${iv.kind}:${iv.start_lap}-${iv.end_lap ?? "open"}:${iv.endpoint_inferred ?? "exact"}`).join(" | ");
+if (sig(intervals) !== sig(jsIntervals)) {
+  const msg = `racing-state PARITY MISMATCH — view: [${sig(intervals)}] vs js: [${sig(jsIntervals)}]`;
+  manifest.flags.push(msg);
+  if (!process.argv.includes("--allow-parity-mismatch")) { console.error(msg); process.exit(3); }
+} else manifest.flags.push(`racing-state parity OK (${intervals.length} periods; view == js builder)`);
 for (const iv of intervals) if (iv.endpoint_inferred) manifest.flags.push(`${iv.kind} interval from L${iv.start_lap}: endpoint_inferred=${iv.endpoint_inferred}`);
 
 // ---- stints & stops

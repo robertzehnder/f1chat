@@ -8,6 +8,7 @@ import {
 import { validateColumnExistence } from "@/lib/sqlValidation/columnExistenceCheck";
 import { validateJoinPatterns } from "@/lib/sqlValidation/joinPatternsCheck";
 import { extractSessionKeyLiterals } from "@/lib/sqlValidation/sessionKeyExtraction";
+import { attachRacingStateToPayload } from "@/lib/racingState/server";
 import { getSchemaCatalog } from "@/lib/schemaCatalog";
 import { buildHeuristicSql, runReadOnlySql } from "@/lib/queries";
 import { warmPool } from "@/lib/db";
@@ -416,6 +417,7 @@ export async function POST(request: Request): Promise<Response> {
       emitStage: () => {},
       emitInsight: () => {}
     }, sessionUserId);
+    await attachRacingStateIfSuccessful(outcome);
     await persistTurnIfRequested(parsedBody, outcome, sessionUserId);
     return NextResponse.json(outcome.payload, { status: outcome.status });
   }
@@ -438,6 +440,7 @@ export async function POST(request: Request): Promise<Response> {
         if (outcome.asError) {
           writeFrame("error", outcome.asError);
         } else {
+          await attachRacingStateIfSuccessful(outcome);
           await persistTurnIfRequested(parsedBody, outcome, sessionUserId);
           writeFrame("final", outcome.payload);
         }
@@ -452,6 +455,19 @@ export async function POST(request: Request): Promise<Response> {
     }
   });
   return new Response(stream, { headers: SSE_RESPONSE_HEADERS });
+}
+
+/** Racing-state layer (visuals plan S1.1): one chokepoint for both the SSE
+ *  and JSON paths, after the outcome exists and before it is persisted, so
+ *  a restored conversation replays the same layer. Never fails the turn. */
+async function attachRacingStateIfSuccessful(outcome: RouteOutcome): Promise<void> {
+  if (outcome.asError || outcome.status !== 200) return;
+  try {
+    await attachRacingStateToPayload(outcome.payload);
+  } catch {
+    // the loader already degrades to source="failed"; a thrown error here
+    // would only mean the payload shape was unexpected — leave it untouched.
+  }
 }
 
 async function runChatRoute(parsedBody: ChatBody | null, ctx: RouteCtx, sessionUserId: string): Promise<RouteOutcome> {

@@ -224,7 +224,17 @@ export interface ChartSpec {
   // Lap-axis charts (line_with_stint_markers, position_changes): shaded
   // x-ranges for caution periods derived from per-lap track_flag values.
   // Inclusive lap bounds; label like "SC" / "VSC" / "Yellow".
+  // LEGACY (2026-09-09): superseded by `racing_state` whenever the layer is
+  // attached — track_flag cannot see VSCs (their race-control rows carry no
+  // flag) and collapses sector yellows. Kept for sessions without the layer.
   caution_bands?: Array<{ from: number; to: number; label?: string }>;
+
+  /** Racing-state layer (visuals plan S1.1, 2026-09-09): SC / VSC / red
+   *  periods from analytics.racing_state_intervals (migration 062) plus
+   *  sector-yellow OBSERVATIONS from raw.race_control. Attached server-side
+   *  for the resolved race session and drawn by every lap-axis renderer
+   *  with one shared visual grammar (charts/racing-state-layer.tsx). */
+  racing_state?: RacingStateLayer;
 
   // One-line honesty caption rendered subdued under the chart — e.g.
   // "7 pit/outlier laps hidden" or "data covers 16 of 52 laps". Set by
@@ -235,6 +245,56 @@ export interface ChartSpec {
   // track_heatmap — explicit legend so BOTH compared drivers show even when one
   // wins zero segments (deriving the legend from segment leaders drops them).
   dominance_legend?: Array<{ name: string; color: string; count: number }>;
+}
+
+// ---------------------------------------------------------------------------
+// Racing-state layer (SC / VSC / red-flag periods + sector-yellow observations)
+// ---------------------------------------------------------------------------
+
+export type RacingStateKind = "sc" | "vsc" | "red";
+
+/** One row of analytics.racing_state_intervals, kept whole — lap bounds AND
+ *  timestamps AND closure provenance — so renderers can show sequence
+ *  (SC → red → SC inside two laps) instead of a merged band. `to_lap` null =
+ *  never closed before the chequered flag. */
+export interface RacingStatePeriod {
+  kind: RacingStateKind;
+  start_ts: string;
+  end_ts: string | null;
+  from_lap: number;
+  to_lap: number | null;
+  /** NULL when an explicit closing message exists; otherwise the 062 code
+   *  (ending_lap_end / resumption_state_msg / lights_on_lap_end / …). */
+  endpoint_inferred: string | null;
+  opened_by: string | null;
+  closed_by: string | null;
+}
+
+/** A yellow-flag MESSAGE for one sector on one lap. An observation, not an
+ *  interval: it says a yellow was issued, nothing about how long it stood. */
+export interface SectorFlagObservation {
+  lap: number;
+  sector: number;
+  level: "yellow" | "double_yellow";
+  issued_at: string;
+}
+
+/** available: race-control feed present, periods (possibly none) exact.
+ *  incomplete: periods present but at least one end is inferred, or the
+ *  feed has no CHEQUERED message. absent: no race-control rows for the
+ *  session (nothing can be said; renderers fall back to the heuristic
+ *  overlay, labelled as such). failed: the load errored. */
+export type RacingStateSource = "available" | "incomplete" | "absent" | "failed";
+
+export interface RacingStateLayer {
+  source: RacingStateSource;
+  session_key: number | null;
+  periods: RacingStatePeriod[];
+  sector_flags: SectorFlagObservation[];
+  /** One line per caveat, rendered under the chart ("VSC end inferred at end
+   *  of lap 29 (feed has no VSC ENDED message)"). Empty when nothing to say. */
+  notes: string[];
+  total_laps?: number | null;
 }
 
 export interface Metric {
@@ -328,6 +388,9 @@ export interface DraftInsight extends Omit<InsightMock, "title"> {
   reasoning?: string;
   /** True while the SSE stream is still open. Drives the "Working…" UI. */
   streaming?: boolean;
+  /** Racing-state layer delivered by the server for the resolved race
+   *  session; folded onto `chart` when the chart is lap-axis. */
+  racingState?: RacingStateLayer;
   /** Stage-by-stage activity (synthetic during stream, real after final). */
   activity?: import("@/lib/activityLog").ActivityEvent[];
 }

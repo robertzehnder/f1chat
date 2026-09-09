@@ -272,8 +272,8 @@
     },
     "session_interruptions": {
       "class": "gated",
-      "truthTier": "data-backed",
-      "note": "SC/VSC/red periods from analytics.racing_state_intervals; states a queried absence via sentinel row; inferred endpoints flagged (G3 honesty fix)"
+      "truthTier": "hard-truth",
+      "note": "SC/VSC/red periods from analytics.racing_state_intervals; states a queried absence via sentinel row; inferred endpoints flagged (G3 honesty fix) \u2014 hard-truth: the view is the record; a queried absence is stated via the sentinel row, never inferred"
     }
   },
   "detectors": {
@@ -642,6 +642,18 @@
     "core.telemetry_lap_bridge_mat [heap]": {
       "class": "gated",
       "note": "heap _mat table \u2014 refresh via per-session delete+insert WITH dedup"
+    },
+    "analytics.fantasy_points_ledger_data [matview]": {
+      "class": "gated",
+      "note": "true matview (migration 060) \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY"
+    },
+    "analytics.race_control_incidents_data_v2 [matview]": {
+      "class": "gated",
+      "note": "true matview (migration 062 widened incidents; facade analytics.race_control_incidents points here) \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY"
+    },
+    "analytics.racing_state_intervals_data [matview]": {
+      "class": "hard-truth",
+      "note": "SC/VSC/red periods per session (migration 062); the record behind the interruptions card AND the chart racing-state layer (src/lib/racingState) \u2014 refresh via REFRESH MATERIALIZED VIEW CONCURRENTLY"
     }
   },
   "clientFetchEdges": {

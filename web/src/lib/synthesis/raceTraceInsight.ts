@@ -46,6 +46,47 @@ type DriverTrace = {
 
 export type RaceTraceInsightResult = { answer: string; insight: InsightFields };
 
+/** The lap-time heuristic's own wording, exported so the racing-state
+ *  attach step (src/lib/racingState/server.ts) can replace it with the
+ *  race-control record when the layer is available — the chart then draws
+ *  the record and the prose must not keep calling it a guess. */
+export const HEURISTIC_SC_SENTENCE_RE =
+  / Shaded bands mark \d+ neutralized windows? where the field compressed \(inferred from synchronized lap-time spikes, not official race control data\)\./;
+export const HEURISTIC_SC_TAKEAWAY_RE =
+  /^(Neutralized .* \(detected from synchronized lap-time spikes\)|No SC\/VSC neutralization detected from lap times)$/;
+export const HEURISTIC_SC_METRIC_LABEL = "SC/VSC windows";
+
+type RacingStateLike = {
+  source: string;
+  periods: Array<{ kind: "sc" | "vsc" | "red"; from_lap: number; to_lap: number | null }>;
+};
+
+/** Record-based replacements for the heuristic sentence / metric / takeaway. */
+export function describeRacingStateForTrace(layer: RacingStateLike): {
+  sentence: string;
+  metric: { label: string; value: string; context?: string };
+  takeaway: string;
+} {
+  const label = (p: RacingStateLike["periods"][number]): string => {
+    const kind = p.kind === "red" ? "red flag" : p.kind.toUpperCase();
+    const laps = p.to_lap == null ? `from lap ${p.from_lap}` : p.to_lap === p.from_lap ? `lap ${p.from_lap}` : `laps ${p.from_lap}–${p.to_lap}`;
+    return `${kind} ${laps}`;
+  };
+  const list = layer.periods.map(label).join(", ");
+  if (!layer.periods.length) {
+    return {
+      sentence: " Race control recorded no safety car, virtual safety car or red flag.",
+      metric: { label: "Cautions (race control)", value: "0", context: "none recorded" },
+      takeaway: "No SC / VSC / red-flag period in the race-control record"
+    };
+  }
+  return {
+    sentence: ` Shaded bands mark the race-control record: ${list}.`,
+    metric: { label: "Cautions (race control)", value: String(layer.periods.length), context: list },
+    takeaway: `Race control: ${list}`
+  };
+}
+
 export function buildRaceTraceInsight(rows: Row[] | undefined): RaceTraceInsightResult | null {
   if (!rows || rows.length === 0) return null;
   if (!("gap_to_leader_s" in rows[0]) || !("analysis_kind" in rows[0])) return null;
