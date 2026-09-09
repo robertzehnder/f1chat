@@ -13,30 +13,35 @@ figure slot-bound and verified, and the existing `monza-2026` post untouched.
 - No changes to the racing-state layer, the chat route, migrations, lockfiles, or deploy.
 - No LLM-judge or human style-approval loop in-gate; `style_lint.mjs` is the deterministic bar.
 
-## State after T2 (merged 9488392)
-The full `analyst/2026_1293_gpt6/` package exists and the whole toml gate is green: report.md is
-931 body words; three figures — `early_lead_exchange` (laps 11–24), `unequal_recoveries`
-(laps 27–53, the hero), `mclaren_finish` (laps 43–53) — all `race_trace` pair-gap charts built
-from `packet.pair_gaps` with full lap bindings, racing-state windows, and slot-bound text;
-`recipes.mjs` uses no `derive` slots and no `const` slots at all (the derive-literal hole is moot);
-the post builds, three PNGs are exported, and `/blog/monza-2026-gpt6` is in the blog store.
-Thesis (divergent recoveries from a shared lap-28 VSC stop, Verstappen as the parallel control) is
-genuinely distinct from the original post's cheap-stop counterfactual; reviewer spot-checked the
-packet paths behind every headline number.
+## State after T5 (merged b7ceb97)
+The package is complete and the accepted T2 defect is closed. Verified in the merged tree:
+- `race-trace-chart.tsx` now renders `horizontal_marker` when present as a dashed
+  `<ReferenceLine y={value}>` with an `insideBottomRight` label at font 9, a verbatim mirror of the
+  `line-with-stint-markers.tsx` block (the label position also dodges the reversed Y axis). It is a
+  purely additive conditional: absent marker → nothing rendered, so `monza-2026`'s `gap_trace` and
+  `charge` are unchanged by construction. T2's `isAnimationActive={false}` and the frozen
+  racing-state layer are untouched.
+- `race-trace-export.test.ts` asserts, per gpt6 figure, exactly one ReferenceLine at y=0 carrying
+  "Level at the line", plus a dedicated absence case on `analyst/2026_1293/figures/gap_trace.json`
+  (zero ReferenceLines). All pre-existing assertions intact.
+- All six PNGs (public + analyst figures dir) were re-exported; the reviewer opened each and
+  confirmed the labelled zero line with traces crossing it, matching the alt texts. Diff was
+  exactly the eight permitted files; protected paths clean.
+- **QA recorded "blocked" on T5 as well as T2** — no browser verification has run in this entire
+  project. T3 is that verification and is mandatory, not a formality.
+- **Out-of-scope observation from the T5 merge**: the bare figure route renders the article-title
+  header ("Antonelli's Monza recovery…") on every exported figure/PNG — pre-existing export-route
+  behavior, present before this run and presumably on the `monza-2026` exports too. T3 records
+  this as an observation in qa.md (it is not a defect introduced by this run and not a T3 failure);
+  whether to change the export route is a decision for a future run.
 
-Two facts from the merge that the remaining work must absorb:
-1. **Shared-code change shipped in T2**: `race-trace-chart.tsx` now sets `isAnimationActive=false`
-   (PNG exports could otherwise freeze mid-animation with partially drawn traces), guarded by
-   `web/scripts/tests/race-trace-export.test.ts`, which inspects the renderer's element tree
-   against the three merged figure JSONs. This also affects the live chat UI (benignly).
-2. **Accepted defect, now closed by T5**: all three figures declare
-   `horizontal_marker: {value: 0, label: "Level at the line"}` and the verifier passed it, but
-   `RaceTraceChart` ignores `horizontal_marker` entirely (unlike `line_with_stint_markers.tsx:179`,
-   which renders it as a ReferenceLine). Two of the three alt texts describe curves "crossing the
-   level line" — a visual element the published PNGs do not contain. That fails honesty-over-polish,
-   and a gap chart whose story is zero-crossings genuinely needs its zero line. T5 renders it and
-   re-exports the three PNGs; the figure JSONs, blog JSON, and sidecar are already correct and do
-   not change.
+State after T2 (merged 9488392), still accurate: report.md is 931 body words; three figures —
+`early_lead_exchange` (laps 11–24), `unequal_recoveries` (laps 27–53, the hero), `mclaren_finish`
+(laps 43–53) — all `race_trace` pair-gap charts from `packet.pair_gaps` with full lap bindings,
+racing-state windows, and slot-bound text; `recipes.mjs` uses no `derive`-literal or `const` slots;
+the post builds, three PNGs export, `/blog/monza-2026-gpt6` is in the blog store. Thesis (divergent
+recoveries from a shared lap-28 VSC stop, Verstappen as the parallel control) is genuinely distinct
+from the original post; the reviewer spot-checked the packet paths behind every headline number.
 
 ## Architecture (all existing, boring, file-backed)
 ```
@@ -51,8 +56,8 @@ export_figures.mjs --slug monza-2026-gpt6 --base http://localhost:3101
                                           ▶ web/public/blog/monza-2026-gpt6/*.png
 ```
 The blog store is file-backed; the bare figure route `/blog/<slug>/figure/<name>` drives PNG export.
-`build_post.mjs` copies `chart` wholesale into the blog JSON, so the already-declared
-`horizontal_marker` reaches the renderer without any rebuild — T5 is renderer + PNG re-export only.
+`build_post.mjs` copies `chart` wholesale into the blog JSON, which is why T5 needed no rebuild —
+renderer + PNG re-export only, exactly as merged.
 
 ## Gate reality (resolved)
 The committed `orchestra.toml` gate is authoritative and green end-to-end: typecheck, racing-state
@@ -62,7 +67,7 @@ restore around `--meeting 2026_1293 --verify`), `brief-bounds` (900–1400 words
 have added already runs in the toml gate. `npm audit` lives only in the planner gate block; any
 failure there is pre-existing and is waived by the human, never "fixed" by a task.
 
-### Verifier contract as merged (T1 — unchanged; recipes were reviewed against it)
+### Verifier contract as merged (T1 — unchanged)
 `figures.mjs` loads `analyst/<meeting>/recipes.mjs` (default export `(ctx) => map`) and verifies
 external figures in strict mode: exactly one `series_sources` entry per series index;
 `packet_path_template` sources bind each displayed lap to its packet row via `lap_path_template`;
@@ -74,20 +79,21 @@ declared `racing_state_window`; gantt and position_changes projection rules as s
 Deterministic writes keep `git status` clean on re-runs, which `monza-figures` → `gpt6-post` rely on.
 
 ## Renderer reality (verified in web/src/components/f1-chat/charts/)
-- `race-trace-chart.tsx`: no `horizontal_marker` handling (T5 adds it, mirroring
-  `line-with-stint-markers.tsx:179-186`); `isAnimationActive=false` since T2.
+- `race-trace-chart.tsx`: renders `horizontal_marker` since T5 (mirroring
+  `line-with-stint-markers.tsx:179-186`); `isAnimationActive=false` since T2; both changes pinned
+  by `web/scripts/tests/race-trace-export.test.ts`.
 - `line-with-stint-markers.tsx` renders `horizontal_marker` as a labelled ReferenceLine —
   the existing post's `closing_rate` proves it in production.
 - `stint_gantt` renders with HTML/CSS divs, no SVG; `position_changes` labels laps by array index.
 - The merged gpt6 post contains **only race_trace figures**, so T3's per-renderer split is:
-  SVG data-mark assertions for all three new figures; the gantt assertion applies only to the
-  `monza-2026` regression check (`strategy_split`).
-- `chart-types.ts:210` already types `horizontal_marker` on line charts; the chat-side detector at
-  `mapInsight/detectors/registry.ts:1859` also emits one, so T5's rendering is additive for chat too.
+  SVG data-mark assertions (including the zero ReferenceLine) for all three new figures; the gantt
+  assertion applies only to the `monza-2026` regression check (`strategy_split`).
+- `chart-types.ts:210` types `horizontal_marker` on line charts; the chat-side detector at
+  `mapInsight/detectors/registry.ts:1859` also emits one, so T5's rendering was additive for chat too.
 
 ## Data model (unchanged; source of truth is the verifying code)
-Figure JSON, sidecar, and post-meta shapes as in v5. The merged sidecar and figure JSONs verified
-under those rules and are frozen unless a task explicitly reruns the pipeline.
+Figure JSON, sidecar, and post-meta shapes as in v5. The merged sidecar, figure JSONs, and blog
+JSON verified under those rules and are frozen; no remaining task regenerates any of them.
 
 ## Stack
 Unchanged: Node 20 ESM scripts, Next.js 15 + Recharts, Playwright (installed) for PNG export,
@@ -96,29 +102,29 @@ Unchanged: Node 20 ESM scripts, Next.js 15 + Recharts, Playwright (installed) fo
 ## Milestones
 1. **T1** — recipe loader + strict provenance mode + deterministic writes + tests. **DONE** (a682103).
 2. **T2** — the full `analyst/2026_1293_gpt6/` package, pipeline end-to-end, PNGs exported.
-   **DONE** (9488392): 931 words, 3 race_trace figures, distinct thesis, all gate steps green;
-   shipped the race-trace animation fix + element-tree test as a justified shared-code change.
-3. **T5** — render the declared `horizontal_marker` in `RaceTraceChart` (the accepted T2 defect):
-   ReferenceLine + label when present, extend the element-tree test, re-export the three gpt6 PNGs.
-   Small, sanctioned by the brief's "renderer feature only if a figure genuinely needs it".
-4. **T3** — per-renderer browser QA + PNG visual inspection + regression on `/blog/monza-2026`;
-   runs after T5 so QA sees (and asserts) the zero line in the final published state.
+   **DONE** (9488392).
+3. **T5** — render the declared `horizontal_marker` in `RaceTraceChart`, extend the element-tree
+   test, re-export the three gpt6 PNGs. **DONE** (b7ceb97): additive conditional + absence-case
+   test; reviewer visually confirmed the zero line on all three PNGs; diff exactly the eight
+   permitted files.
+4. **T3** — per-renderer browser QA + PNG visual inspection + regression on `/blog/monza-2026`.
+   The last open task; the only step that has ever exercised a real browser in this run.
 
 ## Risks
-- **T5 touches a live chat-UI component.** Scope is one additive conditional (render a declared
-  optional field the type system already carries); the element-tree test pins it, and T3 regression
-  checks `/blog/monza-2026` (whose race_trace figures declare no marker, so they must not change).
-- **PNG re-export churn**: T5 rewrites three PNGs in two places (public + analyst figures dir);
-  byte diffs are expected and confined to the gpt6 slug. `monza-2026` assets must stay untouched —
-  export runs only with `--slug monza-2026-gpt6`.
+- **QA has never run.** Both T2 and T5 recorded QA "blocked"; every browser-level claim so far is
+  from element-tree tests and manual PNG opens. T3 is the substantive check — especially the
+  `monza-2026` regression, since `race-trace-chart.tsx` changed twice this run (T2 animation,
+  T5 marker) and the old post's `gap_trace`/`charge` must show no stray reference line.
 - **Port 3101 contention** between a task dev server and the orchestrator QA server; `parallel = 1`
   mitigates, `--base`/export accept any port.
-- QA on T2 recorded status "blocked" — browser verification has not actually run yet; T3 is that
-  verification and stays mandatory, not a formality.
+- The figure-header observation (article title on bare figure routes) could tempt T3 into an
+  out-of-scope "fix"; T3 is instructed to record it, not change the export route.
 
 ## Open questions for the human
-- None blocking. `npm audit` (critical-only, prod deps) still lives only in the planner gate block;
-  if it ever flags a pre-existing advisory, waive it — dependency work belongs to a separate run.
+- None blocking. Two notes: (1) `npm audit` lives only in the planner gate block; if it flags a
+  pre-existing advisory, waive it — dependency work belongs to a separate run. (2) The bare figure
+  route stamps the article title on every exported figure (pre-existing, affects both posts'
+  PNGs); say the word if you want a future run to slim the export route — it is out of scope here.
 
 ## Plan history
 - v1 (2026-09-09): initial plan. Recipe loader → atomic authoring → browser QA.
@@ -131,11 +137,12 @@ Unchanged: Node 20 ESM scripts, Next.js 15 + Recharts, Playwright (installed) fo
   binding (`lap_path_template`/`lap_paths`); unresolved paths are failures; new fixtures.
 - v5 (2026-09-09): replan after T1. Merged verifier contract folded into T2; human adopted the
   planner gate into orchestra.toml at 7dfaa01, so T4 dropped as redundant; T2 depends only on T1.
-- v6 (2026-09-09): replan after T2 merged (9488392). Package verified in the repo: 931 words,
-  3 race_trace figures, distinct thesis. Two absorptions: T2's shared-code animation fix noted as
-  shipped; the reviewer-accepted defect — `horizontal_marker` declared by all three figures (and
-  described by two alt texts) but silently dropped by RaceTraceChart — promoted to new task T5
-  (render it, extend the element-tree test, re-export gpt6 PNGs) because it violates
-  honesty-over-polish on published figures. T3 re-pinned to the actual merged figure set (all
-  race_trace; gantt assertion only for the monza-2026 regression; zero-line assertions added) and
-  now depends on T5. T4 remains dropped.
+- v6 (2026-09-09): replan after T2 merged (9488392). T2's shared-code animation fix noted as
+  shipped; the accepted `horizontal_marker` defect promoted to T5; T3 re-pinned to the merged
+  all-race_trace figure set and made dependent on T5.
+- v7 (2026-09-09): replan after T5 merged (b7ceb97). Merge verified against the task spec:
+  additive ReferenceLine mirror of line-with-stint-markers, per-figure + absence-case tests, six
+  PNGs refreshed, exactly the eight permitted files in the diff. T3 unchanged in substance — its
+  zero-line assertions now check merged reality — with two additions: QA "blocked" on T5 as well
+  (T3 remains the first real browser run), and the merge's out-of-scope observation (article-title
+  header on bare figure routes, pre-existing) is recorded in qa.md as an observation, not fixed.

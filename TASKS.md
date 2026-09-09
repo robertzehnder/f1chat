@@ -1,6 +1,6 @@
-# Tasks (plan v3 · second opinion: off)
+# Tasks (plan v4 · second opinion: off)
 
-A second, independently-authored Monza 2026 article (GPT-6 Astra) is now merged and live at /blog/monza-2026-gpt6: 931 words, 3 verified race_trace figures, full pipeline green. Replan v6 adds one small follow-up (T5: render the declared zero-line horizontal_marker in RaceTraceChart — all three figures declare it and two alt texts describe it, but the renderer drops it) and re-pins browser QA (T3) to the actual merged figure set before it runs last.
+A second, independent GPT-6-authored Monza 2026 article is live in the repo at analyst/2026_1293_gpt6/ and published to /blog/monza-2026-gpt6; T5 just merged the missing zero-line rendering in RaceTraceChart and re-exported the three PNGs, verified in the merge diff. Only T3 remains: real-browser QA of both blog posts (the zero line included), which no task has actually run yet — QA recorded "blocked" on both T2 and T5.
 
 ## Gate
 
@@ -8,7 +8,7 @@ A second, independently-authored Monza 2026 article (GPT-6 Astra) is now merged 
 - `racing-state`: `cd web && npx tsx --test scripts/tests/racing-state.test.ts`
 - `adapter`: `cd web && npm run test:adapter`
 - `figures-recipes-test`: `cd web && { [ ! -f scripts/tests/figures-recipes.test.mjs ] || node --test scripts/tests/figures-recipes.test.mjs; }`
-- `race-trace-export-test`: `cd web && { [ ! -f scripts/tests/race-trace-export.test.ts ] || npx tsx --test scripts/tests/race-trace-export.test.ts; }`
+- `race-trace-export-test`: `cd web && npx tsx --test scripts/tests/race-trace-export.test.ts`
 - `monza-figures`: `tmp=$(mktemp -d) || exit 1; cp -R analyst/2026_1293/figures "$tmp/fig" || { rm -rf "$tmp"; exit 1; }; trap 'rm -rf analyst/2026_1293/figures; mv "$tmp/fig" analyst/2026_1293/figures; rm -rf "$tmp"' EXIT; (cd web && node scripts/analyst/figures.mjs --meeting 2026_1293 --verify)`
 - `brief-bounds`: `d=analyst/2026_1293_gpt6; [ ! -d "$d" ] && exit 0; w=$(sed 1d "$d/report.md" | wc -w); { [ "$w" -ge 900 ] && [ "$w" -le 1400 ]; } || { echo "report.md is $w words (brief: 900-1400)"; exit 1; }; n=$(ls "$d"/figures/*.json 2>/dev/null | wc -l); { [ "$n" -ge 3 ] && [ "$n" -le 5 ]; } || { echo "$n compiled figures (brief: 3-5)"; exit 1; }`
 - `gpt6-post`: `bash scripts/gate_gpt6_post.sh`
@@ -33,17 +33,13 @@ A second, independently-authored Monza 2026 article (GPT-6 Astra) is now merged 
     - AC: report.md argues its own thesis (notes.md names it, its packet paths, and a per-material-causal-claim self-review) and shares no paragraph with `analyst/2026_1293/report.md`
     - AC: The full toml gate sequence passes in the worktree; `git status --porcelain -- analyst/2026_1293` is empty after the pipeline runs
 - [ ] **T3** Browser QA of /blog/monza-2026-gpt6 with per-renderer assertions and PNG inspection — _pending_ (after T2, T5) `ui` `frontend` `tests` `docs`
-    - AC: `analyst/2026_1293_gpt6/qa.md` exists, lists checks 1–5 each with URL, assertion, and PASS (or defect + fix), and contains one visual-inspection line per exported PNG including lap-range, racing-state, and zero-line observations
+    - AC: `analyst/2026_1293_gpt6/qa.md` exists, lists checks 1–5 each with URL, assertion, and PASS (or defect + fix), and contains one visual-inspection line per exported PNG including lap-range, racing-state, and zero-line observations (and a note of the pre-existing title header, recorded not fixed)
     - AC: Page HTML of `/blog/monza-2026-gpt6` contains zero `{{fig:` literals; wrapper count equals placeholder count; each of the three race_trace figures shows >0 data marks, x-ticks spanning its declared lap window, and the labelled zero ReferenceLine; no unsupported/no-data fallback text anywhere
     - AC: All three figures render at their bare figure routes under the same assertions, and each PNG is served 200/image/png at >10 KB AND visually shows plotted data with racing-state shading and the zero line
     - AC: `/blog` lists both posts; `/blog/monza-2026` passes the per-renderer assertions for its four figures (strategy_split asserted as a gantt, not as SVG; gap_trace/charge show no stray reference line); `git diff main` remains clean for all Do-not-touch paths
     - AC: `bash scripts/gate_gpt6_post.sh` and the full toml gate sequence still pass in the worktree; no throwaway QA scripts or screenshots are committed
-- [ ] **T4** Harden scripts/gate_gpt6_post.sh to the brief (bounds, figure count, recipes test, env guard) — _obsolete_ (after T1) **[needs human]** `tooling` `tests` `security`
-    - AC: `bash scripts/gate_gpt6_post.sh` exits 0 in this task's worktree (gpt6 dir absent): hygiene section runs the figures-recipes test and the env guard, then the script prints the skip message and exits 0
-    - AC: With a synthetic `analyst/2026_1293_gpt6/` fixture (created temporarily during development only, deleted before finishing): an 899- or 1401-word report.md fails with the 900–1400 message; 2 or 6 figure JSONs fail with the 3–5 message
-    - AC: Running the full toml gate sequence in order in the worktree passes, and `git status --porcelain -- analyst/2026_1293` is empty after the monza-figures step
-    - AC: A worktree diff containing a `.env` path (simulated during development only) is rejected by the env guard; a clean diff passes
-    - AC: `git diff main` at task end touches only `scripts/gate_gpt6_post.sh`; typecheck and the test suite still pass
+- [ ] **T4** Harden scripts/gate_gpt6_post.sh to the brief (bounds, figure count, recipes test, env guard) — _pending_ (after T1) **[needs human]** `tooling` `tests` `security`
+    - AC: Not applicable — superseded by the committed orchestra.toml gate.
 - [x] **T5** Render horizontal_marker in RaceTraceChart and re-export the gpt6 PNGs — _done_ (after T2) `frontend` `ui` `tests`
     - AC: `git diff main --name-only` contains exactly: `web/src/components/f1-chat/charts/race-trace-chart.tsx`, `web/scripts/tests/race-trace-export.test.ts`, the three PNGs under `web/public/blog/monza-2026-gpt6/`, and the three PNGs under `analyst/2026_1293_gpt6/figures/` — no JSON, no other source files
     - AC: `cd web && npx tsx --test scripts/tests/race-trace-export.test.ts` passes: all pre-existing assertions plus, per gpt6 figure, exactly one ReferenceLine at y=0 carrying the label "Level at the line" from the figure JSON, and zero ReferenceLine elements for `analyst/2026_1293/figures/gap_trace.json`
