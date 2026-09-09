@@ -1,0 +1,41 @@
+{
+  "_comment": "Bluesky curated list (free public API). Find handles with `node scripts/reporting/bsky_poll.mjs --search \"name\"`. roles: reporter | analyst | outlet.",
+  "accounts": [
+    {
+      "handle": "wearetherace.bsky.social",
+      "role": "outlet",
+      "name": "The Race"
+    },
+    {
+      "handle": "autosport.bsky.social",
+      "role": "outlet",
+      "name": "Autosport.com"
+    },
+    {
+      "handle": "chrismedlandf1.bsky.social",
+      "role": "reporter",
+      "name": "Chris Medland"
+    },
+    {
+      "handle": "eddstrawf1.bsky.social",
+      "role": "reporter",
+      "name": "Edd Straw"
+    },
+    {
+      "handle": "scottmitchellmalm.bsky.social",
+      "role": "reporter",
+      "name": "Scott Mitchell-Malm"
+    },
+    {
+      "handle": "noblef1.bsky.social",
+      "role": "reporter",
+      "name": "Jon Noble"
+    },
+    {
+      "handle": "f1oversteer.com",
+      "role": "outlet",
+      "note": "found via actor search — confirm relevance",
+      "enabled": false
+    }
+  ]
+}

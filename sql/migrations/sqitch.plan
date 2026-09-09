@@ -63,3 +63,4 @@
 060_fantasy_projection [059_fantasy_feed_snapshots] 2026-08-26T19:44:13Z System Administrator <root@Roberts-MacBook-Pro.local> # fantasy R3/R6 — stored per-gameday projections
 061_analyst_corpus [060_fantasy_projection] 2026-09-07T02:00:00Z System Administrator <root@Roberts-MacBook-Pro.local> # analyst-corpus G1 — rights registry + provenance document store
 062_racing_state_and_incident_honesty [061_analyst_corpus] 2026-09-08T18:00:00Z System Administrator <root@Roberts-MacBook-Pro.local> # analyst probe honesty — racing-state intervals (SC/VSC/red) + widened race_control_incidents
+063_reporting_sources [062_racing_state_and_incident_honesty] 2026-09-09T22:00:00Z System Administrator <root@Roberts-MacBook-Pro.local> # reporting layer — X / Bluesky / FIA document sources + the 'reporting' purpose

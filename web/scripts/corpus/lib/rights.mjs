@@ -13,7 +13,7 @@
  */
 
 export const USES = ["store_full_text", "llm_process"];
-export const PURPOSES = ["style_research", "eval_reference", "question_mining", "format_study"];
+export const PURPOSES = ["style_research", "eval_reference", "question_mining", "format_study", "reporting"];
 
 export class RightsError extends Error {
   constructor(message) {

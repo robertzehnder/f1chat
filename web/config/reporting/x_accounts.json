@@ -1,0 +1,175 @@
+{
+ "_comment": "Lean X list (owner decision 2026-09-09): reporters and analysts only — no official F1/FIA/team accounts (their content arrives via FIA documents and press releases) and no drivers. Seed handles are UNVERIFIED until `x_poll.mjs --resolve` fills id/name; delete any whose resolved name is not the person intended. roles: reporter | analyst | outlet.",
+ "accounts": [
+  {
+   "handle": "ChrisMedlandF1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "16681420",
+   "name": "Chris Medland",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "adamcooperF1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "71370894",
+   "name": "Adam Cooper",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "NobleF1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "53047484",
+   "name": "Jon Noble",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "SMitchellF1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "38485549",
+   "name": "Scott Mitchell-Malm",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "eddstrawF1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "31401945",
+   "name": "Edd Straw",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "LawroBarretto",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "73395319",
+   "name": "Lawrence Barretto",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "LukeSmithF1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "102076372",
+   "name": "Luke Smith",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "andrewbensonf1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "58444150",
+   "name": "Andrew Benson",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "SportmphMark",
+   "role": "analyst",
+   "note": "seed — verify",
+   "id": "1622716321",
+   "name": "Mark Hughes",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "JoshSuttill",
+   "role": "reporter",
+   "note": "handle not found on X — replace",
+   "enabled": false
+  },
+  {
+   "handle": "alexkalinauckas",
+   "role": "reporter",
+   "note": "handle not found on X — replace",
+   "enabled": false
+  },
+  {
+   "handle": "ErikvHaren",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "190632194",
+   "name": "Erik van Haren",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "AlbertFabrega",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "134733894",
+   "name": "Albert Fabrega",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "laurenceedmondson",
+   "role": "reporter",
+   "note": "invalid handle length — replace",
+   "enabled": false
+  },
+  {
+   "handle": "ianparkesf1",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "56061098",
+   "name": "Ian Parkes",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "JennieGow",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "86740435",
+   "name": "Jennie Gow",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "tedkravitz",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "21710527",
+   "name": "Ted Kravitz",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "karunchandhok",
+   "role": "analyst",
+   "note": "seed — verify",
+   "id": "45578562",
+   "name": "Karun Chandhok",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "JolyonPalmer",
+   "role": "analyst",
+   "note": "seed — verify",
+   "id": "594802359",
+   "name": "Jolyon Palmer",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "ScarbsTech",
+   "role": "analyst",
+   "note": "seed — verify",
+   "id": "80324287",
+   "name": "Craig Scarborough",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "RonaldVording",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "831236353585246210",
+   "name": "Ronald Vording",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  },
+  {
+   "handle": "RachelBrookesTV",
+   "role": "reporter",
+   "note": "seed — verify",
+   "id": "19267015",
+   "name": "Rachel Brookes",
+   "resolved_at": "2026-09-09T19:33:43.732Z"
+  }
+ ]
+}

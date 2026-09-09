@@ -10,7 +10,7 @@
    "material": false,
    "text": "the first Italian to win at Monza since Ludovico Scarfiotti in 1966",
    "refs": [
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
+    "reporting:article:d6f0a32151",
     "packet:results.0"
    ],
    "values": [
@@ -23,7 +23,7 @@
    "material": false,
    "text": "His seventh victory of the season",
    "refs": [
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
+    "reporting:article:d6f0a32151",
     "packet:results.0"
    ]
   },
@@ -58,7 +58,7 @@
    "material": false,
    "text": "Antonelli called it",
    "refs": [
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG"
+    "reporting:article:d6f0a32151"
    ]
   },
   {
@@ -73,7 +73,7 @@
     "packet:position_trace.ANT.47.lap_s",
     "packet:pair_gaps.0.laps.39.gap",
     "packet:pair_gaps.0.laps.47.gap",
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3"
+    "reporting:article:7446643512"
    ],
    "confidence": "medium",
    "review": {
@@ -98,7 +98,7 @@
    "material": false,
    "text": "an engine-change penalty",
    "refs": [
-    "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2",
+    "reporting:article:fdf74d8787",
     "packet:grid_penalties.0"
    ]
   },
@@ -121,8 +121,8 @@
    "material": false,
    "text": "Charles Leclerc crashed at the final corner",
    "refs": [
-    "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2",
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
+    "reporting:article:fdf74d8787",
+    "reporting:article:7446643512",
     "packet:results.21"
    ]
   },
@@ -163,7 +163,7 @@
    "material": false,
    "text": "Mercedes doubted his mediums would last the distance",
    "refs": [
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
+    "reporting:article:7446643512",
     "packet:stints"
    ]
   },
@@ -227,7 +227,7 @@
    "refs": [
     "packet:results.19",
     "packet:timeline.intervals.3",
-    "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2"
+    "reporting:article:fdf74d8787"
    ]
   },
   {
@@ -282,7 +282,7 @@
    "material": false,
    "text": "Russell later said he had expected both Mercedes to stay out",
    "refs": [
-    "attributed:Formula1.com (rus) https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C"
+    "reporting:article:3e742530c5"
    ]
   },
   {
@@ -291,8 +291,8 @@
    "material": false,
    "text": "the better option had been far from obvious at the time",
    "refs": [
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
-    "attributed:Formula1.com (rus) https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C"
+    "reporting:article:7446643512",
+    "reporting:article:3e742530c5"
    ]
   },
   {
@@ -327,7 +327,7 @@
    "material": false,
    "text": "front-tyre vibrations reported by Mercedes",
    "refs": [
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
+    "reporting:article:7446643512",
     "packet:position_trace.RUS.47.age"
    ]
   },
@@ -356,7 +356,7 @@
    "material": false,
    "text": "Antonelli admitted afterwards",
    "refs": [
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG"
+    "reporting:article:d6f0a32151"
    ]
   },
   {
@@ -382,8 +382,8 @@
    "material": false,
    "text": "passed on the run to Ascari",
    "refs": [
-    "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2",
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
+    "reporting:article:fdf74d8787",
+    "reporting:article:d6f0a32151",
     "moment:m_lead_50"
    ]
   },
@@ -491,7 +491,7 @@
    "material": false,
    "text": "a moment on the grass for Norris",
    "refs": [
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
+    "reporting:article:7446643512",
     "packet:position_trace.NOR.47.position",
     "packet:position_trace.NOR.48.position"
    ]
@@ -504,7 +504,7 @@
    "refs": [
     "packet:timeline.events.28",
     "packet:timeline.events.64",
-    "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2"
+    "reporting:article:fdf74d8787"
    ]
   },
   {
@@ -539,7 +539,7 @@
    "material": false,
    "text": "described the result as best of the rest",
    "refs": [
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3"
+    "reporting:article:7446643512"
    ]
   },
   {
@@ -697,10 +697,10 @@
    "material": false,
    "text": "all driver and team remarks come from Formula1.com’s linked reporting",
    "refs": [
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
-    "attributed:Formula1.com (rus) https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C",
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
-    "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2",
+    "reporting:article:d6f0a32151",
+    "reporting:article:3e742530c5",
+    "reporting:article:7446643512",
+    "reporting:article:fdf74d8787",
     "packet:manifest.not_available"
    ]
   }
@@ -728,7 +728,7 @@
    "reason": "pass on lap 50; the corner (run to Ascari) is attributed and linked to Formula1.com because overtake corners are not in the packet",
    "refs": [
     "moment:m_lead_50",
-    "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2"
+    "reporting:article:fdf74d8787"
    ]
   },
   "C4": {
@@ -775,9 +775,9 @@
    "reason": "race-control record described in ordinary language (no verbatim log quotes in the narrative, per the editorial brief); driver and team remarks are attributed to Formula1.com reporting, not the warehouse",
    "refs": [
     "packet:timeline.events",
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
-    "attributed:Formula1.com (rus) https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C",
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3"
+    "reporting:article:d6f0a32151",
+    "reporting:article:3e742530c5",
+    "reporting:article:7446643512"
    ]
   },
   "C10": {

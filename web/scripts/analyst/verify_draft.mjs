@@ -14,8 +14,9 @@
  * Usage: node scripts/analyst/verify_draft.mjs --dir ../analyst/2026_1293
  *   expects: packet.json, report.md, sidecar.json
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { checkAttributions } from "../reporting/lib/verify_attribution.mjs";
 
 const dir = process.argv.find((a, i) => process.argv[i - 1] === "--dir");
 const packet = JSON.parse(readFileSync(resolve(dir, "packet.json"), "utf8"));
@@ -56,11 +57,21 @@ for (const c of sidecar.claims ?? []) {
   for (const r of c.refs ?? []) {
     if (r.startsWith("moment:")) { if (!momentIds.has(r.slice(7))) { bad(`claim ${c.id}: unknown moment ${r}`); refBad++; } }
     else if (r.startsWith("packet:")) { if (getPath(r.slice(7)) === undefined) { bad(`claim ${c.id}: packet path not found ${r}`); refBad++; } }
+    else if (r.startsWith("reporting:")) { /* checked against reporting.json in 2b */ }
     else if (!r.startsWith("attributed:")) { bad(`claim ${c.id}: malformed ref ${r}`); refBad++; }
   }
   if (!(c.refs ?? []).length) { bad(`claim ${c.id}: no refs`); refBad++; }
 }
 if (!refBad) ok(`all sidecar references resolve (${(sidecar.claims ?? []).length} claims)`);
+
+// ---- 2b. attributions must cite reporting.json entries; body links must be registered sources
+{
+  const rp = resolve(dir, "reporting.json");
+  const reporting = existsSync(rp) ? JSON.parse(readFileSync(rp, "utf8")) : null;
+  const r = checkAttributions({ claims: sidecar.claims ?? [], reporting, body });
+  r.fails.forEach(bad); r.warns.forEach(warn);
+  if (reporting && !r.fails.length) ok(`attributions and source links resolve to reporting.json (${reporting.entries.length} entries)`);
+}
 
 // ---- 3. causal language without a sidecar entry
 const CAUSAL = /\b(because|since|due to|thanks to|handed|gave|allowed|cost (?:him|her|them)|proved decisive|turned the race|undone by|as a result|led to|meant that|so that|which is why|decided (?:the|it))\b/i;
