@@ -1,0 +1,77 @@
+# orchestra configuration for this project — see README.md for every key and its default.
+#
+# Layers (later wins): built-in defaults < ~/.orchestra/config.toml (global) < this file
+#   < orchestra.local.toml (machine-local, git-ignored) < --profile < --set key=value
+# Keep this file to what is specific to the project. Set models, tiers, and pricing ONCE globally:
+#   orchestra config set --global codex.model=gpt-6-astra claude.model=fable
+# and check the effective result with `orchestra config`. Anything set here shadows the global value.
+
+[project]
+brief = "BRIEF.md"          # the app brief the planner reads
+main_branch = "main"
+instructions = "AGENTS.md"  # single source; CLAUDE.md mirrors it
+branch_prefix = "task/"     # task branches are <prefix><id>-<slug>
+
+# [[project.endpoints]]      # quick-access URLs in the UI / `orchestra endpoints`; QA url is added automatically
+# name = "Web app"
+# url = "http://127.0.0.1:4317/"
+# kind = "app"
+# serve = "npm run dev -- --port 4317"
+
+[defaults]
+profile = "balanced"        # economy | balanced | max | [profiles.<yours>]; per run: --profile / ORCHESTRA_PROFILE
+
+[gate]
+# Leave empty to use the gate the planner defines; set to override, e.g.
+# setup = ["npm ci"]
+# commands = [ {name = "test", cmd = "npm test"}, {name = "lint", cmd = "npm run lint"}, {name = "security", cmd = "npm audit --audit-level=high"} ]
+
+# ---- project-specific overrides (uncomment what this project needs) ----
+# [claude]                  # architect / planner / reviewer
+# model = "fable"
+# plan_effort = "high"
+# review_effort = "medium"
+#
+# [codex]                   # implementer
+# model = ""                # "" = ~/.codex/config.toml default
+# reasoning_effort = "medium"
+# network_access = true
+#
+# [loop]
+# parallel = 2
+# max_fix_attempts = 3
+# max_review_rounds = 2
+# replan_after_merge = true
+#
+# [escalation]
+# auto_approve_plan = false
+#
+# [budget]                  # 0 = unlimited; per-task caps escalate, project caps stop dispatch
+# task_tokens_max = 0
+# project_cost_max_usd = 0.0
+# claude_calls_max = 0
+#
+# [router]
+# mode = "auto"             # auto (complexity + feedback) | fixed
+# downshift_at = 0.8        # past 80% of any project cap: route one tier lower, stop replans
+#
+# [router.tiers.light]
+# codex_model = "gpt-5.4-mini"
+#
+# [profiles.overnight]      # your own preset: orchestra --profile overnight run
+# _description = "big batch"
+# loop.parallel = 4
+# codex.reasoning_effort = "high"
+#
+# [qa]                      # browser QA role for UI-tagged tasks (Codex drives the running app)
+# enabled = true
+# serve = "npm run dev -- --port 4317"
+# url = "http://127.0.0.1:4317/"
+#
+# [plan]
+# prd = "auto"              # auto (greenfield only) | always | never
+# second_opinion = true     # Codex critiques Fable's plan draft until SHIP (max_rounds = 3)
+# second_opinion_on_replan = false
+#
+# [github]
+# use_prs = false           # mirror branches as PRs with gh

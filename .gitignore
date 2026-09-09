@@ -90,3 +90,10 @@ corpus/quarantine/*
 !corpus/quarantine/.gitkeep
 corpus/eval/blind/pairs/
 corpus/eval/blind/keys/
+.orchestra/worktrees/
+.orchestra/runs/
+.orchestra/state.json
+.orchestra/*.tmp
+.orchestra/heartbeat.json
+.orchestra/*.log
+orchestra.local.toml

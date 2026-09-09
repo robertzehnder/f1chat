@@ -41,3 +41,14 @@ file directly.
 - No restated context, no narration of what you're about to do.
 - Cite file:line and command exit codes; skip prose explanations of obvious
   passes.
+
+## Orchestra runs
+
+When work is dispatched by `orchestra` (see `orchestra.toml`, `PLAN.md`, `TASKS.md`):
+
+- Claude plans and reviews; Codex implements one task per worktree on its own branch. The
+  orchestrator commits and merges under each agent's identity, so agents do not commit, branch, or merge.
+- Do not edit `PLAN.md`, `TASKS.md`, `BRIEF.md`, or anything under `.orchestra/`; the planner owns them.
+- The verification gate is the `[gate]` block in `orchestra.toml` (or the planner's); run it before finishing.
+- Tasks touching auth, secrets, infrastructure, CI, or destructive data operations pause for human
+  approval before merge. Everything above in this file still applies.
