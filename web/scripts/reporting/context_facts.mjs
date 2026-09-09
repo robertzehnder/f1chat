@@ -106,7 +106,7 @@ if (process.argv[1]?.endsWith("context_facts.mjs")) {
   // 1. same nationality at this circuit
   const circuitWinners = await jall(`/circuits/${circuitId}/results/1.json`, { ttlDays: 30 }, (d) => d.RaceTable.Races.map(winnerRow));
   const circuitName = meetingName.replace(/ Grand Prix$/, "");
-  const prevNat = lastSameNationality(circuitWinners.rows, nationality, year);
+  const prevNat = lastSameNationality(circuitWinners.rows, nationality, year, -Infinity, driverId);
   fact("nationality_circuit", "history",
     prevNat ? `${name} is the first ${nationality} driver to win the ${meetingName} since ${prevNat.givenName} ${prevNat.familyName} in ${prevNat.season}.` : `${name} is the first ${nationality} driver to win the ${meetingName}.`,
     { nationality, previous_season: prevNat?.season ?? null, previous_winner: prevNat ? `${prevNat.givenName} ${prevNat.familyName}` : null, circuit: circuitName },
@@ -127,16 +127,24 @@ if (process.argv[1]?.endsWith("context_facts.mjs")) {
   const careerUpto = career.rows.filter((r) => r.season < year || (r.season === year && r.round <= round)).length;
   fact("career_wins", "career", `It was the ${ordinal(careerUpto)} grand prix win of ${name}'s career.`, { career_wins: careerUpto }, [], career.urls);
 
-  // 4. grid position context
-  const lowerAll = winnersFromLowerGrid(allWinners.rows.filter((w) => w.grid > 0), grid);
+  // 4. grid position context (only interesting from outside the top three); pole facts otherwise
+  if (grid === 1) {
+    const poleWinsHere = circuitWinners.rows.filter((w) => w.grid === 1 && w.season < year);
+    const recent = circuitWinners.rows.filter((w) => w.season < year).slice(-10);
+    fact("pole_to_win", "history",
+      `${name} won from pole; ${poleWinsHere.length} of the ${circuitWinners.rows.filter((w) => w.season < year).length} previous ${meetingName} winners on record started from pole, ${recent.filter((w) => w.grid === 1).length} of the last ${recent.length}.`,
+      { pole_wins_at_circuit: poleWinsHere.length, previous_races: circuitWinners.rows.filter((w) => w.season < year).length, pole_wins_last_ten: recent.filter((w) => w.grid === 1).length, last_ten: recent.length },
+      recent.map((w) => ({ season: w.season, winner: w.familyName, grid: w.grid })), circuitWinners.urls);
+  }
+  const lowerAll = grid > 3 ? winnersFromLowerGrid(allWinners.rows.filter((w) => w.grid > 0), grid) : [];
   const lowerHere = winnersFromLowerGrid(circuitWinners.rows.filter((w) => w.grid > 0 && w.season < year), grid);
-  fact("grid_win_history", "history",
+  if (grid > 3) fact("grid_win_history", "history",
     lowerAll.length === 0 ? `No driver has won a grand prix from lower on the grid than ${ordinal(grid)}.`
       : `${lowerAll.length === 1 ? "Only one driver has" : `${lowerAll.length} drivers have`} won a grand prix from lower on the grid than ${ordinal(grid)}: ${lowerAll.slice(0, 3).map((w) => `${w.familyName} from ${ordinal(w.grid)} at the ${w.season} ${w.raceName}`).join("; ")}.`,
     { grid, lower_all_time: lowerAll.length, lower_at_circuit: lowerHere.length, lowest_grid_winner: lowerAll[0] ? { name: `${lowerAll[0].givenName} ${lowerAll[0].familyName}`, grid: lowerAll[0].grid, season: lowerAll[0].season, race: lowerAll[0].raceName } : null },
     lowerAll.slice(0, 5), allWinners.urls.slice(0, 1));
   const bestHere = circuitWinners.rows.filter((w) => w.grid > 0 && w.season < year).sort((a, b) => b.grid - a.grid)[0];
-  if (bestHere) fact("grid_win_circuit", "history",
+  if (bestHere && grid > 3) fact("grid_win_circuit", "history",
     lowerHere.length ? `${lowerHere.length} previous ${meetingName} winner(s) started lower than ${ordinal(grid)}.` : `No previous ${meetingName} winner had started lower than ${ordinal(bestHere.grid)} (${bestHere.familyName}, ${bestHere.season}); ${name} won from ${ordinal(grid)}.`,
     { grid, previous_lowest_grid: bestHere.grid, previous_lowest_winner: `${bestHere.givenName} ${bestHere.familyName}`, previous_lowest_season: bestHere.season }, [bestHere], circuitWinners.urls);
 
@@ -151,6 +159,14 @@ if (process.argv[1]?.endsWith("context_facts.mjs")) {
       { constructor: constructorName, previous_one_two_season: prev?.season ?? null }, prev ? [prev] : [], [...circuitWinners.urls, ...seconds.urls]);
   }
 
+  // 5b. season shape: back-to-back wins, drivers with multiple wins, the winner's own standing
+  const prevRound = season.rows.find((r) => r.round === round - 1);
+  if (prevRound && prevRound.code === winnerAcr) fact("back_to_back", "season", `${name} won the previous round too, the ${prevRound.raceName}, making it back-to-back wins.`, { previous_round: round - 1, previous_race: prevRound.raceName }, [prevRound], season.urls);
+  const winCounts = {};
+  for (const r of season.rows.filter((r) => r.round <= round)) winCounts[r.code ?? r.driverId] = (winCounts[r.code ?? r.driverId] ?? 0) + 1;
+  const multi = Object.entries(winCounts).filter(([, n]) => n >= 2).map(([code, n]) => ({ code, wins: n }));
+  fact("season_winners", "season", `After round ${round}, ${Object.keys(winCounts).length} different drivers have won in ${year}; with multiple wins: ${multi.map((m) => `${m.code} (${m.wins})`).join(", ")}.`, { distinct_winners: Object.keys(winCounts).length, multiple_winners: multi }, multi, season.urls);
+
   // 6. standings after this round (cross-check against the packet)
   const st = await jget(`/${year}/${round}/driverStandings.json`, { ttlDays: 1 });
   const list = st.data.StandingsTable.StandingsLists[0]?.DriverStandings ?? [];
@@ -158,9 +174,10 @@ if (process.argv[1]?.endsWith("context_facts.mjs")) {
     const lead = list[0], second = list[1];
     const gap = Number(lead.points) - Number(second.points);
     const packetLead = packet.standings_after?.[0];
+    const mine = list.find((s) => s.Driver.code === winnerAcr);
     fact("standings_after", "season",
-      `After round ${round} ${lead.Driver.givenName} ${lead.Driver.familyName} leads the championship on ${lead.points} points, ${gap} clear of ${second.Driver.givenName} ${second.Driver.familyName}.`,
-      { leader: lead.Driver.code, points: Number(lead.points), gap_to_second: gap, second: second.Driver.code, packet_agrees: packetLead ? Number(packetLead.after) === Number(lead.points) : null },
+      `After round ${round} ${lead.Driver.givenName} ${lead.Driver.familyName} leads the championship on ${lead.points} points, ${gap} clear of ${second.Driver.givenName} ${second.Driver.familyName}${mine && mine.Driver.code !== lead.Driver.code ? `; ${name} is ${ordinal(Number(mine.position))} on ${mine.points}, ${Number(lead.points) - Number(mine.points)} behind` : ""}.`,
+      { leader: lead.Driver.code, points: Number(lead.points), gap_to_second: gap, second: second.Driver.code, winner_position: mine ? Number(mine.position) : null, winner_points: mine ? Number(mine.points) : null, winner_gap_to_leader: mine ? Number(lead.points) - Number(mine.points) : null, packet_agrees: packetLead ? Number(packetLead.after) === Number(lead.points) : null },
       list.slice(0, 3).map((s) => ({ code: s.Driver.code, points: Number(s.points), wins: Number(s.wins) })), [st.url]);
   }
 

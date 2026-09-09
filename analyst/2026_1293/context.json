@@ -48,7 +48,7 @@
    "sources": [
     "https://api.jolpi.ca/ergast/f1/circuits/monza/results/1.json?limit=100&offset=0"
    ],
-   "computed_at": "2026-09-09T19:57:46.838Z"
+   "computed_at": "2026-09-09T20:48:01.162Z"
   },
   {
    "id": "nationality_any",
@@ -78,7 +78,7 @@
    "sources": [
     "https://api.jolpi.ca/ergast/f1/results/1.json?limit=100&offset=0"
    ],
-   "computed_at": "2026-09-09T19:57:46.844Z"
+   "computed_at": "2026-09-09T20:48:01.170Z"
   },
   {
    "id": "season_wins",
@@ -121,7 +121,7 @@
    "sources": [
     "https://api.jolpi.ca/ergast/f1/2026/results/1.json?limit=100&offset=0"
    ],
-   "computed_at": "2026-09-09T19:57:46.844Z"
+   "computed_at": "2026-09-09T20:48:01.170Z"
   },
   {
    "id": "career_wins",
@@ -134,7 +134,7 @@
    "sources": [
     "https://api.jolpi.ca/ergast/f1/drivers/antonelli/results/1.json?limit=100&offset=0"
    ],
-   "computed_at": "2026-09-09T19:57:46.844Z"
+   "computed_at": "2026-09-09T20:48:01.170Z"
   },
   {
    "id": "grid_win_history",
@@ -170,7 +170,7 @@
    "sources": [
     "https://api.jolpi.ca/ergast/f1/results/1.json?limit=100&offset=0"
    ],
-   "computed_at": "2026-09-09T19:57:46.844Z"
+   "computed_at": "2026-09-09T20:48:01.170Z"
   },
   {
    "id": "grid_win_circuit",
@@ -201,7 +201,7 @@
    "sources": [
     "https://api.jolpi.ca/ergast/f1/circuits/monza/results/1.json?limit=100&offset=0"
    ],
-   "computed_at": "2026-09-09T19:57:46.844Z"
+   "computed_at": "2026-09-09T20:48:01.170Z"
   },
   {
    "id": "team_one_two_circuit",
@@ -222,7 +222,47 @@
     "https://api.jolpi.ca/ergast/f1/circuits/monza/results/1.json?limit=100&offset=0",
     "https://api.jolpi.ca/ergast/f1/circuits/monza/results/2.json?limit=100&offset=0"
    ],
-   "computed_at": "2026-09-09T19:57:46.845Z"
+   "computed_at": "2026-09-09T20:48:01.171Z"
+  },
+  {
+   "id": "season_winners",
+   "kind": "season",
+   "statement": "After round 13, 5 different drivers have won in 2026; with multiple wins: RUS (2), ANT (7), NOR (2).",
+   "values": {
+    "distinct_winners": 5,
+    "multiple_winners": [
+     {
+      "code": "RUS",
+      "wins": 2
+     },
+     {
+      "code": "ANT",
+      "wins": 7
+     },
+     {
+      "code": "NOR",
+      "wins": 2
+     }
+    ]
+   },
+   "evidence": [
+    {
+     "code": "RUS",
+     "wins": 2
+    },
+    {
+     "code": "ANT",
+     "wins": 7
+    },
+    {
+     "code": "NOR",
+     "wins": 2
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/2026/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:01.172Z"
   },
   {
    "id": "standings_after",
@@ -233,6 +273,9 @@
     "points": 267,
     "gap_to_second": 66,
     "second": "RUS",
+    "winner_position": 1,
+    "winner_points": 267,
+    "winner_gap_to_leader": 0,
     "packet_agrees": true
    },
    "evidence": [
@@ -255,7 +298,7 @@
    "sources": [
     "https://api.jolpi.ca/ergast/f1/2026/13/driverStandings.json"
    ],
-   "computed_at": "2026-09-09T19:57:46.845Z"
+   "computed_at": "2026-09-09T20:48:01.172Z"
   }
  ]
 }
