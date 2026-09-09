@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceArea,
+  ReferenceLine,
   ReferenceDot
 } from "recharts"
 import type { ChartSpec } from "@/lib/chart-types"
@@ -21,6 +22,7 @@ import { LANE_TOP, RacingStateLegend, mergeChartNotes, racingStateNotes, renderA
  * stops are dots on each trace.
  */
 export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
+  const { horizontal_marker } = chart
   const series = chart.series ?? []
   if (series.length === 0) return null
   const maxLen = Math.max(...series.map((s) => s.values.length))
@@ -116,6 +118,19 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
               labelStyle={{ color: "hsl(var(--foreground))" }}
               itemStyle={{ color: "hsl(var(--muted-foreground))" }}
             />
+            {horizontal_marker && (
+              <ReferenceLine
+                y={horizontal_marker.value}
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="3 3"
+                label={{
+                  value: horizontal_marker.label,
+                  position: "insideBottomRight",
+                  fill: "hsl(var(--muted-foreground))",
+                  fontSize: 9
+                }}
+              />
+            )}
             {renderRacingStateLayer(recordAvailable ? rs : undefined, lastLap, firstLap)}
             {renderAnnotations(chart.annotations, lastLap, firstLap)}
             {bands.map(([a, b], i) => (

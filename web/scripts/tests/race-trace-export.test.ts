@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import * as React from 'react'
 import { isValidElement, type ReactNode } from 'react'
-import { Line, LineChart } from 'recharts'
+import { Line, LineChart, ReferenceLine } from 'recharts'
 import { RaceTraceChart } from '../../src/components/f1-chat/charts/race-trace-chart'
 import type { ChartSpec } from '../../src/lib/chart-types'
 
@@ -44,6 +44,13 @@ for (const [name, expected] of Object.entries(terminalValues)) {
       `../../../analyst/2026_1293_gpt6/figures/${name}.json`, import.meta.url), 'utf8'))
     const chart = figure.chart as ChartSpec
     const tree = elements(RaceTraceChart({ chart }))
+    const markers = tree.filter(element => element.type === ReferenceLine)
+    assert.ok(chart.horizontal_marker)
+    assert.equal(chart.horizontal_marker.value, 0)
+    assert.equal(chart.horizontal_marker.label, 'Level at the line')
+    assert.equal(markers.length, 1)
+    assert.equal(markers[0].props.y, chart.horizontal_marker.value)
+    assert.equal(markers[0].props.label.value, chart.horizontal_marker.label)
     const lines = tree.filter(element => element.type === Line)
     const plot = tree.find(element => element.type === LineChart)
     assert.ok(plot)
@@ -58,3 +65,12 @@ for (const [name, expected] of Object.entries(terminalValues)) {
     })
   })
 }
+
+test('gap_trace: no reference line renders when horizontal_marker is absent', () => {
+  const figure = JSON.parse(readFileSync(new URL(
+    '../../../analyst/2026_1293/figures/gap_trace.json', import.meta.url), 'utf8'))
+  const chart = figure.chart as ChartSpec
+  assert.equal(chart.horizontal_marker, undefined)
+  const tree = elements(RaceTraceChart({ chart }))
+  assert.equal(tree.filter(element => element.type === ReferenceLine).length, 0)
+})
