@@ -1,0 +1,780 @@
+{
+ "name": "gap_trace",
+ "meeting": "2026_1292",
+ "chart": {
+  "type": "race_trace",
+  "x_label": "Lap",
+  "y_label": "Antonelli's gap to Norris (s)",
+  "y_value_format": "decimal_seconds",
+  "series": [
+   {
+    "name": "Antonelli behind Norris",
+    "color": "#27F4D2",
+    "values": [
+     3.401,
+     2.765,
+     -1.003,
+     -0.715,
+     -0.995,
+     -0.898,
+     -1.075,
+     -1.203,
+     -1.622,
+     -1.751,
+     -1.633,
+     -1.922,
+     -2.185,
+     -1.769,
+     -1.95,
+     -1.926,
+     -2.033,
+     -2.301,
+     -2.297,
+     -1.447,
+     -1.684,
+     -1.578,
+     -1.561,
+     -1.66,
+     -1.359,
+     -1.016,
+     -1,
+     -0.68,
+     -0.9,
+     -0.985,
+     -1.054,
+     -1.234,
+     -0.994,
+     -1.571,
+     -1.002,
+     -1.103,
+     -0.706,
+     1.689,
+     17.861,
+     17.06,
+     null,
+     15.666,
+     15.193,
+     14.193,
+     10.852,
+     -4.975,
+     -3.297,
+     -1.699,
+     -0.454,
+     -0.302,
+     -0.172,
+     1.248,
+     1.386,
+     4.211,
+     12.573,
+     12.555,
+     12.365,
+     12.43,
+     12.453,
+     12.478,
+     12.498,
+     12.476,
+     12.028,
+     11.139,
+     11.495,
+     11.525,
+     11.617,
+     11.112,
+     10.83,
+     11.523
+    ],
+    "point_quality": [
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "missing",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed"
+    ]
+   }
+  ],
+  "lap_numbers": [
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49,
+   50,
+   51,
+   52,
+   53,
+   54,
+   55,
+   56,
+   57,
+   58,
+   59,
+   60,
+   61,
+   62,
+   63,
+   64,
+   65,
+   66,
+   67,
+   68,
+   69,
+   70,
+   71,
+   72
+  ],
+  "y_domain": [
+   -8,
+   20
+  ],
+  "trace_pit_dots": [
+   {
+    "x": 21,
+    "y": -2.297,
+    "color": "#27F4D2",
+    "driver": "Antonelli",
+    "label": "stop"
+   },
+   {
+    "x": 40,
+    "y": 1.689,
+    "color": "#27F4D2",
+    "driver": "Antonelli",
+    "label": "stop"
+   },
+   {
+    "x": 56,
+    "y": 4.211,
+    "color": "#27F4D2",
+    "driver": "Antonelli",
+    "label": "stop · VSC"
+   }
+  ],
+  "annotations": [
+   {
+    "lap": 47,
+    "text": "Norris stops L47",
+    "kind": "note"
+   },
+   {
+    "lap": 54,
+    "text": "Norris leads",
+    "kind": "pass"
+   }
+  ],
+  "racing_state": {
+   "source": "incomplete",
+   "session_key": "11353",
+   "periods": [
+    {
+     "kind": "red",
+     "start_ts": "2026-08-23T13:05:28.000Z",
+     "end_ts": "2026-08-23T13:28:11.000Z",
+     "from_lap": 2,
+     "to_lap": 3,
+     "endpoint_inferred": "resumption_state_msg",
+     "opened_by": "rc98",
+     "closed_by": "rc130"
+    },
+    {
+     "kind": "sc",
+     "start_ts": "2026-08-23T13:28:11.000Z",
+     "end_ts": "2026-08-23T13:35:18.052Z",
+     "from_lap": 3,
+     "to_lap": 3,
+     "endpoint_inferred": "lights_on_lap_end",
+     "opened_by": "rc130",
+     "closed_by": null
+    },
+    {
+     "kind": "vsc",
+     "start_ts": "2026-08-23T14:44:35.000Z",
+     "end_ts": "2026-08-23T14:48:52.000Z",
+     "from_lap": 55,
+     "to_lap": 57,
+     "endpoint_inferred": null,
+     "opened_by": "rc232",
+     "closed_by": "rc239"
+    },
+    {
+     "kind": "vsc",
+     "start_ts": "2026-08-23T15:04:22.000Z",
+     "end_ts": "2026-08-23T15:05:25.000Z",
+     "from_lap": 70,
+     "to_lap": 70,
+     "endpoint_inferred": null,
+     "opened_by": "rc288",
+     "closed_by": "rc297"
+    }
+   ],
+   "sector_flags": [
+    {
+     "lap": 3,
+     "sector": 6,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:22:26.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 7,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:10:50.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 10,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:08:53.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 11,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:21:35.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 14,
+     "level": "yellow",
+     "issued_at": "2026-08-23T13:08:18.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:11:12.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 17,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:11:12.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 18,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:08:01.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 13,
+     "level": "yellow",
+     "issued_at": "2026-08-23T13:35:29.000Z"
+    },
+    {
+     "lap": 5,
+     "sector": 3,
+     "level": "yellow",
+     "issued_at": "2026-08-23T13:39:47.000Z"
+    },
+    {
+     "lap": 54,
+     "sector": 5,
+     "level": "yellow",
+     "issued_at": "2026-08-23T14:44:04.000Z"
+    },
+    {
+     "lap": 55,
+     "sector": 4,
+     "level": "yellow",
+     "issued_at": "2026-08-23T14:44:55.000Z"
+    },
+    {
+     "lap": 55,
+     "sector": 5,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T14:44:51.000Z"
+    },
+    {
+     "lap": 70,
+     "sector": 7,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:04:45.000Z"
+    },
+    {
+     "lap": 70,
+     "sector": 8,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:05:03.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 5,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:12:50.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 6,
+     "level": "yellow",
+     "issued_at": "2026-08-23T15:20:40.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 7,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:39.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 11,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:29.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 15,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:16:24.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:08.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 17,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:08.000Z"
+    }
+   ],
+   "notes": [
+    "SC end placed at L3 end; end of the SC-in lap, no end message recorded"
+   ],
+   "total_laps": 72
+  },
+  "chart_note": "Gap = difference of the two cars' line-crossing times at the end of each lap; positive = Antonelli behind Norris, below the zero line = ahead. Final lap from lap start + lap time.",
+  "horizontal_marker": {
+   "value": 0,
+   "label": "level"
+  }
+ },
+ "caption": {
+  "template": "Antonelli's gap to Norris at the end of each lap, laps {from}–{to}. Antonelli led by {g39} s at lap {l39}; Norris stayed out until lap {nor_stop} and rejoined {g48} s behind at lap {l48}; by lap {l53} he was {g53} s behind, and he led from lap {pass_lap}. After the lap-{vsc_lap} VSC stops he was {g57} s clear by lap {l57}; the reconstructed final margin is {gfin} s.",
+  "slots": {
+   "from": {
+    "packet_path": "/pair_gaps/1/laps/2/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/1/laps/71/lap"
+   },
+   "l39": {
+    "packet_path": "/pair_gaps/1/laps/38/lap"
+   },
+   "g39": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      0,
+      "/pair_gaps/1/laps/38/gap"
+     ]
+    },
+    "format": "0.0"
+   },
+   "nor_stop": {
+    "packet_path": "/stops/52/lap"
+   },
+   "l48": {
+    "packet_path": "/pair_gaps/1/laps/47/lap"
+   },
+   "g48": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      0,
+      "/pair_gaps/1/laps/47/gap"
+     ]
+    },
+    "format": "0.0"
+   },
+   "l53": {
+    "packet_path": "/pair_gaps/1/laps/52/lap"
+   },
+   "g53": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      0,
+      "/pair_gaps/1/laps/52/gap"
+     ]
+    },
+    "format": "0.000"
+   },
+   "pass_lap": {
+    "packet_path": "/lead_changes/5/lap"
+   },
+   "vsc_lap": {
+    "packet_path": "/timeline/intervals/2/start_lap"
+   },
+   "l57": {
+    "packet_path": "/pair_gaps/1/laps/56/lap"
+   },
+   "g57": {
+    "packet_path": "/pair_gaps/1/laps/56/gap",
+    "format": "0.0"
+   },
+   "gfin": {
+    "packet_path": "/pair_gaps/1/laps/71/gap",
+    "format": "0.0"
+   }
+  },
+  "rendered": "Antonelli's gap to Norris at the end of each lap, laps 3–72. Antonelli led by 0.7 s at lap 39; Norris stayed out until lap 47 and rejoined 5.0 s behind at lap 48; by lap 53 he was 0.172 s behind, and he led from lap 54. After the lap-55 VSC stops he was 12.6 s clear by lap 57; the reconstructed final margin is 11.5 s."
+ },
+ "alt": {
+  "template": "Line chart of Antonelli's gap to Norris by lap from {from} to {to}: below zero while Antonelli leads, a jump after Norris's lap-{nor_stop} stop, a steady close to {g53} s by lap {l53}, then Norris ahead from lap {pass_lap} and clear after the lap-{vsc_lap} VSC.",
+  "slots": {
+   "from": {
+    "packet_path": "/pair_gaps/1/laps/2/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/1/laps/71/lap"
+   },
+   "l39": {
+    "packet_path": "/pair_gaps/1/laps/38/lap"
+   },
+   "g39": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      0,
+      "/pair_gaps/1/laps/38/gap"
+     ]
+    },
+    "format": "0.0"
+   },
+   "nor_stop": {
+    "packet_path": "/stops/52/lap"
+   },
+   "l48": {
+    "packet_path": "/pair_gaps/1/laps/47/lap"
+   },
+   "g48": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      0,
+      "/pair_gaps/1/laps/47/gap"
+     ]
+    },
+    "format": "0.0"
+   },
+   "l53": {
+    "packet_path": "/pair_gaps/1/laps/52/lap"
+   },
+   "g53": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      0,
+      "/pair_gaps/1/laps/52/gap"
+     ]
+    },
+    "format": "0.000"
+   },
+   "pass_lap": {
+    "packet_path": "/lead_changes/5/lap"
+   },
+   "vsc_lap": {
+    "packet_path": "/timeline/intervals/2/start_lap"
+   },
+   "l57": {
+    "packet_path": "/pair_gaps/1/laps/56/lap"
+   },
+   "g57": {
+    "packet_path": "/pair_gaps/1/laps/56/gap",
+    "format": "0.0"
+   },
+   "gfin": {
+    "packet_path": "/pair_gaps/1/laps/71/gap",
+    "format": "0.0"
+   }
+  },
+  "rendered": "Line chart of Antonelli's gap to Norris by lap from 3 to 72: below zero while Antonelli leads, a jump after Norris's lap-47 stop, a steady close to 0.172 s by lap 53, then Norris ahead from lap 54 and clear after the lap-55 VSC."
+ },
+ "series_sources": [
+  {
+   "series": 0,
+   "packet_path_template": "/pair_gaps/1/laps/{i}/gap",
+   "lap_path_template": "/pair_gaps/1/laps/{i}/lap",
+   "index_from": 2,
+   "laps": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72
+   ]
+  }
+ ],
+ "decoration_sources": {
+  "racing_state_window": [
+   3,
+   72
+  ],
+  "chart_note": {
+   "template": "Gap = difference of the two cars' line-crossing times at the end of each lap; positive = Antonelli behind Norris, below the zero line = ahead. Final lap from lap start + lap time.",
+   "slots": {},
+   "rendered": "Gap = difference of the two cars' line-crossing times at the end of each lap; positive = Antonelli behind Norris, below the zero line = ahead. Final lap from lap start + lap time."
+  },
+  "trace_pit_dots": [
+   {
+    "x": {
+     "packet_path": "/stops/31/lap"
+    },
+    "y": {
+     "packet_path": "/pair_gaps/1/laps/20/gap"
+    },
+    "label": {
+     "template": "stop",
+     "slots": {},
+     "rendered": "stop"
+    }
+   },
+   {
+    "x": {
+     "packet_path": "/stops/46/lap"
+    },
+    "y": {
+     "packet_path": "/pair_gaps/1/laps/39/gap"
+    },
+    "label": {
+     "template": "stop",
+     "slots": {},
+     "rendered": "stop"
+    }
+   },
+   {
+    "x": {
+     "packet_path": "/stops/63/lap"
+    },
+    "y": {
+     "packet_path": "/pair_gaps/1/laps/55/gap"
+    },
+    "label": {
+     "template": "stop · VSC",
+     "slots": {},
+     "rendered": "stop · VSC"
+    }
+   }
+  ],
+  "annotations": [
+   {
+    "lap": {
+     "packet_path": "/stops/52/lap"
+    },
+    "text": {
+     "template": "Norris stops L{lap}",
+     "slots": {
+      "lap": {
+       "packet_path": "/stops/52/lap"
+      }
+     },
+     "rendered": "Norris stops L47"
+    }
+   },
+   {
+    "lap": {
+     "packet_path": "/lead_changes/5/lap"
+    },
+    "text": {
+     "template": "Norris leads",
+     "slots": {},
+     "rendered": "Norris leads"
+    }
+   }
+  ],
+  "horizontal_marker": {
+   "value": 0,
+   "label": {
+    "template": "level",
+    "slots": {},
+    "rendered": "level"
+   }
+  }
+ },
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T20:45:47.963Z",
+  "session_key": "11353",
+  "built_at": "2026-09-09T20:54:02.594Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T20:54:02.595Z",
+  "ok": true,
+  "problems": []
+ }
+}

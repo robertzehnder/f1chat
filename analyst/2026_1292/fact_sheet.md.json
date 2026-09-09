@@ -1,0 +1,831 @@
+{
+ "meeting": "2026_1292",
+ "numbers": [
+  {
+   "id": "N1",
+   "value": 1,
+   "render": "1st",
+   "path": "results.0.position",
+   "meaning": "Norris finished 1st"
+  },
+  {
+   "id": "N2",
+   "value": 1,
+   "render": "1st",
+   "path": "results.0.grid",
+   "meaning": "Norris started 1st"
+  },
+  {
+   "id": "N3",
+   "value": 2,
+   "render": "2nd",
+   "path": "results.1.position",
+   "meaning": "Antonelli finished 2nd"
+  },
+  {
+   "id": "N4",
+   "value": 3,
+   "render": "3rd",
+   "path": "results.1.grid",
+   "meaning": "Antonelli started 3rd"
+  },
+  {
+   "id": "N5",
+   "value": 3,
+   "render": "3rd",
+   "path": "results.2.position",
+   "meaning": "Russell finished 3rd"
+  },
+  {
+   "id": "N6",
+   "value": 2,
+   "render": "2nd",
+   "path": "results.2.grid",
+   "meaning": "Russell started 2nd"
+  },
+  {
+   "id": "N7",
+   "value": 4,
+   "render": "4th",
+   "path": "results.3.position",
+   "meaning": "Hamilton finished 4th"
+  },
+  {
+   "id": "N8",
+   "value": 5,
+   "render": "5th",
+   "path": "results.3.grid",
+   "meaning": "Hamilton started 5th"
+  },
+  {
+   "id": "N9",
+   "value": 5,
+   "render": "5th",
+   "path": "results.4.position",
+   "meaning": "Leclerc finished 5th"
+  },
+  {
+   "id": "N10",
+   "value": 6,
+   "render": "6th",
+   "path": "results.4.grid",
+   "meaning": "Leclerc started 6th"
+  },
+  {
+   "id": "N11",
+   "value": 6,
+   "render": "6th",
+   "path": "results.5.position",
+   "meaning": "Piastri finished 6th"
+  },
+  {
+   "id": "N12",
+   "value": 4,
+   "render": "4th",
+   "path": "results.5.grid",
+   "meaning": "Piastri started 4th"
+  },
+  {
+   "id": "N13",
+   "value": 7,
+   "render": "7th",
+   "path": "results.6.position",
+   "meaning": "Lawson finished 7th"
+  },
+  {
+   "id": "N14",
+   "value": 8,
+   "render": "8th",
+   "path": "results.6.grid",
+   "meaning": "Lawson started 8th"
+  },
+  {
+   "id": "N15",
+   "value": 8,
+   "render": "8th",
+   "path": "results.7.position",
+   "meaning": "Hulkenberg finished 8th"
+  },
+  {
+   "id": "N16",
+   "value": 13,
+   "render": "13th",
+   "path": "results.7.grid",
+   "meaning": "Hulkenberg started 13th"
+  },
+  {
+   "id": "N17",
+   "value": 9,
+   "render": "9th",
+   "path": "results.8.position",
+   "meaning": "Alonso finished 9th"
+  },
+  {
+   "id": "N18",
+   "value": 18,
+   "render": "18th",
+   "path": "results.8.grid",
+   "meaning": "Alonso started 18th"
+  },
+  {
+   "id": "N19",
+   "value": 10,
+   "render": "10th",
+   "path": "results.9.position",
+   "meaning": "Gasly finished 10th"
+  },
+  {
+   "id": "N20",
+   "value": 11,
+   "render": "11th",
+   "path": "results.9.grid",
+   "meaning": "Gasly started 11th"
+  },
+  {
+   "id": "N21",
+   "value": 67,
+   "render": "67",
+   "path": "results.16.last_completed_lap",
+   "meaning": "Albon retired after lap 67 (DNF)"
+  },
+  {
+   "id": "N22",
+   "value": 62,
+   "render": "62",
+   "path": "results.17.last_completed_lap",
+   "meaning": "Bottas retired after lap 62 (DNF)"
+  },
+  {
+   "id": "N23",
+   "value": 53,
+   "render": "53",
+   "path": "results.18.last_completed_lap",
+   "meaning": "Ocon retired after lap 53 (DNF)"
+  },
+  {
+   "id": "N24",
+   "value": 46,
+   "render": "46",
+   "path": "results.19.last_completed_lap",
+   "meaning": "Stroll retired after lap 46 (DNF)"
+  },
+  {
+   "id": "N25",
+   "value": 3,
+   "render": "3",
+   "path": "results.20.last_completed_lap",
+   "meaning": "Bearman retired after lap 3 (DNF)"
+  },
+  {
+   "id": "N26",
+   "value": 1,
+   "render": "1",
+   "path": "results.21.last_completed_lap",
+   "meaning": "Verstappen retired after lap 1 (DNF)"
+  },
+  {
+   "id": "N27",
+   "value": 72,
+   "render": "72",
+   "path": "session.total_laps",
+   "meaning": "race distance in laps"
+  },
+  {
+   "id": "N28",
+   "value": 11.536,
+   "render": "11.536",
+   "path": "position_trace.ANT.71.gap",
+   "meaning": "official margin: Antonelli behind Norris at the flag (s)"
+  },
+  {
+   "id": "N29",
+   "value": 74.23,
+   "render": "1m14.230s",
+   "path": "fastest_laps.0.time_s",
+   "meaning": "fastest lap of the race: Leclerc on lap 60"
+  },
+  {
+   "id": "N30",
+   "value": 60,
+   "render": "60",
+   "path": "fastest_laps.0.lap",
+   "meaning": "lap of the fastest lap (Leclerc)"
+  },
+  {
+   "id": "N31",
+   "value": 2,
+   "render": "2",
+   "path": "timeline.intervals.0.start_lap",
+   "meaning": "RED began lap"
+  },
+  {
+   "id": "N32",
+   "value": 3,
+   "render": "3",
+   "path": "timeline.intervals.0.end_lap",
+   "meaning": "RED ended lap (end INFERRED: resumption_state_msg)"
+  },
+  {
+   "id": "N33",
+   "value": 3,
+   "render": "3",
+   "path": "timeline.intervals.1.start_lap",
+   "meaning": "SC began lap"
+  },
+  {
+   "id": "N34",
+   "value": 3,
+   "render": "3",
+   "path": "timeline.intervals.1.end_lap",
+   "meaning": "SC ended lap (end INFERRED: lights_on_lap_end)"
+  },
+  {
+   "id": "N35",
+   "value": 55,
+   "render": "55",
+   "path": "timeline.intervals.2.start_lap",
+   "meaning": "VSC began lap"
+  },
+  {
+   "id": "N36",
+   "value": 57,
+   "render": "57",
+   "path": "timeline.intervals.2.end_lap",
+   "meaning": "VSC ended lap"
+  },
+  {
+   "id": "N37",
+   "value": 70,
+   "render": "70",
+   "path": "timeline.intervals.3.start_lap",
+   "meaning": "VSC began lap"
+  },
+  {
+   "id": "N38",
+   "value": 70,
+   "render": "70",
+   "path": "timeline.intervals.3.end_lap",
+   "meaning": "VSC ended lap"
+  },
+  {
+   "id": "N39",
+   "value": 5,
+   "render": "5",
+   "path": "lead_changes.0.lap",
+   "meaning": "Antonelli led at the end of lap 5; lead changes are end-of-lap order"
+  },
+  {
+   "id": "N40",
+   "value": 22,
+   "render": "22",
+   "path": "lead_changes.1.lap",
+   "meaning": "Hamilton led at the end of lap 22 (from Antonelli); lead changes are end-of-lap order"
+  },
+  {
+   "id": "N41",
+   "value": 25,
+   "render": "25",
+   "path": "lead_changes.2.lap",
+   "meaning": "Antonelli led at the end of lap 25 (from Hamilton); lead changes are end-of-lap order"
+  },
+  {
+   "id": "N42",
+   "value": 40,
+   "render": "40",
+   "path": "lead_changes.3.lap",
+   "meaning": "Norris led at the end of lap 40 (from Antonelli); lead changes are end-of-lap order"
+  },
+  {
+   "id": "N43",
+   "value": 48,
+   "render": "48",
+   "path": "lead_changes.4.lap",
+   "meaning": "Hamilton led at the end of lap 48 (from Norris); lead changes are end-of-lap order"
+  },
+  {
+   "id": "N44",
+   "value": 54,
+   "render": "54",
+   "path": "lead_changes.5.lap",
+   "meaning": "Norris led at the end of lap 54 (from Hamilton); lead changes are end-of-lap order"
+  },
+  {
+   "id": "N45",
+   "value": 2,
+   "render": "2",
+   "path": "stops.0.lap",
+   "meaning": "Norris stopped on lap 2 (MEDIUM→SOFT, boundary_spanning)"
+  },
+  {
+   "id": "N46",
+   "value": 2,
+   "render": "2",
+   "path": "stops.1.lap",
+   "meaning": "Antonelli stopped on lap 2 (MEDIUM→MEDIUM, boundary_spanning)"
+  },
+  {
+   "id": "N47",
+   "value": 2,
+   "render": "2",
+   "path": "stops.2.lap",
+   "meaning": "Russell stopped on lap 2 (MEDIUM→MEDIUM, boundary_spanning)"
+  },
+  {
+   "id": "N48",
+   "value": 2,
+   "render": "2",
+   "path": "stops.3.lap",
+   "meaning": "Leclerc stopped on lap 2 (SOFT→SOFT, boundary_spanning)"
+  },
+  {
+   "id": "N49",
+   "value": 2,
+   "render": "2",
+   "path": "stops.4.lap",
+   "meaning": "Piastri stopped on lap 2 (MEDIUM→HARD, boundary_spanning)"
+  },
+  {
+   "id": "N50",
+   "value": 2,
+   "render": "2",
+   "path": "stops.5.lap",
+   "meaning": "Hamilton stopped on lap 2 (SOFT→SOFT, boundary_spanning)"
+  },
+  {
+   "id": "N51",
+   "value": 17,
+   "render": "17",
+   "path": "stops.26.lap",
+   "meaning": "Russell stopped on lap 17 (MEDIUM→HARD, green)"
+  },
+  {
+   "id": "N52",
+   "value": 18,
+   "render": "18.0",
+   "path": "stops.26.lane_time_s",
+   "meaning": "Russell lap-17 pit-lane time (s)"
+  },
+  {
+   "id": "N53",
+   "value": 18,
+   "render": "18",
+   "path": "stops.27.lap",
+   "meaning": "Piastri stopped on lap 18 (HARD→HARD, green)"
+  },
+  {
+   "id": "N54",
+   "value": 20.2,
+   "render": "20.2",
+   "path": "stops.27.lane_time_s",
+   "meaning": "Piastri lap-18 pit-lane time (s)"
+  },
+  {
+   "id": "N55",
+   "value": 21,
+   "render": "21",
+   "path": "stops.31.lap",
+   "meaning": "Antonelli stopped on lap 21 (MEDIUM→HARD, green)"
+  },
+  {
+   "id": "N56",
+   "value": 18.7,
+   "render": "18.7",
+   "path": "stops.31.lane_time_s",
+   "meaning": "Antonelli lap-21 pit-lane time (s)"
+  },
+  {
+   "id": "N57",
+   "value": 21,
+   "render": "21",
+   "path": "stops.32.lap",
+   "meaning": "Norris stopped on lap 21 (SOFT→HARD, green)"
+  },
+  {
+   "id": "N58",
+   "value": 18,
+   "render": "18.0",
+   "path": "stops.32.lane_time_s",
+   "meaning": "Norris lap-21 pit-lane time (s)"
+  },
+  {
+   "id": "N59",
+   "value": 21,
+   "render": "21",
+   "path": "stops.33.lap",
+   "meaning": "Leclerc stopped on lap 21 (SOFT→MEDIUM, green)"
+  },
+  {
+   "id": "N60",
+   "value": 19.7,
+   "render": "19.7",
+   "path": "stops.33.lane_time_s",
+   "meaning": "Leclerc lap-21 pit-lane time (s)"
+  },
+  {
+   "id": "N61",
+   "value": 25,
+   "render": "25",
+   "path": "stops.36.lap",
+   "meaning": "Hamilton stopped on lap 25 (SOFT→HARD, green)"
+  },
+  {
+   "id": "N62",
+   "value": 17.8,
+   "render": "17.8",
+   "path": "stops.36.lane_time_s",
+   "meaning": "Hamilton lap-25 pit-lane time (s)"
+  },
+  {
+   "id": "N63",
+   "value": 40,
+   "render": "40",
+   "path": "stops.46.lap",
+   "meaning": "Antonelli stopped on lap 40 (HARD→HARD, green)"
+  },
+  {
+   "id": "N64",
+   "value": 17.7,
+   "render": "17.7",
+   "path": "stops.46.lane_time_s",
+   "meaning": "Antonelli lap-40 pit-lane time (s)"
+  },
+  {
+   "id": "N65",
+   "value": 40,
+   "render": "40",
+   "path": "stops.47.lap",
+   "meaning": "Russell stopped on lap 40 (HARD→HARD, green)"
+  },
+  {
+   "id": "N66",
+   "value": 17.4,
+   "render": "17.4",
+   "path": "stops.47.lane_time_s",
+   "meaning": "Russell lap-40 pit-lane time (s)"
+  },
+  {
+   "id": "N67",
+   "value": 43,
+   "render": "43",
+   "path": "stops.48.lap",
+   "meaning": "Leclerc stopped on lap 43 (MEDIUM→HARD, green)"
+  },
+  {
+   "id": "N68",
+   "value": 18.7,
+   "render": "18.7",
+   "path": "stops.48.lane_time_s",
+   "meaning": "Leclerc lap-43 pit-lane time (s)"
+  },
+  {
+   "id": "N69",
+   "value": 44,
+   "render": "44",
+   "path": "stops.49.lap",
+   "meaning": "Piastri stopped on lap 44 (HARD→SOFT, green)"
+  },
+  {
+   "id": "N70",
+   "value": 18.1,
+   "render": "18.1",
+   "path": "stops.49.lane_time_s",
+   "meaning": "Piastri lap-44 pit-lane time (s)"
+  },
+  {
+   "id": "N71",
+   "value": 47,
+   "render": "47",
+   "path": "stops.52.lap",
+   "meaning": "Norris stopped on lap 47 (HARD→HARD, green)"
+  },
+  {
+   "id": "N72",
+   "value": 17.5,
+   "render": "17.5",
+   "path": "stops.52.lane_time_s",
+   "meaning": "Norris lap-47 pit-lane time (s)"
+  },
+  {
+   "id": "N73",
+   "value": 55,
+   "render": "55",
+   "path": "stops.60.lap",
+   "meaning": "Hamilton stopped on lap 55 (HARD→SOFT, vsc)"
+  },
+  {
+   "id": "N74",
+   "value": 18.7,
+   "render": "18.7",
+   "path": "stops.60.lane_time_s",
+   "meaning": "Hamilton lap-55 pit-lane time (s)"
+  },
+  {
+   "id": "N75",
+   "value": 55,
+   "render": "55",
+   "path": "stops.61.lap",
+   "meaning": "Leclerc stopped on lap 55 (HARD→SOFT, vsc)"
+  },
+  {
+   "id": "N76",
+   "value": 18.7,
+   "render": "18.7",
+   "path": "stops.61.lane_time_s",
+   "meaning": "Leclerc lap-55 pit-lane time (s)"
+  },
+  {
+   "id": "N77",
+   "value": 55,
+   "render": "55",
+   "path": "stops.62.lap",
+   "meaning": "Piastri stopped on lap 55 (SOFT→SOFT, vsc)"
+  },
+  {
+   "id": "N78",
+   "value": 17.8,
+   "render": "17.8",
+   "path": "stops.62.lane_time_s",
+   "meaning": "Piastri lap-55 pit-lane time (s)"
+  },
+  {
+   "id": "N79",
+   "value": 56,
+   "render": "56",
+   "path": "stops.63.lap",
+   "meaning": "Antonelli stopped on lap 56 (HARD→SOFT, vsc)"
+  },
+  {
+   "id": "N80",
+   "value": 19.1,
+   "render": "19.1",
+   "path": "stops.63.lane_time_s",
+   "meaning": "Antonelli lap-56 pit-lane time (s)"
+  },
+  {
+   "id": "N81",
+   "value": 0.711,
+   "render": "0.711",
+   "path": "pair_gaps.1.laps.0.gap",
+   "meaning": "gap at end of lap 1 (observed)"
+  },
+  {
+   "id": "N82",
+   "value": 1.756,
+   "render": "1.8",
+   "path": "pair_gaps.1.laps.1.gap",
+   "meaning": "gap at end of lap 2 (observed)"
+  },
+  {
+   "id": "N83",
+   "value": 3.401,
+   "render": "3.4",
+   "path": "pair_gaps.1.laps.2.gap",
+   "meaning": "gap at end of lap 3 (observed)"
+  },
+  {
+   "id": "N84",
+   "value": 2.765,
+   "render": "2.8",
+   "path": "pair_gaps.1.laps.3.gap",
+   "meaning": "gap at end of lap 4 (observed)"
+  },
+  {
+   "id": "N85",
+   "value": -1.003,
+   "render": "-1.0",
+   "path": "pair_gaps.1.laps.4.gap",
+   "meaning": "gap at end of lap 5 (observed)"
+  },
+  {
+   "id": "N86",
+   "value": -1.203,
+   "render": "-1.2",
+   "path": "pair_gaps.1.laps.9.gap",
+   "meaning": "gap at end of lap 10 (observed)"
+  },
+  {
+   "id": "N87",
+   "value": -2.185,
+   "render": "-2.2",
+   "path": "pair_gaps.1.laps.14.gap",
+   "meaning": "gap at end of lap 15 (observed)"
+  },
+  {
+   "id": "N88",
+   "value": -2.301,
+   "render": "-2.3",
+   "path": "pair_gaps.1.laps.19.gap",
+   "meaning": "gap at end of lap 20 (observed)"
+  },
+  {
+   "id": "N89",
+   "value": -2.297,
+   "render": "-2.3",
+   "path": "pair_gaps.1.laps.20.gap",
+   "meaning": "gap at end of lap 21 (observed)"
+  },
+  {
+   "id": "N90",
+   "value": -1.447,
+   "render": "-1.4",
+   "path": "pair_gaps.1.laps.21.gap",
+   "meaning": "gap at end of lap 22 (observed)"
+  },
+  {
+   "id": "N91",
+   "value": -1.578,
+   "render": "-1.6",
+   "path": "pair_gaps.1.laps.23.gap",
+   "meaning": "gap at end of lap 24 (observed)"
+  },
+  {
+   "id": "N92",
+   "value": -1.561,
+   "render": "-1.6",
+   "path": "pair_gaps.1.laps.24.gap",
+   "meaning": "gap at end of lap 25 (observed)"
+  },
+  {
+   "id": "N93",
+   "value": -0.68,
+   "render": "-0.680",
+   "path": "pair_gaps.1.laps.29.gap",
+   "meaning": "gap at end of lap 30 (observed)"
+  },
+  {
+   "id": "N94",
+   "value": -0.994,
+   "render": "-0.994",
+   "path": "pair_gaps.1.laps.34.gap",
+   "meaning": "gap at end of lap 35 (observed)"
+  },
+  {
+   "id": "N95",
+   "value": -0.706,
+   "render": "-0.706",
+   "path": "pair_gaps.1.laps.38.gap",
+   "meaning": "gap at end of lap 39 (observed)"
+  },
+  {
+   "id": "N96",
+   "value": 1.689,
+   "render": "1.7",
+   "path": "pair_gaps.1.laps.39.gap",
+   "meaning": "gap at end of lap 40 (observed)"
+  },
+  {
+   "id": "N97",
+   "value": 17.861,
+   "render": "17.9",
+   "path": "pair_gaps.1.laps.40.gap",
+   "meaning": "gap at end of lap 41 (observed)"
+  },
+  {
+   "id": "N98",
+   "value": 15.193,
+   "render": "15.2",
+   "path": "pair_gaps.1.laps.44.gap",
+   "meaning": "gap at end of lap 45 (observed)"
+  },
+  {
+   "id": "N99",
+   "value": 14.193,
+   "render": "14.2",
+   "path": "pair_gaps.1.laps.45.gap",
+   "meaning": "gap at end of lap 46 (observed)"
+  },
+  {
+   "id": "N100",
+   "value": 10.852,
+   "render": "10.9",
+   "path": "pair_gaps.1.laps.46.gap",
+   "meaning": "gap at end of lap 47 (observed)"
+  },
+  {
+   "id": "N101",
+   "value": -4.975,
+   "render": "-5.0",
+   "path": "pair_gaps.1.laps.47.gap",
+   "meaning": "gap at end of lap 48 (observed)"
+  },
+  {
+   "id": "N102",
+   "value": -1.699,
+   "render": "-1.7",
+   "path": "pair_gaps.1.laps.49.gap",
+   "meaning": "gap at end of lap 50 (observed)"
+  },
+  {
+   "id": "N103",
+   "value": -0.172,
+   "render": "-0.172",
+   "path": "pair_gaps.1.laps.52.gap",
+   "meaning": "gap at end of lap 53 (observed)"
+  },
+  {
+   "id": "N104",
+   "value": 1.248,
+   "render": "1.2",
+   "path": "pair_gaps.1.laps.53.gap",
+   "meaning": "gap at end of lap 54 (observed)"
+  },
+  {
+   "id": "N105",
+   "value": 1.386,
+   "render": "1.4",
+   "path": "pair_gaps.1.laps.54.gap",
+   "meaning": "gap at end of lap 55 (observed)"
+  },
+  {
+   "id": "N106",
+   "value": 4.211,
+   "render": "4.2",
+   "path": "pair_gaps.1.laps.55.gap",
+   "meaning": "gap at end of lap 56 (observed)"
+  },
+  {
+   "id": "N107",
+   "value": 12.573,
+   "render": "12.6",
+   "path": "pair_gaps.1.laps.56.gap",
+   "meaning": "gap at end of lap 57 (observed)"
+  },
+  {
+   "id": "N108",
+   "value": 12.43,
+   "render": "12.4",
+   "path": "pair_gaps.1.laps.59.gap",
+   "meaning": "gap at end of lap 60 (observed)"
+  },
+  {
+   "id": "N109",
+   "value": 12.028,
+   "render": "12.0",
+   "path": "pair_gaps.1.laps.64.gap",
+   "meaning": "gap at end of lap 65 (observed)"
+  },
+  {
+   "id": "N110",
+   "value": 11.617,
+   "render": "11.6",
+   "path": "pair_gaps.1.laps.68.gap",
+   "meaning": "gap at end of lap 69 (observed)"
+  },
+  {
+   "id": "N111",
+   "value": 11.112,
+   "render": "11.1",
+   "path": "pair_gaps.1.laps.69.gap",
+   "meaning": "gap at end of lap 70 (observed)"
+  },
+  {
+   "id": "N112",
+   "value": 11.523,
+   "render": "11.5",
+   "path": "pair_gaps.1.laps.71.gap",
+   "meaning": "gap at end of lap 72 (observed)"
+  },
+  {
+   "id": "N113",
+   "value": 242,
+   "render": "242",
+   "path": "standings_after.0.after",
+   "meaning": "Antonelli points after the race"
+  },
+  {
+   "id": "N114",
+   "value": 183,
+   "render": "183",
+   "path": "standings_after.1.after",
+   "meaning": "Russell points after the race"
+  },
+  {
+   "id": "N115",
+   "value": 183,
+   "render": "183",
+   "path": "standings_after.2.after",
+   "meaning": "Hamilton points after the race"
+  },
+  {
+   "id": "N116",
+   "value": 159,
+   "render": "159",
+   "path": "standings_after.3.after",
+   "meaning": "Norris points after the race"
+  },
+  {
+   "id": "N117",
+   "value": 155,
+   "render": "155",
+   "path": "standings_after.4.after",
+   "meaning": "Leclerc points after the race"
+  },
+  {
+   "id": "N118",
+   "value": 59,
+   "render": "59",
+   "path": "standings_after.0.after − standings_after.1.after",
+   "meaning": "leader's margin over second (derived)"
+  }
+ ]
+}

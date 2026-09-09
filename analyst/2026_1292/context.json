@@ -1,0 +1,324 @@
+{
+ "meeting": "2026_1292",
+ "year": 2026,
+ "round": 12,
+ "circuit_id": "zandvoort",
+ "winner": {
+  "code": "NOR",
+  "driverId": "norris",
+  "name": "Lando Norris",
+  "nationality": "British",
+  "constructor": "McLaren",
+  "grid": 1
+ },
+ "source": "jolpica",
+ "facts": [
+  {
+   "id": "nationality_circuit",
+   "kind": "history",
+   "statement": "Lando Norris is the first British driver to win the Dutch Grand Prix since James Hunt in 1976.",
+   "values": {
+    "nationality": "British",
+    "previous_season": 1976,
+    "previous_winner": "James Hunt",
+    "circuit": "Dutch"
+   },
+   "evidence": [
+    {
+     "season": 1958,
+     "winner": "Moss"
+    },
+    {
+     "season": 1962,
+     "winner": "Hill"
+    },
+    {
+     "season": 1963,
+     "winner": "Clark"
+    },
+    {
+     "season": 1964,
+     "winner": "Clark"
+    },
+    {
+     "season": 1965,
+     "winner": "Clark"
+    },
+    {
+     "season": 1967,
+     "winner": "Clark"
+    },
+    {
+     "season": 1968,
+     "winner": "Stewart"
+    },
+    {
+     "season": 1969,
+     "winner": "Stewart"
+    },
+    {
+     "season": 1973,
+     "winner": "Stewart"
+    },
+    {
+     "season": 1975,
+     "winner": "Hunt"
+    },
+    {
+     "season": 1976,
+     "winner": "Hunt"
+    },
+    {
+     "season": 2024,
+     "winner": "Norris"
+    },
+    {
+     "season": 2026,
+     "winner": "Norris"
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/circuits/zandvoort/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:00.965Z"
+  },
+  {
+   "id": "nationality_any",
+   "kind": "history",
+   "statement": "Before Lando Norris, the last British driver to win a grand prix was George Russell at the 2026 Austrian Grand Prix.",
+   "values": {
+    "previous_season": 2026,
+    "previous_winner": "George Russell",
+    "previous_race": "Austrian Grand Prix"
+   },
+   "evidence": [
+    {
+     "season": 2026,
+     "round": 8,
+     "raceName": "Austrian Grand Prix",
+     "circuitId": "red_bull_ring",
+     "driverId": "russell",
+     "code": "RUS",
+     "givenName": "George",
+     "familyName": "Russell",
+     "nationality": "British",
+     "constructorId": "mercedes",
+     "constructorName": "Mercedes",
+     "grid": 1
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:00.973Z"
+  },
+  {
+   "id": "season_wins",
+   "kind": "season",
+   "statement": "The Dutch Grand Prix was Lando Norris's second win of the 2026 season.",
+   "values": {
+    "season_wins": 2,
+    "year": 2026
+   },
+   "evidence": [
+    {
+     "round": 11,
+     "race": "Hungarian Grand Prix"
+    },
+    {
+     "round": 12,
+     "race": "Dutch Grand Prix"
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/2026/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:00.973Z"
+  },
+  {
+   "id": "career_wins",
+   "kind": "career",
+   "statement": "It was the 13th grand prix win of Lando Norris's career.",
+   "values": {
+    "career_wins": 13
+   },
+   "evidence": [],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/drivers/norris/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:00.973Z"
+  },
+  {
+   "id": "pole_to_win",
+   "kind": "history",
+   "statement": "Lando Norris won from pole; 17 of the 35 previous Dutch Grand Prix winners on record started from pole, 7 of the last 10.",
+   "values": {
+    "pole_wins_at_circuit": 17,
+    "previous_races": 35,
+    "pole_wins_last_ten": 7,
+    "last_ten": 10
+   },
+   "evidence": [
+    {
+     "season": 1981,
+     "winner": "Prost",
+     "grid": 1
+    },
+    {
+     "season": 1982,
+     "winner": "Pironi",
+     "grid": 4
+    },
+    {
+     "season": 1983,
+     "winner": "Arnoux",
+     "grid": 10
+    },
+    {
+     "season": 1984,
+     "winner": "Prost",
+     "grid": 1
+    },
+    {
+     "season": 1985,
+     "winner": "Lauda",
+     "grid": 10
+    },
+    {
+     "season": 2021,
+     "winner": "Verstappen",
+     "grid": 1
+    },
+    {
+     "season": 2022,
+     "winner": "Verstappen",
+     "grid": 1
+    },
+    {
+     "season": 2023,
+     "winner": "Verstappen",
+     "grid": 1
+    },
+    {
+     "season": 2024,
+     "winner": "Norris",
+     "grid": 1
+    },
+    {
+     "season": 2025,
+     "winner": "Piastri",
+     "grid": 1
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/circuits/zandvoort/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:00.974Z"
+  },
+  {
+   "id": "back_to_back",
+   "kind": "season",
+   "statement": "Lando Norris won the previous round too, the Hungarian Grand Prix, making it back-to-back wins.",
+   "values": {
+    "previous_round": 11,
+    "previous_race": "Hungarian Grand Prix"
+   },
+   "evidence": [
+    {
+     "season": 2026,
+     "round": 11,
+     "raceName": "Hungarian Grand Prix",
+     "circuitId": "hungaroring",
+     "driverId": "norris",
+     "code": "NOR",
+     "givenName": "Lando",
+     "familyName": "Norris",
+     "nationality": "British",
+     "constructorId": "mclaren",
+     "constructorName": "McLaren",
+     "grid": 1
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/2026/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:00.974Z"
+  },
+  {
+   "id": "season_winners",
+   "kind": "season",
+   "statement": "After round 12, 5 different drivers have won in 2026; with multiple wins: RUS (2), ANT (6), NOR (2).",
+   "values": {
+    "distinct_winners": 5,
+    "multiple_winners": [
+     {
+      "code": "RUS",
+      "wins": 2
+     },
+     {
+      "code": "ANT",
+      "wins": 6
+     },
+     {
+      "code": "NOR",
+      "wins": 2
+     }
+    ]
+   },
+   "evidence": [
+    {
+     "code": "RUS",
+     "wins": 2
+    },
+    {
+     "code": "ANT",
+     "wins": 6
+    },
+    {
+     "code": "NOR",
+     "wins": 2
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/2026/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T20:48:00.974Z"
+  },
+  {
+   "id": "standings_after",
+   "kind": "season",
+   "statement": "After round 12 Andrea Kimi Antonelli leads the championship on 242 points, 59 clear of George Russell; Lando Norris is 4th on 159, 83 behind.",
+   "values": {
+    "leader": "ANT",
+    "points": 242,
+    "gap_to_second": 59,
+    "second": "RUS",
+    "winner_position": 4,
+    "winner_points": 159,
+    "winner_gap_to_leader": 83,
+    "packet_agrees": true
+   },
+   "evidence": [
+    {
+     "code": "ANT",
+     "points": 242,
+     "wins": 6
+    },
+    {
+     "code": "RUS",
+     "points": 183,
+     "wins": 2
+    },
+    {
+     "code": "HAM",
+     "points": 183,
+     "wins": 1
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/2026/12/driverStandings.json"
+   ],
+   "computed_at": "2026-09-09T20:48:00.974Z"
+  }
+ ]
+}

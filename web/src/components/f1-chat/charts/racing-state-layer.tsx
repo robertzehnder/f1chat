@@ -182,17 +182,19 @@ function ClusterShape({ members, coords, ...rect }: ShapeProps & { members: Raci
 type LapTicks = { lap: number; flags: SectorFlagObservation[]; stagger: boolean }
 
 /** Lane background + rule + label, drawn once across every lap. */
-function SectorLaneShape({ coords, ...rect }: ShapeProps & { coords: Coords }) {
+function SectorLaneShape({ coords, labelAtStart = false, ...rect }: ShapeProps & { coords: Coords; labelAtStart?: boolean }) {
   const { y = 0, height = 0 } = rect
   const { x, width } = lapRect(rect, coords)
   const top = y + height - SECTOR_LANE_H
+  const inset = Math.max(6, width / Math.max(1, coords.laps) / 2)
   return (
     <g>
       <rect x={x} y={top} width={width} height={SECTOR_LANE_H} fill={INK} fillOpacity={0.07} />
       <line x1={x} x2={x + width} y1={top} y2={top} stroke={INK} strokeWidth={0.8} opacity={0.6} />
       {/* anchored at the last lap's centre, not the expanded band edge, so it
-          never runs past the chart's right edge (QA found it clipped) */}
-      <text x={x + width - Math.max(6, width / Math.max(1, coords.laps) / 2)} y={top + 8} textAnchor="end" fontSize={7.5} fill={INK} opacity={0.9}>sector yellows (issued)</text>
+          never runs past the chart's right edge (QA found it clipped); when the
+          final laps carry sector marks the label moves to the left end instead */}
+      <text x={labelAtStart ? x + inset : x + width - inset} y={top + 8} textAnchor={labelAtStart ? "start" : "end"} fontSize={7.5} fill={INK} opacity={0.9}>sector yellows (issued)</text>
     </g>
   )
 }
@@ -258,8 +260,11 @@ export function renderRacingStateLayer(state: RacingStateLayer | undefined, last
   // sector lane first so bands draw over its background
   if (state.sector_flags.length) {
     const laneCoords = bandCoords(firstLap, lastLap, lastLap)
+    const marksAtEnd = state.sector_flags.some((f) => f.lap >= lastLap - 4 && f.lap <= lastLap)
+    const marksAtStart = state.sector_flags.some((f) => f.lap >= firstLap && f.lap <= firstLap + 4)
+    const labelAtStart = marksAtEnd && !marksAtStart
     out.push(
-      <ReferenceArea key="rs-sector-lane" x1={laneCoords.x1} x2={laneCoords.x2} ifOverflow="visible" shape={(props: ShapeProps) => <SectorLaneShape coords={laneCoords} {...props} />} />
+      <ReferenceArea key="rs-sector-lane" x1={laneCoords.x1} x2={laneCoords.x2} ifOverflow="visible" shape={(props: ShapeProps) => <SectorLaneShape coords={laneCoords} labelAtStart={labelAtStart} {...props} />} />
     )
   }
   const visible = state.periods

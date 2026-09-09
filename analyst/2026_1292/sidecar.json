@@ -1,0 +1,1495 @@
+{
+ "report": "report.md",
+ "packet_version": "race_packet@1",
+ "review_mode": "GPT-6 Astra writer claims bound by bind_claims.mjs v1; causal outcomes reviewed by Claude against the packet (2026-09-09)",
+ "bound_at": "2026-09-09T21:03:15.639Z",
+ "draft_source": "/private/tmp/claude-501/-Users-robertzehnder-Documents-coding-f1-openf1/93762501-7023-4c04-8b01-a36740b25a5c/scratchpad/dutch-draft-2.md",
+ "claims": [
+  {
+   "id": "O1",
+   "type": "observation",
+   "material": false,
+   "text": "Norris passes Antonelli and Hamilton to win at Zandvoort",
+   "refs": [
+    "reporting:article:b25de7596c",
+    "packet:results.0.position"
+   ],
+   "values": [
+    "1st",
+    "1"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The reported passes secured the lead Norris retained."
+  },
+  {
+   "id": "N2",
+   "type": "derived_metric",
+   "material": true,
+   "text": "won the Dutch Grand Prix by 11.536 seconds",
+   "values": [
+    "11.536",
+    "11.536"
+   ],
+   "refs": [
+    "packet:position_trace.ANT.71.gap"
+   ],
+   "note": "Official winning margin."
+  },
+  {
+   "id": "O3",
+   "type": "observation",
+   "material": false,
+   "text": "from Kimi Antonelli, with George Russell completing the podium",
+   "refs": [
+    "packet:results.1.position",
+    "packet:results.2.position"
+   ],
+   "values": [
+    "2nd",
+    "2",
+    "3rd",
+    "3"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The classification establishes the podium order."
+  },
+  {
+   "id": "O4",
+   "type": "observation",
+   "material": false,
+   "text": "A longer middle stint put Norris on fresher hard tyres",
+   "refs": [
+    "packet:stops.46.lap",
+    "packet:stops.52.lap"
+   ],
+   "values": [
+    "40",
+    "40",
+    "47",
+    "47"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Norris fitted his final hards later than Antonelli."
+  },
+  {
+   "id": "N5",
+   "type": "derived_metric",
+   "material": true,
+   "text": "his decisive attack on lap 54",
+   "values": [
+    "54",
+    "54"
+   ],
+   "refs": [
+    "packet:lead_changes.5.lap"
+   ],
+   "note": "The recorded lead change matches the reported overtakes."
+  },
+  {
+   "id": "C6",
+   "type": "causal_interpretation",
+   "material": true,
+   "text": "the subsequent virtual safety car widened his advantage when Antonelli stopped and he stayed out",
+   "relation": "The stop and stay-out decisions are reported; the gap widened across the interruption.",
+   "refs": [
+    "packet:stops.63.lap",
+    "packet:pair_gaps.1.laps.53.gap",
+    "packet:pair_gaps.1.laps.56.gap",
+    "reporting:article:571fd11450"
+   ],
+   "confidence": "writer-stated",
+   "review": {
+    "outcome": "accepted",
+    "alternative_considered": "Antonelli's stop was a choice, not forced; the widening is the observed gap change L54→L57 (1.248→12.573 s) across the VSC stop",
+    "reviewer": "Claude (analyst), 2026-09-09"
+   }
+  },
+  {
+   "id": "O7",
+   "type": "observation",
+   "material": false,
+   "text": "Norris’s second successive victory after Hungary",
+   "refs": [
+    "context:back_to_back"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The context establishes consecutive wins."
+  },
+  {
+   "id": "A8",
+   "type": "attribution",
+   "material": false,
+   "text": "losing the lead at the restart",
+   "refs": [
+    "reporting:article:a12a0fb0cb"
+   ],
+   "note": "Antonelli passed Norris at the resumption."
+  },
+  {
+   "id": "A9",
+   "type": "attribution",
+   "material": false,
+   "text": "Mercedes took both remaining podium places after ordering its drivers to swap",
+   "refs": [
+    "reporting:article:d2fdcad2fb",
+    "packet:results.1.position",
+    "packet:results.2.position"
+   ],
+   "values": [
+    "2nd",
+    "2",
+    "3rd",
+    "3"
+   ],
+   "note": "The team-directed exchange preceded the double podium."
+  },
+  {
+   "id": "A10",
+   "type": "attribution",
+   "material": false,
+   "text": "Russell then holding off the Ferraris",
+   "refs": [
+    "reporting:article:53383e5ca8"
+   ],
+   "note": "Russell retained his podium place under Ferrari pressure."
+  },
+  {
+   "id": "A11",
+   "type": "attribution",
+   "material": false,
+   "text": "Luke Smith noted the contrast between the earlier rain and the field’s choice of slicks",
+   "refs": [
+    "reporting:x:2091510131922014275"
+   ],
+   "note": "Named paraphrase of the supplied live post; no post numbers are used."
+  },
+  {
+   "id": "A12",
+   "type": "attribution",
+   "material": false,
+   "text": "Norris held his lead from pole",
+   "refs": [
+    "packet:results.0.grid",
+    "reporting:article:571fd11450"
+   ],
+   "values": [
+    "1st",
+    "1"
+   ],
+   "note": "Grid evidence and reporting establish his initial lead."
+  },
+  {
+   "id": "A13",
+   "type": "attribution",
+   "material": false,
+   "text": "Max Verstappen’s final home race",
+   "refs": [
+    "reporting:article:045b28d03a"
+   ],
+   "note": "The account identifies the departing home event."
+  },
+  {
+   "id": "N14",
+   "type": "derived_metric",
+   "material": true,
+   "text": "ended on lap 1",
+   "values": [
+    "1",
+    "1"
+   ],
+   "refs": [
+    "packet:results.21.last_completed_lap"
+   ],
+   "note": "The sheet supplies the lap; reporting locates the accident on the opening lap."
+  },
+  {
+   "id": "A15",
+   "type": "attribution",
+   "material": false,
+   "text": "lost control at the still-damp final corner and struck the barriers",
+   "refs": [
+    "reporting:article:045b28d03a"
+   ],
+   "note": "Reporting supplies the accident circumstances."
+  },
+  {
+   "id": "A16",
+   "type": "attribution",
+   "material": false,
+   "text": "Verstappen later said he was physically okay",
+   "refs": [
+    "reporting:article:045b28d03a"
+   ],
+   "note": "Paraphrase of Verstappen’s account of his condition."
+  },
+  {
+   "id": "N17",
+   "type": "derived_metric",
+   "material": true,
+   "text": "The red flag began on lap 2",
+   "values": [
+    "2",
+    "2"
+   ],
+   "refs": [
+    "packet:timeline.intervals.0.start_lap"
+   ],
+   "note": "Recorded red-flag start."
+  },
+  {
+   "id": "A18",
+   "type": "attribution",
+   "material": false,
+   "text": "Chris Medland described cars near the back being held by a red light while Norris was already approaching the grid",
+   "refs": [
+    "reporting:x:2091519800912605247"
+   ],
+   "note": "Named paraphrase of the restart confusion."
+  },
+  {
+   "id": "A19",
+   "type": "attribution",
+   "material": false,
+   "text": "Antonelli took the lead from Norris",
+   "refs": [
+    "reporting:article:a12a0fb0cb"
+   ],
+   "note": "Reported restart pass."
+  },
+  {
+   "id": "A20",
+   "type": "attribution",
+   "material": false,
+   "text": "passed Russell",
+   "refs": [
+    "reporting:article:53383e5ca8"
+   ],
+   "note": "Piastri gained the position at the restart."
+  },
+  {
+   "id": "A21",
+   "type": "attribution",
+   "material": false,
+   "text": "Antonelli credited his starts with salvaging his race",
+   "refs": [
+    "reporting:article:a12a0fb0cb"
+   ],
+   "note": "Paraphrase of Antonelli’s assessment."
+  },
+  {
+   "id": "A22",
+   "type": "attribution",
+   "material": false,
+   "text": "having also overtaken Russell at the initial getaway",
+   "refs": [
+    "reporting:article:a12a0fb0cb"
+   ],
+   "note": "Reported initial-start gain."
+  },
+  {
+   "id": "O23",
+   "type": "observation",
+   "material": false,
+   "text": "Norris switched from mediums to softs, Piastri from mediums to hards, while both Mercedes drivers retained mediums",
+   "refs": [
+    "packet:stops.0.lap",
+    "packet:stops.4.lap",
+    "packet:stops.1.lap",
+    "packet:stops.2.lap"
+   ],
+   "values": [
+    "2",
+    "2",
+    "2",
+    "2",
+    "2",
+    "2",
+    "2",
+    "2"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Compound changes are attached to the cited stop records."
+  },
+  {
+   "id": "O24",
+   "type": "observation",
+   "material": false,
+   "text": "Hamilton and Charles Leclerc stayed on softs",
+   "refs": [
+    "packet:stops.3.lap",
+    "packet:stops.5.lap"
+   ],
+   "values": [
+    "2",
+    "2",
+    "2",
+    "2"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Both boundary-spanning records retain softs."
+  },
+  {
+   "id": "O25",
+   "type": "observation",
+   "material": false,
+   "text": "McLaren’s drivers were now pursuing the Mercedes pair on different compounds",
+   "refs": [
+    "packet:stops.0.lap",
+    "packet:stops.4.lap",
+    "packet:stops.1.lap",
+    "packet:stops.2.lap",
+    "reporting:article:53383e5ca8"
+   ],
+   "values": [
+    "2",
+    "2",
+    "2",
+    "2",
+    "2",
+    "2",
+    "2",
+    "2"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The restart compound split accompanied the reported battles."
+  },
+  {
+   "id": "N26",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Russell stopped for hards on lap 17",
+   "values": [
+    "17",
+    "17"
+   ],
+   "refs": [
+    "packet:stops.26.lap"
+   ],
+   "note": "Recorded stop lap and compound."
+  },
+  {
+   "id": "N27",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Piastri following on lap 18",
+   "values": [
+    "18",
+    "18"
+   ],
+   "refs": [
+    "packet:stops.27.lap"
+   ],
+   "note": "Recorded stop lap."
+  },
+  {
+   "id": "N28",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Piastri spent 20.2 seconds in the pit lane",
+   "values": [
+    "20.2",
+    "20.2"
+   ],
+   "refs": [
+    "packet:stops.27.lane_time_s"
+   ],
+   "note": "Lane time, not net loss."
+  },
+  {
+   "id": "A29",
+   "type": "attribution",
+   "material": false,
+   "text": "lost the position to Russell through a slow stop",
+   "refs": [
+    "reporting:article:0993917dca"
+   ],
+   "note": "Linked reporting attributes the loss to the slow stop."
+  },
+  {
+   "id": "A30",
+   "type": "attribution",
+   "material": false,
+   "text": "Grip difficulties followed, and both Ferraris passed him",
+   "refs": [
+    "reporting:article:0993917dca"
+   ],
+   "note": "The same linked account describes the subsequent grip problems and passes."
+  },
+  {
+   "id": "N31",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Antonelli and Norris took hards on lap 21",
+   "values": [
+    "21",
+    "21",
+    "21",
+    "21"
+   ],
+   "refs": [
+    "packet:stops.31.lap",
+    "packet:stops.32.lap"
+   ],
+   "note": "Both stopped on this lap for hards."
+  },
+  {
+   "id": "O32",
+   "type": "observation",
+   "material": false,
+   "text": "leaving Hamilton out front",
+   "refs": [
+    "packet:lead_changes.1.lap"
+   ],
+   "values": [
+    "22",
+    "22"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Hamilton assumed the lead while extending his stint."
+  },
+  {
+   "id": "N33",
+   "type": "derived_metric",
+   "material": true,
+   "text": "his own stop on lap 25 returned Antonelli to the lead",
+   "values": [
+    "25",
+    "25",
+    "25",
+    "25"
+   ],
+   "refs": [
+    "packet:stops.36.lap",
+    "packet:lead_changes.2.lap"
+   ],
+   "note": "Hamilton’s stop and Antonelli’s lead change share the recorded lap."
+  },
+  {
+   "id": "A34",
+   "type": "attribution",
+   "material": false,
+   "text": "Norris said the softs had left him struggling for pace and balance, whereas the hards allowed him to push",
+   "refs": [
+    "reporting:article:0993917dca"
+   ],
+   "note": "Paraphrase of Norris’s compound assessment."
+  },
+  {
+   "id": "A35",
+   "type": "attribution",
+   "material": false,
+   "text": "He credited that improvement with forcing Mercedes to stop early",
+   "refs": [
+    "reporting:article:0993917dca"
+   ],
+   "note": "The causal explanation is explicitly Norris’s."
+  },
+  {
+   "id": "N36",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Both Mercedes drivers fitted fresh hards on lap 40",
+   "values": [
+    "40",
+    "40",
+    "40",
+    "40"
+   ],
+   "refs": [
+    "packet:stops.46.lap",
+    "packet:stops.47.lap"
+   ],
+   "note": "Recorded Mercedes stops."
+  },
+  {
+   "id": "O37",
+   "type": "observation",
+   "material": false,
+   "text": "but Norris stayed out",
+   "refs": [
+    "packet:lead_changes.3.lap",
+    "packet:stops.52.lap"
+   ],
+   "values": [
+    "40",
+    "40",
+    "47",
+    "47"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Norris took the lead and stopped later."
+  },
+  {
+   "id": "O38",
+   "type": "observation",
+   "material": false,
+   "text": "Hamilton also extended his stint",
+   "refs": [
+    "packet:stops.36.lap",
+    "packet:stops.60.lap",
+    "packet:lead_changes.4.lap"
+   ],
+   "values": [
+    "25",
+    "25",
+    "55",
+    "55",
+    "48",
+    "48"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "His hard stint continued through the lead phase."
+  },
+  {
+   "id": "A39",
+   "type": "attribution",
+   "material": false,
+   "text": "voicing frustration over the radio about time spent behind Leclerc",
+   "refs": [
+    "reporting:article:d1debbce94"
+   ],
+   "note": "Linked reporting describes Hamilton’s radio frustration."
+  },
+  {
+   "id": "A40",
+   "type": "attribution",
+   "material": false,
+   "text": "Hamilton said he believed he had more pace and explained that his impatience came from wanting to win",
+   "refs": [
+    "reporting:article:d1debbce94"
+   ],
+   "note": "Pace assessment and motivation are attributed to Hamilton."
+  },
+  {
+   "id": "N41",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Norris finally stopped on lap 47",
+   "values": [
+    "47",
+    "47"
+   ],
+   "refs": [
+    "packet:stops.52.lap"
+   ],
+   "note": "Recorded final stop."
+  },
+  {
+   "id": "N42",
+   "type": "derived_metric",
+   "material": true,
+   "text": "a pit-lane time of 17.5 seconds",
+   "values": [
+    "17.5",
+    "17.5"
+   ],
+   "refs": [
+    "packet:stops.52.lane_time_s"
+   ],
+   "note": "Recorded lane time."
+  },
+  {
+   "id": "N43",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Hamilton led at the end of lap 48",
+   "values": [
+    "48",
+    "48"
+   ],
+   "refs": [
+    "packet:lead_changes.4.lap"
+   ],
+   "note": "End-of-lap lead order."
+  },
+  {
+   "id": "O44",
+   "type": "observation",
+   "material": false,
+   "text": "Antonelli between the Ferrari and the McLaren",
+   "refs": [
+    "packet:lead_changes.4.lap",
+    "packet:pair_gaps.1.laps.47.gap"
+   ],
+   "values": [
+    "48",
+    "48",
+    "-5.0",
+    "-4.975"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Hamilton led and Antonelli remained ahead of Norris."
+  },
+  {
+   "id": "O45",
+   "type": "observation",
+   "material": false,
+   "text": "Norris had surrendered track position, but his tyres were fresher than Antonelli’s",
+   "refs": [
+    "packet:stops.46.lap",
+    "packet:stops.52.lap",
+    "packet:lead_changes.4.lap",
+    "packet:pair_gaps.1.laps.47.gap"
+   ],
+   "values": [
+    "40",
+    "40",
+    "47",
+    "47",
+    "48",
+    "48",
+    "-5.0",
+    "-4.975"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The later stop produced fresher tyres with both rivals ahead."
+  },
+  {
+   "id": "O46",
+   "type": "observation",
+   "material": false,
+   "text": "Norris rapidly closed on the Mercedes, reducing its advantage to a fraction of a second",
+   "refs": [
+    "packet:pair_gaps.1.laps.47.gap",
+    "packet:pair_gaps.1.laps.49.gap",
+    "packet:pair_gaps.1.laps.52.gap"
+   ],
+   "values": [
+    "-5.0",
+    "-4.975",
+    "-1.7",
+    "-1.699",
+    "-0.172",
+    "-0.172"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Qualitative description of the contracting signed gap; no gap value is rendered."
+  },
+  {
+   "id": "O47",
+   "type": "observation",
+   "material": false,
+   "text": "Hamilton was still ahead of both",
+   "refs": [
+    "packet:lead_changes.4.lap",
+    "packet:lead_changes.5.lap",
+    "reporting:article:b25de7596c"
+   ],
+   "values": [
+    "48",
+    "48",
+    "54",
+    "54"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Hamilton led until the reported passes."
+  },
+  {
+   "id": "A48",
+   "type": "attribution",
+   "material": false,
+   "text": "Norris later credited McLaren’s strategy with giving him fresh tyres to attack while Antonelli was occupied with Hamilton",
+   "refs": [
+    "reporting:article:0993917dca"
+   ],
+   "note": "Paraphrase of Norris’s explanation of the opportunity."
+  },
+  {
+   "id": "N49",
+   "type": "derived_metric",
+   "material": true,
+   "text": "On lap 54",
+   "values": [
+    "54",
+    "54"
+   ],
+   "refs": [
+    "packet:lead_changes.5.lap"
+   ],
+   "note": "Lap of the decisive lead change."
+  },
+  {
+   "id": "A50",
+   "type": "attribution",
+   "material": false,
+   "text": "went around Antonelli’s outside at the opening corner, then caught and passed Hamilton on the same lap",
+   "refs": [
+    "reporting:article:b25de7596c"
+   ],
+   "note": "Reporting supplies the corner, manoeuvre and sequence."
+  },
+  {
+   "id": "N51",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Antonelli was 1.2 seconds behind him",
+   "values": [
+    "1.2",
+    "1.248"
+   ],
+   "refs": [
+    "packet:pair_gaps.1.laps.53.gap"
+   ],
+   "note": "End-of-lap gap after the passes."
+  },
+  {
+   "id": "C52",
+   "type": "causal_interpretation",
+   "material": true,
+   "text": "Norris’s longer stint had delivered the tyre advantage; the overtakes converted it into the lead",
+   "relation": "Stop chronology supports tyre freshness; Norris’s account and the reported passes explain its use.",
+   "refs": [
+    "packet:stops.46.lap",
+    "packet:stops.52.lap",
+    "packet:lead_changes.5.lap",
+    "reporting:article:0993917dca",
+    "reporting:article:b25de7596c"
+   ],
+   "confidence": "writer-stated",
+   "review": {
+    "outcome": "accepted",
+    "alternative_considered": "traffic (Hamilton) per Norris's own account; supported by stop chronology (Norris L47 vs Antonelli L40, both hards) and the lap-54 lead change",
+    "reviewer": "Claude (analyst), 2026-09-09"
+   }
+  },
+  {
+   "id": "N53",
+   "type": "derived_metric",
+   "material": true,
+   "text": "The virtual safety car began on lap 55",
+   "values": [
+    "55",
+    "55"
+   ],
+   "refs": [
+    "packet:timeline.intervals.2.start_lap"
+   ],
+   "note": "Recorded VSC start."
+  },
+  {
+   "id": "A54",
+   "type": "attribution",
+   "material": false,
+   "text": "Ocon’s Haas stopped on track",
+   "refs": [
+    "reporting:article:571fd11450"
+   ],
+   "note": "Reporting identifies the cause of this VSC."
+  },
+  {
+   "id": "O55",
+   "type": "observation",
+   "material": false,
+   "text": "Hamilton, Leclerc and Piastri took softs",
+   "refs": [
+    "packet:stops.60.lap",
+    "packet:stops.61.lap",
+    "packet:stops.62.lap"
+   ],
+   "values": [
+    "55",
+    "55",
+    "55",
+    "55",
+    "55",
+    "55"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "All changed to softs during the VSC."
+  },
+  {
+   "id": "N56",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Antonelli on lap 56",
+   "values": [
+    "56",
+    "56"
+   ],
+   "refs": [
+    "packet:stops.63.lap"
+   ],
+   "note": "Recorded soft-tyre stop."
+  },
+  {
+   "id": "A57",
+   "type": "attribution",
+   "material": false,
+   "text": "Norris and Russell stayed out",
+   "refs": [
+    "reporting:article:571fd11450",
+    "reporting:article:d2fdcad2fb"
+   ],
+   "note": "Reporting establishes both stay-out decisions."
+  },
+  {
+   "id": "A58",
+   "type": "attribution",
+   "material": false,
+   "text": "Antonelli rejoined behind Russell",
+   "refs": [
+    "reporting:article:d2fdcad2fb"
+   ],
+   "note": "Reported order after the stop."
+  },
+  {
+   "id": "N59",
+   "type": "derived_metric",
+   "material": true,
+   "text": "by the end of lap 57",
+   "values": [
+    "57",
+    "57"
+   ],
+   "refs": [
+    "packet:timeline.intervals.2.end_lap"
+   ],
+   "note": "The cited lap is the VSC ending lap."
+  },
+  {
+   "id": "N60",
+   "type": "derived_metric",
+   "material": true,
+   "text": "his deficit to Norris was 12.6 seconds",
+   "values": [
+    "12.6",
+    "12.573"
+   ],
+   "refs": [
+    "packet:pair_gaps.1.laps.56.gap"
+   ],
+   "note": "Gap sample at the end of that lap."
+  },
+  {
+   "id": "A61",
+   "type": "attribution",
+   "material": false,
+   "text": "Antonelli said his final hard-tyre stint had brought little confidence and insufficient pace",
+   "refs": [
+    "reporting:article:a12a0fb0cb"
+   ],
+   "note": "Paraphrase of Antonelli’s assessment."
+  },
+  {
+   "id": "O62",
+   "type": "observation",
+   "material": false,
+   "text": "the softs couldn’t restore his challenge for victory",
+   "refs": [
+    "packet:pair_gaps.1.laps.56.gap",
+    "packet:pair_gaps.1.laps.59.gap",
+    "packet:pair_gaps.1.laps.64.gap",
+    "packet:pair_gaps.1.laps.68.gap",
+    "packet:position_trace.ANT.71.gap"
+   ],
+   "values": [
+    "12.6",
+    "12.573",
+    "12.4",
+    "12.43",
+    "12.0",
+    "12.028",
+    "11.6",
+    "11.617",
+    "11.536",
+    "11.536"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Later gaps and the final margin show no renewed close contest."
+  },
+  {
+   "id": "A63",
+   "type": "attribution",
+   "material": false,
+   "text": "Mercedes then instructed Russell to let Antonelli through",
+   "refs": [
+    "reporting:article:d2fdcad2fb"
+   ],
+   "note": "Reported team order."
+  },
+  {
+   "id": "A64",
+   "type": "attribution",
+   "material": false,
+   "text": "Toto Wolff said the team wanted to avoid its drivers costing each other time with Ferrari closing in",
+   "refs": [
+    "reporting:article:d2fdcad2fb"
+   ],
+   "note": "Wolff’s stated rationale."
+  },
+  {
+   "id": "A65",
+   "type": "attribution",
+   "material": false,
+   "text": "pointed out that Antonelli had been ahead before stopping",
+   "refs": [
+    "reporting:article:d2fdcad2fb"
+   ],
+   "note": "Wolff cited the earlier running order."
+  },
+  {
+   "id": "A66",
+   "type": "attribution",
+   "material": false,
+   "text": "Russell initially questioned the order and warned that it threatened the double podium",
+   "refs": [
+    "reporting:article:d2fdcad2fb"
+   ],
+   "note": "Reported reaction, without quoting radio."
+  },
+  {
+   "id": "A67",
+   "type": "attribution",
+   "material": false,
+   "text": "accepted afterwards that Antonelli deserved to finish ahead and had the tyres to pass anyway",
+   "refs": [
+    "reporting:article:53383e5ca8"
+   ],
+   "note": "Paraphrase of Russell’s post-race explanation."
+  },
+  {
+   "id": "N68",
+   "type": "derived_metric",
+   "material": true,
+   "text": "A further virtual safety car began and ended on lap 70",
+   "values": [
+    "70",
+    "70",
+    "70",
+    "70"
+   ],
+   "refs": [
+    "packet:timeline.intervals.3.start_lap",
+    "packet:timeline.intervals.3.end_lap"
+   ],
+   "note": "Both recorded boundaries fall on the same lap."
+  },
+  {
+   "id": "A69",
+   "type": "attribution",
+   "material": false,
+   "text": "Chris Medland linked it to debris from the Williams collision",
+   "refs": [
+    "reporting:x:2091542375856287768"
+   ],
+   "note": "Named paraphrase; the cause comes from reporting rather than timing."
+  },
+  {
+   "id": "A70",
+   "type": "attribution",
+   "material": false,
+   "text": "judged that the interruption might have preserved Russell’s podium with Hamilton pressing him",
+   "refs": [
+    "reporting:x:2091542550498722225"
+   ],
+   "note": "Medland’s qualified assessment is retained as an assessment."
+  },
+  {
+   "id": "O71",
+   "type": "observation",
+   "material": false,
+   "text": "Russell finished ahead of Hamilton and Leclerc, with Piastri behind the Ferraris",
+   "refs": [
+    "packet:results.2.position",
+    "packet:results.3.position",
+    "packet:results.4.position",
+    "packet:results.5.position"
+   ],
+   "values": [
+    "3rd",
+    "3",
+    "4th",
+    "4",
+    "5th",
+    "5",
+    "6th",
+    "6"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Classification order."
+  },
+  {
+   "id": "N72",
+   "type": "derived_metric",
+   "material": true,
+   "text": "leading the championship on 242 points",
+   "values": [
+    "242",
+    "242"
+   ],
+   "refs": [
+    "packet:standings_after.0.after"
+   ],
+   "note": "Antonelli’s post-race total."
+  },
+  {
+   "id": "N73",
+   "type": "derived_metric",
+   "material": true,
+   "text": "59 clear of Russell",
+   "values": [
+    "59",
+    "59"
+   ],
+   "refs": [
+    "packet:standings_after.0.after",
+    "packet:standings_after.1.after"
+   ],
+   "note": "Supplied derived championship margin."
+  },
+  {
+   "id": "N74",
+   "type": "derived_metric",
+   "material": true,
+   "text": "Norris is fourth on 159",
+   "values": [
+    "159",
+    "159"
+   ],
+   "refs": [
+    "packet:standings_after.3.after",
+    "context:standings_after"
+   ],
+   "note": "Norris’s championship position and points."
+  },
+  {
+   "id": "N75",
+   "type": "derived_metric",
+   "material": true,
+   "text": "still 83 behind Antonelli",
+   "values": [],
+   "refs": [
+    "context:standings_after"
+   ],
+   "note": "The explicitly permitted computed context supplies this deficit."
+  },
+  {
+   "id": "O76",
+   "type": "observation",
+   "material": false,
+   "text": "despite consecutive wins",
+   "refs": [
+    "context:back_to_back"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Consecutive Hungarian and Dutch victories."
+  },
+  {
+   "id": "O77",
+   "type": "observation",
+   "material": false,
+   "text": "The Italian Grand Prix at Monza is next",
+   "refs": [
+    "reporting:bsky:3muk3wggrr22z",
+    "reporting:bsky:3muoukr5ojk2e"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The supplied subsequent-event reporting establishes Monza as the next round."
+  },
+  {
+   "id": "O78",
+   "type": "observation",
+   "material": false,
+   "text": "Arvid Lindblad received and served a drive-through penalty for overtaking under yellow flags",
+   "refs": [
+    "reporting:fia:1292:62"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The document identifies the offence; service is confirmed by supplied race-control events.147."
+  },
+  {
+   "id": "O79",
+   "type": "observation",
+   "material": false,
+   "text": "Franco Colapinto also received and served a drive-through penalty for overtaking under yellow flags",
+   "refs": [
+    "reporting:fia:1292:63"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The document identifies the offence; service is confirmed by supplied race-control events.148."
+  },
+  {
+   "id": "O80",
+   "type": "observation",
+   "material": false,
+   "text": "Colapinto later received a time penalty for failing to slow for yellow flags",
+   "refs": [
+    "reporting:fia:1292:65"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The document identifies the offence; the supplied race-control record confirms the time penalty."
+  },
+  {
+   "id": "O81",
+   "type": "observation",
+   "material": false,
+   "text": "Liam Lawson received a time penalty for a yellow-flag infringement",
+   "refs": [
+    "reporting:fia:1292:66"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The document and supplied race-control record identify the infringement and penalty."
+  },
+  {
+   "id": "O82",
+   "type": "observation",
+   "material": false,
+   "text": "Carlos Sainz received a time penalty for colliding with Alex Albon",
+   "refs": [
+    "reporting:fia:1292:68"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The document and supplied race-control record identify the collision penalty."
+  },
+  {
+   "id": "A83",
+   "type": "attribution",
+   "material": false,
+   "text": "accepted responsibility after locking up while defending",
+   "refs": [
+    "reporting:article:9cae91e0b5"
+   ],
+   "note": "Sainz’s explanation is paraphrased and linked."
+  },
+  {
+   "id": "O84",
+   "type": "observation",
+   "material": false,
+   "text": "Oliver Bearman was referred for investigation after the race over leaving pit exit against a red light",
+   "refs": [
+    "reporting:fia:1292:69"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The document identifies the infringement; supplied race-control events.145 records the referral."
+  },
+  {
+   "id": "O85",
+   "type": "observation",
+   "material": false,
+   "text": "Gabriel Bortoleto was also referred for investigation after the race over leaving pit exit against a red light",
+   "refs": [
+    "reporting:fia:1292:70"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The document identifies the infringement; supplied race-control events.146 records the referral."
+  },
+  {
+   "id": "O86",
+   "type": "observation",
+   "material": false,
+   "text": "An alleged unsafe release involving Pierre Gasly was addressed in a separate",
+   "refs": [
+    "reporting:fia:1292:52"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Only the supplied decision subject is stated; no outcome is inferred."
+  },
+  {
+   "id": "O87",
+   "type": "observation",
+   "material": false,
+   "text": "An unsafe release involving Bortoleto was covered by another",
+   "refs": [
+    "reporting:fia:1292:42"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Only the supplied infringement subject is stated."
+  },
+  {
+   "id": "O88",
+   "type": "observation",
+   "material": false,
+   "text": "Timing and race-control data come from OpenF1, compiled into the packet linked at the foot of the page",
+   "refs": [
+    "packet:timeline.intervals.0.start_lap",
+    "packet:pair_gaps.1.laps.53.gap"
+   ],
+   "values": [
+    "2",
+    "2",
+    "1.2",
+    "1.248"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Required provenance and publication disclosure supplied by the task; these entries exemplify the packet’s racing-state and timing data."
+  },
+  {
+   "id": "O89",
+   "type": "observation",
+   "material": false,
+   "text": "Gaps are line-crossing differences at each lap’s end, not broadcast intervals",
+   "refs": [
+    "packet:pair_gaps.1.laps.53.gap",
+    "packet:pair_gaps.1.laps.56.gap"
+   ],
+   "values": [
+    "1.2",
+    "1.248",
+    "12.6",
+    "12.573"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The fact-sheet gap section explicitly defines these measurements."
+  },
+  {
+   "id": "O90",
+   "type": "observation",
+   "material": false,
+   "text": "The gap chart’s final point is reconstructed from lap start plus duration",
+   "refs": [
+    "packet:pair_gaps.1.laps.71.gap"
+   ],
+   "values": [
+    "11.5",
+    "11.523"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Required methodological disclosure for the final sample, distinct from the official margin."
+  },
+  {
+   "id": "O91",
+   "type": "observation",
+   "material": false,
+   "text": "positions are carried forward between logged changes",
+   "refs": [
+    "packet:position_trace.ANT.71.gap"
+   ],
+   "values": [
+    "11.536",
+    "11.536"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Required methodological disclosure for the position trace; the cited entry identifies that trace."
+  },
+  {
+   "id": "N92",
+   "type": "derived_metric",
+   "material": true,
+   "text": "The red flag’s end and the lap-3 safety car’s end are inferred",
+   "values": [
+    "3",
+    "3",
+    "3",
+    "3",
+    "3",
+    "3"
+   ],
+   "refs": [
+    "packet:timeline.intervals.0.end_lap",
+    "packet:timeline.intervals.1.start_lap",
+    "packet:timeline.intervals.1.end_lap"
+   ],
+   "note": "All cited entries render 3; the interval metadata explicitly identifies the inferred endpoints."
+  },
+  {
+   "id": "O93",
+   "type": "observation",
+   "material": false,
+   "text": "Causes, corners and all remarks come from the linked reporting",
+   "refs": [
+    "reporting:article:571fd11450",
+    "reporting:article:045b28d03a",
+    "reporting:article:b25de7596c",
+    "reporting:article:d2fdcad2fb"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "Reporting supplies the non-timing details and attributed remarks."
+  },
+  {
+   "id": "O94",
+   "type": "observation",
+   "material": false,
+   "text": "Pit-lane times shown are lane times, not net loss",
+   "refs": [
+    "packet:stops.27.lane_time_s",
+    "packet:stops.52.lane_time_s"
+   ],
+   "values": [
+    "20.2",
+    "20.2",
+    "17.5",
+    "17.5"
+   ],
+   "review": {
+    "outcome": "accepted"
+   },
+   "note": "The fact sheet explicitly defines the stop durations as lane times."
+  }
+ ],
+ "contract": {
+  "C1": {
+   "status": "covered",
+   "reason": "result, margin and podium in the opening paragraph",
+   "refs": [
+    "packet:results"
+   ]
+  },
+  "C2": {
+   "status": "covered",
+   "reason": "mechanism chain in the body; moment ids cited by the causal claims",
+   "refs": [
+    "moment:m_red_2",
+    "moment:m_sc_3",
+    "moment:m_vsc_55",
+    "moment:m_vsc_70",
+    "moment:m_lead_54"
+   ]
+  },
+  "C3": {
+   "status": "covered",
+   "reason": "decisive lap from lead_changes; corner attributed to reporting",
+   "refs": [
+    "packet:lead_changes"
+   ]
+  },
+  "C4": {
+   "status": "covered",
+   "reason": "turning points that did not turn (slow stop, VSC stops) from the packet",
+   "refs": [
+    "packet:stops",
+    "packet:timeline.intervals"
+   ]
+  },
+  "C5": {
+   "status": "not material",
+   "reason": "pole-sitter won; folded into C1",
+   "refs": [
+    "packet:pole_sitter"
+   ]
+  },
+  "C6": {
+   "status": "covered",
+   "reason": "restart tyre changes, inferred caution endpoints and carried-forward positions stated in About the data",
+   "refs": [
+    "packet:manifest.flags"
+   ]
+  },
+  "C7": {
+   "status": "covered",
+   "reason": "standings from standings_after",
+   "refs": [
+    "packet:standings_after"
+   ]
+  },
+  "C8": {
+   "status": "covered",
+   "reason": "secondary storylines cite moments / reporting",
+   "refs": [
+    "moment:m_red_2",
+    "moment:m_sc_3",
+    "moment:m_vsc_55",
+    "moment:m_vsc_70",
+    "moment:m_lead_54"
+   ]
+  },
+  "C9": {
+   "status": "covered",
+   "reason": "race-control record described in ordinary language; driver/team remarks attributed to registered reporting",
+   "refs": [
+    "packet:timeline.events"
+   ]
+  },
+  "C10": {
+   "status": "covered",
+   "reason": "About the data names the manifest's gaps",
+   "refs": [
+    "packet:manifest.not_available"
+   ]
+  },
+  "C0": {
+   "status": "not material",
+   "reason": "article register",
+   "refs": []
+  },
+  "C1a": {
+   "status": "not material",
+   "reason": "article register",
+   "refs": []
+  },
+  "C11": {
+   "status": "not material",
+   "reason": "no grid penalties recorded for this race",
+   "refs": [
+    "packet:grid_penalties"
+   ]
+  },
+  "C12": {
+   "status": "not material",
+   "reason": "rest of the field handled as connected paragraphs",
+   "refs": []
+  },
+  "C13": {
+   "status": "covered",
+   "reason": "closes on the standings and the next race",
+   "refs": [
+    "packet:standings_after"
+   ]
+  }
+ }
+}

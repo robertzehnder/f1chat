@@ -1,0 +1,798 @@
+{
+ "name": "strategy_split",
+ "meeting": "2026_1292",
+ "chart": {
+  "type": "stint_gantt",
+  "y_axis": [
+   "Norris",
+   "Antonelli",
+   "Russell",
+   "Hamilton",
+   "Leclerc",
+   "Piastri",
+   "Lawson",
+   "Hulkenberg"
+  ],
+  "total_laps": 72,
+  "stints": [
+   {
+    "driver": "Norris",
+    "start": 1,
+    "end": 2,
+    "compound": "medium"
+   },
+   {
+    "driver": "Norris",
+    "start": 3,
+    "end": 21,
+    "compound": "soft"
+   },
+   {
+    "driver": "Norris",
+    "start": 22,
+    "end": 47,
+    "compound": "hard"
+   },
+   {
+    "driver": "Norris",
+    "start": 48,
+    "end": 72,
+    "compound": "hard"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 1,
+    "end": 2,
+    "compound": "medium"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 3,
+    "end": 21,
+    "compound": "medium"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 22,
+    "end": 40,
+    "compound": "hard"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 41,
+    "end": 56,
+    "compound": "hard"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 57,
+    "end": 72,
+    "compound": "soft"
+   },
+   {
+    "driver": "Leclerc",
+    "start": 1,
+    "end": 2,
+    "compound": "soft"
+   },
+   {
+    "driver": "Leclerc",
+    "start": 3,
+    "end": 21,
+    "compound": "soft"
+   },
+   {
+    "driver": "Leclerc",
+    "start": 22,
+    "end": 43,
+    "compound": "medium"
+   },
+   {
+    "driver": "Leclerc",
+    "start": 44,
+    "end": 55,
+    "compound": "hard"
+   },
+   {
+    "driver": "Leclerc",
+    "start": 56,
+    "end": 72,
+    "compound": "soft"
+   },
+   {
+    "driver": "Hulkenberg",
+    "start": 1,
+    "end": 2,
+    "compound": "soft"
+   },
+   {
+    "driver": "Hulkenberg",
+    "start": 3,
+    "end": 19,
+    "compound": "soft"
+   },
+   {
+    "driver": "Hulkenberg",
+    "start": 20,
+    "end": 48,
+    "compound": "soft"
+   },
+   {
+    "driver": "Hulkenberg",
+    "start": 49,
+    "end": 71,
+    "compound": "hard"
+   },
+   {
+    "driver": "Lawson",
+    "start": 1,
+    "end": 2,
+    "compound": "soft"
+   },
+   {
+    "driver": "Lawson",
+    "start": 3,
+    "end": 21,
+    "compound": "soft"
+   },
+   {
+    "driver": "Lawson",
+    "start": 22,
+    "end": 47,
+    "compound": "medium"
+   },
+   {
+    "driver": "Lawson",
+    "start": 48,
+    "end": 72,
+    "compound": "medium"
+   },
+   {
+    "driver": "Hamilton",
+    "start": 1,
+    "end": 2,
+    "compound": "soft"
+   },
+   {
+    "driver": "Hamilton",
+    "start": 3,
+    "end": 25,
+    "compound": "soft"
+   },
+   {
+    "driver": "Hamilton",
+    "start": 26,
+    "end": 55,
+    "compound": "hard"
+   },
+   {
+    "driver": "Hamilton",
+    "start": 56,
+    "end": 72,
+    "compound": "soft"
+   },
+   {
+    "driver": "Russell",
+    "start": 1,
+    "end": 2,
+    "compound": "medium"
+   },
+   {
+    "driver": "Russell",
+    "start": 3,
+    "end": 17,
+    "compound": "medium"
+   },
+   {
+    "driver": "Russell",
+    "start": 18,
+    "end": 40,
+    "compound": "hard"
+   },
+   {
+    "driver": "Russell",
+    "start": 41,
+    "end": 72,
+    "compound": "hard"
+   },
+   {
+    "driver": "Piastri",
+    "start": 1,
+    "end": 2,
+    "compound": "medium"
+   },
+   {
+    "driver": "Piastri",
+    "start": 3,
+    "end": 18,
+    "compound": "hard"
+   },
+   {
+    "driver": "Piastri",
+    "start": 19,
+    "end": 44,
+    "compound": "hard"
+   },
+   {
+    "driver": "Piastri",
+    "start": 45,
+    "end": 55,
+    "compound": "soft"
+   },
+   {
+    "driver": "Piastri",
+    "start": 56,
+    "end": 72,
+    "compound": "soft"
+   }
+  ],
+  "compound_legend": {
+   "hard": "#E5E7EB",
+   "medium": "#FCD34D",
+   "soft": "#EF4444"
+  },
+  "gantt_stops": [
+   {
+    "driver": "Norris",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Antonelli",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Russell",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Leclerc",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Piastri",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Hamilton",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Lawson",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Hulkenberg",
+    "lap": 2,
+    "label": "red"
+   },
+   {
+    "driver": "Russell",
+    "lap": 17,
+    "label": "green"
+   },
+   {
+    "driver": "Piastri",
+    "lap": 18,
+    "label": "green"
+   },
+   {
+    "driver": "Hulkenberg",
+    "lap": 19,
+    "label": "green"
+   },
+   {
+    "driver": "Antonelli",
+    "lap": 21,
+    "label": "green"
+   },
+   {
+    "driver": "Norris",
+    "lap": 21,
+    "label": "green"
+   },
+   {
+    "driver": "Leclerc",
+    "lap": 21,
+    "label": "green"
+   },
+   {
+    "driver": "Lawson",
+    "lap": 21,
+    "label": "green"
+   },
+   {
+    "driver": "Hamilton",
+    "lap": 25,
+    "label": "green"
+   },
+   {
+    "driver": "Antonelli",
+    "lap": 40,
+    "label": "green"
+   },
+   {
+    "driver": "Russell",
+    "lap": 40,
+    "label": "green"
+   },
+   {
+    "driver": "Leclerc",
+    "lap": 43,
+    "label": "green"
+   },
+   {
+    "driver": "Piastri",
+    "lap": 44,
+    "label": "green"
+   },
+   {
+    "driver": "Norris",
+    "lap": 47,
+    "label": "green"
+   },
+   {
+    "driver": "Lawson",
+    "lap": 47,
+    "label": "green"
+   },
+   {
+    "driver": "Hulkenberg",
+    "lap": 48,
+    "label": "green"
+   },
+   {
+    "driver": "Hamilton",
+    "lap": 55,
+    "label": "VSC"
+   },
+   {
+    "driver": "Leclerc",
+    "lap": 55,
+    "label": "VSC"
+   },
+   {
+    "driver": "Piastri",
+    "lap": 55,
+    "label": "VSC"
+   },
+   {
+    "driver": "Antonelli",
+    "lap": 56,
+    "label": "VSC"
+   }
+  ],
+  "racing_state": {
+   "source": "incomplete",
+   "session_key": "11353",
+   "periods": [
+    {
+     "kind": "red",
+     "start_ts": "2026-08-23T13:05:28.000Z",
+     "end_ts": "2026-08-23T13:28:11.000Z",
+     "from_lap": 2,
+     "to_lap": 3,
+     "endpoint_inferred": "resumption_state_msg",
+     "opened_by": "rc98",
+     "closed_by": "rc130"
+    },
+    {
+     "kind": "sc",
+     "start_ts": "2026-08-23T13:28:11.000Z",
+     "end_ts": "2026-08-23T13:35:18.052Z",
+     "from_lap": 3,
+     "to_lap": 3,
+     "endpoint_inferred": "lights_on_lap_end",
+     "opened_by": "rc130",
+     "closed_by": null
+    },
+    {
+     "kind": "vsc",
+     "start_ts": "2026-08-23T14:44:35.000Z",
+     "end_ts": "2026-08-23T14:48:52.000Z",
+     "from_lap": 55,
+     "to_lap": 57,
+     "endpoint_inferred": null,
+     "opened_by": "rc232",
+     "closed_by": "rc239"
+    },
+    {
+     "kind": "vsc",
+     "start_ts": "2026-08-23T15:04:22.000Z",
+     "end_ts": "2026-08-23T15:05:25.000Z",
+     "from_lap": 70,
+     "to_lap": 70,
+     "endpoint_inferred": null,
+     "opened_by": "rc288",
+     "closed_by": "rc297"
+    }
+   ],
+   "sector_flags": [
+    {
+     "lap": 1,
+     "sector": 3,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:31:15.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 4,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:31:20.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 5,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:31:22.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 6,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:32:23.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 7,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:30:39.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 8,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:32:05.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 9,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:32:58.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 10,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:32:23.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 11,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:32:15.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 12,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:31:47.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 13,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:31:07.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 14,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:30:20.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 15,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:31:12.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T12:31:06.000Z"
+    },
+    {
+     "lap": 2,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:05:01.000Z"
+    },
+    {
+     "lap": 2,
+     "sector": 17,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:05:01.000Z"
+    },
+    {
+     "lap": 2,
+     "sector": 18,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:04:56.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 6,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:22:26.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 7,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:10:50.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 10,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:08:53.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 11,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:21:35.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 14,
+     "level": "yellow",
+     "issued_at": "2026-08-23T13:08:18.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:11:12.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 17,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:11:12.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 18,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T13:08:01.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 13,
+     "level": "yellow",
+     "issued_at": "2026-08-23T13:35:29.000Z"
+    },
+    {
+     "lap": 5,
+     "sector": 3,
+     "level": "yellow",
+     "issued_at": "2026-08-23T13:39:47.000Z"
+    },
+    {
+     "lap": 54,
+     "sector": 5,
+     "level": "yellow",
+     "issued_at": "2026-08-23T14:44:04.000Z"
+    },
+    {
+     "lap": 55,
+     "sector": 4,
+     "level": "yellow",
+     "issued_at": "2026-08-23T14:44:55.000Z"
+    },
+    {
+     "lap": 55,
+     "sector": 5,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T14:44:51.000Z"
+    },
+    {
+     "lap": 70,
+     "sector": 7,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:04:45.000Z"
+    },
+    {
+     "lap": 70,
+     "sector": 8,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:05:03.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 5,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:12:50.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 6,
+     "level": "yellow",
+     "issued_at": "2026-08-23T15:20:40.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 7,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:39.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 11,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:29.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 15,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:16:24.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:08.000Z"
+    },
+    {
+     "lap": 72,
+     "sector": 17,
+     "level": "double_yellow",
+     "issued_at": "2026-08-23T15:14:08.000Z"
+    }
+   ],
+   "notes": [
+    "SC end placed at L3 end; end of the SC-in lap, no end message recorded"
+   ],
+   "total_laps": 72
+  },
+  "chart_note": "Top eight finishers. Stops during the lap-2 red flag were tyre changes while the race was suspended; the stops on laps 55 and 56 came under the virtual safety car."
+ },
+ "caption": {
+  "template": "Tyre strategies of the top eight. At the lap-{red_lap} red flag {nor} took {nor_c2}s and {pia} took {pia_c2}s while {ant} stayed on {ant_c2}s; {ant} made his second stop on lap {ant_stop2} and {nor} ran seven laps longer to lap {nor_stop2}. {n_vsc} stops were made under the late virtual safety car.",
+  "slots": {
+   "nor": {
+    "packet_path": "/stints/1/driver",
+    "format": "surname"
+   },
+   "ant": {
+    "packet_path": "/stints/19/driver",
+    "format": "surname"
+   },
+   "nor_c2": {
+    "packet_path": "/stints/1/compound",
+    "format": "lower"
+   },
+   "ant_c2": {
+    "packet_path": "/stints/19/compound",
+    "format": "lower"
+   },
+   "pia": {
+    "packet_path": "/stints/81/driver",
+    "format": "surname"
+   },
+   "pia_c2": {
+    "packet_path": "/stints/81/compound",
+    "format": "lower"
+   },
+   "nor_stop2": {
+    "packet_path": "/stops/52/lap"
+   },
+   "ant_stop2": {
+    "packet_path": "/stops/46/lap"
+   },
+   "n_vsc": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/stops/59/lap",
+      "/stops/60/lap",
+      "/stops/61/lap",
+      "/stops/62/lap",
+      "/stops/63/lap"
+     ]
+    }
+   },
+   "red_lap": {
+    "packet_path": "/timeline/intervals/0/start_lap"
+   }
+  },
+  "rendered": "Tyre strategies of the top eight. At the lap-2 red flag Norris took softs and Piastri took hards while Antonelli stayed on mediums; Antonelli made his second stop on lap 40 and Norris ran seven laps longer to lap 47. 5 stops were made under the late virtual safety car."
+ },
+ "alt": {
+  "template": "Gantt chart of tyre stints for the top eight finishers with the red flag, safety car and VSC periods shaded and pit stops marked; {nor} on {nor_c2}s then hards, {ant} on {ant_c2}s then hards then softs.",
+  "slots": {
+   "nor": {
+    "packet_path": "/stints/1/driver",
+    "format": "surname"
+   },
+   "ant": {
+    "packet_path": "/stints/19/driver",
+    "format": "surname"
+   },
+   "nor_c2": {
+    "packet_path": "/stints/1/compound",
+    "format": "lower"
+   },
+   "ant_c2": {
+    "packet_path": "/stints/19/compound",
+    "format": "lower"
+   },
+   "pia": {
+    "packet_path": "/stints/81/driver",
+    "format": "surname"
+   },
+   "pia_c2": {
+    "packet_path": "/stints/81/compound",
+    "format": "lower"
+   },
+   "nor_stop2": {
+    "packet_path": "/stops/52/lap"
+   },
+   "ant_stop2": {
+    "packet_path": "/stops/46/lap"
+   },
+   "n_vsc": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/stops/59/lap",
+      "/stops/60/lap",
+      "/stops/61/lap",
+      "/stops/62/lap",
+      "/stops/63/lap"
+     ]
+    }
+   },
+   "red_lap": {
+    "packet_path": "/timeline/intervals/0/start_lap"
+   }
+  },
+  "rendered": "Gantt chart of tyre stints for the top eight finishers with the red flag, safety car and VSC periods shaded and pit stops marked; Norris on softs then hards, Antonelli on mediums then hards then softs."
+ },
+ "series_sources": [
+  {
+   "series": "stints",
+   "packet_path": "/stints",
+   "filter": "driver in top 8"
+  }
+ ],
+ "decoration_sources": {
+  "racing_state_window": null,
+  "chart_note": {
+   "template": "Top eight finishers. Stops during the lap-{red_lap} red flag were tyre changes while the race was suspended; the stops on laps {vsc_a} and {vsc_b} came under the virtual safety car.",
+   "slots": {
+    "red_lap": {
+     "packet_path": "/timeline/intervals/0/start_lap"
+    },
+    "vsc_a": {
+     "packet_path": "/stops/60/lap"
+    },
+    "vsc_b": {
+     "packet_path": "/stops/63/lap"
+    }
+   },
+   "rendered": "Top eight finishers. Stops during the lap-2 red flag were tyre changes while the race was suspended; the stops on laps 55 and 56 came under the virtual safety car."
+  }
+ },
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T20:45:47.963Z",
+  "session_key": "11353",
+  "built_at": "2026-09-09T20:54:02.591Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T20:54:02.593Z",
+  "ok": true,
+  "problems": []
+ }
+}

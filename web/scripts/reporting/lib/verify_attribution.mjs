@@ -10,6 +10,9 @@ export function normalizeUrl(u) {
   try {
     const x = new URL(u);
     x.hash = ""; x.search = "";
+    // X posts: /<handle>/status/<id> and /i/web/status/<id> are the same post
+    const st = /\/status\/(\d+)/.exec(x.pathname);
+    if (st && /(^|\.)(x|twitter)\.com$/.test(x.hostname)) return `x:status/${st[1]}`;
     return (x.origin + x.pathname).replace(/\/+$/, "").toLowerCase();
   } catch { return String(u).trim().toLowerCase(); }
 }

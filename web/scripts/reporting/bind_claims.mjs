@@ -23,6 +23,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT, parseMeeting, argOpt, argFlag, readJson } from "./lib/common.mjs";
+import { normalizeUrl } from "./lib/verify_attribution.mjs";
 
 const { meeting, meetingKey } = parseMeeting(argOpt("meeting"));
 const dir = join(ROOT, "analyst", meeting);
@@ -75,7 +76,13 @@ for (const c of claims) {
     if (c.kind === "number" && !c.span.includes(f.render)) fail(`number claim "${c.span}" cites ${id} but does not contain its rendering "${f.render}"`);
     citedRenders.add(f.render);
   }
-  if (c.kind === "number" && !ns.length) fail(`number claim without an N-id: "${c.span}"`);
+  if (c.kind === "number" && !ns.length) {
+    // a number may instead come from a cited computed context fact (its values are provenance)
+    const ctx = (c.refs ?? []).filter((r) => r.startsWith("context:")).map((r) => (context?.facts ?? []).find((f) => f.id === r.slice(8))).filter(Boolean);
+    const vals = ctx.flatMap((f) => JSON.stringify(f.values).match(/\d+(?:\.\d+)?/g) ?? []);
+    const hit = vals.find((v) => c.span.includes(v));
+    if (hit) citedRenders.add(hit); else fail(`number claim without an N-id or a context fact containing its number: "${c.span}"`);
+  }
 }
 let scan = plain;
 for (const r of [...citedRenders].sort((a, b) => b.length - a.length)) scan = scan.split(r).join(" ");
@@ -105,14 +112,15 @@ for (const c of claims) {
 const CAUSAL = /\b(because|since|due to|thanks to|handed|gave|allowed|cost (?:him|her|them)|proved decisive|turned the race|undone by|as a result|led to|meant that|so that|which is why|decided (?:the|it))\b/i;
 const bodyNoNotes = plain.split(/^##\s+/m)[0];
 const sentences = bodyNoNotes.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+/g) ?? [];
-const causalSpans = claims.filter((c) => c.kind === "causal").map((c) => c.span.toLowerCase());
+// an attributed cause ("X said the hards allowed him to push") is covered by its attribution claim
+const causalSpans = claims.filter((c) => c.kind === "causal" || c.kind === "attribution").map((c) => c.span.toLowerCase());
 for (const s of sentences.filter((s) => CAUSAL.test(s) && !/\bsince (19|20)\d{2}\b/.test(s))) {
   if (!causalSpans.some((sp) => s.toLowerCase().includes(sp.slice(0, 40)))) fail(`causal sentence without a causal claim: "${s.trim().slice(0, 90)}"`);
 }
 
 // ---- 5. links must be registered sources (verify_draft checks too; fail early here)
-const urls = new Set((reporting?.entries ?? []).map((e) => e.url));
-for (const m of body.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) if (![...urls].some((u) => u.split("?")[0].replace(/\/$/, "") === m[1].split("?")[0].replace(/\/$/, ""))) fail(`unregistered link: ${m[1].slice(0, 80)}`);
+const urls = new Set((reporting?.entries ?? []).map((e) => normalizeUrl(e.url)));
+for (const m of body.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) if (!urls.has(normalizeUrl(m[1]))) fail(`unregistered link: ${m[1].slice(0, 80)}`);
 
 // ---- report
 for (const w of warns) console.log(`  ⚠️  ${w}`);
@@ -131,7 +139,8 @@ const toRef = (r) => {
   return r;
 };
 const sidecarClaims = claims.map((c, i) => {
-  const refs = [...new Set((c.refs ?? []).map(toRef).filter(Boolean))];
+  let refs = [...new Set((c.refs ?? []).map(toRef).filter(Boolean))];
+  if (!refs.length) refs = (c.refs ?? []).filter((r) => /^N\d+$/.test(r)).map((r) => byN.get(r)).filter((f) => f?.path.includes(" − ")).flatMap((f) => f.path.split(" − ").map((p) => `packet:${p.trim()}`));
   const ns = (c.refs ?? []).filter((r) => /^N\d+$/.test(r)).map((r) => byN.get(r));
   const values = ns.flatMap((f) => [f.render, String(f.value)]);
   const id = `${c.kind[0].toUpperCase()}${i + 1}`;
@@ -140,7 +149,12 @@ const sidecarClaims = claims.map((c, i) => {
   if (c.kind === "number") return { id, type: "derived_metric", material: true, text: c.span, values, refs, note: c.note ?? "" };
   return { id, type: "observation", material: false, text: c.span, refs, ...(values.length ? { values } : {}), review: { outcome: "accepted" }, note: c.note ?? "" };
 });
-const moments = [...new Set(claims.flatMap((c) => (c.refs ?? []).filter((r) => r.startsWith("moment:"))))];
+// mechanism/secondary beats cite candidate moments: those the writer cited, plus the packet's
+// caution moments and the final lead change (the deterministic story spine)
+const cited = claims.flatMap((c) => (c.refs ?? []).filter((r) => r.startsWith("moment:")));
+const lastLead = packet.lead_changes.at(-1);
+const spine = packet.candidate_moments.filter((m) => m.type?.startsWith("caution:") || (lastLead && m.type === "lead_change" && m.lap === lastLead.lap)).map((m) => `moment:${m.id}`);
+const moments = [...new Set([...cited, ...spine])];
 const contract = {
   C1: { status: "covered", reason: "result, margin and podium in the opening paragraph", refs: ["packet:results"] },
   C2: { status: "covered", reason: "mechanism chain in the body; moment ids cited by the causal claims", refs: moments.length ? moments : ["packet:candidate_moments"] },

@@ -1,0 +1,219 @@
+{
+ "name": "closing_rate",
+ "meeting": "2026_1292",
+ "chart": {
+  "type": "line_with_stint_markers",
+  "x_label": "Lap",
+  "y_label": "Norris − Antonelli (s)",
+  "y_value_format": "decimal_seconds",
+  "series": [
+   {
+    "name": "Norris − Antonelli",
+    "color": "#FF8000",
+    "values": [
+     -1.529,
+     -1.577,
+     -1.199,
+     -0.203,
+     -0.075
+    ]
+   }
+  ],
+  "lap_numbers": [
+   49,
+   50,
+   51,
+   52,
+   53
+  ],
+  "horizontal_marker": {
+   "value": 0,
+   "label": "equal pace"
+  },
+  "chart_note": "Negative = Norris faster. Laps 49–53 are the clean laps between Norris's out-lap and his pass; neither car pitted in this window."
+ },
+ "caption": {
+  "template": "Norris's lap time minus Antonelli's, laps {from}–{to}. Over those {n} laps Norris averaged {mean_nor} s a lap against Antonelli's {mean_ant} s.",
+  "slots": {
+   "from": {
+    "packet_path": "/position_trace/NOR/48/lap"
+   },
+   "to": {
+    "packet_path": "/position_trace/NOR/52/lap"
+   },
+   "mean_nor": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/NOR/48/lap_s",
+      "/position_trace/NOR/49/lap_s",
+      "/position_trace/NOR/50/lap_s",
+      "/position_trace/NOR/51/lap_s",
+      "/position_trace/NOR/52/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "mean_ant": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/ANT/48/lap_s",
+      "/position_trace/ANT/49/lap_s",
+      "/position_trace/ANT/50/lap_s",
+      "/position_trace/ANT/51/lap_s",
+      "/position_trace/ANT/52/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "n": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/position_trace/NOR/48/lap_s",
+      "/position_trace/NOR/49/lap_s",
+      "/position_trace/NOR/50/lap_s",
+      "/position_trace/NOR/51/lap_s",
+      "/position_trace/NOR/52/lap_s"
+     ]
+    }
+   }
+  },
+  "rendered": "Norris's lap time minus Antonelli's, laps 49–53. Over those 5 laps Norris averaged 74.980 s a lap against Antonelli's 75.897 s."
+ },
+ "alt": {
+  "template": "Line chart of the per-lap time difference between Norris and Antonelli for laps {from} to {to}; every point is below zero, Norris faster.",
+  "slots": {
+   "from": {
+    "packet_path": "/position_trace/NOR/48/lap"
+   },
+   "to": {
+    "packet_path": "/position_trace/NOR/52/lap"
+   },
+   "mean_nor": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/NOR/48/lap_s",
+      "/position_trace/NOR/49/lap_s",
+      "/position_trace/NOR/50/lap_s",
+      "/position_trace/NOR/51/lap_s",
+      "/position_trace/NOR/52/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "mean_ant": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/ANT/48/lap_s",
+      "/position_trace/ANT/49/lap_s",
+      "/position_trace/ANT/50/lap_s",
+      "/position_trace/ANT/51/lap_s",
+      "/position_trace/ANT/52/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "n": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/position_trace/NOR/48/lap_s",
+      "/position_trace/NOR/49/lap_s",
+      "/position_trace/NOR/50/lap_s",
+      "/position_trace/NOR/51/lap_s",
+      "/position_trace/NOR/52/lap_s"
+     ]
+    }
+   }
+  },
+  "rendered": "Line chart of the per-lap time difference between Norris and Antonelli for laps 49 to 53; every point is below zero, Norris faster."
+ },
+ "series_sources": [
+  {
+   "series": 0,
+   "derived": "lap_s(NOR, L) − lap_s(ANT, L)",
+   "inputs": [
+    [
+     "/position_trace/NOR/48/lap_s",
+     "/position_trace/ANT/48/lap_s"
+    ],
+    [
+     "/position_trace/NOR/49/lap_s",
+     "/position_trace/ANT/49/lap_s"
+    ],
+    [
+     "/position_trace/NOR/50/lap_s",
+     "/position_trace/ANT/50/lap_s"
+    ],
+    [
+     "/position_trace/NOR/51/lap_s",
+     "/position_trace/ANT/51/lap_s"
+    ],
+    [
+     "/position_trace/NOR/52/lap_s",
+     "/position_trace/ANT/52/lap_s"
+    ]
+   ],
+   "lap_paths": [
+    [
+     "/position_trace/NOR/48/lap",
+     "/position_trace/ANT/48/lap"
+    ],
+    [
+     "/position_trace/NOR/49/lap",
+     "/position_trace/ANT/49/lap"
+    ],
+    [
+     "/position_trace/NOR/50/lap",
+     "/position_trace/ANT/50/lap"
+    ],
+    [
+     "/position_trace/NOR/51/lap",
+     "/position_trace/ANT/51/lap"
+    ],
+    [
+     "/position_trace/NOR/52/lap",
+     "/position_trace/ANT/52/lap"
+    ]
+   ]
+  }
+ ],
+ "decoration_sources": {
+  "chart_note": {
+   "template": "Negative = Norris faster. Laps {from}–{to} are the clean laps between Norris's out-lap and his pass; neither car pitted in this window.",
+   "slots": {
+    "from": {
+     "packet_path": "/position_trace/NOR/48/lap"
+    },
+    "to": {
+     "packet_path": "/position_trace/NOR/52/lap"
+    }
+   },
+   "rendered": "Negative = Norris faster. Laps 49–53 are the clean laps between Norris's out-lap and his pass; neither car pitted in this window."
+  },
+  "horizontal_marker": {
+   "value": 0,
+   "label": {
+    "template": "equal pace",
+    "slots": {},
+    "rendered": "equal pace"
+   }
+  }
+ },
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T20:45:47.963Z",
+  "session_key": "11353",
+  "built_at": "2026-09-09T20:54:02.595Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T20:54:02.596Z",
+  "ok": true,
+  "problems": []
+ }
+}
