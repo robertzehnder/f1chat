@@ -32,11 +32,14 @@ gate_timeout_s = 1500
 [gate]                       # runs in every task worktree (repo root)
 setup = ["cd web && ([ -d node_modules ] || ln -s /Users/robertzehnder/Documents/coding/f1/openf1/web/node_modules node_modules || npm ci --no-audit --no-fund)"]
 commands = [
-  { name = "typecheck",     cmd = "cd web && npm run typecheck" },
-  { name = "racing-state",  cmd = "cd web && npx tsx --test scripts/tests/racing-state.test.ts" },
-  { name = "adapter",       cmd = "cd web && npm run test:adapter" },
-  { name = "monza-figures", cmd = "cd web && node scripts/analyst/figures.mjs --meeting 2026_1293 --verify" },
-  { name = "gpt6-post",     cmd = "bash scripts/gate_gpt6_post.sh" },
+  { name = "typecheck",            cmd = "cd web && npm run typecheck" },
+  { name = "racing-state",         cmd = "cd web && npx tsx --test scripts/tests/racing-state.test.ts" },
+  { name = "adapter",              cmd = "cd web && npm run test:adapter" },
+  { name = "figures-recipes-test", cmd = "cd web && { [ ! -f scripts/tests/figures-recipes.test.mjs ] || node --test scripts/tests/figures-recipes.test.mjs; }" },
+  { name = "monza-figures",        cmd = "tmp=$(mktemp -d) || exit 1; cp -R analyst/2026_1293/figures \"$tmp/fig\" || { rm -rf \"$tmp\"; exit 1; }; trap 'rm -rf analyst/2026_1293/figures; mv \"$tmp/fig\" analyst/2026_1293/figures; rm -rf \"$tmp\"' EXIT; (cd web && node scripts/analyst/figures.mjs --meeting 2026_1293 --verify)" },
+  { name = "brief-bounds",         cmd = "d=analyst/2026_1293_gpt6; [ ! -d \"$d\" ] && exit 0; w=$(sed 1d \"$d/report.md\" | wc -w); { [ \"$w\" -ge 900 ] && [ \"$w\" -le 1400 ]; } || { echo \"report.md is $w words (brief: 900-1400)\"; exit 1; }; n=$(ls \"$d\"/figures/*.json 2>/dev/null | wc -l); { [ \"$n\" -ge 3 ] && [ \"$n\" -le 5 ]; } || { echo \"$n compiled figures (brief: 3-5)\"; exit 1; }" },
+  { name = "gpt6-post",            cmd = "bash scripts/gate_gpt6_post.sh" },
+  { name = "secret-files",         cmd = "! git diff main --name-only | grep -E '(^|/)\\.env'" },
 ]
 
 [escalation]
