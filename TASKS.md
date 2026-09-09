@@ -14,7 +14,7 @@ A second, independent Monza 2026 blog post authored by GPT-6 from the frozen evi
 - `secret-files`: `! git diff main --name-only | grep -E '(^|/)\.env'`
 - `audit`: `cd web && npm audit --omit=dev --audit-level=critical`
 
-- [ ] **T1** figures.mjs: recipes.mjs loader, binding-based strict verification, deterministic writes, tests — _pending_ `tooling` `data` `tests`
+- [x] **T1** figures.mjs: recipes.mjs loader, binding-based strict verification, deterministic writes, tests — _done_ `tooling` `data` `tests`
     - AC: `cd web && node scripts/analyst/figures.mjs --meeting 2026_1293 --verify` exits 0 printing ✅ for gap_trace, closing_rate, strategy_split, charge, AND leaves `git status --porcelain -- analyst/2026_1293` empty — including charge.json, whose committed nulls exercise the NaN/null normalization
     - AC: Compiling an external-recipe meeting twice produces byte-identical figure files (including a series with a missing point); a genuine content change still rewrites
     - AC: `cd web && node --test scripts/tests/figures-recipes.test.mjs` passes all cases in Part D and leaves no `analyst/.tmp-*` directory behind
