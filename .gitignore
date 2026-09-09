@@ -97,3 +97,6 @@ corpus/eval/blind/keys/
 .orchestra/heartbeat.json
 .orchestra/*.log
 orchestra.local.toml
+
+# derived single-file post exports (regenerate with web/scripts/analyst/export_post_html.mjs)
+analyst/*/*.html
