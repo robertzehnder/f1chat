@@ -44,7 +44,7 @@ A second, independently-authored Monza 2026 article (GPT-6 Astra) is now merged 
     - AC: Running the full toml gate sequence in order in the worktree passes, and `git status --porcelain -- analyst/2026_1293` is empty after the monza-figures step
     - AC: A worktree diff containing a `.env` path (simulated during development only) is rejected by the env guard; a clean diff passes
     - AC: `git diff main` at task end touches only `scripts/gate_gpt6_post.sh`; typecheck and the test suite still pass
-- [ ] **T5** Render horizontal_marker in RaceTraceChart and re-export the gpt6 PNGs — _pending_ (after T2) `frontend` `ui` `tests`
+- [x] **T5** Render horizontal_marker in RaceTraceChart and re-export the gpt6 PNGs — _done_ (after T2) `frontend` `ui` `tests`
     - AC: `git diff main --name-only` contains exactly: `web/src/components/f1-chat/charts/race-trace-chart.tsx`, `web/scripts/tests/race-trace-export.test.ts`, the three PNGs under `web/public/blog/monza-2026-gpt6/`, and the three PNGs under `analyst/2026_1293_gpt6/figures/` — no JSON, no other source files
     - AC: `cd web && npx tsx --test scripts/tests/race-trace-export.test.ts` passes: all pre-existing assertions plus, per gpt6 figure, exactly one ReferenceLine at y=0 carrying the label "Level at the line" from the figure JSON, and zero ReferenceLine elements for `analyst/2026_1293/figures/gap_trace.json`
     - AC: Each regenerated PNG in `web/public/blog/monza-2026-gpt6/` is >10 KB and was visually opened to confirm a labelled horizontal zero line with the gap traces crossing it (per the alt text); the same three PNGs are refreshed in `analyst/2026_1293_gpt6/figures/`
