@@ -18,7 +18,7 @@ figure slot-bound and verified, and the existing `monza-2026` post untouched.
 ```
 analyst/2026_1293/packet.json  ──copy (byte-identical)──▶  analyst/2026_1293_gpt6/packet.json
                                                               │
-        recipes.mjs (NEW per-meeting module, loaded by figures.mjs when present)
+        recipes.mjs (per-meeting module, loaded by figures.mjs when present — MERGED in T1)
                                                               ▼
 figures.mjs --meeting 2026_1293_gpt6 --verify  ▶  analyst/2026_1293_gpt6/figures/*.json
 report.md + sidecar.json  ──verify_draft.mjs / style_lint.mjs──▶ verified prose
@@ -30,86 +30,66 @@ The blog store is file-backed: dropping `monza-2026-gpt6.json` into `web/content
 appear on `/blog` and render at `/blog/monza-2026-gpt6`; the bare figure route
 `/blog/<slug>/figure/<name>` drives PNG export.
 
-## Gate reality (verified in the orchestra source)
-`orchestra/runner.py` `_gate()` (lines 49–53) uses the `orchestra.toml` `[gate]` commands whenever
-they are non-empty and falls back to the planner's gate only otherwise. The committed toml gate has
-a self-defeating sequence: its `monza-figures` step (`figures.mjs --meeting 2026_1293 --verify`)
-rewrites `analyst/2026_1293/figures/*.json` with fresh `built_at`/`checked_at` timestamps, and the
-very next step (`gate_gpt6_post.sh`) rejects any diff under `analyst/2026_1293`. The planner
-attempted to correct `orchestra.toml` directly; this session's permission mode denies file writes,
-so the fix is routed through the repo instead, which the orchestrator CAN merge:
+## Gate reality (resolved)
+The concern from v2–v4 is closed. At 7dfaa01 the human adopted the planner's gate into the
+committed `orchestra.toml`: `monza-figures` now snapshots `analyst/2026_1293/figures` to a temp
+dir and restores it via an EXIT trap (so the protected path is byte-clean regardless), and the
+toml gate additionally runs `figures-recipes-test` (the T1 test, conditional on the file — which
+now exists on main), `brief-bounds` (900–1400 words, 3–5 compiled figures, skip while the gpt6
+dir is absent), and `secret-files` (rejects any `.env` path in the diff). T1's deterministic
+writes merged on top, so the snapshot/restore and the no-op rewrite are belt and braces.
 
-1. **Root cause (T1)**: `figures.mjs` gains deterministic writes. Subtlety (review r3): the
-   compiler holds `NaN` for missing points but JSON serialization stores `null` — the committed
-   `charge.json` contains such nulls — so the comparison must JSON-normalize the freshly compiled
-   object (`JSON.parse(JSON.stringify(out))`) before deep-comparing with the parsed on-disk file,
-   both minus the two timestamp fields. When equal, the original bytes are preserved. The toml's
-   `monza-figures` step then leaves the protected path byte-clean, in every worktree, with no
-   wrapper needed.
-2. **Brief enforcement (T4)**: `scripts/gate_gpt6_post.sh` — a repo script the toml gate already
-   executes — is hardened to the brief: 900–1400 words (was 850–1500), 3–5 compiled figures, run
-   the T1 recipes test, and an env-file guard. This is the one planner-controllable executable
-   hook in the committed gate.
+**Consequence: T4 is dropped.** Every check it would have added to `scripts/gate_gpt6_post.sh`
+(tightened word bound, figure count, recipes test, env guard) already runs in the committed toml
+gate. The script's internal 850–1500 bound is looser than its own message, but the toml
+`brief-bounds` step (900–1400) is the binding constraint, so the inconsistency is benign and not
+worth a human-approval pause to fix. The only check that still lives solely in the planner gate
+block is `npm audit` (critical-only, prod deps); since this run permits no dependency changes,
+any failure there is pre-existing and is waived or deferred by the human, never "fixed" by a task.
 
-**Human action at plan approval (optional hardening, not load-bearing):** mirror this plan's gate
-block into `orchestra.toml` (or empty its `commands` to activate the planner gate). Until then the
-committed toml gate is correct once T1+T4 merge; the only check that exists solely in the planner
-block is `npm audit` (critical-only, prod deps — the stack-appropriate security scan; since this
-run permits no dependency changes, any failure is pre-existing and is waived or deferred by the
-human, never "fixed" by a task).
-
-### Code change 1: per-meeting recipe modules (T1)
-When `analyst/<meeting>/recipes.mjs` exists, `figures.mjs` imports it (via `pathToFileURL`) and
-calls its default export with `ctx = { packet, ptr, text, renderText, racingState, colorOf,
-surname, driverOf, traceIdx, pairIdx, lapIdx, TEAM_COLORS, COMPILER_VERSION }`; the returned
-`{ name: () => figure }` map replaces the built-ins for that meeting. Meetings without one
-(`2026_1293`) keep the built-ins on the unchanged code path.
-
-### Code change 2: strict provenance mode for external recipes (T1)
-`verifyFigure` today checks caption/alt slot binding and the two supported `series_sources`
-shapes; unknown shapes are silently skipped, decorations are unchecked, per-point coverage is not
-enforced, `src.laps` is only used in diagnostic messages (nothing binds a displayed lap to the
-packet row it came from), and `want == null` accepts a misspelled path as "missing data". Strict
-mode — applied ONLY to external-recipe figures; built-in Monza verification is untouched — closes
-these by **binding, not membership**:
-- **Exact per-point series coverage with lap identity**: every `chart.series` index needs a
-  supported-shape source; `laps.length + (lap0_path ? 1 : 0)` must equal `values.length`; `laps`
-  must deep-equal `chart.lap_numbers` when present. Each source additionally declares a
-  **lap binding**: for `packet_path_template` sources, a `lap_path_template` over the same `{i}`
-  indexing whose resolved value must equal `laps[i]` (and for `position_changes`, the implicit
-  index-lap: row lap === array index); for `inputs` sources, parallel `lap_paths: [[pa, pb], …]`
-  where both operands' laps must resolve to the displayed lap. This is what stops lap-40 data
-  being plotted as lap 41 with internally consistent recipe-authored arrays.
-- **Unresolved paths are failures, not missing data**: every declared source path must exist in
-  the packet (walk the parent and check the property is present). A plotted `NaN` is legal only
-  when the existing packet field is explicitly `null`; `NaN` against finite resolvable inputs, or
-  any path that resolves to `undefined`, is a failure. (The shipped `want == null` check accepts
-  typo'd paths; strict mode does not.)
-- **Decoration binding** via a `decoration_sources` object: `chart_note` and every annotation
-  text / pit-dot label / marker label is a `{template, slots}` whose re-render must byte-equal the
-  string in `chart`, with the caption-style unbound-number scan and slot-path resolution applied;
-  annotation `lap`, pit-dot `x`/`y` and `horizontal_marker.value` are slot-bound (the constant 0
-  is allowed for zero lines).
-- **racing_state recompute**: the recipe declares its window; the verifier recomputes
-  `ctx.racingState(window)` and deep-compares with `chart.racing_state`.
-- **stint_gantt cross-check**: `stints`/`gantt_stops` must equal their projections of
-  `packet.stints`/`packet.stops` (surname, lap bounds, lowercased compound), stop labels must
-  follow the class mapping (boundary_spanning→"red", vsc→"VSC", sc→"SC", else "green"), and
-  `total_laps` must match the packet.
-- **position_changes indexing**: the renderer labels laps by array index (index 0 = grid), so
-  strict mode requires full-race grid-prefixed series (`values.length === total_laps + 1` with a
-  `lap0_path`). Windowed lap plots must use `race_trace` or `line_with_stint_markers`.
-Negative fixtures: tampered value, shortened/appended arrays, unknown shape, **both lap arrays
-shifted together**, **mixed operand laps**, **misspelled path with NaN plotted**, unbound
-decoration, wrong annotation-lap binding, tampered racing_state, wrong gantt label; positive
-fixture for a legitimate packet null rendering as NaN.
-
-### Code change 3: deterministic figure writes (T1)
-As under "Gate reality": JSON-normalize the compiled object, strip
-`provenance.built_at`/`verification.checked_at` from both sides, deep-compare, and skip the write
-when equal — preserving original bytes. Console output and exit codes unchanged. Tested with a
-fixture whose series contains missing values (NaN→null round-trip) and with the real Monza
-meeting (`git status` clean afterwards — `charge.json`'s committed nulls make that test bite).
+### Verifier contract as merged (T1, verified in code — recipe authors code against THIS)
+`figures.mjs` loads `analyst/<meeting>/recipes.mjs` when present and calls its default export with
+`ctx = { packet, ptr, text, renderText, racingState, colorOf, surname, driverOf, traceIdx,
+pairIdx, lapIdx, TEAM_COLORS, COMPILER_VERSION }`; the returned `{ name: () => figure }` map
+replaces the built-ins for that meeting. External figures are verified by
+`verifyExternalFigure` (strict mode); built-in Monza verification is unchanged. Strict mode:
+- **Exactly one `series_sources` entry per series index**; unknown indexes, duplicates, or
+  uncovered series fail.
+- `packet_path_template` sources require `{series, packet_path_template ("{i}"), index_from ≥ 0,
+  laps[], lap_path_template ("{i}")[, lap0_path]}`: `laps.length + (lap0_path?1:0) ===
+  values.length`; `laps` deep-equals `chart.lap_numbers` when present; each row's resolved
+  `lap_path_template` value must equal `laps[i]` (and for `position_changes`, the array index);
+  each value must equal its resolved packet path at 1e-6.
+- `inputs` sources require parallel `lap_paths` AND `chart.lap_numbers` of the same length; the
+  chart value must equal `+(a − b).toFixed(3)`; both operands' laps must resolve to the displayed
+  lap; a packet-null operand → plotted `NaN` is legal; `position_changes` cannot use this shape.
+- **Unresolved paths are failures**: every declared path must exist property-by-property in the
+  packet; `NaN` is legal only against an explicit packet `null`.
+- **Slots**: `{packet_path}` | `{derive:{op: sub|div|mean|count, inputs:[path|number]}}` |
+  `{const: string}` — strict mode rejects `const` strings containing digits. Formats: `0.0`,
+  `0.00`, `0.000`, `int`, `ordinal`, `lower`, `surname`. ⚠ Accepted hole: the verifier does NOT
+  check numeric literals inside `derive.inputs`; recipes in this run are forbidden to use them
+  (T2 constraint, enforced at review) — every displayed number must trace to packet paths.
+- **Decorations** via `decoration_sources`: `chart_note: {template, slots}`;
+  `annotations: [{lap:<slot>, text:{template,slots}}]` and
+  `trace_pit_dots: [{x:<slot>, y:<slot>, label:{template,slots}}]` parallel to the chart arrays;
+  `horizontal_marker: {value: 0 | <slot>, label:{template,slots}}` (the zero line is the literal
+  `value: 0`). All bound text gets the byte-equality re-render + unbound-number scan. Annotation
+  laps must be path- or derive-bound (a digit-free `const` cannot carry a lap).
+- **racing_state**: whenever `chart.racing_state` exists, `decoration_sources.racing_state_window`
+  (`null` or `[from,to]`) is required and the verifier requires `JSON.stringify` equality with
+  `ctx.racingState(window)` — so recipes must build the layer with exactly that call and window.
+- **stint_gantt**: `stints` entries must deep-equal projections `{driver: surname(s.driver),
+  start: s.laps[0], end: s.laps[1], compound: lowercase}` of `packet.stints`; `gantt_stops` match
+  on `surname(s.acronym)` + lap with label from class (`boundary_spanning`→"red", `vsc`→"VSC",
+  `sc`→"SC", else "green"); `total_laps` must match the packet.
+- **position_changes**: full race, grid-prefixed (`values.length === total_laps + 1` with
+  `lap0_path`).
+Deterministic writes: compiled output is JSON-normalized (NaN→null), both sides stripped of
+`provenance.built_at`/`verification.checked_at`, and the write is skipped when deep-equal.
+`build_post.mjs` copies only `chart`/`caption.rendered`/`alt.rendered` per figure, so
+`decoration_sources` never reaches the blog JSON (no downstream impact). Figure names must match
+`/^[a-z0-9_-]+$/i` for `{{fig:name}}` placeholders.
 
 ## Data model (unchanged; source of truth is the verifying code)
 - **Figure JSON**: `{ name, chart, caption: {template, slots, rendered}, alt, series_sources,
@@ -138,35 +118,32 @@ Unchanged: Node 20 ESM scripts, Next.js 15 + Recharts, Playwright (installed) fo
 `node --test`/`tsx --test`. No new dependencies; no lockfile changes.
 
 ## Milestones
-1. **T1** — recipe loader + strict provenance mode + deterministic writes + tests.
-2. **T4** — harden `scripts/gate_gpt6_post.sh` (brief bounds, figure count, recipes test, env
-   guard). Human approves the merge (it edits the verification gate).
-3. **T2** — the full `analyst/2026_1293_gpt6/` package, pipeline end-to-end, PNGs exported.
+1. **T1** — recipe loader + strict provenance mode + deterministic writes + tests. **DONE**
+   (merged a682103; implementation verified against the spec during replan).
+2. **T2** — the full `analyst/2026_1293_gpt6/` package, pipeline end-to-end, PNGs exported.
    Atomic by design: the gate skips until the directory exists, then requires everything.
-4. **T3** — per-renderer browser QA + PNG visual inspection + regression on `/blog/monza-2026`;
+   Now depends only on T1 (T4 dropped).
+3. **T3** — per-renderer browser QA + PNG visual inspection + regression on `/blog/monza-2026`;
    `qa.md` evidence.
 
 ## Risks
-- **Gate atomicity makes T2 large.** Accepted; all code lands first (T1/T4) and T2's description
-  spells out every verifier rule.
+- **Gate atomicity makes T2 large.** Accepted; all code landed in T1 and T2's description spells
+  out every verifier rule as merged.
 - **Strict number provenance and the style linter force iteration.** Budgeted in T2.
-- **Deterministic-write comparison must ignore ONLY timestamps and must JSON-normalize** (NaN vs
-  null). T1's tests include a missing-value determinism fixture, a content-change-still-writes
-  case, and the real-Monza clean-status check.
+- **Derive-literal hole**: the merged verifier accepts numeric literals in `derive.inputs`. Closed
+  by task constraint (T2 forbids them) and planner review of `recipes.mjs`, not by more code.
+- **Script/toml bound mismatch**: `gate_gpt6_post.sh` still checks 850–1500 internally; the toml
+  `brief-bounds` step (900–1400) is the binding constraint. Benign; T2 targets 900–1400.
 - **Lap-binding requirements make recipes slightly more verbose** (lap_path_template/lap_paths);
   the cost is small and the alternative — internally consistent but wrong lap labels — is exactly
   the failure the brief exists to prevent.
 - **Port 3101 contention** between the task's dev server and the orchestrator QA server;
   `parallel = 1` mitigates, `--base` accepts any port.
-- **T4 pauses for human approval** (it edits the gate script); briefly blocks the run —
-  acceptable for a change to the verification gate itself.
 
 ## Open questions for the human
-- At plan approval: optionally mirror this plan's gate block into `orchestra.toml` (or empty its
-  `commands` to activate the planner gate). The run works without it once T1+T4 merge; only the
-  `npm audit` check lives solely in the planner block.
-- If `npm audit` (when active) flags a pre-existing critical advisory, waive it; dependency work
-  belongs to a separate run.
+- None blocking. `npm audit` (critical-only, prod deps) still lives only in the planner gate
+  block; if it ever runs and flags a pre-existing advisory, waive it — dependency work belongs to
+  a separate run.
 
 ## Plan history
 - v1 (2026-09-09): initial plan. Recipe loader → atomic authoring → browser QA.
@@ -182,3 +159,10 @@ Unchanged: Node 20 ESM scripts, Next.js 15 + Recharts, Playwright (installed) fo
   `lap_paths`, index-lap check for position_changes); unresolved source paths are failures — NaN
   is legal only against an explicit packet null. New fixtures for shifted lap arrays, mixed
   operand laps, typo'd paths, and legitimate nulls.
+- v5 (2026-09-09): replan after T1 merged. Implementation verified to match the spec; contract
+  details from the merged code (exactly-one-source-per-series, inputs = a−b toFixed(3) with
+  lap_numbers required, digit-free const slots, literal `value: 0` zero line, racing_state via
+  `ctx.racingState(window)` verbatim, derive-literal hole) folded into the plan and T2. The human
+  had adopted the planner gate into orchestra.toml at 7dfaa01 (snapshot/restore monza-figures,
+  brief-bounds, recipes test, secret-files), so **T4 dropped as redundant** (id never reused) —
+  removing its human-approval pause; T2 now depends only on T1. T3 unchanged.
