@@ -222,6 +222,7 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
               stroke={s.color}
               strokeWidth={2}
               dot={makeGapAwareDot(s.values, s.color)}
+              isAnimationActive={false}
               activeDot={{ r: 4, fill: s.color }}
             />
           ))}

@@ -115,6 +115,7 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
                   strokeWidth={s.emphasis === true ? 2.6 : 1.6}
                   strokeOpacity={dimmed ? 0.28 : 1}
                   dot={dimmed ? false : makeGapAwareDot(s.values, s.color)}
+                  isAnimationActive={false}
                 />
               )
             })}

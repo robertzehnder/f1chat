@@ -190,7 +190,9 @@ function SectorLaneShape({ coords, ...rect }: ShapeProps & { coords: Coords }) {
     <g>
       <rect x={x} y={top} width={width} height={SECTOR_LANE_H} fill={INK} fillOpacity={0.07} />
       <line x1={x} x2={x + width} y1={top} y2={top} stroke={INK} strokeWidth={0.8} opacity={0.6} />
-      <text x={x + width - 3} y={top + 8} textAnchor="end" fontSize={7.5} fill={INK} opacity={0.9}>sector yellows (issued)</text>
+      {/* anchored at the last lap's centre, not the expanded band edge, so it
+          never runs past the chart's right edge (QA found it clipped) */}
+      <text x={x + width - Math.max(6, width / Math.max(1, coords.laps) / 2)} y={top + 8} textAnchor="end" fontSize={7.5} fill={INK} opacity={0.9}>sector yellows (issued)</text>
     </g>
   )
 }
