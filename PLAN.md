@@ -8,11 +8,35 @@ figure slot-bound and verified, and the existing `monza-2026` post untouched.
 
 ## Non-goals
 - No database access, no packet regeneration, no changes to `analyst/2026_1293/`.
-- No new chart renderers or chart types; recipes are restricted to the four types the existing
-  post proved render correctly (`race_trace`, `position_changes`, `line_with_stint_markers`,
-  `stint_gantt`).
+- No new chart types; renderer changes only where a merged figure genuinely needs one (the brief's
+  sanctioned path — exercised once in T2 for animation honesty, once in T5 for the zero marker).
 - No changes to the racing-state layer, the chat route, migrations, lockfiles, or deploy.
 - No LLM-judge or human style-approval loop in-gate; `style_lint.mjs` is the deterministic bar.
+
+## State after T2 (merged 9488392)
+The full `analyst/2026_1293_gpt6/` package exists and the whole toml gate is green: report.md is
+931 body words; three figures — `early_lead_exchange` (laps 11–24), `unequal_recoveries`
+(laps 27–53, the hero), `mclaren_finish` (laps 43–53) — all `race_trace` pair-gap charts built
+from `packet.pair_gaps` with full lap bindings, racing-state windows, and slot-bound text;
+`recipes.mjs` uses no `derive` slots and no `const` slots at all (the derive-literal hole is moot);
+the post builds, three PNGs are exported, and `/blog/monza-2026-gpt6` is in the blog store.
+Thesis (divergent recoveries from a shared lap-28 VSC stop, Verstappen as the parallel control) is
+genuinely distinct from the original post's cheap-stop counterfactual; reviewer spot-checked the
+packet paths behind every headline number.
+
+Two facts from the merge that the remaining work must absorb:
+1. **Shared-code change shipped in T2**: `race-trace-chart.tsx` now sets `isAnimationActive=false`
+   (PNG exports could otherwise freeze mid-animation with partially drawn traces), guarded by
+   `web/scripts/tests/race-trace-export.test.ts`, which inspects the renderer's element tree
+   against the three merged figure JSONs. This also affects the live chat UI (benignly).
+2. **Accepted defect, now closed by T5**: all three figures declare
+   `horizontal_marker: {value: 0, label: "Level at the line"}` and the verifier passed it, but
+   `RaceTraceChart` ignores `horizontal_marker` entirely (unlike `line_with_stint_markers.tsx:179`,
+   which renders it as a ReferenceLine). Two of the three alt texts describe curves "crossing the
+   level line" — a visual element the published PNGs do not contain. That fails honesty-over-polish,
+   and a gap chart whose story is zero-crossings genuinely needs its zero line. T5 renders it and
+   re-exports the three PNGs; the figure JSONs, blog JSON, and sidecar are already correct and do
+   not change.
 
 ## Architecture (all existing, boring, file-backed)
 ```
@@ -26,143 +50,92 @@ post.md + post.meta.json  ──build_post.mjs (fail-closed gates)──▶ web/
 export_figures.mjs --slug monza-2026-gpt6 --base http://localhost:3101
                                           ▶ web/public/blog/monza-2026-gpt6/*.png
 ```
-The blog store is file-backed: dropping `monza-2026-gpt6.json` into `web/content/blog/` makes it
-appear on `/blog` and render at `/blog/monza-2026-gpt6`; the bare figure route
-`/blog/<slug>/figure/<name>` drives PNG export.
+The blog store is file-backed; the bare figure route `/blog/<slug>/figure/<name>` drives PNG export.
+`build_post.mjs` copies `chart` wholesale into the blog JSON, so the already-declared
+`horizontal_marker` reaches the renderer without any rebuild — T5 is renderer + PNG re-export only.
 
 ## Gate reality (resolved)
-The concern from v2–v4 is closed. At 7dfaa01 the human adopted the planner's gate into the
-committed `orchestra.toml`: `monza-figures` now snapshots `analyst/2026_1293/figures` to a temp
-dir and restores it via an EXIT trap (so the protected path is byte-clean regardless), and the
-toml gate additionally runs `figures-recipes-test` (the T1 test, conditional on the file — which
-now exists on main), `brief-bounds` (900–1400 words, 3–5 compiled figures, skip while the gpt6
-dir is absent), and `secret-files` (rejects any `.env` path in the diff). T1's deterministic
-writes merged on top, so the snapshot/restore and the no-op rewrite are belt and braces.
+The committed `orchestra.toml` gate is authoritative and green end-to-end: typecheck, racing-state
+test, adapter test, `figures-recipes-test` (T1's suite), `monza-figures` (snapshot/EXIT-trap
+restore around `--meeting 2026_1293 --verify`), `brief-bounds` (900–1400 words, 3–5 figures),
+`gpt6-post` (`scripts/gate_gpt6_post.sh`), `secret-files`. T4 stays dropped — every check it would
+have added already runs in the toml gate. `npm audit` lives only in the planner gate block; any
+failure there is pre-existing and is waived by the human, never "fixed" by a task.
 
-**Consequence: T4 is dropped.** Every check it would have added to `scripts/gate_gpt6_post.sh`
-(tightened word bound, figure count, recipes test, env guard) already runs in the committed toml
-gate. The script's internal 850–1500 bound is looser than its own message, but the toml
-`brief-bounds` step (900–1400) is the binding constraint, so the inconsistency is benign and not
-worth a human-approval pause to fix. The only check that still lives solely in the planner gate
-block is `npm audit` (critical-only, prod deps); since this run permits no dependency changes,
-any failure there is pre-existing and is waived or deferred by the human, never "fixed" by a task.
+### Verifier contract as merged (T1 — unchanged; recipes were reviewed against it)
+`figures.mjs` loads `analyst/<meeting>/recipes.mjs` (default export `(ctx) => map`) and verifies
+external figures in strict mode: exactly one `series_sources` entry per series index;
+`packet_path_template` sources bind each displayed lap to its packet row via `lap_path_template`;
+`inputs` sources need parallel `lap_paths` + `chart.lap_numbers` with `+(a−b).toFixed(3)` equality;
+unresolved paths fail (NaN legal only against explicit packet null); decoration binding via
+`decoration_sources` (chart_note / annotations / trace_pit_dots / horizontal_marker with the zero
+line as literal `value: 0`); `racing_state` must JSON-equal `ctx.racingState(window)` for the
+declared `racing_state_window`; gantt and position_changes projection rules as specified in T1.
+Deterministic writes keep `git status` clean on re-runs, which `monza-figures` → `gpt6-post` rely on.
 
-### Verifier contract as merged (T1, verified in code — recipe authors code against THIS)
-`figures.mjs` loads `analyst/<meeting>/recipes.mjs` when present and calls its default export with
-`ctx = { packet, ptr, text, renderText, racingState, colorOf, surname, driverOf, traceIdx,
-pairIdx, lapIdx, TEAM_COLORS, COMPILER_VERSION }`; the returned `{ name: () => figure }` map
-replaces the built-ins for that meeting. External figures are verified by
-`verifyExternalFigure` (strict mode); built-in Monza verification is unchanged. Strict mode:
-- **Exactly one `series_sources` entry per series index**; unknown indexes, duplicates, or
-  uncovered series fail.
-- `packet_path_template` sources require `{series, packet_path_template ("{i}"), index_from ≥ 0,
-  laps[], lap_path_template ("{i}")[, lap0_path]}`: `laps.length + (lap0_path?1:0) ===
-  values.length`; `laps` deep-equals `chart.lap_numbers` when present; each row's resolved
-  `lap_path_template` value must equal `laps[i]` (and for `position_changes`, the array index);
-  each value must equal its resolved packet path at 1e-6.
-- `inputs` sources require parallel `lap_paths` AND `chart.lap_numbers` of the same length; the
-  chart value must equal `+(a − b).toFixed(3)`; both operands' laps must resolve to the displayed
-  lap; a packet-null operand → plotted `NaN` is legal; `position_changes` cannot use this shape.
-- **Unresolved paths are failures**: every declared path must exist property-by-property in the
-  packet; `NaN` is legal only against an explicit packet `null`.
-- **Slots**: `{packet_path}` | `{derive:{op: sub|div|mean|count, inputs:[path|number]}}` |
-  `{const: string}` — strict mode rejects `const` strings containing digits. Formats: `0.0`,
-  `0.00`, `0.000`, `int`, `ordinal`, `lower`, `surname`. ⚠ Accepted hole: the verifier does NOT
-  check numeric literals inside `derive.inputs`; recipes in this run are forbidden to use them
-  (T2 constraint, enforced at review) — every displayed number must trace to packet paths.
-- **Decorations** via `decoration_sources`: `chart_note: {template, slots}`;
-  `annotations: [{lap:<slot>, text:{template,slots}}]` and
-  `trace_pit_dots: [{x:<slot>, y:<slot>, label:{template,slots}}]` parallel to the chart arrays;
-  `horizontal_marker: {value: 0 | <slot>, label:{template,slots}}` (the zero line is the literal
-  `value: 0`). All bound text gets the byte-equality re-render + unbound-number scan. Annotation
-  laps must be path- or derive-bound (a digit-free `const` cannot carry a lap).
-- **racing_state**: whenever `chart.racing_state` exists, `decoration_sources.racing_state_window`
-  (`null` or `[from,to]`) is required and the verifier requires `JSON.stringify` equality with
-  `ctx.racingState(window)` — so recipes must build the layer with exactly that call and window.
-- **stint_gantt**: `stints` entries must deep-equal projections `{driver: surname(s.driver),
-  start: s.laps[0], end: s.laps[1], compound: lowercase}` of `packet.stints`; `gantt_stops` match
-  on `surname(s.acronym)` + lap with label from class (`boundary_spanning`→"red", `vsc`→"VSC",
-  `sc`→"SC", else "green"); `total_laps` must match the packet.
-- **position_changes**: full race, grid-prefixed (`values.length === total_laps + 1` with
-  `lap0_path`).
-Deterministic writes: compiled output is JSON-normalized (NaN→null), both sides stripped of
-`provenance.built_at`/`verification.checked_at`, and the write is skipped when deep-equal.
-`build_post.mjs` copies only `chart`/`caption.rendered`/`alt.rendered` per figure, so
-`decoration_sources` never reaches the blog JSON (no downstream impact). Figure names must match
-`/^[a-z0-9_-]+$/i` for `{{fig:name}}` placeholders.
+## Renderer reality (verified in web/src/components/f1-chat/charts/)
+- `race-trace-chart.tsx`: no `horizontal_marker` handling (T5 adds it, mirroring
+  `line-with-stint-markers.tsx:179-186`); `isAnimationActive=false` since T2.
+- `line-with-stint-markers.tsx` renders `horizontal_marker` as a labelled ReferenceLine —
+  the existing post's `closing_rate` proves it in production.
+- `stint_gantt` renders with HTML/CSS divs, no SVG; `position_changes` labels laps by array index.
+- The merged gpt6 post contains **only race_trace figures**, so T3's per-renderer split is:
+  SVG data-mark assertions for all three new figures; the gantt assertion applies only to the
+  `monza-2026` regression check (`strategy_split`).
+- `chart-types.ts:210` already types `horizontal_marker` on line charts; the chat-side detector at
+  `mapInsight/detectors/registry.ts:1859` also emits one, so T5's rendering is additive for chat too.
 
 ## Data model (unchanged; source of truth is the verifying code)
-- **Figure JSON**: `{ name, chart, caption: {template, slots, rendered}, alt, series_sources,
-  decoration_sources (external recipes), provenance, verification }`. Slots bind by slash
-  JSON-pointer or `derive` ops (sub/div/mean/count).
-- **Sidecar** (`verify_draft.mjs` + `analyst/2026_1293/sidecar.json` as reference):
-  `{ report, packet_version, review_mode, claims[], contract{} }`; dotted `packet:` refs,
-  `moment:` ids, `attributed:` sources. Contract beats C1–C10 with status+reason; C2 needs a
-  `moment:` ref; causal claims need review outcomes; material rejected/unresolved blocks.
-  **This run's honesty tightening**: `attributed:` may only name sources present in the packet
-  (the race-control record) — the implementer has no press access, so unsupported causes are
-  withheld; quantities are written as numerals so the number scanner sees them.
-- **Post meta**: `{ slug, dek, published_at, author, meeting_key: 1293, session_key: 11361,
-  hero_figure, figure_order[] }`.
-
-### Renderer reality (verified in web/src/components/f1-chat/charts/)
-`metric_grid` is in build_post's allowlist but has no ChartRenderer case; plain `line` ignores
-`racing_state`/`lap_numbers`; **`stint_gantt` renders with HTML/CSS divs and contains no SVG**;
-`position_changes` labels laps by array index. Consequences: T2 uses only the four proven types;
-T3 asserts per-renderer (Recharts data marks inside SVG for the three line-family types; driver
-rows + nonzero-width compound bars for gantt) — the existing post's `strategy_split` is a gantt,
-so a blanket SVG assertion could never pass.
+Figure JSON, sidecar, and post-meta shapes as in v5. The merged sidecar and figure JSONs verified
+under those rules and are frozen unless a task explicitly reruns the pipeline.
 
 ## Stack
 Unchanged: Node 20 ESM scripts, Next.js 15 + Recharts, Playwright (installed) for PNG export,
 `node --test`/`tsx --test`. No new dependencies; no lockfile changes.
 
 ## Milestones
-1. **T1** — recipe loader + strict provenance mode + deterministic writes + tests. **DONE**
-   (merged a682103; implementation verified against the spec during replan).
+1. **T1** — recipe loader + strict provenance mode + deterministic writes + tests. **DONE** (a682103).
 2. **T2** — the full `analyst/2026_1293_gpt6/` package, pipeline end-to-end, PNGs exported.
-   Atomic by design: the gate skips until the directory exists, then requires everything.
-   Now depends only on T1 (T4 dropped).
-3. **T3** — per-renderer browser QA + PNG visual inspection + regression on `/blog/monza-2026`;
-   `qa.md` evidence.
+   **DONE** (9488392): 931 words, 3 race_trace figures, distinct thesis, all gate steps green;
+   shipped the race-trace animation fix + element-tree test as a justified shared-code change.
+3. **T5** — render the declared `horizontal_marker` in `RaceTraceChart` (the accepted T2 defect):
+   ReferenceLine + label when present, extend the element-tree test, re-export the three gpt6 PNGs.
+   Small, sanctioned by the brief's "renderer feature only if a figure genuinely needs it".
+4. **T3** — per-renderer browser QA + PNG visual inspection + regression on `/blog/monza-2026`;
+   runs after T5 so QA sees (and asserts) the zero line in the final published state.
 
 ## Risks
-- **Gate atomicity makes T2 large.** Accepted; all code landed in T1 and T2's description spells
-  out every verifier rule as merged.
-- **Strict number provenance and the style linter force iteration.** Budgeted in T2.
-- **Derive-literal hole**: the merged verifier accepts numeric literals in `derive.inputs`. Closed
-  by task constraint (T2 forbids them) and planner review of `recipes.mjs`, not by more code.
-- **Script/toml bound mismatch**: `gate_gpt6_post.sh` still checks 850–1500 internally; the toml
-  `brief-bounds` step (900–1400) is the binding constraint. Benign; T2 targets 900–1400.
-- **Lap-binding requirements make recipes slightly more verbose** (lap_path_template/lap_paths);
-  the cost is small and the alternative — internally consistent but wrong lap labels — is exactly
-  the failure the brief exists to prevent.
-- **Port 3101 contention** between the task's dev server and the orchestrator QA server;
-  `parallel = 1` mitigates, `--base` accepts any port.
+- **T5 touches a live chat-UI component.** Scope is one additive conditional (render a declared
+  optional field the type system already carries); the element-tree test pins it, and T3 regression
+  checks `/blog/monza-2026` (whose race_trace figures declare no marker, so they must not change).
+- **PNG re-export churn**: T5 rewrites three PNGs in two places (public + analyst figures dir);
+  byte diffs are expected and confined to the gpt6 slug. `monza-2026` assets must stay untouched —
+  export runs only with `--slug monza-2026-gpt6`.
+- **Port 3101 contention** between a task dev server and the orchestrator QA server; `parallel = 1`
+  mitigates, `--base`/export accept any port.
+- QA on T2 recorded status "blocked" — browser verification has not actually run yet; T3 is that
+  verification and stays mandatory, not a formality.
 
 ## Open questions for the human
-- None blocking. `npm audit` (critical-only, prod deps) still lives only in the planner gate
-  block; if it ever runs and flags a pre-existing advisory, waive it — dependency work belongs to
-  a separate run.
+- None blocking. `npm audit` (critical-only, prod deps) still lives only in the planner gate block;
+  if it ever flags a pre-existing advisory, waive it — dependency work belongs to a separate run.
 
 ## Plan history
 - v1 (2026-09-09): initial plan. Recipe loader → atomic authoring → browser QA.
 - v2 (2026-09-09): review r1. Snapshot/restore around Monza verify; membership-based strict mode;
   four proven chart types; attribution/word-form bans; 900–1400 + 3–5 in planner gate.
-- v3 (2026-09-09): review r2. Runner prefers the toml gate → fix moved into the repo
-  (deterministic writes in T1, gate-script hardening in new T4); strict mode redesigned from
-  membership to binding; per-point series coverage; gantt QA rewritten (no SVG);
-  position_changes full-race rule.
-- v4 (2026-09-09): review r3, all three issues verified and accepted. Deterministic-write
-  comparison JSON-normalizes before diffing (committed charge.json holds nulls where the compiler
-  holds NaN); strict mode binds each displayed lap to its packet row (`lap_path_template` /
-  `lap_paths`, index-lap check for position_changes); unresolved source paths are failures — NaN
-  is legal only against an explicit packet null. New fixtures for shifted lap arrays, mixed
-  operand laps, typo'd paths, and legitimate nulls.
-- v5 (2026-09-09): replan after T1 merged. Implementation verified to match the spec; contract
-  details from the merged code (exactly-one-source-per-series, inputs = a−b toFixed(3) with
-  lap_numbers required, digit-free const slots, literal `value: 0` zero line, racing_state via
-  `ctx.racingState(window)` verbatim, derive-literal hole) folded into the plan and T2. The human
-  had adopted the planner gate into orchestra.toml at 7dfaa01 (snapshot/restore monza-figures,
-  brief-bounds, recipes test, secret-files), so **T4 dropped as redundant** (id never reused) —
-  removing its human-approval pause; T2 now depends only on T1. T3 unchanged.
+- v3 (2026-09-09): review r2. Fix moved into the repo (deterministic writes in T1, gate-script
+  hardening in T4); strict mode redesigned from membership to binding; per-point series coverage;
+  gantt QA rewritten (no SVG); position_changes full-race rule.
+- v4 (2026-09-09): review r3 accepted. JSON-normalized deterministic-write comparison; per-lap
+  binding (`lap_path_template`/`lap_paths`); unresolved paths are failures; new fixtures.
+- v5 (2026-09-09): replan after T1. Merged verifier contract folded into T2; human adopted the
+  planner gate into orchestra.toml at 7dfaa01, so T4 dropped as redundant; T2 depends only on T1.
+- v6 (2026-09-09): replan after T2 merged (9488392). Package verified in the repo: 931 words,
+  3 race_trace figures, distinct thesis. Two absorptions: T2's shared-code animation fix noted as
+  shipped; the reviewer-accepted defect — `horizontal_marker` declared by all three figures (and
+  described by two alt texts) but silently dropped by RaceTraceChart — promoted to new task T5
+  (render it, extend the element-tree test, re-export gpt6 PNGs) because it violates
+  honesty-over-polish on published figures. T3 re-pinned to the actual merged figure set (all
+  race_trace; gantt assertion only for the monza-2026 regression; zero-line assertions added) and
+  now depends on T5. T4 remains dropped.

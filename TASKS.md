@@ -1,18 +1,19 @@
-# Tasks (plan v2 · second opinion: off)
+# Tasks (plan v3 · second opinion: off)
 
-A second, independent Monza 2026 article authored by GPT-6 from the frozen evidence packet, published at /blog/monza-2026-gpt6 through the existing verified-figures pipeline. T1 (recipe loader + binding-based strict verification + deterministic writes) merged exactly to spec, and the human adopted the planner's gate into orchestra.toml — so T4 (gate-script hardening) is dropped as redundant and T2 (the full authoring package) dispatches next, followed by T3 browser QA.
+A second, independently-authored Monza 2026 article (GPT-6 Astra) is now merged and live at /blog/monza-2026-gpt6: 931 words, 3 verified race_trace figures, full pipeline green. Replan v6 adds one small follow-up (T5: render the declared zero-line horizontal_marker in RaceTraceChart — all three figures declare it and two alt texts describe it, but the renderer drops it) and re-pins browser QA (T3) to the actual merged figure set before it runs last.
 
 ## Gate
 
 - `typecheck`: `cd web && npm run typecheck`
 - `racing-state`: `cd web && npx tsx --test scripts/tests/racing-state.test.ts`
 - `adapter`: `cd web && npm run test:adapter`
-- `figures-recipes-test`: `cd web && node --test scripts/tests/figures-recipes.test.mjs`
+- `figures-recipes-test`: `cd web && { [ ! -f scripts/tests/figures-recipes.test.mjs ] || node --test scripts/tests/figures-recipes.test.mjs; }`
+- `race-trace-export-test`: `cd web && { [ ! -f scripts/tests/race-trace-export.test.ts ] || npx tsx --test scripts/tests/race-trace-export.test.ts; }`
 - `monza-figures`: `tmp=$(mktemp -d) || exit 1; cp -R analyst/2026_1293/figures "$tmp/fig" || { rm -rf "$tmp"; exit 1; }; trap 'rm -rf analyst/2026_1293/figures; mv "$tmp/fig" analyst/2026_1293/figures; rm -rf "$tmp"' EXIT; (cd web && node scripts/analyst/figures.mjs --meeting 2026_1293 --verify)`
 - `brief-bounds`: `d=analyst/2026_1293_gpt6; [ ! -d "$d" ] && exit 0; w=$(sed 1d "$d/report.md" | wc -w); { [ "$w" -ge 900 ] && [ "$w" -le 1400 ]; } || { echo "report.md is $w words (brief: 900-1400)"; exit 1; }; n=$(ls "$d"/figures/*.json 2>/dev/null | wc -l); { [ "$n" -ge 3 ] && [ "$n" -le 5 ]; } || { echo "$n compiled figures (brief: 3-5)"; exit 1; }`
 - `gpt6-post`: `bash scripts/gate_gpt6_post.sh`
 - `secret-files`: `! git diff main --name-only | grep -E '(^|/)\.env'`
-- `npm-audit`: `cd web && npm audit --omit=dev --audit-level=critical`
+- `audit`: `cd web && npm audit --omit=dev --audit-level=critical`
 
 - [x] **T1** figures.mjs: recipes.mjs loader, binding-based strict verification, deterministic writes, tests — _done_ `tooling` `data` `tests`
     - AC: `cd web && node scripts/analyst/figures.mjs --meeting 2026_1293 --verify` exits 0 printing ✅ for gap_trace, closing_rate, strategy_split, charge, AND leaves `git status --porcelain -- analyst/2026_1293` empty — including charge.json, whose committed nulls exercise the NaN/null normalization
@@ -31,11 +32,11 @@ A second, independent Monza 2026 article authored by GPT-6 from the frozen evide
     - AC: `web/content/blog/monza-2026-gpt6.json` exists with the title from report.md line 1, author "GPT-6 Astra (orchestra)", and a hero_figure that is one of the compiled figures; every numeric fact in the dek has a sidecar claim
     - AC: report.md argues its own thesis (notes.md names it, its packet paths, and a per-material-causal-claim self-review) and shares no paragraph with `analyst/2026_1293/report.md`
     - AC: The full toml gate sequence passes in the worktree; `git status --porcelain -- analyst/2026_1293` is empty after the pipeline runs
-- [ ] **T3** Browser QA of /blog/monza-2026-gpt6 with per-renderer assertions and PNG inspection — _pending_ (after T2) `ui` `frontend` `tests` `docs`
-    - AC: `analyst/2026_1293_gpt6/qa.md` exists, lists checks 1–5 each with URL, assertion, and PASS (or defect + fix), and contains one visual-inspection line per exported PNG including lap-range and racing-state observations
-    - AC: Page HTML of `/blog/monza-2026-gpt6` contains zero `{{fig:` literals; wrapper count equals placeholder count; every SVG-family figure shows >0 data marks with the intended lap range; every gantt figure shows per-driver rows with nonzero-width compound bars; no unsupported/no-data fallback text anywhere
-    - AC: Every figure in the post JSON renders at its bare figure route under the same per-renderer assertions, and its PNG is served 200/image/png at >10 KB AND visually shows plotted data with racing-state shading where declared
-    - AC: `/blog` lists both posts; `/blog/monza-2026` passes the per-renderer assertions for its four figures (strategy_split asserted as a gantt, not as SVG); `git diff main` remains clean for all Do-not-touch paths
+- [ ] **T3** Browser QA of /blog/monza-2026-gpt6 with per-renderer assertions and PNG inspection — _pending_ (after T2, T5) `ui` `frontend` `tests` `docs`
+    - AC: `analyst/2026_1293_gpt6/qa.md` exists, lists checks 1–5 each with URL, assertion, and PASS (or defect + fix), and contains one visual-inspection line per exported PNG including lap-range, racing-state, and zero-line observations
+    - AC: Page HTML of `/blog/monza-2026-gpt6` contains zero `{{fig:` literals; wrapper count equals placeholder count; each of the three race_trace figures shows >0 data marks, x-ticks spanning its declared lap window, and the labelled zero ReferenceLine; no unsupported/no-data fallback text anywhere
+    - AC: All three figures render at their bare figure routes under the same assertions, and each PNG is served 200/image/png at >10 KB AND visually shows plotted data with racing-state shading and the zero line
+    - AC: `/blog` lists both posts; `/blog/monza-2026` passes the per-renderer assertions for its four figures (strategy_split asserted as a gantt, not as SVG; gap_trace/charge show no stray reference line); `git diff main` remains clean for all Do-not-touch paths
     - AC: `bash scripts/gate_gpt6_post.sh` and the full toml gate sequence still pass in the worktree; no throwaway QA scripts or screenshots are committed
 - [ ] **T4** Harden scripts/gate_gpt6_post.sh to the brief (bounds, figure count, recipes test, env guard) — _obsolete_ (after T1) **[needs human]** `tooling` `tests` `security`
     - AC: `bash scripts/gate_gpt6_post.sh` exits 0 in this task's worktree (gpt6 dir absent): hygiene section runs the figures-recipes test and the env guard, then the script prints the skip message and exits 0
@@ -43,3 +44,9 @@ A second, independent Monza 2026 article authored by GPT-6 from the frozen evide
     - AC: Running the full toml gate sequence in order in the worktree passes, and `git status --porcelain -- analyst/2026_1293` is empty after the monza-figures step
     - AC: A worktree diff containing a `.env` path (simulated during development only) is rejected by the env guard; a clean diff passes
     - AC: `git diff main` at task end touches only `scripts/gate_gpt6_post.sh`; typecheck and the test suite still pass
+- [ ] **T5** Render horizontal_marker in RaceTraceChart and re-export the gpt6 PNGs — _pending_ (after T2) `frontend` `ui` `tests`
+    - AC: `git diff main --name-only` contains exactly: `web/src/components/f1-chat/charts/race-trace-chart.tsx`, `web/scripts/tests/race-trace-export.test.ts`, the three PNGs under `web/public/blog/monza-2026-gpt6/`, and the three PNGs under `analyst/2026_1293_gpt6/figures/` — no JSON, no other source files
+    - AC: `cd web && npx tsx --test scripts/tests/race-trace-export.test.ts` passes: all pre-existing assertions plus, per gpt6 figure, exactly one ReferenceLine at y=0 carrying the label "Level at the line" from the figure JSON, and zero ReferenceLine elements for `analyst/2026_1293/figures/gap_trace.json`
+    - AC: Each regenerated PNG in `web/public/blog/monza-2026-gpt6/` is >10 KB and was visually opened to confirm a labelled horizontal zero line with the gap traces crossing it (per the alt text); the same three PNGs are refreshed in `analyst/2026_1293_gpt6/figures/`
+    - AC: The full gate passes in the worktree: typecheck, racing-state test, adapter test, figures-recipes test, monza-figures verify (with `git status --porcelain -- analyst/2026_1293` empty after), brief-bounds, `bash scripts/gate_gpt6_post.sh`, secret-files
+    - AC: `git diff main` is clean for `analyst/2026_1293/**`, `web/content/blog/monza-2026.json`, and `web/public/blog/monza-2026/**`
