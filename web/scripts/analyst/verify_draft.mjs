@@ -35,9 +35,10 @@ const packetNumbers = new Set();
 const derived = new Set((sidecar.claims ?? []).flatMap((c) => (["derived_metric", "attribution"].includes(c.type) ? (c.values ?? []).map(String) : [])));
 // Verbatim race-control quotes ARE provenance: strip any body substring that
 // equals a packet message before scanning numbers (their times/lap refs live in the packet).
-let scanBody = body;
+// Markdown link targets are source URLs, not prose: strip them before scanning.
+let scanBody = body.replace(/\]\((https?:\/\/[^)\s]+)\)/g, "]");
 const msgs = packet.timeline.events.map((e) => e.message).filter(Boolean);
-for (const m of body.matchAll(/"([^"]+?)"/g)) {
+for (const m of scanBody.matchAll(/"([^"]+?)"/g)) {
   const quoted = m[1];
   if (quoted.length < 25) continue; // short quotes are not treated as record citations
   if (msgs.some((msg) => msg.includes(quoted))) scanBody = scanBody.split(quoted).join(" ");

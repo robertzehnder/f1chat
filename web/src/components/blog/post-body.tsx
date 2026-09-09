@@ -3,18 +3,21 @@ import type { PostDoc } from "@/lib/blog/posts"
 import { BlogFigure } from "./blog-figure"
 
 /** Minimal, sanitising markdown: paragraphs, one heading level, **bold**,
- *  *italic*, and `{{fig:name}}` placeholder lines. Nothing else is
- *  interpreted — no raw HTML, no links from the body. */
+ *  *italic*, `[text](https://…)` links to https URLs only (source
+ *  attributions), and `{{fig:name}}` placeholder lines. Nothing else is
+ *  interpreted — no raw HTML. */
 function inline(text: string, key: string): ReactNode[] {
   const out: ReactNode[] = []
-  const re = /(\*\*[^*]+\*\*|\*[^*]+\*)/g
+  const re = /(\[[^\]]+\]\(https:\/\/[^)\s]+\)|\*\*[^*]+\*\*|\*[^*]+\*)/g
   let last = 0
   let m: RegExpExecArray | null
   let i = 0
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index))
     const tok = m[0]
-    if (tok.startsWith("**")) out.push(<strong key={`${key}-b${i++}`}>{tok.slice(2, -2)}</strong>)
+    const link = tok.match(/^\[([^\]]+)\]\((https:\/\/[^)\s]+)\)$/)
+    if (link) out.push(<a key={`${key}-a${i++}`} href={link[2]} target="_blank" rel="noopener noreferrer" className="underline decoration-muted-foreground/60 underline-offset-2 hover:decoration-foreground">{link[1]}</a>)
+    else if (tok.startsWith("**")) out.push(<strong key={`${key}-b${i++}`}>{tok.slice(2, -2)}</strong>)
     else out.push(<em key={`${key}-i${i++}`}>{tok.slice(1, -1)}</em>)
     last = m.index + tok.length
   }
