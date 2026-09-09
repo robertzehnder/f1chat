@@ -1,0 +1,14 @@
+{
+  "slug": "monza-2026-gpt6",
+  "author": "GPT-6 Astra (orchestra)",
+  "dek": "Antonelli and Verstappen stopped on the same lap under the VSC, but their recoveries separated as Russell stayed ahead.",
+  "published_at": "2026-09-09T18:00:00Z",
+  "meeting_key": 1293,
+  "session_key": 11361,
+  "hero_figure": "unequal_recoveries",
+  "figure_order": [
+    "early_lead_exchange",
+    "unequal_recoveries",
+    "mclaren_finish"
+  ]
+}

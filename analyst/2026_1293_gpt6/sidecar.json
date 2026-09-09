@@ -1,0 +1,1455 @@
+{
+  "report": "report.md",
+  "packet_version": "race_packet@1",
+  "review_mode": "Structured self-review by the authoring agent; orchestra review is the external check.",
+  "claims": [
+    {
+      "id": "P1S1",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "Kimi Antonelli won the Italian Grand Prix after converting a post-stop deficit into a lead that Max Verstappen, stopping on the same lap, never matched.",
+      "refs": [
+        "packet:results.0.position",
+        "packet:results.1.position",
+        "packet:results.2.position",
+        "packet:stops.27.lap",
+        "packet:stops.28.lap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.2.laps.38.gap",
+        "packet:pair_gaps.2.laps.47.gap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted as observed recovery, not a claim that the stop guaranteed victory; compared Verstappen\u2019s same-lap stop and failure to regain the lead."
+      }
+    },
+    {
+      "id": "P1S2",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "George Russell finished 2nd ahead of Verstappen, but the decisive separation was already visible while Russell still led: Antonelli kept closing as the Red Bull's recovery stalled.",
+      "refs": [
+        "packet:results.0.position",
+        "packet:results.1.position",
+        "packet:results.2.position",
+        "packet:stops.27.lap",
+        "packet:stops.28.lap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.2.laps.38.gap",
+        "packet:pair_gaps.2.laps.47.gap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted: pair gaps diverge between laps 39 and 48 with Russell still leading; considered an apparent divergence caused by changing gap references, excluded by the named pair series."
+      }
+    },
+    {
+      "id": "P2S1",
+      "type": "observation",
+      "material": true,
+      "text": "The VSC stop was a shared opportunity with unequal returns.",
+      "refs": [
+        "packet:stops.27.lane_time_s",
+        "packet:stops.28.lane_time_s",
+        "packet:stops.27.compound_after",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.2.laps.28.gap",
+        "packet:manifest.not_available.3"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P2S2",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli and Verstappen each recorded 24.9 seconds in the pit lane, then resumed on different compounds; the subsequent gaps show how much remained to be done after the stop.",
+      "refs": [
+        "packet:stops.27.lane_time_s",
+        "packet:stops.28.lane_time_s",
+        "packet:stops.27.compound_after",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.2.laps.28.gap",
+        "packet:manifest.not_available.3"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P2S3",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "That comparison cannot isolate the tyre advantage from the cars, drivers or traffic, but it does resist treating the caution as a complete explanation of the winner.",
+      "refs": [
+        "packet:stops.27.lane_time_s",
+        "packet:stops.28.lane_time_s",
+        "packet:stops.27.compound_after",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.2.laps.28.gap",
+        "packet:manifest.not_available.3"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted as a limitation on causal attribution; different cars and compounds prevent a controlled comparison. A tyre-only explanation is withheld."
+      }
+    },
+    {
+      "id": "P3S1",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli's recovery had begun well before that opening.",
+      "refs": [
+        "packet:grid_penalties.0.qualified",
+        "packet:grid_penalties.0.grid",
+        "packet:grid_penalties.0.places_lost",
+        "packet:grid_penalties.0.cause",
+        "packet:position_trace.ANT.1.lap",
+        "packet:position_trace.ANT.1.position",
+        "packet:restart_snapshots.1.label",
+        "packet:restart_snapshots.1.order.11.position",
+        "packet:restart_snapshots.1.order.11.as_of"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P3S2",
+      "type": "observation",
+      "material": true,
+      "text": "He qualified 7th and started 19th after a 12-place grid penalty, whose cause isn't supplied by the timing record.",
+      "refs": [
+        "packet:grid_penalties.0.qualified",
+        "packet:grid_penalties.0.grid",
+        "packet:grid_penalties.0.places_lost",
+        "packet:grid_penalties.0.cause",
+        "packet:position_trace.ANT.1.lap",
+        "packet:position_trace.ANT.1.position",
+        "packet:restart_snapshots.1.label",
+        "packet:restart_snapshots.1.order.11.position",
+        "packet:restart_snapshots.1.order.11.as_of"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P3S3",
+      "type": "observation",
+      "material": true,
+      "text": "By the end of lap 2 he was 12th.",
+      "refs": [
+        "packet:grid_penalties.0.qualified",
+        "packet:grid_penalties.0.grid",
+        "packet:grid_penalties.0.places_lost",
+        "packet:grid_penalties.0.cause",
+        "packet:position_trace.ANT.1.lap",
+        "packet:position_trace.ANT.1.position",
+        "packet:restart_snapshots.1.label",
+        "packet:restart_snapshots.1.order.11.position",
+        "packet:restart_snapshots.1.order.11.as_of"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P3S4",
+      "type": "observation",
+      "material": true,
+      "text": "The approximate lap-end restart snapshot also places him 12th after the red flag, with positions retained from earlier observations; that qualification matters when separating his opening gains from his later progress.",
+      "refs": [
+        "packet:grid_penalties.0.qualified",
+        "packet:grid_penalties.0.grid",
+        "packet:grid_penalties.0.places_lost",
+        "packet:grid_penalties.0.cause",
+        "packet:position_trace.ANT.1.lap",
+        "packet:position_trace.ANT.1.position",
+        "packet:restart_snapshots.1.label",
+        "packet:restart_snapshots.1.order.11.position",
+        "packet:restart_snapshots.1.order.11.as_of"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P4S1",
+      "type": "observation",
+      "material": true,
+      "text": "The restart introduced the compound split.",
+      "refs": [
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1",
+        "packet:manifest.not_available.0"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P4S2",
+      "type": "observation",
+      "material": true,
+      "text": "Russell's hard stint runs from lap 4 to the finish, while Antonelli's medium stint runs from lap 4 through lap 28.",
+      "refs": [
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1",
+        "packet:manifest.not_available.0"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P4S3",
+      "type": "observation",
+      "material": true,
+      "text": "Verstappen was also on mediums during that phase.",
+      "refs": [
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1",
+        "packet:manifest.not_available.0"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P4S4",
+      "type": "observation",
+      "material": true,
+      "text": "Those records establish the tyre choices, without revealing whether Mercedes had planned to run Russell to the flag or what alternatives the team was considering during the stoppage.",
+      "refs": [
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1",
+        "packet:manifest.not_available.0"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P5S1",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli had already reached the lead on lap 18.",
+      "refs": [
+        "packet:lead_changes.3.lap",
+        "packet:lead_changes.3.driver",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.4.driver",
+        "packet:pair_gaps.0.laps.22.gap",
+        "packet:manifest.not_available.0",
+        "packet:manifest.not_available.2"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P5S2",
+      "type": "observation",
+      "material": true,
+      "text": "Russell returned to the front on lap 23, with Antonelli 0.399 seconds behind at the line.",
+      "refs": [
+        "packet:lead_changes.3.lap",
+        "packet:lead_changes.3.driver",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.4.driver",
+        "packet:pair_gaps.0.laps.22.gap",
+        "packet:manifest.not_available.0",
+        "packet:manifest.not_available.2"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P5S3",
+      "type": "observation",
+      "material": true,
+      "text": "The lead had changed hands before the later tyre stop; the eventual winner hadn't spent the entire opening stint trapped behind his teammate.",
+      "refs": [
+        "packet:lead_changes.3.lap",
+        "packet:lead_changes.3.driver",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.4.driver",
+        "packet:pair_gaps.0.laps.22.gap",
+        "packet:manifest.not_available.0",
+        "packet:manifest.not_available.2"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P5S4",
+      "type": "observation",
+      "material": true,
+      "text": "The record identifies the laps of those changes, but supplies no corner for either move and no radio explaining how the Mercedes drivers were racing each other.",
+      "refs": [
+        "packet:lead_changes.3.lap",
+        "packet:lead_changes.3.driver",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.4.driver",
+        "packet:pair_gaps.0.laps.22.gap",
+        "packet:manifest.not_available.0",
+        "packet:manifest.not_available.2"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P6S1",
+      "type": "observation",
+      "material": true,
+      "text": "At lap 27, Antonelli was 0.531 seconds behind Russell, with Verstappen 2 seconds behind the leader.",
+      "refs": [
+        "packet:pair_gaps.0.laps.26.lap",
+        "packet:pair_gaps.0.laps.26.gap",
+        "packet:pair_gaps.2.laps.26.gap",
+        "packet:timeline.events.103.message",
+        "packet:timeline.events.103.issued_lap",
+        "packet:stops.27.compound_after",
+        "packet:stops.28.compound_after",
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P6S2",
+      "type": "observation",
+      "material": true,
+      "text": "Race control subsequently recorded \"VSC DEPLOYED\" on lap 28.",
+      "refs": [
+        "packet:pair_gaps.0.laps.26.lap",
+        "packet:pair_gaps.0.laps.26.gap",
+        "packet:pair_gaps.2.laps.26.gap",
+        "packet:timeline.events.103.message",
+        "packet:timeline.events.103.issued_lap",
+        "packet:stops.27.compound_after",
+        "packet:stops.28.compound_after",
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P6S3",
+      "type": "observation",
+      "material": true,
+      "text": "The log establishes the intervention, without establishing its cause.",
+      "refs": [
+        "packet:pair_gaps.0.laps.26.lap",
+        "packet:pair_gaps.0.laps.26.gap",
+        "packet:pair_gaps.2.laps.26.gap",
+        "packet:timeline.events.103.message",
+        "packet:timeline.events.103.issued_lap",
+        "packet:stops.27.compound_after",
+        "packet:stops.28.compound_after",
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P6S4",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli's stop retained the medium compound; Verstappen switched to hard tyres, while Russell's hard stint continued uninterrupted.",
+      "refs": [
+        "packet:pair_gaps.0.laps.26.lap",
+        "packet:pair_gaps.0.laps.26.gap",
+        "packet:pair_gaps.2.laps.26.gap",
+        "packet:timeline.events.103.message",
+        "packet:timeline.events.103.issued_lap",
+        "packet:stops.27.compound_after",
+        "packet:stops.28.compound_after",
+        "packet:stints.2.compound",
+        "packet:stints.2.laps.0",
+        "packet:stints.2.laps.1",
+        "packet:stints.3.compound",
+        "packet:stints.3.laps.0",
+        "packet:stints.3.laps.1",
+        "packet:stints.4.compound",
+        "packet:stints.4.laps.0",
+        "packet:stints.4.laps.1",
+        "packet:stints.12.compound",
+        "packet:stints.12.laps.0",
+        "packet:stints.12.laps.1",
+        "packet:stints.13.compound",
+        "packet:stints.13.laps.0",
+        "packet:stints.13.laps.1",
+        "packet:stints.14.compound",
+        "packet:stints.14.laps.0",
+        "packet:stints.14.laps.1",
+        "packet:stints.43.compound",
+        "packet:stints.43.laps.0",
+        "packet:stints.43.laps.1",
+        "packet:stints.44.compound",
+        "packet:stints.44.laps.0",
+        "packet:stints.44.laps.1"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P7S1",
+      "type": "observation",
+      "material": true,
+      "text": "By the end of lap 29, Antonelli was 14.374 seconds behind Russell and Verstappen was 15.484 seconds back.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.2.laps.28.gap",
+        "packet:pair_gaps.0.definition",
+        "packet:manifest.not_available.3"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P7S2",
+      "type": "observation",
+      "material": true,
+      "text": "These are gaps between their lap-ending line crossings, rather than the asynchronously sampled gaps on the position feed.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.2.laps.28.gap",
+        "packet:pair_gaps.0.definition",
+        "packet:manifest.not_available.3"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P7S3",
+      "type": "observation",
+      "material": true,
+      "text": "They describe the task after the stop; neither number is a controlled measurement of pit loss, and the timing packet cannot reconstruct a race in which the VSC never appeared.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.2.laps.28.gap",
+        "packet:pair_gaps.0.definition",
+        "packet:manifest.not_available.3"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P8S1",
+      "type": "observation",
+      "material": true,
+      "text": "Initially, each pursuer reduced his deficit.",
+      "refs": [
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.2.laps.38.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.2.laps.47.gap",
+        "packet:stops.27.lap",
+        "packet:stops.28.lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P8S2",
+      "type": "observation",
+      "material": true,
+      "text": "At lap 39 Antonelli was 7.498 seconds behind Russell, while Verstappen was 9.882 seconds back.",
+      "refs": [
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.2.laps.38.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.2.laps.47.gap",
+        "packet:stops.27.lap",
+        "packet:stops.28.lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P8S3",
+      "type": "observation",
+      "material": true,
+      "text": "From there their traces separated sharply.",
+      "refs": [
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.2.laps.38.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.2.laps.47.gap",
+        "packet:stops.27.lap",
+        "packet:stops.28.lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P8S4",
+      "type": "observation",
+      "material": true,
+      "text": "By lap 48 Antonelli was within 0.236 seconds, but Verstappen's deficit had grown to 13.946 seconds, despite his tyres having been fitted during the same intervention.",
+      "refs": [
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.2.laps.38.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.2.laps.47.gap",
+        "packet:stops.27.lap",
+        "packet:stops.28.lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P9S1",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli was sustaining the recovery deep into the stint.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:stops.28.class",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.29.gap",
+        "packet:pair_gaps.0.laps.30.gap",
+        "packet:pair_gaps.0.laps.31.gap",
+        "packet:pair_gaps.0.laps.32.gap",
+        "packet:pair_gaps.0.laps.33.gap",
+        "packet:pair_gaps.0.laps.34.gap",
+        "packet:pair_gaps.0.laps.35.gap",
+        "packet:pair_gaps.0.laps.36.gap",
+        "packet:pair_gaps.0.laps.37.gap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.39.gap",
+        "packet:pair_gaps.0.laps.40.gap",
+        "packet:pair_gaps.0.laps.41.gap",
+        "packet:pair_gaps.0.laps.42.gap",
+        "packet:pair_gaps.0.laps.43.gap",
+        "packet:pair_gaps.0.laps.44.gap",
+        "packet:pair_gaps.0.laps.45.gap",
+        "packet:pair_gaps.0.laps.46.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.0.a",
+        "packet:pair_gaps.2.a",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.5.lap",
+        "packet:position_trace.ANT.28.position",
+        "packet:position_trace.ANT.38.position"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P9S2",
+      "type": "observation",
+      "material": true,
+      "text": "His gap shrank at every lap ending from lap 29 through lap 48, across the traffic and changing positions recorded during that stretch.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:stops.28.class",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.29.gap",
+        "packet:pair_gaps.0.laps.30.gap",
+        "packet:pair_gaps.0.laps.31.gap",
+        "packet:pair_gaps.0.laps.32.gap",
+        "packet:pair_gaps.0.laps.33.gap",
+        "packet:pair_gaps.0.laps.34.gap",
+        "packet:pair_gaps.0.laps.35.gap",
+        "packet:pair_gaps.0.laps.36.gap",
+        "packet:pair_gaps.0.laps.37.gap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.39.gap",
+        "packet:pair_gaps.0.laps.40.gap",
+        "packet:pair_gaps.0.laps.41.gap",
+        "packet:pair_gaps.0.laps.42.gap",
+        "packet:pair_gaps.0.laps.43.gap",
+        "packet:pair_gaps.0.laps.44.gap",
+        "packet:pair_gaps.0.laps.45.gap",
+        "packet:pair_gaps.0.laps.46.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.0.a",
+        "packet:pair_gaps.2.a",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.5.lap",
+        "packet:position_trace.ANT.28.position",
+        "packet:position_trace.ANT.38.position"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P9S3",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "Russell remained the reference throughout that comparison, so the divergence cannot be explained merely by a change of leader.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:stops.28.class",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.29.gap",
+        "packet:pair_gaps.0.laps.30.gap",
+        "packet:pair_gaps.0.laps.31.gap",
+        "packet:pair_gaps.0.laps.32.gap",
+        "packet:pair_gaps.0.laps.33.gap",
+        "packet:pair_gaps.0.laps.34.gap",
+        "packet:pair_gaps.0.laps.35.gap",
+        "packet:pair_gaps.0.laps.36.gap",
+        "packet:pair_gaps.0.laps.37.gap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.39.gap",
+        "packet:pair_gaps.0.laps.40.gap",
+        "packet:pair_gaps.0.laps.41.gap",
+        "packet:pair_gaps.0.laps.42.gap",
+        "packet:pair_gaps.0.laps.43.gap",
+        "packet:pair_gaps.0.laps.44.gap",
+        "packet:pair_gaps.0.laps.45.gap",
+        "packet:pair_gaps.0.laps.46.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.0.a",
+        "packet:pair_gaps.2.a",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.5.lap",
+        "packet:position_trace.ANT.28.position",
+        "packet:position_trace.ANT.38.position"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted: every selected series names Russell as reference and lead_changes places his lead across this window; a reference-driver switch cannot explain the divergence."
+      }
+    },
+    {
+      "id": "P9S4",
+      "type": "observation",
+      "material": true,
+      "text": "It still combines the performance of different cars on different compounds, and the traffic each encountered.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:stops.28.class",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.29.gap",
+        "packet:pair_gaps.0.laps.30.gap",
+        "packet:pair_gaps.0.laps.31.gap",
+        "packet:pair_gaps.0.laps.32.gap",
+        "packet:pair_gaps.0.laps.33.gap",
+        "packet:pair_gaps.0.laps.34.gap",
+        "packet:pair_gaps.0.laps.35.gap",
+        "packet:pair_gaps.0.laps.36.gap",
+        "packet:pair_gaps.0.laps.37.gap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.39.gap",
+        "packet:pair_gaps.0.laps.40.gap",
+        "packet:pair_gaps.0.laps.41.gap",
+        "packet:pair_gaps.0.laps.42.gap",
+        "packet:pair_gaps.0.laps.43.gap",
+        "packet:pair_gaps.0.laps.44.gap",
+        "packet:pair_gaps.0.laps.45.gap",
+        "packet:pair_gaps.0.laps.46.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.0.a",
+        "packet:pair_gaps.2.a",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.5.lap",
+        "packet:position_trace.ANT.28.position",
+        "packet:position_trace.ANT.38.position"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P9S5",
+      "type": "observation",
+      "material": true,
+      "text": "No isolated compound test sits behind the curves.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:stops.28.class",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.29.gap",
+        "packet:pair_gaps.0.laps.30.gap",
+        "packet:pair_gaps.0.laps.31.gap",
+        "packet:pair_gaps.0.laps.32.gap",
+        "packet:pair_gaps.0.laps.33.gap",
+        "packet:pair_gaps.0.laps.34.gap",
+        "packet:pair_gaps.0.laps.35.gap",
+        "packet:pair_gaps.0.laps.36.gap",
+        "packet:pair_gaps.0.laps.37.gap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.39.gap",
+        "packet:pair_gaps.0.laps.40.gap",
+        "packet:pair_gaps.0.laps.41.gap",
+        "packet:pair_gaps.0.laps.42.gap",
+        "packet:pair_gaps.0.laps.43.gap",
+        "packet:pair_gaps.0.laps.44.gap",
+        "packet:pair_gaps.0.laps.45.gap",
+        "packet:pair_gaps.0.laps.46.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.0.a",
+        "packet:pair_gaps.2.a",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.5.lap",
+        "packet:position_trace.ANT.28.position",
+        "packet:position_trace.ANT.38.position"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P9S6",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "The comparison with Verstappen strengthens the case for examining the running after the stop, although it cannot assign the difference to medium tyres alone.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:stops.28.class",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.29.gap",
+        "packet:pair_gaps.0.laps.30.gap",
+        "packet:pair_gaps.0.laps.31.gap",
+        "packet:pair_gaps.0.laps.32.gap",
+        "packet:pair_gaps.0.laps.33.gap",
+        "packet:pair_gaps.0.laps.34.gap",
+        "packet:pair_gaps.0.laps.35.gap",
+        "packet:pair_gaps.0.laps.36.gap",
+        "packet:pair_gaps.0.laps.37.gap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.39.gap",
+        "packet:pair_gaps.0.laps.40.gap",
+        "packet:pair_gaps.0.laps.41.gap",
+        "packet:pair_gaps.0.laps.42.gap",
+        "packet:pair_gaps.0.laps.43.gap",
+        "packet:pair_gaps.0.laps.44.gap",
+        "packet:pair_gaps.0.laps.45.gap",
+        "packet:pair_gaps.0.laps.46.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.0.a",
+        "packet:pair_gaps.2.a",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.5.lap",
+        "packet:position_trace.ANT.28.position",
+        "packet:position_trace.ANT.38.position"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted as an analytical priority, explicitly excluding a compound-only cause. Considered treating equal stop timing as equal race conditions; rejected that equivalence."
+      }
+    },
+    {
+      "id": "P9S7",
+      "type": "observation",
+      "material": true,
+      "text": "Fresh rubber and a VSC-classified stop were features of Verstappen's race too.",
+      "refs": [
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:stops.28.class",
+        "packet:stops.28.compound_after",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.29.gap",
+        "packet:pair_gaps.0.laps.30.gap",
+        "packet:pair_gaps.0.laps.31.gap",
+        "packet:pair_gaps.0.laps.32.gap",
+        "packet:pair_gaps.0.laps.33.gap",
+        "packet:pair_gaps.0.laps.34.gap",
+        "packet:pair_gaps.0.laps.35.gap",
+        "packet:pair_gaps.0.laps.36.gap",
+        "packet:pair_gaps.0.laps.37.gap",
+        "packet:pair_gaps.0.laps.38.gap",
+        "packet:pair_gaps.0.laps.39.gap",
+        "packet:pair_gaps.0.laps.40.gap",
+        "packet:pair_gaps.0.laps.41.gap",
+        "packet:pair_gaps.0.laps.42.gap",
+        "packet:pair_gaps.0.laps.43.gap",
+        "packet:pair_gaps.0.laps.44.gap",
+        "packet:pair_gaps.0.laps.45.gap",
+        "packet:pair_gaps.0.laps.46.gap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.0.a",
+        "packet:pair_gaps.2.a",
+        "packet:lead_changes.4.lap",
+        "packet:lead_changes.5.lap",
+        "packet:position_trace.ANT.28.position",
+        "packet:position_trace.ANT.38.position"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P10S1",
+      "type": "observation",
+      "material": true,
+      "text": "The approach to Russell still contained a reversal.",
+      "refs": [
+        "packet:pair_gaps.0.laps.48.gap",
+        "packet:position_trace.ANT.48.lap_s",
+        "packet:timeline.events.145.message",
+        "packet:timeline.events.145.issued_lap",
+        "packet:timeline.events.145.occurred_lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P10S2",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli's deficit rose to 0.860 seconds on lap 49, when his recorded lap time was 88.582 seconds.",
+      "refs": [
+        "packet:pair_gaps.0.laps.48.gap",
+        "packet:position_trace.ANT.48.lap_s",
+        "packet:timeline.events.145.message",
+        "packet:timeline.events.145.issued_lap",
+        "packet:timeline.events.145.occurred_lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P10S3",
+      "type": "observation",
+      "material": true,
+      "text": "Race control deleted that lap for track limits at Turn 1; the message was issued on lap 50 and refers back to lap 49.",
+      "refs": [
+        "packet:pair_gaps.0.laps.48.gap",
+        "packet:position_trace.ANT.48.lap_s",
+        "packet:timeline.events.145.message",
+        "packet:timeline.events.145.issued_lap",
+        "packet:timeline.events.145.occurred_lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P10S4",
+      "type": "observation",
+      "material": true,
+      "text": "It establishes the infringement, without describing the attempted manoeuvre or proving that the deletion itself caused the loss of time.",
+      "refs": [
+        "packet:pair_gaps.0.laps.48.gap",
+        "packet:position_trace.ANT.48.lap_s",
+        "packet:timeline.events.145.message",
+        "packet:timeline.events.145.issued_lap",
+        "packet:timeline.events.145.occurred_lap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P11S1",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli led at the next lap ending.",
+      "refs": [
+        "packet:lead_changes.5.lap",
+        "packet:lead_changes.5.driver",
+        "packet:pair_gaps.1.laps.49.gap",
+        "packet:fastest_laps.0.lap",
+        "packet:fastest_laps.0.time_s",
+        "packet:pair_gaps.1.laps.52.gap",
+        "packet:pair_gaps.1.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P11S2",
+      "type": "observation",
+      "material": true,
+      "text": "The lap-50 line-crossing gap puts Russell 1.313 seconds behind him, consistent with the lead-change record.",
+      "refs": [
+        "packet:lead_changes.5.lap",
+        "packet:lead_changes.5.driver",
+        "packet:pair_gaps.1.laps.49.gap",
+        "packet:fastest_laps.0.lap",
+        "packet:fastest_laps.0.time_s",
+        "packet:pair_gaps.1.laps.52.gap",
+        "packet:pair_gaps.1.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P11S3",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli then recorded the race's fastest lap on lap 53 at 83.504 seconds.",
+      "refs": [
+        "packet:lead_changes.5.lap",
+        "packet:lead_changes.5.driver",
+        "packet:pair_gaps.1.laps.49.gap",
+        "packet:fastest_laps.0.lap",
+        "packet:fastest_laps.0.time_s",
+        "packet:pair_gaps.1.laps.52.gap",
+        "packet:pair_gaps.1.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P11S4",
+      "type": "observation",
+      "material": true,
+      "text": "His final advantage in the pair-gap series is 3.942 seconds.",
+      "refs": [
+        "packet:lead_changes.5.lap",
+        "packet:lead_changes.5.driver",
+        "packet:pair_gaps.1.laps.49.gap",
+        "packet:fastest_laps.0.lap",
+        "packet:fastest_laps.0.time_s",
+        "packet:pair_gaps.1.laps.52.gap",
+        "packet:pair_gaps.1.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P11S5",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "That margin is reconstructed from the final lap's start and duration because there is no following lap-start timestamp.",
+      "refs": [
+        "packet:lead_changes.5.lap",
+        "packet:lead_changes.5.driver",
+        "packet:pair_gaps.1.laps.49.gap",
+        "packet:fastest_laps.0.lap",
+        "packet:fastest_laps.0.time_s",
+        "packet:pair_gaps.1.laps.52.gap",
+        "packet:pair_gaps.1.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted: pair_gaps.1.definition explicitly specifies the final-lap reconstruction; considered treating the terminal point as a directly observed next-lap start, which does not exist."
+      }
+    },
+    {
+      "id": "P12S1",
+      "type": "observation",
+      "material": true,
+      "text": "Verstappen's podium belongs alongside that victory as a different outcome from the shared stop.",
+      "refs": [
+        "packet:results.2.position",
+        "packet:results.3.position",
+        "packet:results.4.position",
+        "packet:pair_gaps.4.laps.52.gap",
+        "packet:pair_gaps.4.laps.51.gap",
+        "packet:pair_gaps.4.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P12S2",
+      "type": "observation",
+      "material": true,
+      "text": "Behind him, Lando Norris finished 4th and Oscar Piastri 5th; their reconstructed final line-crossing separation was only 0.238 seconds.",
+      "refs": [
+        "packet:results.2.position",
+        "packet:results.3.position",
+        "packet:results.4.position",
+        "packet:pair_gaps.4.laps.52.gap",
+        "packet:pair_gaps.4.laps.51.gap",
+        "packet:pair_gaps.4.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P12S3",
+      "type": "observation",
+      "material": true,
+      "text": "Piastri had been ahead at the end of lap 52.",
+      "refs": [
+        "packet:results.2.position",
+        "packet:results.3.position",
+        "packet:results.4.position",
+        "packet:pair_gaps.4.laps.52.gap",
+        "packet:pair_gaps.4.laps.51.gap",
+        "packet:pair_gaps.4.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P12S4",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "That late change settled the McLaren order while leaving Verstappen's podium intact, a reminder that the closing laps were still rearranging the result beyond the Mercedes contest.",
+      "refs": [
+        "packet:results.2.position",
+        "packet:results.3.position",
+        "packet:results.4.position",
+        "packet:pair_gaps.4.laps.52.gap",
+        "packet:pair_gaps.4.laps.51.gap",
+        "packet:pair_gaps.4.definition"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted as the final timing order, not an account of an overtaking manoeuvre; considered whether the final point was directly observed and retained its reconstruction caveat in the paragraph."
+      }
+    },
+    {
+      "id": "P13S1",
+      "type": "observation",
+      "material": true,
+      "text": "Pierre Gasly finished 7th from pole, behind Lewis Hamilton in 6th.",
+      "refs": [
+        "packet:results.6.position",
+        "packet:results.6.grid",
+        "packet:pole_sitter.driver",
+        "packet:results.5.position",
+        "packet:results.21.last_completed_lap",
+        "packet:results.21.status"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P13S2",
+      "type": "observation",
+      "material": true,
+      "text": "Charles Leclerc's last completed lap was lap 2 and his result is recorded as a retirement.",
+      "refs": [
+        "packet:results.6.position",
+        "packet:results.6.grid",
+        "packet:pole_sitter.driver",
+        "packet:results.5.position",
+        "packet:results.21.last_completed_lap",
+        "packet:results.21.status"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P13S3",
+      "type": "observation",
+      "material": true,
+      "text": "Those outcomes sit outside the comparison of the VSC stoppers: the finishing order contains recoveries, lost ground and an early exit, without timing alone supplying a mechanical or strategic cause for each result.",
+      "refs": [
+        "packet:results.6.position",
+        "packet:results.6.grid",
+        "packet:pole_sitter.driver",
+        "packet:results.5.position",
+        "packet:results.21.last_completed_lap",
+        "packet:results.21.status"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P14S1",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli leaves Monza on 267 points to Russell's 201.",
+      "refs": [
+        "packet:standings_after.0.before",
+        "packet:standings_after.0.after",
+        "packet:standings_after.1.before",
+        "packet:standings_after.1.after",
+        "packet:stops.27.class",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "P14S2",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "The win extends an advantage already present before the race, but the useful lesson for the next strategy decision is narrower than a prescription to copy the winning stop.",
+      "refs": [
+        "packet:standings_after.0.before",
+        "packet:standings_after.0.after",
+        "packet:standings_after.1.before",
+        "packet:standings_after.1.after",
+        "packet:stops.27.class",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted: standings show a pre-existing advantage and an increased advantage after the win; considered prescribing the same stop elsewhere, withheld without comparable conditions."
+      }
+    },
+    {
+      "id": "P14S3",
+      "type": "causal_interpretation",
+      "material": true,
+      "text": "A caution can change the available choices; judging the choice still requires the pace and traffic that follow.",
+      "refs": [
+        "packet:standings_after.0.before",
+        "packet:standings_after.0.after",
+        "packet:standings_after.1.before",
+        "packet:standings_after.1.after",
+        "packet:stops.27.class",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Accepted as a conditional strategic implication, not a quantified no-VSC counterfactual; no claim that either a stop or staying out universally wins."
+      }
+    },
+    {
+      "id": "P14S4",
+      "type": "observation",
+      "material": true,
+      "text": "Any repeat would have to survive that test again.",
+      "refs": [
+        "packet:standings_after.0.before",
+        "packet:standings_after.0.after",
+        "packet:standings_after.1.before",
+        "packet:standings_after.1.after",
+        "packet:stops.27.class",
+        "packet:pair_gaps.0.laps.28.gap",
+        "packet:pair_gaps.0.laps.47.gap"
+      ],
+      "review": {
+        "outcome": "accepted",
+        "alternative_considered": "Temporal association is not a controlled tyre or strategy counterfactual; claim limited to recorded sequence and analytical comparison."
+      }
+    },
+    {
+      "id": "DEK",
+      "type": "observation",
+      "material": true,
+      "text": "Antonelli and Verstappen stopped on the same lap under the VSC, but their recoveries separated as Russell stayed ahead.",
+      "refs": [
+        "packet:stops.27.lap",
+        "packet:stops.28.lap",
+        "packet:pair_gaps.0.laps.47.gap",
+        "packet:pair_gaps.2.laps.47.gap"
+      ]
+    }
+  ],
+  "contract": {
+    "C1": {
+      "status": "covered",
+      "reason": "Result, podium and reconstructed margin.",
+      "refs": [
+        "packet:results.0.position",
+        "packet:pair_gaps.1.laps.52.gap"
+      ]
+    },
+    "C2": {
+      "status": "covered",
+      "reason": "Shared stop followed by divergent recoveries; caution context.",
+      "refs": [
+        "packet:caution_windows.3",
+        "moment:m_vsc_28"
+      ]
+    },
+    "C3": {
+      "status": "covered",
+      "reason": "Lead changes at lap 50; corner withheld.",
+      "refs": [
+        "packet:lead_changes.5.lap"
+      ]
+    },
+    "C4": {
+      "status": "covered",
+      "reason": "Lap deletion and gap reversal; causal details withheld.",
+      "refs": [
+        "packet:timeline.events.145.message"
+      ]
+    },
+    "C5": {
+      "status": "covered",
+      "reason": "Pole to seventh.",
+      "refs": [
+        "packet:pole_sitter.finished"
+      ]
+    },
+    "C6": {
+      "status": "covered",
+      "reason": "Penalty and approximate restart position.",
+      "refs": [
+        "packet:restart_snapshots.1.label"
+      ]
+    },
+    "C7": {
+      "status": "covered",
+      "reason": "Standings before and after.",
+      "refs": [
+        "packet:standings_after.0.after",
+        "packet:standings_after.1.after"
+      ]
+    },
+    "C8": {
+      "status": "covered",
+      "reason": "Verstappen recovery and late McLaren reversal.",
+      "refs": [
+        "packet:pair_gaps.4.laps.52.gap",
+        "moment:m_gap_VER_29"
+      ]
+    },
+    "C9": {
+      "status": "covered",
+      "reason": "Verbatim VSC record; driver quotation unavailable.",
+      "refs": [
+        "packet:timeline.events.103.message"
+      ]
+    },
+    "C10": {
+      "status": "covered",
+      "reason": "Radio, overtaking corners and controlled pit loss unavailable.",
+      "refs": [
+        "packet:manifest.not_available.0",
+        "packet:manifest.not_available.2",
+        "packet:manifest.not_available.3"
+      ]
+    }
+  }
+}

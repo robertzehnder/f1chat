@@ -1,0 +1,152 @@
+{
+ "name": "mclaren_finish",
+ "meeting": "2026_1293_gpt6",
+ "chart": {
+  "type": "race_trace",
+  "x_label": "Lap",
+  "y_label": "Gap to Norris (s)",
+  "y_value_format": "decimal_seconds",
+  "lap_numbers": [
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49,
+   50,
+   51,
+   52,
+   53
+  ],
+  "series": [
+   {
+    "name": "Piastri behind Norris",
+    "color": "#FF8000",
+    "values": [
+     -0.946,
+     -1.032,
+     -0.813,
+     -0.671,
+     -0.41,
+     0.501,
+     -1.125,
+     -0.373,
+     -0.625,
+     -0.386,
+     0.238
+    ],
+    "point_quality": [
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed",
+     "observed"
+    ]
+   }
+  ],
+  "racing_state": {
+   "source": "available",
+   "session_key": "11361",
+   "periods": [],
+   "sector_flags": [],
+   "notes": [],
+   "total_laps": 53
+  },
+  "chart_note": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration.",
+  "horizontal_marker": {
+   "value": 0,
+   "label": "Level at the line"
+  }
+ },
+ "caption": {
+  "template": "McLaren’s order remained unsettled over laps {from}–{to}. Piastri finished {gap} s behind Norris in the reconstructed final line-crossing comparison.",
+  "slots": {
+   "from": {
+    "packet_path": "/pair_gaps/4/laps/42/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/4/laps/52/lap"
+   },
+   "gap": {
+    "packet_path": "/pair_gaps/4/laps/52/gap",
+    "format": "0.000"
+   }
+  },
+  "rendered": "McLaren’s order remained unsettled over laps 43–53. Piastri finished 0.238 s behind Norris in the reconstructed final line-crossing comparison."
+ },
+ "alt": {
+  "template": "Piastri’s gap to Norris crosses the level line late in the race. The final reconstructed point places Piastri {gap} s behind Norris.",
+  "slots": {
+   "from": {
+    "packet_path": "/pair_gaps/4/laps/42/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/4/laps/52/lap"
+   },
+   "gap": {
+    "packet_path": "/pair_gaps/4/laps/52/gap",
+    "format": "0.000"
+   }
+  },
+  "rendered": "Piastri’s gap to Norris crosses the level line late in the race. The final reconstructed point places Piastri 0.238 s behind Norris."
+ },
+ "series_sources": [
+  {
+   "series": 0,
+   "packet_path_template": "/pair_gaps/4/laps/{i}/gap",
+   "index_from": 42,
+   "laps": [
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53
+   ],
+   "lap_path_template": "/pair_gaps/4/laps/{i}/lap"
+  }
+ ],
+ "decoration_sources": {
+  "racing_state_window": [
+   43,
+   53
+  ],
+  "chart_note": {
+   "template": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration.",
+   "slots": {},
+   "rendered": "Positive gaps place the named pursuer behind the reference driver; negative gaps place the pursuer ahead. Gaps use lap-ending line crossings. The final lap, where shown, is reconstructed from lap start plus duration."
+  },
+  "horizontal_marker": {
+   "value": 0,
+   "label": {
+    "template": "Level at the line",
+    "slots": {},
+    "rendered": "Level at the line"
+   }
+  }
+ },
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T14:59:33.860Z",
+  "session_key": "11361",
+  "built_at": "2026-09-09T16:00:04.414Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T16:00:04.414Z",
+  "ok": true,
+  "problems": []
+ }
+}
