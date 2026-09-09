@@ -68,9 +68,9 @@ export function isInferredEnd(code: string | null | undefined): boolean {
 const KIND_LABEL: Record<RacingStateKind, string> = { sc: "SC", vsc: "VSC", red: "Red flag" };
 
 function inferredReason(kind: RacingStateKind, code: string): string {
-  if (code.startsWith("ending_")) return `feed has no ${KIND_LABEL[kind]} ENDED message`;
-  if (code.startsWith("lights_on_") || code.startsWith("in_this_lap_")) return "closed at the end of the SC-in lap";
-  if (code === "unclosed_at_chequered" || code === "never_closed") return "no closing message before the chequered flag";
+  if (code.startsWith("ending_")) return `no ${KIND_LABEL[kind]} end message recorded`;
+  if (code.startsWith("lights_on_") || code.startsWith("in_this_lap_")) return "end of the SC-in lap, no end message recorded";
+  if (code === "unclosed_at_chequered" || code === "never_closed") return "no end message before the chequered flag";
   return `end code ${code}`;
 }
 
@@ -143,8 +143,8 @@ export function buildRacingStateLayer(input: {
   const notes: string[] = [];
   for (const p of periods) {
     if (!isInferredEnd(p.endpoint_inferred)) continue;
-    const where = p.to_lap == null ? "never closed" : `inferred at end of lap ${p.to_lap}`;
-    notes.push(`${KIND_LABEL[p.kind]} end ${where} (${inferredReason(p.kind, p.endpoint_inferred!)})`);
+    const where = p.to_lap == null ? "never closed" : `placed at L${p.to_lap} end`;
+    notes.push(`${KIND_LABEL[p.kind]} end ${where}; ${inferredReason(p.kind, p.endpoint_inferred!)}`);
   }
   if (!hasChequered) notes.push("race-control feed ends before the chequered flag; later cautions may be missing");
   return {

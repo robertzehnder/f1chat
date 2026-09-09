@@ -99,6 +99,6 @@ export function renderCautionBands(
 export function ChartNote({ note }: { note?: string }) {
   if (!note) return null
   return (
-    <p className="text-[10px] text-muted-foreground/80 text-center mt-1">{note}</p>
+    <p className="text-[11px] text-muted-foreground text-center mt-1">{note}</p>
   )
 }

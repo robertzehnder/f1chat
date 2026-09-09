@@ -13,7 +13,7 @@ import {
 } from "recharts"
 import type { ChartSpec } from "@/lib/chart-types"
 import { ChartNote } from "./line-hardening"
-import { RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
+import { LANE_TOP, RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
 
 /**
  * Race trace: every driver's gap to the leader, lap by lap. Y axis is
@@ -48,6 +48,11 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
 
   const finite = series.flatMap((s) => s.values).filter((v) => Number.isFinite(v))
   const maxGap = finite.length ? Math.max(...finite) : 1
+  // Gap axis ends at the data; the domain is padded past it only to make room
+  // for the sector-alert lane, and no tick or gridline is drawn in that lane.
+  const gapTop = Math.ceil(maxGap / 10) * 10
+  const yDomainTop = recordAvailable ? gapTop * 1.1 : gapTop
+  const yTicks = Array.from({ length: gapTop / 10 + 1 }, (_, i) => i * 10)
 
   // Story emphasis: honor detector-set `emphasis`; else derive the two lines
   // worth following — the winner (ends nearest the leader) and the biggest
@@ -77,7 +82,7 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
     <div className="space-y-2">
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <RechartsLineChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 16 }}>
+          <RechartsLineChart data={data} margin={{ top: recordAvailable ? LANE_TOP : 10, right: 12, left: 0, bottom: 16 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
             <XAxis
               dataKey="lap"
@@ -88,7 +93,8 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
             />
             <YAxis
               reversed
-              domain={[0, Math.ceil(maxGap / 10) * 10]}
+              domain={[0, yDomainTop]}
+              ticks={yTicks}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
               axisLine={{ stroke: "hsl(var(--border))" }}
               tickLine={{ stroke: "hsl(var(--border))" }}

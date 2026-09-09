@@ -17,7 +17,7 @@ import {
   makeGapAwareDot,
   renderCautionBands,
 } from "./line-hardening"
-import { RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
+import { LANE_TOP, RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
 
 interface LineWithStintMarkersProps {
   chart: {
@@ -107,7 +107,7 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
           data={data}
           // Top margin reserves headroom for the stint-boundary labels
           // ("S2 Medium"), which render above the plot and clip at 10px.
-          margin={{ top: 24, right: 10, left: 0, bottom: 20 }}
+          margin={{ top: recordAvailable ? LANE_TOP + 4 : 24, right: 10, left: 0, bottom: 20 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
           <XAxis

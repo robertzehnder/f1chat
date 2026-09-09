@@ -17,7 +17,7 @@ import {
   makeGapAwareDot,
   renderCautionBands,
 } from "./line-hardening"
-import { RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
+import { LANE_TOP, RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
 
 /** Position changes: every driver's position per lap, grid (lap 0) to
  *  flag. Inverted y (P1 on top); unclassified cars' lines stop at their
@@ -42,7 +42,7 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
     <div className="space-y-2">
       <div className="h-96 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <RechartsLineChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 16 }}>
+          <RechartsLineChart data={data} margin={{ top: recordAvailable ? LANE_TOP : 20, right: 12, left: 0, bottom: 16 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
             <XAxis
               dataKey="lap"
@@ -53,7 +53,7 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
             />
             <YAxis
               reversed
-              domain={[1, maxPos]}
+              domain={[1, recordAvailable ? maxPos + 1.5 : maxPos]}
               ticks={Array.from({ length: Math.ceil(maxPos / 2) }, (_, i) => i * 2 + 1)}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
               axisLine={{ stroke: "hsl(var(--border))" }}
@@ -70,7 +70,7 @@ export function PositionChangesChart({ chart }: { chart: ChartSpec }) {
             />
             {/* Racing-state record (SC/VSC/red + sector yellows) when attached;
                 legacy track_flag bands only for sessions without the layer. */}
-            {renderRacingStateLayer(recordAvailable ? rs : undefined, maxLen - 1)}
+            {renderRacingStateLayer(recordAvailable ? rs : undefined, maxLen - 1, 0)}
             {recordAvailable ? null : renderCautionBands(chart.caution_bands)}
             {chart.stint_boundaries?.map((boundary, idx) => (
               <ReferenceLine

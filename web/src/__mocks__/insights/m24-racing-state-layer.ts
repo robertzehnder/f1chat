@@ -39,8 +39,8 @@ export const racingStateLayerMock: RacingStateLayer = {
     { lap: 49, sector: 1, level: "yellow", issued_at: "2026-09-06T14:45:00Z" }
   ],
   notes: [
-    "SC end inferred at end of lap 4 (closed at the end of the SC-in lap)",
-    "VSC end inferred at end of lap 29 (feed has no VSC ENDED message)"
+    "SC end placed at L4 end; end of the SC-in lap, no end message recorded",
+    "VSC end placed at L29 end; no VSC end message recorded"
   ]
 };
 
