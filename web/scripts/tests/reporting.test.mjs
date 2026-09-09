@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { sessionWindows, activeWindow, nextWindow, textOfHtml, parseMeeting } from "../reporting/lib/common.mjs";
 import { checkAttributions, normalizeUrl } from "../reporting/lib/verify_attribution.mjs";
 import { classifyDoc, carsInTitle, parsePublished, parseDocList } from "../reporting/fia_docs.mjs";
+import { lastSameNationality, seasonWins, winnersFromLowerGrid, lastOneTwo, ordinal } from "../reporting/context_facts.mjs";
 
 const sessions = [
   { session_key: 1, session_name: "Practice 1", date_start: "2026-09-11T11:30:00Z", date_end: "2026-09-11T12:30:00Z" },
@@ -59,9 +60,26 @@ test("attribution check: refs must resolve; body links must be registered", () =
   const claims = [{ id: "A1", type: "attribution", refs: ["reporting:article:abc"] }, { id: "A2", type: "attribution", refs: ["attributed:somewhere"] }];
   const body = "see [x](https://www.formula1.com/en/latest/article/one.X1) and [y](https://example.com/z)";
   const r = checkAttributions({ claims, reporting, body });
-  assert.deepEqual(r.fails, ["claim A2: attribution without a reporting:<id> ref", "unregistered source link: https://example.com/z"]);
+  assert.deepEqual(r.fails, ["claim A2: attribution without a reporting:<id> or context:<id> ref", "unregistered source link: https://example.com/z"]);
   assert.equal(normalizeUrl("https://X.com/a/b/?q=1#f"), "https://x.com/a/b");
   const none = checkAttributions({ claims, reporting: null, body });
   assert.equal(none.fails.length, 0);
   assert.equal(none.warns.length, 1);
+});
+
+test("context facts: nationality, season wins, lower-grid winners, one-two, ordinal", () => {
+  const W = [
+    { season: 1966, round: 8, familyName: "Scarfiotti", nationality: "Italian", grid: 2, constructorId: "ferrari" },
+    { season: 1983, round: 2, familyName: "Watson", nationality: "British", grid: 22, constructorId: "mclaren", raceName: "United States Grand Prix West" },
+    { season: 2025, round: 16, familyName: "Verstappen", nationality: "Dutch", grid: 1, constructorId: "red_bull" },
+    { season: 2026, round: 13, familyName: "Antonelli", nationality: "Italian", grid: 19, constructorId: "mercedes" }
+  ];
+  assert.equal(lastSameNationality(W, "Italian", 2026).season, 1966);
+  assert.equal(lastSameNationality(W, "Italian", 2026, 13).season, 1966);
+  assert.equal(lastSameNationality(W, "Finnish", 2026), null);
+  assert.equal(seasonWins([{ code: "ANT", position: 1, round: 2 }, { code: "ANT", position: 1, round: 13 }, { code: "RUS", position: 1, round: 8 }], "ANT", 13), 2);
+  assert.deepEqual(winnersFromLowerGrid(W, 19).map((w) => w.familyName), ["Watson"]);
+  const top2 = [{ season: 2019, first: "mercedes", second: "mercedes" }, { season: 2024, first: "ferrari", second: "mclaren" }];
+  assert.equal(lastOneTwo(top2, "mercedes", 2026).season, 2019);
+  assert.equal(ordinal(1), "1st"); assert.equal(ordinal(2), "2nd"); assert.equal(ordinal(3), "3rd"); assert.equal(ordinal(11), "11th"); assert.equal(ordinal(22), "22nd"); assert.equal(ordinal(7), "7th");
 });

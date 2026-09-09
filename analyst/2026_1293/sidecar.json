@@ -11,7 +11,8 @@
    "text": "the first Italian to win at Monza since Ludovico Scarfiotti in 1966",
    "refs": [
     "reporting:article:d6f0a32151",
-    "packet:results.0"
+    "packet:results.0",
+    "context:nationality_circuit"
    ],
    "values": [
     "1966"
@@ -24,7 +25,8 @@
    "text": "His seventh victory of the season",
    "refs": [
     "reporting:article:d6f0a32151",
-    "packet:results.0"
+    "packet:results.0",
+    "context:season_wins"
    ]
   },
   {

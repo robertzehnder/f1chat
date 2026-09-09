@@ -10,6 +10,7 @@
  *   node scripts/reporting/x_poll.mjs --meeting 2026_1294 --force     # one pass now, last 2 h, ignoring windows
  *   node scripts/reporting/x_poll.mjs --meeting 2026_1294 --dry-run   # print windows + accounts, no API calls
  *   node scripts/reporting/x_poll.mjs --meeting 2026_1294 --resolve   # handles → ids (one user read each), exit
+ *   node scripts/reporting/x_poll.mjs --meeting 2026_1293 --from 2026-09-06T12:00:00Z --to 2026-09-06T16:00:00Z   # bounded backfill
  *
  * Cost discipline (owner decision 2026-09-09): per-account timelines (never
  * search), original posts only, since_id cursors, NO expansions, a hard
@@ -29,6 +30,7 @@ import {
 const SOURCE = "x_reporters";
 const { meeting, meetingKey } = parseMeeting(argOpt("meeting"));
 const ONCE = argFlag("once"), FORCE = argFlag("force"), DRY = argFlag("dry-run"), RESOLVE = argFlag("resolve");
+const FROM = argOpt("from"), TO = argOpt("to"); // backfill mode: one bounded pass, ignores windows
 const MAX_POSTS = Number(argOpt("max-posts", 2000));
 const INTERVAL_MIN = Number(argOpt("interval-min", 10));
 const TOKEN = process.env.X_BEARER_TOKEN;
@@ -102,7 +104,7 @@ async function pollAccount(a, w) {
   // window start (never back-fills days of posts); later polls use since_id.
   const key = `${a.id}:${w.session_key ?? w.session_name}`;
   const params = { max_results: 100, exclude: "replies,retweets", "tweet.fields": "created_at,lang,public_metrics,entities,conversation_id" };
-  if (state.since[key]) params.since_id = state.since[key]; else params.start_time = w.window_start.toISOString();
+  if (state.since[key]) params.since_id = state.since[key]; else { params.start_time = w.window_start.toISOString(); if (w.window_end) params.end_time = w.window_end.toISOString(); }
   let token, got = 0, fresh = 0;
   do {
     if (budget <= 0) break;
@@ -139,6 +141,12 @@ async function pollAll(w) {
   console.log(`${new Date().toISOString()} ${w.session_name}: ${got} post(s) fetched, ${fresh} new, ${usd(got * X_POST_COST_USD)}; budget left ${budget}`);
 }
 
+if (FROM && TO) {
+  const w = { session_key: `backfill_${FROM}_${TO}`, session_name: "backfill", window_start: new Date(FROM), window_end: new Date(TO) };
+  console.log(`backfill ${w.window_start.toISOString()} → ${w.window_end.toISOString()}`);
+  await pollAll(w);
+  process.exit(0);
+}
 if (ONCE || FORCE) {
   const w = activeWindow(windows) ?? (FORCE ? { session_name: "forced", window_start: new Date(Date.now() - 2 * 3600_000) } : null);
   if (!w) { console.log("no paid window is open now (use --force for a one-off pass over the last 2 h)"); process.exit(0); }

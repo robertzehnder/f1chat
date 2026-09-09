@@ -34,6 +34,10 @@ const packetNumbers = new Set();
 (function walk(v) { if (v == null) return; if (typeof v === "number") { packetNumbers.add(String(v)); packetNumbers.add(v.toFixed(1)); packetNumbers.add(v.toFixed(3)); packetNumbers.add(String(Math.round(v))); } else if (typeof v === "string") { for (const m of v.matchAll(/\d+(?:\.\d+)?/g)) packetNumbers.add(m[0]); } else if (Array.isArray(v)) v.forEach(walk); else if (typeof v === "object") Object.values(v).forEach(walk); })(packet);
 // derived-metric values AND attributed numbers (an attribution claim carries its source) count as provenance
 const derived = new Set((sidecar.claims ?? []).flatMap((c) => (["derived_metric", "attribution"].includes(c.type) ? (c.values ?? []).map(String) : [])));
+// computed context facts (analyst/<meeting>/context.json) are provenance too: their numeric values may appear in prose
+const contextPath = resolve(dir, "context.json");
+const context = existsSync(contextPath) ? JSON.parse(readFileSync(contextPath, "utf8")) : null;
+for (const f of context?.facts ?? []) (function walk(v) { if (typeof v === "number") derived.add(String(v)); else if (v && typeof v === "object") Object.values(v).forEach(walk); })(f.values);
 // Verbatim race-control quotes ARE provenance: strip any body substring that
 // equals a packet message before scanning numbers (their times/lap refs live in the packet).
 // Markdown link targets are source URLs, not prose: strip them before scanning.
@@ -57,7 +61,7 @@ for (const c of sidecar.claims ?? []) {
   for (const r of c.refs ?? []) {
     if (r.startsWith("moment:")) { if (!momentIds.has(r.slice(7))) { bad(`claim ${c.id}: unknown moment ${r}`); refBad++; } }
     else if (r.startsWith("packet:")) { if (getPath(r.slice(7)) === undefined) { bad(`claim ${c.id}: packet path not found ${r}`); refBad++; } }
-    else if (r.startsWith("reporting:")) { /* checked against reporting.json in 2b */ }
+    else if (r.startsWith("reporting:") || r.startsWith("context:")) { /* checked against reporting.json / context.json in 2b */ }
     else if (!r.startsWith("attributed:")) { bad(`claim ${c.id}: malformed ref ${r}`); refBad++; }
   }
   if (!(c.refs ?? []).length) { bad(`claim ${c.id}: no refs`); refBad++; }
@@ -68,7 +72,7 @@ if (!refBad) ok(`all sidecar references resolve (${(sidecar.claims ?? []).length
 {
   const rp = resolve(dir, "reporting.json");
   const reporting = existsSync(rp) ? JSON.parse(readFileSync(rp, "utf8")) : null;
-  const r = checkAttributions({ claims: sidecar.claims ?? [], reporting, body });
+  const r = checkAttributions({ claims: sidecar.claims ?? [], reporting, body, context });
   r.fails.forEach(bad); r.warns.forEach(warn);
   if (reporting && !r.fails.length) ok(`attributions and source links resolve to reporting.json (${reporting.entries.length} entries)`);
 }

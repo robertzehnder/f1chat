@@ -1,0 +1,261 @@
+{
+ "meeting": "2026_1293",
+ "year": 2026,
+ "round": 13,
+ "circuit_id": "monza",
+ "winner": {
+  "code": "ANT",
+  "driverId": "antonelli",
+  "name": "Andrea Kimi Antonelli",
+  "nationality": "Italian",
+  "constructor": "Mercedes",
+  "grid": 19
+ },
+ "source": "jolpica",
+ "facts": [
+  {
+   "id": "nationality_circuit",
+   "kind": "history",
+   "statement": "Andrea Kimi Antonelli is the first Italian driver to win the Italian Grand Prix since Ludovico Scarfiotti in 1966.",
+   "values": {
+    "nationality": "Italian",
+    "previous_season": 1966,
+    "previous_winner": "Ludovico Scarfiotti",
+    "circuit": "Italian"
+   },
+   "evidence": [
+    {
+     "season": 1950,
+     "winner": "Farina"
+    },
+    {
+     "season": 1951,
+     "winner": "Ascari"
+    },
+    {
+     "season": 1952,
+     "winner": "Ascari"
+    },
+    {
+     "season": 1966,
+     "winner": "Scarfiotti"
+    },
+    {
+     "season": 2026,
+     "winner": "Antonelli"
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/circuits/monza/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T19:57:46.838Z"
+  },
+  {
+   "id": "nationality_any",
+   "kind": "history",
+   "statement": "Before Andrea Kimi Antonelli, the last Italian driver to win a grand prix was Giancarlo Fisichella at the 2006 Malaysian Grand Prix.",
+   "values": {
+    "previous_season": 2006,
+    "previous_winner": "Giancarlo Fisichella",
+    "previous_race": "Malaysian Grand Prix"
+   },
+   "evidence": [
+    {
+     "season": 2006,
+     "round": 2,
+     "raceName": "Malaysian Grand Prix",
+     "circuitId": "sepang",
+     "driverId": "fisichella",
+     "code": "FIS",
+     "givenName": "Giancarlo",
+     "familyName": "Fisichella",
+     "nationality": "Italian",
+     "constructorId": "renault",
+     "constructorName": "Renault",
+     "grid": 1
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T19:57:46.844Z"
+  },
+  {
+   "id": "season_wins",
+   "kind": "season",
+   "statement": "The Italian Grand Prix was Andrea Kimi Antonelli's seventh win of the 2026 season.",
+   "values": {
+    "season_wins": 7,
+    "year": 2026
+   },
+   "evidence": [
+    {
+     "round": 2,
+     "race": "Chinese Grand Prix"
+    },
+    {
+     "round": 3,
+     "race": "Japanese Grand Prix"
+    },
+    {
+     "round": 4,
+     "race": "Miami Grand Prix"
+    },
+    {
+     "round": 5,
+     "race": "Canadian Grand Prix"
+    },
+    {
+     "round": 6,
+     "race": "Monaco Grand Prix"
+    },
+    {
+     "round": 10,
+     "race": "Belgian Grand Prix"
+    },
+    {
+     "round": 13,
+     "race": "Italian Grand Prix"
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/2026/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T19:57:46.844Z"
+  },
+  {
+   "id": "career_wins",
+   "kind": "career",
+   "statement": "It was the 7th grand prix win of Andrea Kimi Antonelli's career.",
+   "values": {
+    "career_wins": 7
+   },
+   "evidence": [],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/drivers/antonelli/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T19:57:46.844Z"
+  },
+  {
+   "id": "grid_win_history",
+   "kind": "history",
+   "statement": "Only one driver has won a grand prix from lower on the grid than 19th: Watson from 22nd at the 1983 United States Grand Prix West.",
+   "values": {
+    "grid": 19,
+    "lower_all_time": 1,
+    "lower_at_circuit": 0,
+    "lowest_grid_winner": {
+     "name": "John Watson",
+     "grid": 22,
+     "season": 1983,
+     "race": "United States Grand Prix West"
+    }
+   },
+   "evidence": [
+    {
+     "season": 1983,
+     "round": 2,
+     "raceName": "United States Grand Prix West",
+     "circuitId": "long_beach",
+     "driverId": "watson",
+     "code": null,
+     "givenName": "John",
+     "familyName": "Watson",
+     "nationality": "British",
+     "constructorId": "mclaren",
+     "constructorName": "McLaren",
+     "grid": 22
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T19:57:46.844Z"
+  },
+  {
+   "id": "grid_win_circuit",
+   "kind": "history",
+   "statement": "No previous Italian Grand Prix winner had started lower than 11th (Gethin, 1971); Andrea Kimi Antonelli won from 19th.",
+   "values": {
+    "grid": 19,
+    "previous_lowest_grid": 11,
+    "previous_lowest_winner": "Peter Gethin",
+    "previous_lowest_season": 1971
+   },
+   "evidence": [
+    {
+     "season": 1971,
+     "round": 9,
+     "raceName": "Italian Grand Prix",
+     "circuitId": "monza",
+     "driverId": "gethin",
+     "code": null,
+     "givenName": "Peter",
+     "familyName": "Gethin",
+     "nationality": "British",
+     "constructorId": "brm",
+     "constructorName": "BRM",
+     "grid": 11
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/circuits/monza/results/1.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T19:57:46.844Z"
+  },
+  {
+   "id": "team_one_two_circuit",
+   "kind": "history",
+   "statement": "Mercedes's one-two was its first at the Italian Grand Prix since 2017.",
+   "values": {
+    "constructor": "Mercedes",
+    "previous_one_two_season": 2017
+   },
+   "evidence": [
+    {
+     "season": 2017,
+     "first": "mercedes",
+     "second": "mercedes"
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/circuits/monza/results/1.json?limit=100&offset=0",
+    "https://api.jolpi.ca/ergast/f1/circuits/monza/results/2.json?limit=100&offset=0"
+   ],
+   "computed_at": "2026-09-09T19:57:46.845Z"
+  },
+  {
+   "id": "standings_after",
+   "kind": "season",
+   "statement": "After round 13 Andrea Kimi Antonelli leads the championship on 267 points, 66 clear of George Russell.",
+   "values": {
+    "leader": "ANT",
+    "points": 267,
+    "gap_to_second": 66,
+    "second": "RUS",
+    "packet_agrees": true
+   },
+   "evidence": [
+    {
+     "code": "ANT",
+     "points": 267,
+     "wins": 7
+    },
+    {
+     "code": "RUS",
+     "points": 201,
+     "wins": 2
+    },
+    {
+     "code": "HAM",
+     "points": 191,
+     "wins": 1
+    }
+   ],
+   "sources": [
+    "https://api.jolpi.ca/ergast/f1/2026/13/driverStandings.json"
+   ],
+   "computed_at": "2026-09-09T19:57:46.845Z"
+  }
+ ]
+}
