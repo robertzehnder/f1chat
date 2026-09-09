@@ -132,6 +132,11 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
                   strokeWidth={emph ? 2.6 : 1.5}
                   strokeOpacity={dimPack && !emph ? 0.28 : 1}
                   dot={false}
+                  // Recharts reveals lines with a JavaScript animation. PNG
+                  // capture can otherwise freeze a partially drawn trace;
+                  // Playwright's animations: "disabled" only handles CSS/Web
+                  // Animations, not this reveal. Render the full curve at once.
+                  isAnimationActive={false}
                   connectNulls
                 />
               )
