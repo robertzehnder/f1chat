@@ -64,7 +64,7 @@ if (!refBad) ok(`all sidecar references resolve (${(sidecar.claims ?? []).length
 
 // ---- 3. causal language without a sidecar entry
 const CAUSAL = /\b(because|since|due to|thanks to|handed|gave|allowed|cost (?:him|her|them)|proved decisive|turned the race|undone by|as a result|led to|meant that|so that|which is why|decided (?:the|it))\b/i;
-const sentences = body.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+/g) ?? [];
+const sentences = scanBody.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+/g) ?? []; // scanBody: link URLs stripped, so their dots do not split sentences
 const causalSentences = sentences.filter((s) => CAUSAL.test(s));
 const coveredTexts = (sidecar.claims ?? []).map((c) => (c.text ?? "").toLowerCase().slice(0, 40));
 const uncovered = causalSentences.filter((s) => !coveredTexts.some((t) => t && s.toLowerCase().includes(t)));

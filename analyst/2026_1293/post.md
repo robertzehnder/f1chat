@@ -1,49 +1,59 @@
 # Antonelli wins at Monza from 19th
 
-Kimi Antonelli became the first Italian to win at Monza since Ludovico Scarfiotti in 1966, taking his seventh victory of the season, according to [Formula1.com](https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG). He led a Mercedes one-two and extended his championship lead over George Russell. Antonelli called it ["a dream coming true"](https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG).
+Kimi Antonelli became the first Italian to win at Monza since Ludovico Scarfiotti in 1966, recovering from 19th on the grid to lead a Mercedes one-two. His seventh victory of the season left him 66 points clear of George Russell, the teammate he passed on lap 50 to settle a race that had swung between them.
 
-Russell led for most of the afternoon on hard tyres, his strategy requiring him to reach the flag without another stop. Antonelli was chasing on mediums when the virtual safety car arrived on lap 28. Mercedes stopped Antonelli and left Russell out, setting up a contest between fresh tyres and track position.
+Antonelli called it [“a dream coming true.”](https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG) For Russell, it was a victory that slipped away as his tyres faded and the other Mercedes closed in.
 
-Antonelli had qualified seventh; an engine change cost him 12 places, according to [Formula1.com's race report](https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2). He gained seven positions in the first two laps. Leclerc then crashed at the final corner on lap 2, hitting the barriers but escaping unhurt, the same report confirmed. The red flag followed on lap 3.
+Their afternoons had begun with very different prospects. Russell started on the front row, while [an engine-change penalty](https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2) had dropped Antonelli from seventh in qualifying to 19th. Antonelli recovered seven places in the opening two laps before Charles Leclerc crashed at the final corner. [Leclerc escaped unhurt](https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2), but the race was stopped on lap three.
 
 {{fig:charge}}
 
-The suspension gave the teams a free tyre change. Russell switched from mediums to hards; Antonelli went from hards to mediums. [Toto Wolff said Mercedes did not think Antonelli's new set would last to the finish](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3), leaving him needing to recover ground quickly enough to make another stop worthwhile. He was 12th at the restart, with Russell leading.
+The suspension gave Mercedes an opportunity to split its tyre choices. Russell switched from mediums to hards, aiming to reach the finish without another stop. Antonelli went the other way. [Mercedes doubted his mediums would last the distance](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3), but they offered him a way to attack from 12th at the restart.
 
 {{fig:strategy_split}}
 
-Antonelli was soon fighting for the lead. Max Verstappen passed Russell on lap 12 and held the lead for three laps before Russell regained it. Antonelli reached second on lap 16, led from laps 18 to 22, and was behind Russell again on lap 23. The lead exchanges left neither Mercedes with a lasting advantage: at the end of lap 27, half a second separated them.
+He was soon involved in a fight for the lead. Max Verstappen passed Russell on lap 12 before Russell regained the position three laps later. Antonelli reached second on lap 16 and moved ahead on lap 18, only for Russell to retake the lead on lap 23.
 
-Lance Stroll stopped on lap 27, prompting the VSC on lap 28, according to [Formula1.com](https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2). Antonelli came in for another set of mediums while Russell stayed out. His pit-lane time was 24.9 seconds, identical to Verstappen's, who also stopped and took hards. Antonelli rejoined fifth, and by the end of lap 29 his deficit to Russell was 14.4 seconds.
+Neither Mercedes could make the advantage stick. By the end of lap 27, half a second separated them, and Antonelli still faced the prospect of another stop.
+
+That was when [Lance Stroll’s retirement](https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2) brought him an opening.
+
+The virtual safety car was deployed on lap 28, allowing Antonelli to stop for fresh mediums while the field ran at reduced speed. Russell stayed out on his hards. Verstappen also pitted, choosing a set of hards for the remaining distance.
+
+Antonelli emerged fifth. By the end of lap 29, he was 14.4 seconds behind Russell, but the VSC had reduced the time he lost by stopping and given him fresh tyres for the chase.
 
 {{fig:gap_trace}}
 
-[Russell said he had expected both cars to stay out](https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C) and was surprised to see Antonelli pit, though he accepted that splitting their strategies made sense. He also said nobody could have known the right decision at the time. For Antonelli, the opportunity addressed Mercedes' concern about reaching the finish: [Wolff said the VSC had offered a cheaper stop](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3).
+[Russell later said he had expected both Mercedes to stay out](https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C) and was surprised to see his teammate pit. He accepted the decision to split their strategies, though: the better option had been far from obvious at the time.
 
-By the end of lap 40, Antonelli was 7.1 seconds behind Russell. By the end of lap 48, the gap was under three tenths, a reduction of roughly 0.85 seconds a lap. Russell's hards were more than 40 laps old by then, and [Mercedes reported front-tyre vibrations in the closing stages](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3).
+As the laps passed, Antonelli began to make his approach work. By the end of lap 40, he was 7.1 seconds behind. Eight laps later, the gap was less than three tenths. He had been closing at roughly 0.85 seconds a lap, while Russell was managing hards more than 40 laps old and [front-tyre vibrations reported by Mercedes](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3).
 
 {{fig:closing_rate}}
 
-Antonelli ran wide at the first chicane on lap 49 and crossed the gravel, pushing the gap back to roughly nine tenths. [He said he thought he might have lost his chance when he went straight on](https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG).
+Then Antonelli nearly lost his chance.
 
-He caught Russell again and passed [on the run to Ascari on lap 50](https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2). Once ahead, Antonelli pulled away, setting the fastest lap of 1m23.504s on the final lap and winning by 3.857 seconds. Russell had led 40 of the 53 laps.
+He ran wide at the first chicane on lap 49 and crossed the gravel, allowing Russell to draw roughly nine tenths clear. [Antonelli admitted afterwards](https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG) that he thought the mistake might have cost him the win.
 
-The VSC reduced the cost of Antonelli's stop to about 14 seconds of gap. He had already reached the lead on his earlier set of mediums; the fresh set allowed him to mount another chase. The timing cannot establish whether he would have won without the interruption, but the discounted stop gave him a deficit he could recover.
+His pace gave him another opportunity. On lap 50, he caught Russell again and [passed on the run to Ascari](https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2). This time he pulled away, setting the fastest lap on the final tour and taking the flag 3.857 seconds ahead.
 
-Russell's strategy kept him ahead through the pit cycle and deep into the closing laps. It left him defending on ageing hards against a team-mate with fresher mediums, while the vibrations added to his difficulties.
+The VSC had given Antonelli a cheaper stop, but he still had to recover the positions and close the gap. His earlier spell in the lead had already demonstrated his pace; the fresh mediums allowed him to sustain the pursuit as Russell’s tyres deteriorated.
 
-Verstappen rejoined seventh after his stop and was third again by lap 38. He finished third, 14.7 seconds behind Antonelli. [McLaren reported that Norris and Piastri went wheel-to-wheel, with Norris briefly on the grass, before the team called off their fight](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3). Norris took fourth by two tenths.
+Whether he could have won without the interruption remains uncertain. What followed it was decisive: Russell kept track position, but Antonelli had enough time to turn the tyre advantage into victory.
 
-Hamilton and Leclerc were involved in a first-chicane incident on lap 2. Leclerc's final-corner crash ended his race; Hamilton finished sixth. Pierre Gasly fell from pole to seventh, the first car home behind Mercedes, Red Bull, McLaren and Ferrari, a result [he described as best of the rest](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3).
+Behind the Mercedes battle, Verstappen recovered from seventh after his stop to complete the podium, 14.7 seconds behind the winner. Norris took fourth, just two tenths ahead of Piastri, after a close contest between the McLaren teammates that included [a moment on the grass for Norris](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3).
 
-Antonelli leaves Monza with 267 points and a 66-point advantage.
+Ferrari’s home race brought less reward. Hamilton and Leclerc were involved in an incident at the first chicane on lap two, before Leclerc’s separate crash at the final corner ended his afternoon. Hamilton finished sixth.
+
+Gasly slipped from pole to seventh, but still finished ahead of the midfield and [described the result as best of the rest](https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3). His starting position had raised hopes of more; over the race distance, the Mercedes, Red Bull, McLaren and Ferrari ahead proved too quick.
+
+Antonelli heads to Madrid with 267 points and a 66-point lead over Russell.
 
 ## Race notes
 
-Sergio Pérez received a five-second penalty for failing to follow escape-road instructions at Turn 1 on lap 25. It was issued on lap 30. Tsunoda's starting-procedure infringement was referred for review after the race, with no decision recorded in the feed. Russell was noted for a yellow-flag infringement on lap 33, with no further action on lap 40.
+Sergio Pérez received a five-second penalty for failing to follow escape-road instructions at Turn 1 on lap 25. It was issued on lap 30. Tsunoda’s starting-procedure infringement was referred for review after the race, with no decision recorded in the feed. Russell was noted for a yellow-flag infringement on lap 33, with no further action on lap 40.
 
 ## About the data
 
-Timing and race-control data come from OpenF1, compiled into the race evidence packet linked at the foot of this page. Gaps are the difference between the cars' line-crossing times at each lap's end, rather than broadcast sampled intervals. The chart's reconstructed final point uses the last lap's start time plus its duration and differs from the official margin by less than a tenth; the text uses the official margin. Positions are carried forward between logged changes. The lap-3 safety car has no recorded end, so its endpoint at the red flag is inferred.
+Timing and race-control data come from OpenF1, compiled into the race evidence packet linked at the foot of this page. Gaps are the difference between the cars’ line-crossing times at each lap’s end, rather than broadcast sampled intervals. The chart’s reconstructed final point uses the last lap’s start time plus its duration and differs from the official margin by less than a tenth; the text uses the official margin. Positions are carried forward between logged changes. The lap-3 safety car has no recorded end, so its endpoint at the red flag is inferred.
 
-The closing measures differ: roughly 0.85 seconds a lap is the gap reduction between the ends of laps 40 and 48. The 0.8 seconds figure is Antonelli's average lap-time advantage over Russell across laps 40 to 48. The packet also carries a labelled estimate for a green-flag stop, which this article does not rely on. Incident causes, the winning pass corner, the grid-penalty reason and all driver and team remarks come from Formula1.com's linked reporting; the race-control log records the VSC deployment, not its cause.
+The closing rate in the text is the gap reduction between the ends of laps 40 and 48; the lap-time figure shows the average difference in lap time over laps 40 to 48, a different quantity. The packet also carries a labelled estimate for a green-flag stop, which this article does not rely on. Incident causes, the winning pass corner, the grid-penalty reason and all driver and team remarks come from Formula1.com’s linked reporting; the race-control log records the VSC deployment, not its cause.

@@ -92,11 +92,18 @@
       "sha256": "8624a2887e759e5953c957d4692a49b28bd85015c989eaf0a36278fe920b73fe",
       "structure": "GPT-6 Astra tightening pass (codex exec, 2026-09-09) on the editor's second brief: opening simplified, revision-process traces and the 31 s counterfactual removed, climax shortened, linked attributions; v9 kept as drafts/report_v9.md",
       "gates": {}
+    },
+    {
+      "version": "v11",
+      "file": "report.md",
+      "sha256": "2fc3615a8d3874c3fea166c60c62d84d9fb8fd2b00a6dd71f9bbf63de62a0bf6",
+      "structure": "owner-selected GPT-6 Astra rewrite after the third editorial pass (2026-09-09); source links attached to attributed facts; v10 kept as drafts/report_v10.md",
+      "gates": {}
     }
   ],
   "current_report": {
-    "version": "v10",
-    "sha256": "8624a2887e759e5953c957d4692a49b28bd85015c989eaf0a36278fe920b73fe",
-    "revised_at": "2026-09-09T18:46:58Z"
+    "version": "v11",
+    "sha256": "2fc3615a8d3874c3fea166c60c62d84d9fb8fd2b00a6dd71f9bbf63de62a0bf6",
+    "revised_at": "2026-09-09T18:55:42Z"
   }
 }

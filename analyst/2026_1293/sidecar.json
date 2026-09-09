@@ -1,7 +1,7 @@
 {
  "report": "report.md",
  "packet_version": "race_packet@1",
- "revision": "v10 (2026-09-09): GPT-6 Astra tightening pass via codex exec on the editor's second brief; analyst fixed the packet link and one tautology; external facts attributed to the four Formula1.com articles fetched 2026-09-09",
+ "revision": "v11 (2026-09-09): owner-selected GPT-6 Astra rewrite (from the owner's own GPT-6 session) after the third editorial pass; analyst attached source links to the attributed facts and kept the Race notes / About the data sections",
  "review_mode": "structured self-review (one developer); external facts checked against the cited Formula1.com articles",
  "claims": [
   {
@@ -21,58 +21,82 @@
    "id": "A2",
    "type": "attribution",
    "material": false,
-   "text": "taking his seventh victory of the season",
+   "text": "His seventh victory of the season",
    "refs": [
     "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
     "packet:results.0"
    ]
   },
   {
-   "id": "A3",
-   "type": "attribution",
+   "id": "D8",
+   "type": "derived_metric",
    "material": false,
-   "text": "Antonelli called it \"a dream coming true\"",
+   "text": "left him 66 points clear of George Russell",
+   "values": [
+    "66"
+   ],
    "refs": [
-    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG"
+    "packet:standings_after.0",
+    "packet:standings_after.1"
    ]
   },
   {
    "id": "O0",
    "type": "observation",
    "material": false,
-   "text": "extended his championship lead over George Russell",
+   "text": "the teammate he passed on lap 50",
    "refs": [
-    "packet:standings_after.0",
-    "packet:standings_after.1"
+    "moment:m_lead_50"
    ],
    "review": {
     "outcome": "accepted"
    }
   },
   {
-   "id": "C1",
+   "id": "A3",
+   "type": "attribution",
+   "material": false,
+   "text": "Antonelli called it",
+   "refs": [
+    "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG"
+   ]
+  },
+  {
+   "id": "C0",
    "type": "causal_interpretation",
    "material": true,
-   "text": "setting up a contest between fresh tyres and track position",
-   "relation": "VSC stop for the medium car vs Russell staying out → chase L29–50",
+   "text": "it was a victory that slipped away as his tyres faded and the other Mercedes closed in",
+   "relation": "RUS lap times L40–48 slower on 40+ lap hards; reported vibrations; gap closed 7.1→0.236",
    "refs": [
-    "moment:m_vsc_28",
-    "packet:caution_windows.3.stops_inside",
-    "packet:stints",
-    "moment:m_lead_50"
+    "packet:position_trace.RUS.47.age",
+    "packet:position_trace.RUS.47.lap_s",
+    "packet:position_trace.ANT.47.lap_s",
+    "packet:pair_gaps.0.laps.39.gap",
+    "packet:pair_gaps.0.laps.47.gap",
+    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3"
    ],
-   "confidence": "high",
+   "confidence": "medium",
    "review": {
     "outcome": "accepted"
-   },
-   "cause_event": "rc103",
-   "effect_lap": 50
+   }
+  },
+  {
+   "id": "O0b",
+   "type": "observation",
+   "material": false,
+   "text": "Russell started on the front row",
+   "refs": [
+    "packet:results.1"
+   ],
+   "review": {
+    "outcome": "accepted"
+   }
   },
   {
    "id": "A4",
    "type": "attribution",
    "material": false,
-   "text": "an engine change cost him 12 places",
+   "text": "an engine-change penalty",
    "refs": [
     "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2",
     "packet:grid_penalties.0"
@@ -82,7 +106,7 @@
    "id": "O1",
    "type": "observation",
    "material": true,
-   "text": "He gained seven positions in the first two laps",
+   "text": "Antonelli recovered seven places in the opening two laps",
    "refs": [
     "packet:results.0",
     "packet:position_trace.ANT.1.position"
@@ -95,7 +119,7 @@
    "id": "A5",
    "type": "attribution",
    "material": false,
-   "text": "Leclerc then crashed at the final corner on lap 2",
+   "text": "Charles Leclerc crashed at the final corner",
    "refs": [
     "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2",
     "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
@@ -106,7 +130,7 @@
    "id": "O1b",
    "type": "observation",
    "material": false,
-   "text": "The red flag followed on lap 3",
+   "text": "the race was stopped on lap three",
    "refs": [
     "packet:timeline.intervals.1",
     "moment:m_red_3"
@@ -119,11 +143,12 @@
    "id": "C2",
    "type": "causal_interpretation",
    "material": true,
-   "text": "The suspension gave the teams a free tyre change",
-   "relation": "red flag L3 → all stops boundary-spanning (tyre changes while suspended)",
+   "text": "The suspension gave Mercedes an opportunity to split its tyre choices",
+   "relation": "red flag L3 → tyre changes while suspended (all stops boundary-spanning) → RUS hard / ANT medium",
    "refs": [
     "moment:m_red_3",
-    "packet:caution_windows.1.stops_inside"
+    "packet:caution_windows.1.stops_inside",
+    "packet:stints"
    ],
    "confidence": "high",
    "review": {
@@ -133,22 +158,10 @@
    "effect_lap": 4
   },
   {
-   "id": "O2a",
-   "type": "observation",
-   "material": true,
-   "text": "Russell switched from mediums to hards; Antonelli went from hards to mediums",
-   "refs": [
-    "packet:stints"
-   ],
-   "review": {
-    "outcome": "accepted"
-   }
-  },
-  {
    "id": "A6",
    "type": "attribution",
    "material": false,
-   "text": "Toto Wolff said Mercedes did not think Antonelli's new set would last to the finish",
+   "text": "Mercedes doubted his mediums would last the distance",
    "refs": [
     "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
     "packet:stints"
@@ -158,7 +171,7 @@
    "id": "O2",
    "type": "observation",
    "material": true,
-   "text": "He was 12th at the restart, with Russell leading",
+   "text": "attack from 12th at the restart",
    "refs": [
     "packet:restart_snapshots.1",
     "packet:position_trace.ANT.3.position"
@@ -171,7 +184,7 @@
    "id": "O3",
    "type": "observation",
    "material": false,
-   "text": "Max Verstappen passed Russell on lap 12 and held the lead for three laps",
+   "text": "Max Verstappen passed Russell on lap 12 before Russell regained the position three laps later",
    "refs": [
     "packet:lead_changes.1",
     "packet:lead_changes.2"
@@ -184,7 +197,7 @@
    "id": "O4",
    "type": "observation",
    "material": true,
-   "text": "Antonelli reached second on lap 16, led from laps 18 to 22",
+   "text": "Antonelli reached second on lap 16 and moved ahead on lap 18",
    "refs": [
     "packet:position_trace.ANT.15.position",
     "packet:lead_changes.3",
@@ -198,7 +211,7 @@
    "id": "O5",
    "type": "observation",
    "material": false,
-   "text": "at the end of lap 27, half a second separated them",
+   "text": "By the end of lap 27, half a second separated them",
    "refs": [
     "packet:pair_gaps.0.laps.26.gap"
    ],
@@ -210,7 +223,7 @@
    "id": "A7",
    "type": "attribution",
    "material": false,
-   "text": "Lance Stroll stopped on lap 27, prompting the VSC on lap 28",
+   "text": "Lance Stroll’s retirement",
    "refs": [
     "packet:results.19",
     "packet:timeline.intervals.3",
@@ -220,9 +233,10 @@
   {
    "id": "O6",
    "type": "observation",
-   "material": false,
-   "text": "His pit-lane time was 24.9 seconds, identical to Verstappen's",
+   "material": true,
+   "text": "The virtual safety car was deployed on lap 28",
    "refs": [
+    "moment:m_vsc_28",
     "packet:stops.27",
     "packet:stops.28"
    ],
@@ -234,7 +248,7 @@
    "id": "O6b",
    "type": "observation",
    "material": true,
-   "text": "Antonelli rejoined fifth, and by the end of lap 29 his deficit to Russell was 14.4 seconds",
+   "text": "Antonelli emerged fifth",
    "refs": [
     "packet:caution_windows.3.observed_change",
     "packet:pair_gaps.0.laps.28.gap"
@@ -244,10 +258,29 @@
    }
   },
   {
+   "id": "C4",
+   "type": "causal_interpretation",
+   "material": true,
+   "text": "the VSC had reduced the time he lost by stopping and given him fresh tyres for the chase",
+   "relation": "stop under VSC (field slowed) → deficit ≈14 s at L29; fresh mediums from L29",
+   "refs": [
+    "moment:m_vsc_28",
+    "packet:pair_gaps.0.laps.26.gap",
+    "packet:pair_gaps.0.laps.28.gap",
+    "packet:stints"
+   ],
+   "confidence": "high",
+   "review": {
+    "outcome": "accepted"
+   },
+   "cause_event": "rc103",
+   "effect_lap": 29
+  },
+  {
    "id": "A8",
    "type": "attribution",
    "material": false,
-   "text": "Russell said he had expected both cars to stay out",
+   "text": "Russell later said he had expected both Mercedes to stay out",
    "refs": [
     "attributed:Formula1.com (rus) https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C"
    ]
@@ -256,28 +289,20 @@
    "id": "A9",
    "type": "attribution",
    "material": false,
-   "text": "He also said nobody could have known the right decision at the time",
-   "refs": [
-    "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3"
-   ]
-  },
-  {
-   "id": "A9b",
-   "type": "attribution",
-   "material": false,
-   "text": "Wolff said the VSC had offered a cheaper stop",
+   "text": "the better option had been far from obvious at the time",
    "refs": [
     "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
-    "moment:m_vsc_28"
+    "attributed:Formula1.com (rus) https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C"
    ]
   },
   {
    "id": "O7a",
    "type": "observation",
    "material": false,
-   "text": "By the end of lap 40, Antonelli was 7.1 seconds behind Russell",
+   "text": "By the end of lap 40, he was 7.1 seconds behind",
    "refs": [
-    "packet:pair_gaps.0.laps.39.gap"
+    "packet:pair_gaps.0.laps.39.gap",
+    "packet:pair_gaps.0.laps.47.gap"
    ],
    "review": {
     "outcome": "accepted"
@@ -287,7 +312,7 @@
    "id": "D1",
    "type": "derived_metric",
    "material": true,
-   "text": "a reduction of roughly 0.85 seconds a lap",
+   "text": "He had been closing at roughly 0.85 seconds a lap",
    "values": [
     "0.85"
    ],
@@ -300,7 +325,7 @@
    "id": "A10",
    "type": "attribution",
    "material": false,
-   "text": "Mercedes reported front-tyre vibrations in the closing stages",
+   "text": "front-tyre vibrations reported by Mercedes",
    "refs": [
     "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
     "packet:position_trace.RUS.47.age"
@@ -310,7 +335,7 @@
    "id": "C7",
    "type": "causal_interpretation",
    "material": true,
-   "text": "Antonelli ran wide at the first chicane on lap 49",
+   "text": "He ran wide at the first chicane on lap 49",
    "relation": "track-limits excursion T1 → lap deleted → gap 0.236→0.86",
    "refs": [
     "moment:m_lapspike_ANT_49",
@@ -329,16 +354,33 @@
    "id": "A11",
    "type": "attribution",
    "material": false,
-   "text": "He said he thought he might have lost his chance when he went straight on",
+   "text": "Antonelli admitted afterwards",
    "refs": [
     "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG"
    ]
   },
   {
+   "id": "C7b",
+   "type": "causal_interpretation",
+   "material": true,
+   "text": "His pace gave him another opportunity",
+   "relation": "ANT lap times L45–48 and L50–53 quicker than RUS → re-caught after the L49 loss",
+   "refs": [
+    "packet:position_trace.ANT.49.lap_s",
+    "packet:position_trace.RUS.49.lap_s",
+    "packet:pair_gaps.0.laps.48.gap",
+    "packet:pair_gaps.0.laps.49.gap"
+   ],
+   "confidence": "high",
+   "review": {
+    "outcome": "accepted"
+   }
+  },
+  {
    "id": "A12",
    "type": "attribution",
    "material": false,
-   "text": "on the run to Ascari on lap 50",
+   "text": "passed on the run to Ascari",
    "refs": [
     "attributed:Formula1.com (report) https://www.formula1.com/en/latest/article/antonelli-beats-russell-to-italian-grand-prix-win-with-stunning-comeback-drive.15WtFEBT5JEe4drdeO88t2",
     "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
@@ -346,70 +388,49 @@
    ]
   },
   {
-   "id": "D4",
-   "type": "derived_metric",
-   "material": false,
-   "text": "setting the fastest lap of 1m23.504s on the final lap",
-   "values": [
-    "23.504"
-   ],
-   "refs": [
-    "packet:fastest_laps.0"
-   ]
-  },
-  {
    "id": "O8a",
    "type": "observation",
    "material": true,
-   "text": "winning by 3.857 seconds",
+   "text": "taking the flag 3.857 seconds ahead",
    "refs": [
     "packet:position_trace.RUS.52.gap",
-    "packet:results.0"
+    "packet:results.0",
+    "packet:fastest_laps.0"
    ],
    "review": {
     "outcome": "accepted"
    }
   },
   {
-   "id": "D5",
-   "type": "derived_metric",
-   "material": false,
-   "text": "Russell had led 40 of the 53 laps",
-   "values": [
-    "40",
-    "53"
-   ],
-   "refs": [
-    "packet:lead_changes",
-    "packet:session.total_laps",
-    "packet:position_trace.RUS"
-   ]
-  },
-  {
-   "id": "D6",
-   "type": "derived_metric",
-   "material": true,
-   "text": "The VSC reduced the cost of Antonelli's stop to about 14 seconds of gap",
-   "values": [
-    "14"
-   ],
-   "refs": [
-    "packet:pair_gaps.0.laps.26.gap",
-    "packet:pair_gaps.0.laps.28.gap",
-    "packet:caution_windows.3.observed_change"
-   ]
-  },
-  {
    "id": "C8",
    "type": "causal_interpretation",
    "material": true,
-   "text": "the fresh set allowed him to mount another chase",
-   "relation": "led L18–22 on the first mediums; fresh mediums from L29 → close from 7.1 s (L40) to under 0.3 s (L48)",
+   "text": "The VSC had given Antonelli a cheaper stop",
+   "relation": "VSC stop → ≈14 s deficit rather than a green-flag loss; positions P5→P1 recovered by L50",
    "refs": [
     "moment:m_vsc_28",
+    "packet:pair_gaps.0.laps.28.gap",
+    "packet:caution_windows.3.observed_change",
+    "moment:m_lead_50"
+   ],
+   "confidence": "high",
+   "review": {
+    "outcome": "accepted"
+   },
+   "cause_event": "rc103",
+   "effect_lap": 50
+  },
+  {
+   "id": "C8b",
+   "type": "causal_interpretation",
+   "material": true,
+   "text": "the fresh mediums allowed him to sustain the pursuit",
+   "relation": "led L18–22 on first mediums; fresh set from L29 → 7.1 s (L40) to under 0.3 s (L48)",
+   "refs": [
     "packet:lead_changes.3",
     "packet:pair_gaps.0.laps.39.gap",
-    "packet:pair_gaps.0.laps.47.gap"
+    "packet:pair_gaps.0.laps.47.gap",
+    "packet:stints"
    ],
    "confidence": "high",
    "review": {
@@ -422,46 +443,43 @@
    "id": "C9",
    "type": "causal_interpretation",
    "material": true,
-   "text": "the discounted stop gave him a deficit he could recover",
-   "relation": "≈14 s deficit at L29 recovered by L48 at ≈0.85 s/lap; full counterfactual withheld",
+   "text": "Whether he could have won without the interruption remains uncertain",
+   "relation": "counterfactual withheld: net pit loss, traffic and tyre state not measurable",
    "refs": [
     "moment:m_vsc_28",
-    "packet:pair_gaps.0.laps.28.gap",
-    "packet:pair_gaps.0.laps.47.gap",
-    "moment:m_lead_50"
+    "packet:manifest.not_available",
+    "packet:caution_windows.3.estimate_green_flag_loss_s"
    ],
    "confidence": "high",
    "review": {
     "outcome": "qualified",
-    "qualification": "The timing cannot establish whether he would have won",
-    "alternative_considered": "alternative finishing order (withheld: net pit loss, traffic, tyre state unknown)"
-   },
-   "cause_event": "rc103",
-   "effect_lap": 50
-  },
-  {
-   "id": "O9a",
-   "type": "observation",
-   "material": false,
-   "text": "Russell's strategy kept him ahead through the pit cycle and deep into the closing laps",
-   "refs": [
-    "packet:position_trace.RUS",
-    "packet:lead_changes"
-   ],
-   "review": {
-    "outcome": "accepted"
+    "qualification": "remains uncertain",
+    "alternative_considered": "alternative finishing order (withheld)"
    }
   },
   {
    "id": "O7",
    "type": "observation",
    "material": false,
-   "text": "Verstappen rejoined seventh after his stop and was third again by lap 38",
+   "text": "Verstappen recovered from seventh after his stop to complete the podium",
    "refs": [
-    "packet:stops.28",
     "packet:caution_windows.3.after_top10_plus2min.6",
-    "packet:position_trace.VER.37.position",
+    "packet:results.2",
     "packet:position_trace.VER.52.gap"
+   ],
+   "review": {
+    "outcome": "accepted"
+   }
+  },
+  {
+   "id": "O8",
+   "type": "observation",
+   "material": false,
+   "text": "Norris took fourth, just two tenths ahead of Piastri",
+   "refs": [
+    "packet:position_trace.PIA.52.interval",
+    "packet:position_trace.NOR.52.position",
+    "packet:results.3"
    ],
    "review": {
     "outcome": "accepted"
@@ -471,32 +489,18 @@
    "id": "A13",
    "type": "attribution",
    "material": false,
-   "text": "McLaren reported that Norris and Piastri went wheel-to-wheel",
+   "text": "a moment on the grass for Norris",
    "refs": [
     "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3",
     "packet:position_trace.NOR.47.position",
-    "packet:position_trace.NOR.48.position",
-    "packet:position_trace.NOR.52.position"
+    "packet:position_trace.NOR.48.position"
    ]
-  },
-  {
-   "id": "O8",
-   "type": "observation",
-   "material": false,
-   "text": "Norris took fourth by two tenths",
-   "refs": [
-    "packet:position_trace.PIA.52.interval",
-    "packet:position_trace.NOR.52.position"
-   ],
-   "review": {
-    "outcome": "accepted"
-   }
   },
   {
    "id": "A14",
    "type": "attribution",
    "material": false,
-   "text": "Hamilton and Leclerc were involved in a first-chicane incident on lap 2",
+   "text": "Hamilton and Leclerc were involved in an incident at the first chicane on lap two",
    "refs": [
     "packet:timeline.events.28",
     "packet:timeline.events.64",
@@ -519,7 +523,7 @@
    "id": "O9b",
    "type": "observation",
    "material": false,
-   "text": "Pierre Gasly fell from pole to seventh",
+   "text": "Gasly slipped from pole to seventh",
    "refs": [
     "packet:pole_sitter",
     "packet:results.6",
@@ -533,23 +537,37 @@
    "id": "A15",
    "type": "attribution",
    "material": false,
-   "text": "he described as best of the rest",
+   "text": "described the result as best of the rest",
    "refs": [
     "attributed:Formula1.com (teams) https://www.formula1.com/en/latest/article/what-the-teams-said-race-day-in-italy-2026.43DzkIlg5jfZZOc1IBjSv3"
    ]
   },
   {
-   "id": "D8",
-   "type": "derived_metric",
+   "id": "C12",
+   "type": "causal_interpretation",
    "material": false,
-   "text": "a 66-point advantage",
-   "values": [
-    "66"
-   ],
+   "text": "the Mercedes, Red Bull, McLaren and Ferrari ahead proved too quick",
+   "relation": "GAS trace P1→P2 L2→P6 L10→P7 L20 with no incident or penalty in the record",
    "refs": [
-    "packet:standings_after.0",
-    "packet:standings_after.1"
-   ]
+    "packet:position_trace.GAS",
+    "packet:results.6"
+   ],
+   "confidence": "medium",
+   "review": {
+    "outcome": "accepted"
+   }
+  },
+  {
+   "id": "O99",
+   "type": "observation",
+   "material": false,
+   "text": "Antonelli heads to Madrid with 267 points",
+   "refs": [
+    "packet:standings_after.0"
+   ],
+   "review": {
+    "outcome": "accepted"
+   }
   },
   {
    "id": "O10",
@@ -570,7 +588,7 @@
    "id": "O11",
    "type": "observation",
    "material": false,
-   "text": "Tsunoda's starting-procedure infringement",
+   "text": "Tsunoda’s starting-procedure infringement",
    "refs": [
     "packet:timeline.events.78",
     "packet:timeline.events.82"
@@ -597,7 +615,7 @@
    "id": "O15",
    "type": "observation",
    "material": false,
-   "text": "Gaps are the difference between the cars' line-crossing times",
+   "text": "Gaps are the difference between the cars’ line-crossing times",
    "refs": [
     "packet:pair_gaps.0.definition",
     "packet:pair_gaps.0.laps.47.gap",
@@ -611,7 +629,7 @@
    "id": "O13",
    "type": "observation",
    "material": false,
-   "text": "The chart's reconstructed final point uses the last lap's start time plus its duration",
+   "text": "The chart’s reconstructed final point uses the last lap’s start time plus its duration",
    "refs": [
     "packet:pair_gaps.0.laps.52.gap",
     "packet:position_trace.RUS.52.gap",
@@ -650,7 +668,7 @@
    "id": "D2",
    "type": "derived_metric",
    "material": false,
-   "text": "The 0.8 seconds figure is Antonelli's average lap-time advantage",
+   "text": "the lap-time figure shows the average difference in lap time over laps 40 to 48",
    "values": [
     "0.8"
    ],
@@ -677,7 +695,7 @@
    "id": "A16",
    "type": "attribution",
    "material": false,
-   "text": "all driver and team remarks come from Formula1.com's linked reporting",
+   "text": "all driver and team remarks come from Formula1.com’s linked reporting",
    "refs": [
     "attributed:Formula1.com (win) https://www.formula1.com/en/latest/article/could-never-have-imagined-antonellis-italian-grand-prix-victory-from-p19-a-dream-coming-true.7oXpbc6pFWmhLpIULsFBfG",
     "attributed:Formula1.com (rus) https://www.formula1.com/en/latest/article/russell-reacts-after-losing-out-to-antonelli-in-italian-grand-prix-as-he-admits-being-surprised-by-split-strategies.52sDqfjO4DtEfdrQJMhx0C",
@@ -690,7 +708,7 @@
  "contract": {
   "C1": {
    "status": "covered",
-   "reason": "result, margin (official 3.857), one-two and podium in the opening and pass paragraphs",
+   "reason": "result, 66-point lead, one-two and the lap-50 pass in the opening paragraph; official 3.857 margin at the finish",
    "refs": [
     "packet:results",
     "packet:position_trace.RUS.52"
@@ -715,7 +733,7 @@
   },
   "C4": {
    "status": "covered",
-   "reason": "lap-49 track-limits excursion; net effect stated as the gap (roughly nine tenths); lap-time reconciliation moved out of the narrative per the editor",
+   "reason": "lap-49 excursion stated as the gap effect (roughly nine tenths); driver's own assessment attributed",
    "refs": [
     "moment:m_lapspike_ANT_49"
    ]
@@ -798,7 +816,7 @@
   },
   "C13": {
    "status": "covered",
-   "reason": "closes on the 66-point advantage, as the editor asked; no synthesis",
+   "reason": "closes on Madrid with 267 points and the 66-point lead over Russell, as the editor asked",
    "refs": [
     "packet:standings_after"
    ]
