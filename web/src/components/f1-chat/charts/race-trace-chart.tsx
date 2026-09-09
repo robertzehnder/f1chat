@@ -13,7 +13,7 @@ import {
 } from "recharts"
 import type { ChartSpec } from "@/lib/chart-types"
 import { ChartNote } from "./line-hardening"
-import { LANE_TOP, RacingStateLegend, mergeChartNotes, racingStateNotes, renderRacingStateLayer } from "./racing-state-layer"
+import { LANE_TOP, RacingStateLegend, mergeChartNotes, racingStateNotes, renderAnnotations, renderRacingStateLayer } from "./racing-state-layer"
 
 /**
  * Race trace: every driver's gap to the leader, lap by lap. Y axis is
@@ -24,8 +24,11 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
   const series = chart.series ?? []
   if (series.length === 0) return null
   const maxLen = Math.max(...series.map((s) => s.values.length))
+  const lapAt = (i: number): number => chart.lap_numbers?.[i] ?? i + 1
+  const firstLap = lapAt(0)
+  const lastLap = lapAt(maxLen - 1)
   const data = Array.from({ length: maxLen }, (_, i) => {
-    const point: Record<string, number> = { lap: i + 1 }
+    const point: Record<string, number> = { lap: lapAt(i) }
     series.forEach((s) => {
       const v = s.values[i]
       if (Number.isFinite(v)) point[s.name] = v
@@ -51,8 +54,13 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
   // Gap axis ends at the data; the domain is padded past it only to make room
   // for the sector-alert lane, and no tick or gridline is drawn in that lane.
   const gapTop = Math.ceil(maxGap / 10) * 10
-  const yDomainTop = recordAvailable ? gapTop * 1.1 : gapTop
-  const yTicks = Array.from({ length: gapTop / 10 + 1 }, (_, i) => i * 10)
+  const explicit = chart.y_domain
+  const yBottom = explicit ? explicit[0] : 0
+  const yTop = explicit ? explicit[1] : gapTop
+  const yDomainTop = recordAvailable ? yTop + (yTop - yBottom) * 0.1 : yTop
+  const step = yTop - yBottom > 30 ? 10 : yTop - yBottom > 12 ? 5 : yTop - yBottom > 4 ? 2 : 1
+  const yTicks: number[] = []
+  for (let v = Math.ceil(yBottom / step) * step; v <= yTop + 1e-9; v += step) yTicks.push(+v.toFixed(3))
 
   // Story emphasis: honor detector-set `emphasis`; else derive the two lines
   // worth following — the winner (ends nearest the leader) and the biggest
@@ -93,7 +101,7 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
             />
             <YAxis
               reversed
-              domain={[0, yDomainTop]}
+              domain={[yBottom, yDomainTop]}
               ticks={yTicks}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
               axisLine={{ stroke: "hsl(var(--border))" }}
@@ -104,11 +112,12 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
             <Tooltip
               contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
               labelFormatter={(label) => `Lap ${label}`}
-              formatter={(v: number, name: string) => [`+${v.toFixed(1)}s`, name]}
+              formatter={(v: number, name: string) => [`${v >= 0 ? "+" : ""}${v.toFixed(explicit ? 3 : 1)}s`, name]}
               labelStyle={{ color: "hsl(var(--foreground))" }}
               itemStyle={{ color: "hsl(var(--muted-foreground))" }}
             />
-            {renderRacingStateLayer(recordAvailable ? rs : undefined, maxLen)}
+            {renderRacingStateLayer(recordAvailable ? rs : undefined, lastLap, firstLap)}
+            {renderAnnotations(chart.annotations, lastLap, firstLap)}
             {bands.map(([a, b], i) => (
               <ReferenceArea key={`sc-${i}`} x1={a - 0.5} x2={b + 0.5} fill="hsl(var(--semantic-warning))" fillOpacity={0.12} strokeOpacity={0} />
             ))}
@@ -128,7 +137,16 @@ export function RaceTraceChart({ chart }: { chart: ChartSpec }) {
               )
             })}
             {(chart.trace_pit_dots ?? []).map((d, i) => (
-              <ReferenceDot key={`pit-${i}`} x={d.x} y={d.y} r={3.5} fill={d.color} stroke="hsl(var(--background))" strokeWidth={1.5} />
+              <ReferenceDot
+                key={`pit-${i}`}
+                x={d.x}
+                y={d.y}
+                r={3.5}
+                fill={d.color}
+                stroke="hsl(var(--background))"
+                strokeWidth={1.5}
+                label={d.label ? { value: d.label, position: "right", fill: d.color, fontSize: 9, offset: 6 } : undefined}
+              />
             ))}
           </RechartsLineChart>
         </ResponsiveContainer>

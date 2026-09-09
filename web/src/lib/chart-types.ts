@@ -190,8 +190,20 @@ export interface ChartSpec {
   speed_map?: { channel: "speed" | "throttle_brake"; driverNumber: number; sessionKey: number; driverName: string };
   /** race_trace / position_changes: laps under SC/VSC (shaded bands). */
   neutralized_laps?: number[];
-  /** race_trace: pit-stop dots placed on the trace lines. */
-  trace_pit_dots?: Array<{ x: number; y: number; color: string; driver: string }>;
+  /** race_trace: pit-stop dots placed on the trace lines; `label` (e.g.
+   *  "stop · VSC") is drawn beside the dot when present. */
+  trace_pit_dots?: Array<{ x: number; y: number; color: string; driver: string; label?: string }>;
+  /** race_trace / line: explicit lap number per series index, for figures
+   *  whose window does not start at lap 1 (the renderer otherwise labels
+   *  index+1). Visuals plan S1.2. */
+  lap_numbers?: number[];
+  /** race_trace: explicit y domain (pair-gap figures cross zero). */
+  y_domain?: [number, number];
+  /** Lap-anchored notes drawn in the annotation lane above the plot
+   *  ("L49 lap deleted · track limits T1"). */
+  annotations?: Array<{ lap: number; text: string; kind?: "deletion" | "note" | "pass" }>;
+  /** stint_gantt: pit stops with their racing-state class ("VSC", "red", "green"). */
+  gantt_stops?: Array<{ driver: string; lap: number; label: string }>;
   /** telemetry_overlay: reference identity — the component fetches the
    *  per-point traces from /api/lap-telemetry. */
   telemetry_overlay?: { sessionKey: number; drivers: Array<{ number: number; name: string }> };

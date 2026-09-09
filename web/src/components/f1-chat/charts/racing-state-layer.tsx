@@ -260,7 +260,10 @@ export function renderRacingStateLayer(state: RacingStateLayer | undefined, last
       <ReferenceArea key="rs-sector-lane" x1={laneCoords.x1} x2={laneCoords.x2} ifOverflow="visible" shape={(props: ShapeProps) => <SectorLaneShape coords={laneCoords} {...props} />} />
     )
   }
-  for (const members of clusterPeriods(state.periods, lastLap)) {
+  const visible = state.periods
+    .filter((p) => (p.to_lap ?? lastLap) >= firstLap && p.from_lap <= lastLap)
+    .map((p) => (p.from_lap < firstLap ? { ...p, from_lap: firstLap } : p))
+  for (const members of clusterPeriods(visible, lastLap)) {
     if (members.length > 1) {
       const from = Math.min(...members.map((m) => m.from_lap))
       const to = Math.min(Math.max(...members.map((m) => m.to_lap ?? lastLap)), lastLap)
@@ -357,3 +360,34 @@ export function mergeChartNotes(...notes: Array<string | string[] | undefined>):
   const flat = notes.flatMap((n) => (Array.isArray(n) ? n : n ? [n] : [])).filter(Boolean)
   return flat.length ? flat.join(" · ") : undefined
 }
+
+function AnnotationShape({ text, kind, coords, row, anchor, ...rect }: ShapeProps & { text: string; kind?: string; coords: Coords; row: number; anchor: "start" | "middle" | "end" }) {
+  const { y = 0 } = rect
+  const { x, width } = lapRect(rect, coords)
+  const cx = x + width / 2
+  const color = kind === "deletion" ? RED : kind === "pass" ? "hsl(var(--semantic-positive))" : INK
+  const top = y - 16 - row * 13
+  return (
+    <g>
+      <line x1={cx} x2={cx} y1={top} y2={y} stroke={color} strokeWidth={1} strokeDasharray="2 2" opacity={0.9} />
+      <text x={cx + (anchor === "start" ? 3 : anchor === "end" ? -3 : 0)} y={top - 3} textAnchor={anchor} fontSize={8.5} fill={color} opacity={0.95}>{text}</text>
+      <title>{text}</title>
+    </g>
+  )
+}
+
+/** Lap-anchored notes in the annotation lane (a deletion, a pass). */
+export function renderAnnotations(annotations: ChartSpecAnnotations | undefined, lastLap: number, firstLap = 1): React.ReactElement[] {
+  if (!annotations?.length) return []
+  const visible = annotations.filter((a) => a.lap >= firstLap && a.lap <= lastLap).sort((a, b) => a.lap - b.lap)
+  const span = Math.max(1, lastLap - firstLap)
+  return visible.map((a, i) => {
+    const coords = bandCoords(a.lap, a.lap, lastLap)
+    // neighbours within ~12% of the axis alternate rows; labels near the
+    // right edge anchor "end" so they never overflow the plot
+    const row = i > 0 && a.lap - visible[i - 1].lap <= span * 0.12 ? (i % 2) : 0
+    const anchor: "start" | "middle" | "end" = (a.lap - firstLap) / span > 0.85 ? "end" : (a.lap - firstLap) / span < 0.1 ? "start" : "middle"
+    return <ReferenceArea key={`ann-${a.lap}-${a.text}`} x1={coords.x1} x2={coords.x2} ifOverflow="visible" shape={(props: ShapeProps) => <AnnotationShape text={a.text} kind={a.kind} coords={coords} row={row} anchor={anchor} {...props} />} />
+  })
+}
+type ChartSpecAnnotations = NonNullable<import("@/lib/chart-types").ChartSpec["annotations"]>

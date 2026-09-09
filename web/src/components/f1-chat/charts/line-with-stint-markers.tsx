@@ -36,6 +36,7 @@ interface LineWithStintMarkersProps {
     }>
     caution_bands?: Array<{ from: number; to: number; label?: string }>
     racing_state?: import("@/lib/chart-types").RacingStateLayer
+    lap_numbers?: number[]
     chart_note?: string
     horizontal_marker?: {
       value: number
@@ -70,9 +71,11 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
 
   // Transform data for Recharts
   const maxLength = Math.max(...series.map(s => s.values.length))
-  const lastLap = maxLength
+  const lapAt = (i: number): number => chart.lap_numbers?.[i] ?? i + 1
+  const lastLap = lapAt(maxLength - 1)
+  const firstLap = lapAt(0)
   const data = Array.from({ length: maxLength }, (_, i) => {
-    const point: Record<string, number> = { lap: i + 1 }
+    const point: Record<string, number> = { lap: lapAt(i) }
     series.forEach(s => {
       if (s.values[i] !== undefined) {
         point[s.name] = s.values[i]
@@ -189,7 +192,7 @@ export function LineWithStintMarkers({ chart }: LineWithStintMarkersProps) {
 
           {/* Caution shading first so bands sit under lines: the racing-state
               record when attached, else the legacy track_flag bands. */}
-          {renderRacingStateLayer(recordAvailable ? rs : undefined, lastLap)}
+          {renderRacingStateLayer(recordAvailable ? rs : undefined, lastLap, firstLap)}
           {recordAvailable ? null : renderCautionBands(caution_bands)}
 
           {/* Dashed gap bridges: connectNulls underlay so sparse series

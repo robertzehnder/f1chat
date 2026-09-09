@@ -94,6 +94,7 @@ const gapRows = await q("intervals", `SELECT driver_number, date, gap_to_leader,
 const posByDL = mapObservationsToLaps(posRows.map((r) => ({ driver_number: r.driver_number, date: r.date, value: { position: r.position } })), lapsByDriver);
 const gapByDL = mapObservationsToLaps(gapRows.map((r) => ({ driver_number: r.driver_number, date: r.date, value: { gap: gapNum(r.gap_to_leader), interval: gapNum(r.interval), raw_gap: r.gap_to_leader } })), lapsByDriver);
 const positionTrace = {}; const gapTrace = [];
+const lapS = new Map(laps.map((l) => [`${l.driver_number}:${l.lap_number}`, num(l.lap_duration)]));
 const humanAdded = (() => { const f = process.argv.find((a, i) => process.argv[i - 1] === "--human-candidates"); return f ? JSON.parse(require("node:fs").readFileSync(f, "utf8")) : []; })();
 for (const d of drivers.map((x) => x.driver_number)) {
   positionTrace[acr(d)] = [];
@@ -103,10 +104,22 @@ for (const d of drivers.map((x) => x.driver_number)) {
     const obsPos = posByDL.get(`${d}:${L}`)?.last?.position ?? null;
     const p = obsPos ?? carried; if (obsPos != null) carried = obsPos;
     const g = gapByDL.get(`${d}:${L}`)?.last ?? null;
-    positionTrace[acr(d)].push({ lap: L, position: p, position_carried: obsPos == null && p != null, gap: g?.gap ?? null, interval: g?.interval ?? null, ...compoundAt(d, L) });
+    positionTrace[acr(d)].push({ lap: L, position: p, position_carried: obsPos == null && p != null, gap: g?.gap ?? null, interval: g?.interval ?? null, lap_s: lapS.get(`${d}:${L}`) ?? null, ...compoundAt(d, L) });
     if (g) { gapTrace.push({ driver: acr(d), lap: L, gap: g.gap, prev_gap: prevGap }); prevGap = g.gap; }
   }
 }
+// ---- pair gaps (visuals plan S1.2 contract): gap between two named drivers at the
+// end of lap L = difference of their line-crossing timestamps that END lap L,
+//   pair_gap(A, B, L) = date_start(B, L+1) − date_start(A, L+1)   (positive = B behind A)
+// Final lap: date_start(N) + lap_duration(N) per driver, missing if either lacks it.
+// Lapped: B is a lap down at L when date_start(B, L+1) ≥ date_start(A, L+2); the series
+// stops there with quality "lapped". Not the sampled `interval` (which is the gap to
+// whichever car is ahead) and not cumulative lap durations (which drift on missing laps).
+const startTs = new Map(laps.filter((l) => l.date_start).map((l) => [`${l.driver_number}:${l.lap_number}`, T(l.date_start)]));
+const endTs = (d, L) => { const nxt = startTs.get(`${d}:${L + 1}`); if (nxt != null) return nxt; if (L === totalLaps) { const st = startTs.get(`${d}:${L}`); const dur = lapS.get(`${d}:${L}`); return st != null && dur != null ? st + dur * 1000 : null; } return null; };
+const numOf = (acrn) => drivers.find((x) => acr(x.driver_number) === acrn)?.driver_number;
+const pairGap = (A, B) => { const a = numOf(A), b = numOf(B); const out = []; for (let L = 1; L <= totalLaps; L++) { const ta = endTs(a, L), tb = endTs(b, L); if (ta == null || tb == null) { out.push({ lap: L, gap: null, quality: "missing" }); continue; } const aNext2 = startTs.get(`${a}:${L + 2}`); if (aNext2 != null && tb >= aNext2) { out.push({ lap: L, gap: null, quality: "lapped" }); break; } out.push({ lap: L, gap: +((tb - ta) / 1000).toFixed(3), quality: "observed" }); } return out; };
+const buildPairGaps = (finishOrder) => { const pairList = [["RUS", "ANT"]]; for (let i = 0; i + 1 < Math.min(6, finishOrder.length); i++) { const pr = [finishOrder[i], finishOrder[i + 1]]; if (!pairList.some((q) => q[0] === pr[0] && q[1] === pr[1])) pairList.push(pr); } return pairList.filter(([A, B]) => numOf(A) && numOf(B)).map(([A, B]) => ({ a: A, b: B, definition: "date_start(b, L+1) - date_start(a, L+1); positive = b behind a; final lap uses date_start(N) + lap_duration(N)", laps: pairGap(A, B) })); };
 const leadChanges = []; let prevLeader = null;
 for (let L = 1; L <= totalLaps; L++) { const leader = drivers.map((x) => x.driver_number).find((d) => posByDL.get(`${d}:${L}`)?.last?.position === 1); if (leader && leader !== prevLeader) { leadChanges.push({ lap: L, driver: acr(leader), from: prevLeader ? acr(prevLeader) : null }); prevLeader = leader; } }
 
@@ -170,6 +183,7 @@ const packet = {
   standings_after: standings.slice(0, 8).map((s) => ({ driver: acr(s.driver_number), before: num(s.before) ?? 0, after: num(s.after) })),
   fastest_laps: fastest,
   timeline: { events, links, unresolved_links: unresolved, intervals, announcements },
+  pair_gaps: buildPairGaps(results.filter((r) => r.position != null).sort((a, b) => a.position - b.position).map((r) => acr(r.driver_number))),
   stops, pit_clusters: clusters, stints: stints.map((s) => ({ driver: acr(s.driver_number), stint: s.stint_number, compound: s.compound, laps: [s.lap_start, s.lap_end], age_at_start: s.tyre_age_at_start })),
   position_trace: positionTrace, lead_changes: leadChanges, restart_snapshots: restarts, caution_windows: cautionWindows,
   candidate_moments: candidates, anomaly_windows: windows, manifest

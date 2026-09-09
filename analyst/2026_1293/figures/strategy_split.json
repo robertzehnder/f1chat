@@ -1,0 +1,505 @@
+{
+ "name": "strategy_split",
+ "meeting": "2026_1293",
+ "chart": {
+  "type": "stint_gantt",
+  "y_axis": [
+   "Antonelli",
+   "Russell",
+   "Verstappen",
+   "Norris",
+   "Piastri",
+   "Hamilton",
+   "Gasly",
+   "Lindblad"
+  ],
+  "total_laps": 53,
+  "stints": [
+   {
+    "driver": "Norris",
+    "start": 1,
+    "end": 3,
+    "compound": "medium"
+   },
+   {
+    "driver": "Norris",
+    "start": 4,
+    "end": 53,
+    "compound": "hard"
+   },
+   {
+    "driver": "Verstappen",
+    "start": 1,
+    "end": 3,
+    "compound": "soft"
+   },
+   {
+    "driver": "Verstappen",
+    "start": 4,
+    "end": 28,
+    "compound": "medium"
+   },
+   {
+    "driver": "Verstappen",
+    "start": 29,
+    "end": 53,
+    "compound": "hard"
+   },
+   {
+    "driver": "Gasly",
+    "start": 1,
+    "end": 3,
+    "compound": "medium"
+   },
+   {
+    "driver": "Gasly",
+    "start": 4,
+    "end": 53,
+    "compound": "hard"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 1,
+    "end": 3,
+    "compound": "hard"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 4,
+    "end": 28,
+    "compound": "medium"
+   },
+   {
+    "driver": "Antonelli",
+    "start": 29,
+    "end": 53,
+    "compound": "medium"
+   },
+   {
+    "driver": "Lindblad",
+    "start": 1,
+    "end": 3,
+    "compound": "medium"
+   },
+   {
+    "driver": "Lindblad",
+    "start": 4,
+    "end": 53,
+    "compound": "hard"
+   },
+   {
+    "driver": "Hamilton",
+    "start": 1,
+    "end": 3,
+    "compound": "soft"
+   },
+   {
+    "driver": "Hamilton",
+    "start": 4,
+    "end": 53,
+    "compound": "medium"
+   },
+   {
+    "driver": "Russell",
+    "start": 1,
+    "end": 3,
+    "compound": "medium"
+   },
+   {
+    "driver": "Russell",
+    "start": 4,
+    "end": 53,
+    "compound": "hard"
+   },
+   {
+    "driver": "Piastri",
+    "start": 1,
+    "end": 3,
+    "compound": "medium"
+   },
+   {
+    "driver": "Piastri",
+    "start": 4,
+    "end": 53,
+    "compound": "hard"
+   }
+  ],
+  "compound_legend": {
+   "hard": "#E5E7EB",
+   "medium": "#FCD34D",
+   "soft": "#EF4444"
+  },
+  "gantt_stops": [
+   {
+    "driver": "Russell",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Gasly",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Verstappen",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Piastri",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Norris",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Lindblad",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Hamilton",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Antonelli",
+    "lap": 3,
+    "label": "red"
+   },
+   {
+    "driver": "Antonelli",
+    "lap": 28,
+    "label": "VSC"
+   },
+   {
+    "driver": "Verstappen",
+    "lap": 28,
+    "label": "VSC"
+   }
+  ],
+  "racing_state": {
+   "source": "incomplete",
+   "session_key": "11361",
+   "periods": [
+    {
+     "kind": "sc",
+     "start_ts": "2026-09-06T13:06:49.000Z",
+     "end_ts": "2026-09-06T13:07:43.000Z",
+     "from_lap": 3,
+     "to_lap": 3,
+     "endpoint_inferred": "superseded_by_red",
+     "opened_by": "rc34",
+     "closed_by": "rc36"
+    },
+    {
+     "kind": "red",
+     "start_ts": "2026-09-06T13:07:43.000Z",
+     "end_ts": "2026-09-06T13:34:00.000Z",
+     "from_lap": 3,
+     "to_lap": 4,
+     "endpoint_inferred": "resumption_state_msg",
+     "opened_by": "rc36",
+     "closed_by": "rc68"
+    },
+    {
+     "kind": "sc",
+     "start_ts": "2026-09-06T13:34:00.000Z",
+     "end_ts": "2026-09-06T13:41:04.301Z",
+     "from_lap": 4,
+     "to_lap": 4,
+     "endpoint_inferred": "lights_on_lap_end",
+     "opened_by": "rc68",
+     "closed_by": null
+    },
+    {
+     "kind": "vsc",
+     "start_ts": "2026-09-06T14:17:45.000Z",
+     "end_ts": "2026-09-06T14:19:42.000Z",
+     "from_lap": 28,
+     "to_lap": 29,
+     "endpoint_inferred": null,
+     "opened_by": "rc103",
+     "closed_by": "rc109"
+    }
+   ],
+   "sector_flags": [
+    {
+     "lap": 1,
+     "sector": 2,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:31:54.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 3,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:32:01.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 5,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:31:55.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 7,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:33:20.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 8,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:32:03.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 9,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:32:04.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 11,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:32:09.000Z"
+    },
+    {
+     "lap": 1,
+     "sector": 13,
+     "level": "yellow",
+     "issued_at": "2026-09-06T12:37:39.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 14,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:06:33.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 15,
+     "level": "double_yellow",
+     "issued_at": "2026-09-06T13:06:33.000Z"
+    },
+    {
+     "lap": 3,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-09-06T13:06:35.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 2,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:13:08.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 3,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:13:08.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 6,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:13:12.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 7,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:13:12.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 8,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:12:44.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 9,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:12:44.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 12,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:17:07.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 13,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:17:07.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 14,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:20:53.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 15,
+     "level": "double_yellow",
+     "issued_at": "2026-09-06T13:09:42.000Z"
+    },
+    {
+     "lap": 4,
+     "sector": 16,
+     "level": "double_yellow",
+     "issued_at": "2026-09-06T13:09:42.000Z"
+    },
+    {
+     "lap": 6,
+     "sector": 7,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:46:34.000Z"
+    },
+    {
+     "lap": 6,
+     "sector": 8,
+     "level": "yellow",
+     "issued_at": "2026-09-06T13:46:34.000Z"
+    },
+    {
+     "lap": 28,
+     "sector": 2,
+     "level": "yellow",
+     "issued_at": "2026-09-06T14:17:30.000Z"
+    },
+    {
+     "lap": 28,
+     "sector": 3,
+     "level": "double_yellow",
+     "issued_at": "2026-09-06T14:17:30.000Z"
+    }
+   ],
+   "notes": [
+    "SC end placed at L4 end; end of the SC-in lap, no end message recorded"
+   ],
+   "total_laps": 53
+  },
+  "chart_note": "Top eight finishers. Stops during the lap-3 red flag were tyre changes in the pit lane while the race was suspended; the lap-28 stops came under the virtual safety car."
+ },
+ "caption": {
+  "template": "Tyre strategies of the top eight. At the lap-{red_lap} red flag {rus} took {rus_c2}s to run to the finish while {ant} took {ant_c2}s; {ant} stopped again for {ant_c3}s under the virtual safety car on lap {ant_stop}, one of {n_vsc} stops made under it.",
+  "slots": {
+   "rus": {
+    "packet_path": "/stints/44/driver",
+    "format": "surname"
+   },
+   "ant": {
+    "packet_path": "/stints/13/driver",
+    "format": "surname"
+   },
+   "rus_c2": {
+    "packet_path": "/stints/44/compound",
+    "format": "lower"
+   },
+   "ant_c2": {
+    "packet_path": "/stints/13/compound",
+    "format": "lower"
+   },
+   "ant_c3": {
+    "packet_path": "/stints/14/compound",
+    "format": "lower"
+   },
+   "ant_stop": {
+    "packet_path": "/stops/27/lap"
+   },
+   "n_vsc": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/stops/22/lap",
+      "/stops/23/lap",
+      "/stops/24/lap",
+      "/stops/25/lap",
+      "/stops/26/lap",
+      "/stops/27/lap",
+      "/stops/28/lap"
+     ]
+    }
+   },
+   "red_lap": {
+    "packet_path": "/timeline/intervals/1/start_lap"
+   }
+  },
+  "rendered": "Tyre strategies of the top eight. At the lap-3 red flag Russell took hards to run to the finish while Antonelli took mediums; Antonelli stopped again for mediums under the virtual safety car on lap 28, one of 7 stops made under it."
+ },
+ "alt": {
+  "template": "Gantt chart of tyre stints for the top eight finishers with red-flag and VSC periods shaded and pit stops marked; {rus} on one set of {rus_c2}s after lap 3, {ant} on {ant_c2}s then {ant_c3}s from lap {ant_stop}.",
+  "slots": {
+   "rus": {
+    "packet_path": "/stints/44/driver",
+    "format": "surname"
+   },
+   "ant": {
+    "packet_path": "/stints/13/driver",
+    "format": "surname"
+   },
+   "rus_c2": {
+    "packet_path": "/stints/44/compound",
+    "format": "lower"
+   },
+   "ant_c2": {
+    "packet_path": "/stints/13/compound",
+    "format": "lower"
+   },
+   "ant_c3": {
+    "packet_path": "/stints/14/compound",
+    "format": "lower"
+   },
+   "ant_stop": {
+    "packet_path": "/stops/27/lap"
+   },
+   "n_vsc": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/stops/22/lap",
+      "/stops/23/lap",
+      "/stops/24/lap",
+      "/stops/25/lap",
+      "/stops/26/lap",
+      "/stops/27/lap",
+      "/stops/28/lap"
+     ]
+    }
+   },
+   "red_lap": {
+    "packet_path": "/timeline/intervals/1/start_lap"
+   }
+  },
+  "rendered": "Gantt chart of tyre stints for the top eight finishers with red-flag and VSC periods shaded and pit stops marked; Russell on one set of hards after lap 3, Antonelli on mediums then mediums from lap 28."
+ },
+ "series_sources": [
+  {
+   "series": "stints",
+   "packet_path": "/stints",
+   "filter": "driver in top 8"
+  }
+ ],
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T14:59:33.860Z",
+  "session_key": "11361",
+  "built_at": "2026-09-09T15:06:00.616Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T15:06:00.616Z",
+  "ok": true,
+  "problems": []
+ }
+}

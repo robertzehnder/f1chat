@@ -1,0 +1,223 @@
+{
+ "name": "closing_rate",
+ "meeting": "2026_1293",
+ "chart": {
+  "type": "line_with_stint_markers",
+  "x_label": "Lap",
+  "y_label": "Antonelli − Russell (s)",
+  "y_value_format": "decimal_seconds",
+  "series": [
+   {
+    "name": "Antonelli − Russell",
+    "color": "#27F4D2",
+    "values": [
+     -0.481,
+     -0.754,
+     -0.79,
+     -0.783,
+     -0.784,
+     -1.146,
+     -1.1,
+     -0.733,
+     -0.704
+    ]
+   }
+  ],
+  "lap_numbers": [
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48
+  ],
+  "horizontal_marker": {
+   "value": 0,
+   "label": "equal pace"
+  },
+  "chart_note": "Negative = Antonelli faster. Laps 40–48 contain no pit laps for either car; lap 49 (Antonelli's deleted lap) is excluded by the window."
+ },
+ "caption": {
+  "template": "Antonelli's lap time minus Russell's, laps {from}–{to}. Over those {n} laps Antonelli averaged {mean_ant} s a lap against Russell's {mean_rus} s.",
+  "slots": {
+   "from": {
+    "packet_path": "/position_trace/ANT/39/lap"
+   },
+   "to": {
+    "packet_path": "/position_trace/ANT/47/lap"
+   },
+   "mean_ant": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/ANT/39/lap_s",
+      "/position_trace/ANT/40/lap_s",
+      "/position_trace/ANT/41/lap_s",
+      "/position_trace/ANT/42/lap_s",
+      "/position_trace/ANT/43/lap_s",
+      "/position_trace/ANT/44/lap_s",
+      "/position_trace/ANT/45/lap_s",
+      "/position_trace/ANT/46/lap_s",
+      "/position_trace/ANT/47/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "mean_rus": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/RUS/39/lap_s",
+      "/position_trace/RUS/40/lap_s",
+      "/position_trace/RUS/41/lap_s",
+      "/position_trace/RUS/42/lap_s",
+      "/position_trace/RUS/43/lap_s",
+      "/position_trace/RUS/44/lap_s",
+      "/position_trace/RUS/45/lap_s",
+      "/position_trace/RUS/46/lap_s",
+      "/position_trace/RUS/47/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "n": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/position_trace/ANT/39/lap_s",
+      "/position_trace/ANT/40/lap_s",
+      "/position_trace/ANT/41/lap_s",
+      "/position_trace/ANT/42/lap_s",
+      "/position_trace/ANT/43/lap_s",
+      "/position_trace/ANT/44/lap_s",
+      "/position_trace/ANT/45/lap_s",
+      "/position_trace/ANT/46/lap_s",
+      "/position_trace/ANT/47/lap_s"
+     ]
+    }
+   }
+  },
+  "rendered": "Antonelli's lap time minus Russell's, laps 40–48. Over those 9 laps Antonelli averaged 84.329 s a lap against Russell's 85.137 s."
+ },
+ "alt": {
+  "template": "Line chart of the per-lap time difference between Antonelli and Russell for laps {from} to {to}; every point is below zero, Antonelli faster.",
+  "slots": {
+   "from": {
+    "packet_path": "/position_trace/ANT/39/lap"
+   },
+   "to": {
+    "packet_path": "/position_trace/ANT/47/lap"
+   },
+   "mean_ant": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/ANT/39/lap_s",
+      "/position_trace/ANT/40/lap_s",
+      "/position_trace/ANT/41/lap_s",
+      "/position_trace/ANT/42/lap_s",
+      "/position_trace/ANT/43/lap_s",
+      "/position_trace/ANT/44/lap_s",
+      "/position_trace/ANT/45/lap_s",
+      "/position_trace/ANT/46/lap_s",
+      "/position_trace/ANT/47/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "mean_rus": {
+    "derive": {
+     "op": "mean",
+     "inputs": [
+      "/position_trace/RUS/39/lap_s",
+      "/position_trace/RUS/40/lap_s",
+      "/position_trace/RUS/41/lap_s",
+      "/position_trace/RUS/42/lap_s",
+      "/position_trace/RUS/43/lap_s",
+      "/position_trace/RUS/44/lap_s",
+      "/position_trace/RUS/45/lap_s",
+      "/position_trace/RUS/46/lap_s",
+      "/position_trace/RUS/47/lap_s"
+     ]
+    },
+    "format": "0.000"
+   },
+   "n": {
+    "derive": {
+     "op": "count",
+     "inputs": [
+      "/position_trace/ANT/39/lap_s",
+      "/position_trace/ANT/40/lap_s",
+      "/position_trace/ANT/41/lap_s",
+      "/position_trace/ANT/42/lap_s",
+      "/position_trace/ANT/43/lap_s",
+      "/position_trace/ANT/44/lap_s",
+      "/position_trace/ANT/45/lap_s",
+      "/position_trace/ANT/46/lap_s",
+      "/position_trace/ANT/47/lap_s"
+     ]
+    }
+   }
+  },
+  "rendered": "Line chart of the per-lap time difference between Antonelli and Russell for laps 40 to 48; every point is below zero, Antonelli faster."
+ },
+ "series_sources": [
+  {
+   "series": 0,
+   "derived": "lap_s(ANT, L) − lap_s(RUS, L)",
+   "inputs": [
+    [
+     "/position_trace/ANT/39/lap_s",
+     "/position_trace/RUS/39/lap_s"
+    ],
+    [
+     "/position_trace/ANT/40/lap_s",
+     "/position_trace/RUS/40/lap_s"
+    ],
+    [
+     "/position_trace/ANT/41/lap_s",
+     "/position_trace/RUS/41/lap_s"
+    ],
+    [
+     "/position_trace/ANT/42/lap_s",
+     "/position_trace/RUS/42/lap_s"
+    ],
+    [
+     "/position_trace/ANT/43/lap_s",
+     "/position_trace/RUS/43/lap_s"
+    ],
+    [
+     "/position_trace/ANT/44/lap_s",
+     "/position_trace/RUS/44/lap_s"
+    ],
+    [
+     "/position_trace/ANT/45/lap_s",
+     "/position_trace/RUS/45/lap_s"
+    ],
+    [
+     "/position_trace/ANT/46/lap_s",
+     "/position_trace/RUS/46/lap_s"
+    ],
+    [
+     "/position_trace/ANT/47/lap_s",
+     "/position_trace/RUS/47/lap_s"
+    ]
+   ]
+  }
+ ],
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T14:59:33.860Z",
+  "session_key": "11361",
+  "built_at": "2026-09-09T15:06:00.616Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T15:06:00.616Z",
+  "ok": true,
+  "problems": []
+ }
+}

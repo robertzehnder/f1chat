@@ -1,0 +1,323 @@
+{
+ "name": "gap_trace",
+ "meeting": "2026_1293",
+ "chart": {
+  "type": "race_trace",
+  "x_label": "Lap",
+  "y_label": "Antonelli's gap to Russell (s)",
+  "y_value_format": "decimal_seconds",
+  "series": [
+   {
+    "name": "Antonelli behind Russell",
+    "color": "#27F4D2",
+    "values": [
+     -0.578,
+     -0.625,
+     -0.458,
+     0.399,
+     0.678,
+     0.613,
+     0.575,
+     0.531,
+     3.547,
+     14.374,
+     13.296,
+     12.428,
+     11.772,
+     11.332,
+     10.469,
+     9.693,
+     9.154,
+     8.266,
+     7.75,
+     7.498,
+     7.078,
+     6.393,
+     5.547,
+     4.688,
+     3.889,
+     2.938,
+     1.762,
+     0.965,
+     0.236,
+     0.86,
+     -1.313,
+     -1.282,
+     -1.96,
+     -3.942
+    ]
+   }
+  ],
+  "lap_numbers": [
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36,
+   37,
+   38,
+   39,
+   40,
+   41,
+   42,
+   43,
+   44,
+   45,
+   46,
+   47,
+   48,
+   49,
+   50,
+   51,
+   52,
+   53
+  ],
+  "y_domain": [
+   -6,
+   16
+  ],
+  "trace_pit_dots": [
+   {
+    "x": 28,
+    "y": 3.547,
+    "color": "#27F4D2",
+    "driver": "Antonelli",
+    "label": "stop · VSC"
+   }
+  ],
+  "annotations": [
+   {
+    "lap": 49,
+    "text": "L49 lap deleted · track limits T1",
+    "kind": "deletion"
+   },
+   {
+    "lap": 50,
+    "text": "Antonelli leads",
+    "kind": "pass"
+   }
+  ],
+  "racing_state": {
+   "source": "available",
+   "session_key": "11361",
+   "periods": [
+    {
+     "kind": "vsc",
+     "start_ts": "2026-09-06T14:17:45.000Z",
+     "end_ts": "2026-09-06T14:19:42.000Z",
+     "from_lap": 28,
+     "to_lap": 29,
+     "endpoint_inferred": null,
+     "opened_by": "rc103",
+     "closed_by": "rc109"
+    }
+   ],
+   "sector_flags": [
+    {
+     "lap": 28,
+     "sector": 2,
+     "level": "yellow",
+     "issued_at": "2026-09-06T14:17:30.000Z"
+    },
+    {
+     "lap": 28,
+     "sector": 3,
+     "level": "double_yellow",
+     "issued_at": "2026-09-06T14:17:30.000Z"
+    }
+   ],
+   "notes": [],
+   "total_laps": 53
+  },
+  "chart_note": "Gap = difference of the two cars' line-crossing times at the end of each lap; positive = Antonelli behind, above the zero line = ahead. Final lap from lap start + lap time."
+ },
+ "caption": {
+  "template": "{b}'s gap to {a} at the end of each lap, laps {from}–{to}. The stop under the virtual safety car on lap {stop_lap} turned a {gap_before} s deficit into {gap_after} s by the end of lap {after_lap}; from lap {l40} ({gap40} s) to lap {l48} ({gap48} s) he closed {closed} s, and he took the lead on lap {pass_lap}.",
+  "slots": {
+   "b": {
+    "packet_path": "/pair_gaps/0/b",
+    "format": "surname"
+   },
+   "a": {
+    "packet_path": "/pair_gaps/0/a",
+    "format": "surname"
+   },
+   "from": {
+    "packet_path": "/pair_gaps/0/laps/19/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/0/laps/52/lap"
+   },
+   "stop_lap": {
+    "packet_path": "/stops/27/lap"
+   },
+   "gap_before": {
+    "packet_path": "/pair_gaps/0/laps/26/gap",
+    "format": "0.0"
+   },
+   "after_lap": {
+    "packet_path": "/pair_gaps/0/laps/28/lap"
+   },
+   "gap_after": {
+    "packet_path": "/pair_gaps/0/laps/28/gap",
+    "format": "0.0"
+   },
+   "l40": {
+    "packet_path": "/pair_gaps/0/laps/39/lap"
+   },
+   "gap40": {
+    "packet_path": "/pair_gaps/0/laps/39/gap",
+    "format": "0.0"
+   },
+   "l48": {
+    "packet_path": "/pair_gaps/0/laps/47/lap"
+   },
+   "gap48": {
+    "packet_path": "/pair_gaps/0/laps/47/gap",
+    "format": "0.000"
+   },
+   "closed": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      "/pair_gaps/0/laps/39/gap",
+      "/pair_gaps/0/laps/47/gap"
+     ]
+    },
+    "format": "0.0"
+   },
+   "pass_lap": {
+    "packet_path": "/lead_changes/5/lap"
+   }
+  },
+  "rendered": "Antonelli's gap to Russell at the end of each lap, laps 20–53. The stop under the virtual safety car on lap 28 turned a 0.5 s deficit into 14.4 s by the end of lap 29; from lap 40 (7.1 s) to lap 48 (0.236 s) he closed 6.8 s, and he took the lead on lap 50."
+ },
+ "alt": {
+  "template": "Line chart of {b}'s gap to {a} by lap from {from} to {to}: a jump to {gap_after} s after the lap-{stop_lap} VSC stop, then a steady close to {gap48} s by lap {l48} and the lead on lap {pass_lap}.",
+  "slots": {
+   "b": {
+    "packet_path": "/pair_gaps/0/b",
+    "format": "surname"
+   },
+   "a": {
+    "packet_path": "/pair_gaps/0/a",
+    "format": "surname"
+   },
+   "from": {
+    "packet_path": "/pair_gaps/0/laps/19/lap"
+   },
+   "to": {
+    "packet_path": "/pair_gaps/0/laps/52/lap"
+   },
+   "stop_lap": {
+    "packet_path": "/stops/27/lap"
+   },
+   "gap_before": {
+    "packet_path": "/pair_gaps/0/laps/26/gap",
+    "format": "0.0"
+   },
+   "after_lap": {
+    "packet_path": "/pair_gaps/0/laps/28/lap"
+   },
+   "gap_after": {
+    "packet_path": "/pair_gaps/0/laps/28/gap",
+    "format": "0.0"
+   },
+   "l40": {
+    "packet_path": "/pair_gaps/0/laps/39/lap"
+   },
+   "gap40": {
+    "packet_path": "/pair_gaps/0/laps/39/gap",
+    "format": "0.0"
+   },
+   "l48": {
+    "packet_path": "/pair_gaps/0/laps/47/lap"
+   },
+   "gap48": {
+    "packet_path": "/pair_gaps/0/laps/47/gap",
+    "format": "0.000"
+   },
+   "closed": {
+    "derive": {
+     "op": "sub",
+     "inputs": [
+      "/pair_gaps/0/laps/39/gap",
+      "/pair_gaps/0/laps/47/gap"
+     ]
+    },
+    "format": "0.0"
+   },
+   "pass_lap": {
+    "packet_path": "/lead_changes/5/lap"
+   }
+  },
+  "rendered": "Line chart of Antonelli's gap to Russell by lap from 20 to 53: a jump to 14.4 s after the lap-28 VSC stop, then a steady close to 0.236 s by lap 48 and the lead on lap 50."
+ },
+ "series_sources": [
+  {
+   "series": 0,
+   "packet_path_template": "/pair_gaps/0/laps/{i}/gap",
+   "index_from": 19,
+   "laps": [
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53
+   ]
+  }
+ ],
+ "provenance": {
+  "compiler_version": "figures@1",
+  "packet_version": "race_packet@1",
+  "packet_built_at": "2026-09-09T14:59:33.860Z",
+  "session_key": "11361",
+  "built_at": "2026-09-09T15:06:00.613Z"
+ },
+ "verification": {
+  "checked_at": "2026-09-09T15:06:00.614Z",
+  "ok": true,
+  "problems": []
+ }
+}
