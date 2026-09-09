@@ -1,77 +1,59 @@
-# orchestra configuration for this project — see README.md for every key and its default.
-#
-# Layers (later wins): built-in defaults < ~/.orchestra/config.toml (global) < this file
-#   < orchestra.local.toml (machine-local, git-ignored) < --profile < --set key=value
-# Keep this file to what is specific to the project. Set models, tiers, and pricing ONCE globally:
-#   orchestra config set --global codex.model=gpt-6-astra claude.model=fable
-# and check the effective result with `orchestra config`. Anything set here shadows the global value.
+# orchestra configuration for openf1 / F1 Chat — see ~/Documents/coding/orchestra/README.md
 
 [project]
-brief = "BRIEF.md"          # the app brief the planner reads
+brief = "BRIEF.md"
 main_branch = "main"
-instructions = "AGENTS.md"  # single source; CLAUDE.md mirrors it
-branch_prefix = "task/"     # task branches are <prefix><id>-<slug>
+instructions = "AGENTS.md"   # CLAUDE.md is a symlink to it
+branch_prefix = "task/"
 
-# [[project.endpoints]]      # quick-access URLs in the UI / `orchestra endpoints`; QA url is added automatically
-# name = "Web app"
-# url = "http://127.0.0.1:4317/"
-# kind = "app"
-# serve = "npm run dev -- --port 4317"
+[[project.endpoints]]        # the Next.js app; tasks export figures against this port
+name = "F1 Chat web (dev)"
+url = "http://localhost:3101/"
+kind = "app"
+serve = "cd web && npm run dev -- --port 3101"
 
-[defaults]
-profile = "balanced"        # economy | balanced | max | [profiles.<yours>]; per run: --profile / ORCHESTRA_PROFILE
+[claude]                     # architect / planner / reviewer
+model = "fable"
+plan_effort = "high"
+review_effort = "medium"
 
-[gate]
-# Leave empty to use the gate the planner defines; set to override, e.g.
-# setup = ["npm ci"]
-# commands = [ {name = "test", cmd = "npm test"}, {name = "lint", cmd = "npm run lint"}, {name = "security", cmd = "npm audit --audit-level=high"} ]
+[codex]                      # implementer — the owner asked for GPT-6 on this run
+model = "gpt-6-astra"
+reasoning_effort = "high"
+network_access = true        # npm ci in fresh worktrees
 
-# ---- project-specific overrides (uncomment what this project needs) ----
-# [claude]                  # architect / planner / reviewer
-# model = "fable"
-# plan_effort = "high"
-# review_effort = "medium"
-#
-# [codex]                   # implementer
-# model = ""                # "" = ~/.codex/config.toml default
-# reasoning_effort = "medium"
-# network_access = true
-#
-# [loop]
-# parallel = 2
-# max_fix_attempts = 3
-# max_review_rounds = 2
-# replan_after_merge = true
-#
-# [escalation]
-# auto_approve_plan = false
-#
-# [budget]                  # 0 = unlimited; per-task caps escalate, project caps stop dispatch
-# task_tokens_max = 0
-# project_cost_max_usd = 0.0
-# claude_calls_max = 0
-#
-# [router]
-# mode = "auto"             # auto (complexity + feedback) | fixed
-# downshift_at = 0.8        # past 80% of any project cap: route one tier lower, stop replans
-#
-# [router.tiers.light]
-# codex_model = "gpt-5.4-mini"
-#
-# [profiles.overnight]      # your own preset: orchestra --profile overnight run
-# _description = "big batch"
-# loop.parallel = 4
-# codex.reasoning_effort = "high"
-#
-# [qa]                      # browser QA role for UI-tagged tasks (Codex drives the running app)
-# enabled = true
-# serve = "npm run dev -- --port 4317"
-# url = "http://127.0.0.1:4317/"
-#
-# [plan]
-# prd = "auto"              # auto (greenfield only) | always | never
-# second_opinion = true     # Codex critiques Fable's plan draft until SHIP (max_rounds = 3)
-# second_opinion_on_replan = false
-#
-# [github]
-# use_prs = false           # mirror branches as PRs with gh
+[loop]
+parallel = 1                 # one dev-server port; tasks are sequential anyway
+max_fix_attempts = 3
+max_review_rounds = 2
+replan_after_merge = true
+gate_timeout_s = 1500
+
+[gate]                       # runs in every task worktree (repo root)
+setup = ["cd web && ([ -d node_modules ] || ln -s /Users/robertzehnder/Documents/coding/f1/openf1/web/node_modules node_modules || npm ci --no-audit --no-fund)"]
+commands = [
+  { name = "typecheck",     cmd = "cd web && npm run typecheck" },
+  { name = "racing-state",  cmd = "cd web && npx tsx --test scripts/tests/racing-state.test.ts" },
+  { name = "adapter",       cmd = "cd web && npm run test:adapter" },
+  { name = "monza-figures", cmd = "cd web && node scripts/analyst/figures.mjs --meeting 2026_1293 --verify" },
+  { name = "gpt6-post",     cmd = "bash scripts/gate_gpt6_post.sh" },
+]
+
+[escalation]
+auto_approve_plan = false
+
+[budget]
+claude_calls_max = 40        # safety cap for a first real run
+warn_at = 0.8
+
+[router]
+mode = "fixed"               # every task on the configured Codex model (GPT-6), no tier downshift
+
+[qa]                         # browser QA for UI-tagged tasks: the post must render
+enabled = true
+serve = "cd web && npm run dev -- --port 3101"
+url = "http://localhost:3101/blog/monza-2026-gpt6"
+
+[plan]
+prd = "never"
+second_opinion = true

@@ -1,46 +1,31 @@
-# Repo conventions for Codex agents
+# Working instructions for agents in this repo (openf1 / F1 Chat)
 
-You are running inside the OpenF1 perf-roadmap repo. Most invocations are loop
-dispatchers (audit roles); the dispatcher pre-loads the slice file and the diff
-into your prompt. Operate on those — do not free-range.
+The product is `web/` (Next.js 15 + Recharts) over a Neon Postgres warehouse of OpenF1 data, plus
+an analyst pipeline in `web/scripts/analyst/` that turns a race into a canonical evidence packet,
+a verified article and verified figures. Read `BRIEF.md` for the scope of the current run.
 
-## Read-scope rules
+## Never read (large or irrelevant)
+`data/`, `data_2024_nonrace/`, `logs/`, `*.log`, `helper-repos/`, `f1_codex_helpers/`, `fastf1_audit/`,
+`fastf1_openf1_audit_toolkit/`, `.next/`, `web/.next/`, `node_modules/`, `venv/`, `__pycache__/`,
+`corpus-artifacts/`, `corpus/inbox/`, `corpus/quarantine/`, `web/.env.local`.
 
-The dispatcher prompt already contains the slice file body and the relevant
-`git diff` block. **Do not** re-read those files via tools.
-
-Never read files under these paths (large, irrelevant to audit decisions):
-
-- `data/`, `data_2024_nonrace/` — raw F1 data dumps (multi-GB)
-- `logs/`, `*.log` — runtime logs
-- `helper-repos/`, `f1_codex_helpers/` — vendored reference repos
-- `fastf1_audit/`, `fastf1_openf1_audit_toolkit/` — large vendored tooling
-- `.next/`, `web/.next/` — Next.js build artifacts
-- `node_modules/`, `web/node_modules/`
-- `venv/`, `__pycache__/`
-- `openf1_full_extract.log`, `openf1-full-history-extract.py` (legacy)
-
-If a gate command needs to read one of these, run the command — don't open the
-file directly.
-
-## Tool discipline
-
-- Prefer running gate commands (the slice's "Gate commands" block) over reading
-  source. The verdict turns on exit codes, not on you re-deriving correctness
-  from source.
-- For diff-scope checks use `git diff --name-only integration/perf-roadmap...HEAD`,
-  not full-tree exploration.
-- Do not run `npm install`, `pip install`, or anything that mutates lockfiles
-  or env state unless the slice explicitly says so.
-- One verdict commit per audit. Do not amend.
-
-## Output discipline
-
-- Verdicts go in the slice file's "Audit verdict" section using the format the
-  role prompt specifies.
-- No restated context, no narration of what you're about to do.
-- Cite file:line and command exit codes; skip prose explanations of obvious
-  passes.
+## House rules
+- **No database access.** The analyst packet on disk is the evidence; tasks in this run must not
+  need Neon. Never print or copy environment variables or secrets.
+- **Every number is traceable.** Prose claims go in `sidecar.json` with a packet path; figure text is
+  templates with typed slots bound to packet paths (`figures.mjs`). If the packet cannot support a
+  claim, attribute it or leave it out. Never invent quotes; race-control messages are quoted verbatim.
+- **Honesty over polish.** Inferred endpoints, carried-forward positions, estimates and missing data
+  are labelled as such, in the prose and on the figures.
+- **Rights.** Corpus source text is never copied into anything committed. The target register is the
+  distilled voice in `corpus/style/`, not any source author's text.
+- **Surfaces stay consistent.** Adding a detector, template, chart type or fetch edge requires
+  updating `web/scripts/health/a_surface_manifest.json`; keep `npm run typecheck` and the tests in
+  `web/scripts/tests/` green. A `;` anywhere in deterministic SQL fails the single-statement guard.
+- **Tools, not free-ranging.** Prefer running the pipeline scripts and gate commands over re-deriving
+  results by hand. Do not run `npm install` or change lockfiles unless the task says so.
+- The Browser QA role checks `/blog/<slug>` renders with its figures; do not claim browser checks
+  you did not run.
 
 ## Orchestra runs
 
