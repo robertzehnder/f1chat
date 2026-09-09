@@ -15,9 +15,7 @@ export function BlogFigure({ figure, index, bare = false }: { figure: PostFigure
       <figcaption className="text-[13px] leading-relaxed text-muted-foreground">
         {index != null && <span className="font-semibold text-foreground">Figure {index}. </span>}
         {figure.caption}
-        <span className="mt-1 block text-[11px] text-muted-foreground/80">
-          Data: OpenF1{figure.verified ? " · every number on this figure resolves to the race evidence packet" : ""}
-        </span>
+        <span className="mt-1 block text-[11px] text-muted-foreground/80">Data: OpenF1</span>
       </figcaption>
     </figure>
   )

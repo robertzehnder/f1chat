@@ -16,7 +16,7 @@
  * type is self-contained (no render-time fetch), and every figure's packet
  * provenance matches the packet on disk.
  */
-import { readFileSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, copyFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -75,4 +75,9 @@ const doc = {
 };
 doc.provenance.content_sha256 = createHash("sha256").update(JSON.stringify({ body: doc.body_md, figures: Object.values(figures).map((f) => f.provenance.content_sha256) })).digest("hex");
 writeFileSync(resolve(OUT_DIR, `${meta.slug}.json`), JSON.stringify(doc, null, 1) + "\n");
+// Publish the evidence packet next to the post (linked from the page footer) so
+// readers can inspect the source rather than rely on a blanket assurance.
+const PUB = resolve(ROOT, "web", "public", "blog", meta.slug);
+mkdirSync(PUB, { recursive: true });
+copyFileSync(resolve(DIR, "packet.json"), resolve(PUB, "packet.json"));
 console.log(`✅ wrote web/content/blog/${meta.slug}.json — ${prose.length} paragraphs, ${placeholders.length} figures, content ${doc.provenance.content_sha256.slice(0, 12)}`);

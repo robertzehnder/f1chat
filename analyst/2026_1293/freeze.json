@@ -32,12 +32,12 @@
       "file": "report_v3.md",
       "sha256": "864c4bf4fe593aadb62fe815d03132f747ba9c058bb03dd0c2f8faa01d6a3c91",
       "frozen_at": "2026-09-08T16:29:16Z",
-      "structure": "owner-requested: highlights \u2192 greeting/sentiment lead-in \u2192 analysis \u2192 compressed winners & losers \u2192 sign-off; adds the grid-penalty beat",
+      "structure": "owner-requested: highlights → greeting/sentiment lead-in → analysis → compressed winners & losers → sign-off; adds the grid-penalty beat",
       "gates": {
         "verify": "PASS",
         "style_lint": "PASS",
         "similarity_guard": "PASS",
-        "style_judge": "18/28, human_likelihood 34 \u2014 judge objects to the greeting opener and the sign-off (S2/R3); a register decision for the owner"
+        "style_judge": "18/28, human_likelihood 34 — judge objects to the greeting opener and the sign-off (S2/R3); a register decision for the owner"
       },
       "errata": [
         "tyre age at lap 26 stated as 24; packet says 22 (24 is lap 28). Caught by GPT-5.6 Sol review of v6 against packet.json, 2026-09-08. Frozen text unchanged; corrected from v7."
@@ -48,35 +48,48 @@
       "file": "report_v7.md",
       "sha256": "954f8240ce3087e91e42b9b5f7894b6b1ccdf5848289ba7e681974c25e485a70",
       "frozen_at": "2026-09-08T20:11:44Z",
-      "structure": "owner structure (highlights \u2192 lead-in \u2192 analysis \u2192 winners & losers \u2192 close), phrase-level humanisation per corpus/style/phrasing_method.md; 4-pass GPT-5.6 Sol review SHIP",
+      "structure": "owner structure (highlights → lead-in → analysis → winners & losers → close), phrase-level humanisation per corpus/style/phrasing_method.md; 4-pass GPT-5.6 Sol review SHIP",
       "gates": {
         "verify": "PASS",
         "style_lint": "PASS",
         "similarity_guard": "PASS",
-        "style_judge": "22/28 (register 8/8, structure 2/6 \u2014 judge-register mismatch hypothesis; see plan)",
-        "blind_llm_detector": "unreliable at this level \u2014 reasoning contradicted its own pick on v5; awaiting owner-vote calibration"
+        "style_judge": "22/28 (register 8/8, structure 2/6 — judge-register mismatch hypothesis; see plan)",
+        "blind_llm_detector": "unreliable at this level — reasoning contradicted its own pick on v5; awaiting owner-vote calibration"
       },
-      "review_log": "pass1 REVISE(5): diagnosis conflated inherited vs v3-specific; v4 over-humanised (tokens, unsupported propositions incl. 'in the mirrors' contradicting 40 laps led); linter quotas game-able; byte-identity \u2260 meaning; metric overclaim. pass2 REVISE(6 textual + proportionality). pass3 REVISE(5 textual, incl. tyre-age erratum and false half-second pace claim). pass4 SHIP."
+      "review_log": "pass1 REVISE(5): diagnosis conflated inherited vs v3-specific; v4 over-humanised (tokens, unsupported propositions incl. 'in the mirrors' contradicting 40 laps led); linter quotas game-able; byte-identity ≠ meaning; metric overclaim. pass2 REVISE(6 textual + proportionality). pass3 REVISE(5 textual, incl. tyre-age erratum and false half-second pace claim). pass4 SHIP."
     },
     {
       "version": "v8",
       "file": "report.md",
       "sha256": "a17d55d6e56f57354f54dc229c8089c52cb28b28a44fa668227b3386ae625770",
       "frozen_at": "2026-09-08T20:51:08Z",
-      "structure": "OWNER-SELECTED narrative article register (decision 2026-09-08 after reading a GPT-6 Astra rewrite): result + hinge in the first two paragraphs, connected chronological-analytical body, forward-leaning close; based on the Astra text with honesty fixes (VSC cause attributed, observed 13s vs estimated 31s distinguished, perception/crowd claims removed, race-control record woven in, counterfactual named as extrapolation, P\u00e9rez/Tsunoda and the stewards' note added)",
+      "structure": "OWNER-SELECTED narrative article register (decision 2026-09-08 after reading a GPT-6 Astra rewrite): result + hinge in the first two paragraphs, connected chronological-analytical body, forward-leaning close; based on the Astra text with honesty fixes (VSC cause attributed, observed 13s vs estimated 31s distinguished, perception/crowd claims removed, race-control record woven in, counterfactual named as extrapolation, Pérez/Tsunoda and the stewards' note added)",
       "gates": {
         "verify": "PASS",
         "style_lint": "PASS",
         "similarity_guard": "PASS",
         "style_judge_narrative": "27/28, human_likelihood 81 (final; only P3 midfield pacing at 1)",
-        "style_judge_columnist": "13/28 \u2014 register mismatch, expected",
-        "blind_llm_detector": "detected (conf 4); tells were the record quotes and hedging \u2014 detector remains uncalibrated"
+        "style_judge_columnist": "13/28 — register mismatch, expected",
+        "blind_llm_detector": "detected (conf 4); tells were the record quotes and hedging — detector remains uncalibrated"
       },
       "comparison_narrative_mode": {
         "astra": "24/28",
         "v7": "16/28",
         "v2": "23/28"
       }
+    },
+    {
+      "version": "v9",
+      "file": "report.md",
+      "sha256": "5b5df655182931746d4232d6620f504a86b0baf58dd6192a8025a5d2c3f1d7e2",
+      "structure": "connected narrative after the consolidated editorial brief (2026-09-09): significance up front, lead exchanges, attributed driver/team remarks, narrowed counterfactual, race notes + data note",
+      "note": "report.md is now v9; the frozen evaluation artefact (v8, sha in 'sha256' above) is preserved as drafts/report_v8.md",
+      "gates": {}
     }
-  ]
+  ],
+  "current_report": {
+    "version": "v9",
+    "sha256": "5b5df655182931746d4232d6620f504a86b0baf58dd6192a8025a5d2c3f1d7e2",
+    "revised_at": "2026-09-09T18:35:31Z"
+  }
 }

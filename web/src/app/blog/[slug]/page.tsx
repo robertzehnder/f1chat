@@ -28,6 +28,8 @@ export default async function BlogPost({ params }: Params) {
   const post = readPost(slug);
   if (!post) notFound();
   const date = new Date(post.published_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const packetHref = `/blog/${slug}/packet.json`;
+  const hasPacket = existsSync(join(process.cwd(), "public", packetHref));
   return (
     <main className="mx-auto max-w-[720px] px-5 py-10">
       <nav className="mb-8 text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -41,7 +43,10 @@ export default async function BlogPost({ params }: Params) {
         </header>
         <PostBody post={post} />
         <footer className="mt-12 border-t border-border pt-6 text-xs text-muted-foreground/80">
-          <p>Written from the race evidence packet (session {post.session_key}). Figures are self-contained and verified against the packet; the text is the verified article of record.</p>
+          <p>
+            Source: OpenF1 timing and race-control data for session {post.session_key}, compiled into a race evidence packet
+            {hasPacket ? <> (<a href={packetHref} className="underline">JSON</a>)</> : null}. Every figure is generated from that packet, and every number in the captions is bound to a field in it; the methodology is in the note at the end of the article.
+          </p>
           <p className="mt-2"><Link href="/" className="hover:underline">Ask F1 Chat about this race →</Link></p>
         </footer>
       </article>

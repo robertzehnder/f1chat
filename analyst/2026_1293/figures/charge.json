@@ -460,7 +460,7 @@
   "chart_note": "Classified order at the end of each lap; the feed logs changes only, so a position is carried forward until the next logged change. Lap 0 = grid."
  },
  "caption": {
-  "template": "{ant} from {grid} on the grid: {p3} by the lap-{red_lap} red flag, second by lap {p2lap}, and into the lead on lap {lead_lap}. {gas} went the other way, from {gas_grid} to {gas_fin}.",
+  "template": "{ant} from {grid} on the grid: {p3} by the lap-{red_lap} red flag, second by lap {p2lap}, in front from lap {lead1} until Russell went back ahead on lap {relead}, and into the lead for good on lap {lead_lap}. {gas} went the other way, from {gas_grid} to {gas_fin}.",
   "slots": {
    "ant": {
     "packet_path": "/results/0/driver",
@@ -475,7 +475,13 @@
     "format": "ordinal"
    },
    "p2lap": {
-    "packet_path": "/position_trace/ANT/24/lap"
+    "packet_path": "/position_trace/ANT/15/lap"
+   },
+   "lead1": {
+    "packet_path": "/lead_changes/3/lap"
+   },
+   "relead": {
+    "packet_path": "/lead_changes/4/lap"
    },
    "lead_lap": {
     "packet_path": "/lead_changes/5/lap"
@@ -496,7 +502,7 @@
     "packet_path": "/timeline/intervals/1/start_lap"
    }
   },
-  "rendered": "Antonelli from 19th on the grid: 12th by the lap-3 red flag, second by lap 25, and into the lead on lap 50. Gasly went the other way, from 1st to 7th."
+  "rendered": "Antonelli from 19th on the grid: 12th by the lap-3 red flag, second by lap 16, in front from lap 18 until Russell went back ahead on lap 23, and into the lead for good on lap 50. Gasly went the other way, from 1st to 7th."
  },
  "alt": {
   "template": "Step chart of race position by lap for Antonelli, Russell, Gasly and Verstappen with the red flag, safety car and VSC periods shaded; Antonelli climbs from {grid} to first by lap {lead_lap}.",
@@ -514,7 +520,13 @@
     "format": "ordinal"
    },
    "p2lap": {
-    "packet_path": "/position_trace/ANT/24/lap"
+    "packet_path": "/position_trace/ANT/15/lap"
+   },
+   "lead1": {
+    "packet_path": "/lead_changes/3/lap"
+   },
+   "relead": {
+    "packet_path": "/lead_changes/4/lap"
    },
    "lead_lap": {
     "packet_path": "/lead_changes/5/lap"
@@ -788,10 +800,10 @@
   "packet_version": "race_packet@1",
   "packet_built_at": "2026-09-09T14:59:33.860Z",
   "session_key": "11361",
-  "built_at": "2026-09-09T15:06:00.617Z"
+  "built_at": "2026-09-09T18:35:54.955Z"
  },
  "verification": {
-  "checked_at": "2026-09-09T15:06:00.617Z",
+  "checked_at": "2026-09-09T18:35:54.955Z",
   "ok": true,
   "problems": []
  }

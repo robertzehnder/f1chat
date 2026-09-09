@@ -212,12 +212,14 @@ const RECIPES = {
     const slots = {
       ant: { packet_path: `/results/${ri("ANT")}/driver`, format: "surname" }, grid: { packet_path: `/results/${ri("ANT")}/grid`, format: "ordinal" },
       p3: { packet_path: `/position_trace/ANT/${traceIdx("ANT", 3)}/position`, format: "ordinal" },
-      p2lap: { packet_path: `/position_trace/ANT/${traceIdx("ANT", 25)}/lap` },
+      p2lap: { packet_path: `/position_trace/ANT/${traceIdx("ANT", 16)}/lap` },
+      lead1: { packet_path: `/lead_changes/${packet.lead_changes.findIndex((c) => c.lap === 18 && c.driver === "ANT")}/lap` },
+      relead: { packet_path: `/lead_changes/${packet.lead_changes.findIndex((c) => c.lap === 23 && c.driver === "RUS")}/lap` },
       lead_lap: { packet_path: `/lead_changes/${packet.lead_changes.findIndex((c) => c.lap === 50)}/lap` },
       gas: { packet_path: `/results/${ri("GAS")}/driver`, format: "surname" }, gas_grid: { packet_path: `/results/${ri("GAS")}/grid`, format: "ordinal" }, gas_fin: { packet_path: `/results/${ri("GAS")}/position`, format: "ordinal" },
       red_lap: { packet_path: `/timeline/intervals/${packet.timeline.intervals.findIndex((iv) => iv.kind === "red")}/start_lap` }
     };
-    const caption = text("{ant} from {grid} on the grid: {p3} by the lap-{red_lap} red flag, second by lap {p2lap}, and into the lead on lap {lead_lap}. {gas} went the other way, from {gas_grid} to {gas_fin}.", slots);
+    const caption = text("{ant} from {grid} on the grid: {p3} by the lap-{red_lap} red flag, second by lap {p2lap}, in front from lap {lead1} until Russell went back ahead on lap {relead}, and into the lead for good on lap {lead_lap}. {gas} went the other way, from {gas_grid} to {gas_fin}.", slots);
     const alt = text("Step chart of race position by lap for Antonelli, Russell, Gasly and Verstappen with the red flag, safety car and VSC periods shaded; Antonelli climbs from {grid} to first by lap {lead_lap}.", slots);
     return { chart, caption, alt, series_sources: drivers.map((acr, i) => ({ series: i, packet_path_template: `/position_trace/${acr}/{i}/position`, index_from: 0, laps: Array.from({ length: total }, (_, L) => L + 1), lap0_path: `/results/${ri(acr)}/grid` })) };
   }
