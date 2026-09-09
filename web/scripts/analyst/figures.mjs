@@ -16,7 +16,8 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..", "..", "..");
@@ -251,16 +252,171 @@ function verifyFigure(fig) {
   return problems;
 }
 
+// External recipes opt into binding verification; keep the legacy verifier above unchanged.
+function verifyExternalFigure(fig) {
+  const problems = [];
+  const fail = (name, message) => problems.push(`${name}: ${message}`);
+  const has = (obj, key) => obj != null && Object.hasOwn(obj, key);
+  function source(path, name) {
+    if (typeof path !== "string" || !path.startsWith("/")) {
+      fail(name, `invalid packet path ${path}`); return undefined;
+    }
+    let value = packet;
+    for (const key of path.slice(1).split("/").map(k => k.replace(/~1/g, "/").replace(/~0/g, "~"))) {
+      if (!has(value, key)) { fail(name, `packet path ${path} does not resolve`); return undefined; }
+      value = value[key];
+    }
+    if (value === undefined) fail(name, `packet path ${path} resolves to undefined`);
+    return value;
+  }
+  function slot(s, name) {
+    if (!s || typeof s !== "object") { fail(name, "missing slot binding"); return undefined; }
+    if (has(s, "packet_path")) source(s.packet_path, name);
+    else if (s.derive && Array.isArray(s.derive.inputs)) {
+      for (const p of s.derive.inputs) if (typeof p !== "number") source(p, name);
+    } else if (typeof s.const !== "string" || /\d/.test(s.const)) {
+      fail(name, "slot must bind a packet path or derivation (constants are unit words only)");
+    }
+    try { return resolveSlot(s); } catch (e) { fail(name, e.message); return undefined; }
+  }
+  function boundText(binding, rendered, name) {
+    if (!binding || typeof binding.template !== "string" || !binding.slots || typeof rendered !== "string") {
+      fail(name, "missing text binding"); return;
+    }
+    const nums = new Set();
+    for (const [k, s] of Object.entries(binding.slots)) {
+      const value = slot(s, `${name} slot ${k}`);
+      for (const n of fmt(value, s).match(/\d+(?:\.\d+)?/g) ?? []) nums.add(n);
+    }
+    try {
+      if (renderText(binding.template, binding.slots) !== rendered) fail(name, "rendered text differs from template+slots re-render");
+    } catch (e) { fail(name, e.message); }
+    for (const m of rendered.matchAll(/\d+(?:\.\d+)?/g)) if (!nums.has(m[0])) fail(name, `unbound number ${m[0]}`);
+  }
+  const equalValue = (got, want) => want === null ? Number.isNaN(got) :
+    typeof want === "number" && Number.isFinite(want) && typeof got === "number" && Number.isFinite(got) && Math.abs(got - want) < 1e-6;
+  const checkValue = (got, path, name) => {
+    const want = source(path, name);
+    if (!equalValue(got, want)) fail(name, `chart ${got} vs packet ${path} = ${want}`);
+  };
+  for (const part of ["caption", "alt"]) boundText(fig[part], fig[part]?.rendered, part);
+  const chart = fig.chart;
+  if (chart.type === "stint_gantt") {
+    const projections = packet.stints.map(s => ({ driver: surname(s.driver), start: s.laps[0], end: s.laps[1], compound: String(s.compound).toLowerCase() }));
+    if (!Array.isArray(chart.stints)) fail("stints", "missing stints");
+    else chart.stints.forEach((s, i) => { if (!projections.some(p => isDeepStrictEqual(p, s))) fail(`stints ${i}`, "not a packet stint projection"); });
+    for (const [i, stop] of (chart.gantt_stops ?? []).entries()) {
+      if (!packet.stops.some(s => surname(s.acronym) === stop.driver && s.lap === stop.lap &&
+        stop.label === ({ boundary_spanning: "red", vsc: "VSC", sc: "SC" }[s.class] ?? "green"))) fail(`gantt_stops ${i}`, "driver, lap or label differs from packet stop");
+    }
+    if (chart.total_laps !== packet.session.total_laps) fail("total_laps", "differs from packet");
+  } else {
+    const sources = Array.isArray(fig.series_sources) ? fig.series_sources : [];
+    if (!Array.isArray(fig.series_sources)) fail("series_sources", "missing series coverage");
+    const series = chart.series;
+    if (!Array.isArray(series)) fail("series", "missing chart series");
+    for (const src of sources ?? []) {
+      if (!Number.isInteger(src?.series) || !series?.[src.series]) fail("series_sources", `unknown series index ${src?.series}`);
+    }
+    for (const [index, s] of (series ?? []).entries()) {
+      const name = `series ${index}`;
+      const matches = (sources ?? []).filter(src => src?.series === index);
+      if (matches.length !== 1) { fail(name, "requires exactly one series_sources entry"); continue; }
+      const src = matches[0];
+      const position = chart.type === "position_changes";
+      if (!Array.isArray(s.values)) { fail(name, "missing values"); continue; }
+      if (position && (s.values.length !== packet.session.total_laps + 1 || !src.lap0_path)) fail(name, "position_changes requires full race plus lap 0 grid binding");
+      if (typeof src.packet_path_template === "string" && !has(src, "inputs")) {
+        if (!Array.isArray(src.laps) || !Number.isInteger(src.index_from) || src.index_from < 0 ||
+            !src.packet_path_template.includes("{i}") || typeof src.lap_path_template !== "string" || !src.lap_path_template.includes("{i}")) {
+          fail(name, "unsupported template source: laps, index_from and lap_path_template required"); continue;
+        }
+        const offset = src.lap0_path ? 1 : 0;
+        if (src.laps.length + offset !== s.values.length) fail(name, "source coverage length differs from values");
+        if (has(chart, "lap_numbers") && !isDeepStrictEqual(src.laps, chart.lap_numbers)) fail(name, "laps differ from chart.lap_numbers");
+        if (offset) checkValue(s.values[0], src.lap0_path, `${name} lap 0`);
+        src.laps.forEach((lap, i) => {
+          const row = String(src.index_from + i);
+          const rowLap = source(src.lap_path_template.replaceAll("{i}", row), `${name} lap binding ${i}`);
+          if (rowLap !== lap || (position && rowLap !== i + offset)) fail(name, `lap binding ${i}: packet lap ${rowLap} differs from displayed lap ${position ? i + offset : lap}`);
+          checkValue(s.values[i + offset], src.packet_path_template.replaceAll("{i}", row), `${name} lap ${lap}`);
+        });
+      } else if (Array.isArray(src.inputs) && !has(src, "packet_path_template") && !position) {
+        if (src.inputs.length !== s.values.length || !Array.isArray(src.lap_paths) || src.lap_paths.length !== src.inputs.length ||
+            !Array.isArray(chart.lap_numbers) || chart.lap_numbers.length !== s.values.length) {
+          fail(name, "inputs/lap_paths/displayed laps coverage length mismatch"); continue;
+        }
+        src.inputs.forEach((paths, i) => {
+          if (!Array.isArray(paths) || paths.length !== 2 || !Array.isArray(src.lap_paths[i]) || src.lap_paths[i].length !== 2) {
+            fail(name, `inputs ${i} requires two values and two lap bindings`); return;
+          }
+          const values = paths.map(p => source(p, `${name} inputs ${i}`));
+          for (const p of src.lap_paths[i]) if (source(p, `${name} lap binding ${i}`) !== chart.lap_numbers[i]) fail(name, `lap binding ${i} differs from displayed lap`);
+          const want = values.includes(null) && values.every(v => v === null || Number.isFinite(v)) ? null :
+            values.every(v => typeof v === "number" && Number.isFinite(v)) ? +(values[0] - values[1]).toFixed(3) : undefined;
+          if (!equalValue(s.values[i], want)) fail(name, `inputs ${i}: chart ${s.values[i]} vs packet difference ${want}`);
+        });
+      } else fail(name, "unsupported series_sources shape");
+    }
+  }
+  const decorations = fig.decoration_sources ?? {};
+  if (has(chart, "chart_note") || has(decorations, "chart_note")) boundText(decorations.chart_note, chart.chart_note, "chart_note");
+  for (const [field, coordinates, label] of [["annotations", ["lap"], "text"], ["trace_pit_dots", ["x", "y"], "label"]]) {
+    const items = chart[field] ?? [], bindings = decorations[field] ?? [];
+    if (!Array.isArray(items) || !Array.isArray(bindings)) { fail(field, "requires array bindings"); continue; }
+    if (items.length !== bindings.length) fail(field, "decoration binding coverage mismatch");
+    items.forEach((item, i) => {
+      const binding = bindings[i];
+      for (const key of coordinates) {
+        const want = slot(binding?.[key], `${field} ${i} ${key}`);
+        if (want === undefined || (key === "y" ? !equalValue(item[key], want) : item[key] !== want)) fail(`${field} ${i} ${key}`, "decoration binding mismatch");
+      }
+      boundText(binding?.[label], item[label], `${field} ${i} ${label}`);
+    });
+  }
+  if (has(chart, "horizontal_marker") || has(decorations, "horizontal_marker")) {
+    const marker = chart.horizontal_marker, binding = decorations.horizontal_marker;
+    const want = binding?.value === 0 ? 0 : slot(binding?.value, "horizontal_marker value");
+    if (!equalValue(marker?.value, want)) fail("horizontal_marker value", "decoration binding mismatch");
+    boundText(binding?.label, marker?.label, "horizontal_marker label");
+  }
+  if (has(chart, "racing_state") || has(decorations, "racing_state_window")) {
+    const window = decorations.racing_state_window;
+    if (!(window === null || (Array.isArray(window) && window.length === 2 && window.every(Number.isFinite) && window[0] <= window[1]))) fail("racing_state", "missing or invalid racing_state_window");
+    else if (JSON.stringify(racingState(window)) !== JSON.stringify(chart.racing_state)) fail("racing_state", "differs from packet recomputation");
+  }
+  return problems;
+}
+
+// Ignore only volatile timestamps, after serialization has normalized NaN to null.
+function stableOutput(out) {
+  const normalized = JSON.parse(JSON.stringify(out));
+  if (normalized.provenance) delete normalized.provenance.built_at;
+  if (normalized.verification) delete normalized.verification.checked_at;
+  return normalized;
+}
+
 // ------------------------------------------------------------ main
-const names = ONLY ? [ONLY] : Object.keys(RECIPES);
+const recipePath = resolve(DIR, "recipes.mjs");
+const external = existsSync(recipePath);
+const recipes = external ? (await import(pathToFileURL(recipePath).href)).default({
+  packet, ptr, text, renderText, racingState, colorOf, surname, driverOf, traceIdx, pairIdx, lapIdx, TEAM_COLORS, COMPILER_VERSION
+}) : RECIPES;
+const names = ONLY ? [ONLY] : Object.keys(recipes);
 let failed = 0;
 for (const name of names) {
-  const fig = RECIPES[name]();
+  const fig = recipes[name]();
   delete fig._mean;
   const out = { name, meeting: MEETING, ...fig, provenance: { compiler_version: COMPILER_VERSION, packet_version: packet.manifest?.packet_version, packet_built_at: packet.manifest?.built_at, session_key: packet.session?.session_key, built_at: new Date().toISOString() } };
-  const problems = VERIFY ? verifyFigure(out) : [];
+  const problems = VERIFY ? (external ? verifyExternalFigure(out) : verifyFigure(out)) : [];
   out.verification = { checked_at: new Date().toISOString(), ok: problems.length === 0, problems };
-  writeFileSync(resolve(OUT, `${name}.json`), JSON.stringify(out, null, 1) + "\n");
+  const target = resolve(OUT, `${name}.json`);
+  let unchanged = false;
+  if (existsSync(target)) {
+    try { unchanged = isDeepStrictEqual(stableOutput(JSON.parse(readFileSync(target, "utf8"))), stableOutput(out)); }
+    catch { /* Invalid previous JSON must be replaced. */ }
+  }
+  if (!unchanged) writeFileSync(target, JSON.stringify(out, null, 1) + "\n");
   console.log(`${problems.length ? "❌" : "✅"} ${name}: ${out.caption.rendered}`);
   for (const p of problems) console.log("     -", p);
   if (problems.length) failed++;
